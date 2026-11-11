@@ -77,11 +77,11 @@ You need Node.js 24, [uv](https://docs.astral.sh/uv/getting-started/installation
       openssl rand -base64 33
       ```
 
-6. Start the API and the dev server (port 3300 is the one the redirect URI expects), in two terminals:
+6. Start the API and the dev server in two terminals. The dev server always runs on port 3300, which the redirect URI and `npm run smoke` expect:
 
    ```bash
    npm run dev:api
-   npm run dev -- -p 3300
+   npm run dev
    ```
 
 7. Open [http://localhost:3300](http://localhost:3300) and sign in.
