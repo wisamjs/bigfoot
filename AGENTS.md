@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Bigfoot
 
-- **Tickets**: before starting a Linear `BIG-n` ticket, fetch it with its relations; every "blocked by" ticket must be Done, otherwise stop and name the blockers.
+- **Tickets**: before starting a Linear `BIG-n` ticket, fetch it with its relations; every "blocked by" ticket must be Done, otherwise stop and name the blockers. A finished ticket ends with a pushed branch and a PR whose body starts `Closes BIG-n`; share the PR URL.
 - **Domain language**: `GLOSSARY.md`. Use its terms in code, UI copy and tickets.
 - **UI work**: read `.claude/skills/typeui-design-system/` (TypeUI Candy) before writing or restyling components. Token values live only in `src/app/globals.css`.
 - **Verify**: `npm run check` (types, lint, design tokens), then `npm run smoke` with the dev server running (every route, signed in and out; fails on server errors logged to `.next/dev/logs/next-development.log`, which build and lint miss).
