@@ -11,7 +11,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     error: "/",
   },
   callbacks: {
-    // token.sub is the Google account id: the stable owner of the job seeker's Applications.
+    // token.sub is the Google account id: the stable job seeker id their Applications belong to.
     // Without a database adapter Auth.js sets user.id (and so token.sub) to a fresh random
     // UUID on every sign-in, so pin it to Google's own id instead.
     jwt({ token, account }) {

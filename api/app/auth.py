@@ -9,7 +9,7 @@ AUDIENCE = "bigfoot-api"
 ISSUER = "bigfoot-web"
 
 
-def owner_id(request: Request) -> str:
+def job_seeker_id(request: Request) -> str:
     """The job seeker's id, taken from a verified bearer token."""
     header = request.headers.get("authorization", "")
     scheme, _, token = header.partition(" ")
@@ -29,4 +29,4 @@ def owner_id(request: Request) -> str:
     return claims["sub"]
 
 
-OwnerId = Annotated[str, Depends(owner_id)]
+JobSeekerId = Annotated[str, Depends(job_seeker_id)]

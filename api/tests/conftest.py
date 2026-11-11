@@ -44,8 +44,8 @@ def client(settings: Settings) -> Iterator[TestClient]:
 
 @pytest.fixture
 def token(settings: Settings):
-    def make(owner: str = "alice", **overrides) -> dict[str, str]:
-        claims = {"sub": owner, "aud": AUDIENCE, "iss": ISSUER, "exp": int(time.time()) + 60, **overrides}
+    def make(job_seeker: str = "alice", **overrides) -> dict[str, str]:
+        claims = {"sub": job_seeker, "aud": AUDIENCE, "iss": ISSUER, "exp": int(time.time()) + 60, **overrides}
         return {"Authorization": f"Bearer {jwt.encode(claims, settings.api_secret, algorithm='HS256')}"}
 
     return make
