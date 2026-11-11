@@ -9,12 +9,16 @@ The product itself. Refer to the software by name. The name comes from the brand
 _Avoid_: the application, the platform; hunt words as nouns (sighting, trail, tracks)
 
 **Job seeker**:
-The person running a job search in Bigfoot.
-_Avoid_: candidate, applicant
+The person running a job search in Bigfoot: its user. A job seeker has one account, created the first time they sign in with Google; there is no separate sign-up. Deleting the account removes the job seeker and all of their Applications.
+_Avoid_: user, owner, candidate, applicant
 
 **Application**:
 One role at one company that the job seeker has applied to.
 _Avoid_: job, opportunity, lead
+
+**Sample Application**:
+An Application that Bigfoot creates for a new job seeker, to show how Bigfoot works before they add their own. A job seeker receives sample Applications once. They can be edited or deleted like any other Application, and are always marked as samples.
+_Avoid_: demo, example, placeholder, seed data
 
 **Stage**:
 Where an Application currently sits: In Progress, Offer, or one of the Closed stages.
