@@ -7,6 +7,8 @@ import { readFileSync } from "node:fs";
 import { encode } from "@auth/core/jwt";
 
 export const SESSION_COOKIE = "authjs.session-token";
+/** The test user's job seeker id (token.sub), which scopes their Applications in the API. */
+export const TEST_JOB_SEEKER_ID = "test-user";
 
 export function readAuthSecret() {
   if (process.env.AUTH_SECRET) return process.env.AUTH_SECRET;
@@ -22,7 +24,7 @@ export async function createTestSession() {
   return encode({
     secret: readAuthSecret(),
     salt: SESSION_COOKIE,
-    token: { name: "Test User", email: "test.user@example.test", picture: null, sub: "test-user" },
+    token: { name: "Test User", email: "test.user@example.test", picture: null, sub: TEST_JOB_SEEKER_ID },
   });
 }
 

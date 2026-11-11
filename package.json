@@ -12,6 +12,7 @@
     "tokens": "node scripts/check-tokens.mjs",
     "check": "npm run typecheck && npm run lint && npm run tokens",
     "smoke": "node scripts/smoke.mjs",
+    "screenshots": "node scripts/screenshots.mjs",
     "prepare": "git config core.hooksPath .githooks || true",
     "dev:api": "cd api && uv run uvicorn --factory app.main:create_app --port 8000 --reload",
     "test:api": "cd api && uv run pytest"

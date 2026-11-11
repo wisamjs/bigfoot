@@ -96,6 +96,12 @@ node scripts/dev-session.mjs
 
 In your browser's developer tools, add a cookie named `authjs.session-token` for `localhost` with that value, then open [http://localhost:3300/dashboard](http://localhost:3300/dashboard).
 
+The test user starts with no Applications. To fill their dashboard, run `node scripts/dev-applications.mjs add` (and `remove` to empty it again).
+
+### Retake the screenshots
+
+With the dev server and API running, `npm run screenshots` retakes the two screenshots in this README.
+
 ## Quality checks
 
 | Command | What it checks |
