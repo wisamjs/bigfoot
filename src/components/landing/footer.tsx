@@ -53,7 +53,15 @@ export function Footer() {
           ))}
         </div>
         <div className="flex flex-col gap-2 border-t border-line py-6 text-sm leading-[1.6] text-body sm:flex-row sm:justify-between">
-          <p className="m-0">© 2026 Bigfoot. All rights reserved.</p>
+          <p className="m-0">
+            © 2026 Wisam Zaghal ·{" "}
+            <a
+              href="https://github.com/wisamjs/bigfoot/blob/main/LICENSE"
+              className="rounded-control underline underline-offset-4 transition-colors hover:text-heading"
+            >
+              MIT License
+            </a>
+          </p>
           <p className="m-0">Made for job seekers, by job seekers.</p>
         </div>
       </Container>
