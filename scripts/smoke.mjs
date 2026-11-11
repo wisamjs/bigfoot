@@ -37,8 +37,25 @@ async function reachable(url) {
   }
 }
 
+const started = [];
+
+/**
+ * Stops a server and everything it spawned. `npx` and `uv run` launch the real server
+ * (next-server, uvicorn) as a child that can outlive them, so kill the whole process group.
+ */
+function stop(child) {
+  try {
+    process.kill(-child.pid, "SIGTERM");
+  } catch {}
+}
+
+// Runs on every exit, including when a server fails to start, so no server outlives smoke.
+process.on("exit", () => started.forEach(stop));
+
 async function start(url, command, args, options = {}) {
-  const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"], ...options });
+  // detached: the server leads its own process group, which stop() kills as one.
+  const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"], detached: true, ...options });
+  started.push(child);
   let output = "";
   let exited = false;
   child.stdout.on("data", (d) => (output += d));
@@ -50,7 +67,6 @@ async function start(url, command, args, options = {}) {
     if (exited) throw new Error(`${command} ${args.join(" ")} exited before serving ${url}\n${output}`);
     await new Promise((r) => setTimeout(r, 500));
   }
-  child.kill();
   throw new Error(`${command} ${args.join(" ")} did not start on ${url}\n${output}`);
 }
 
@@ -83,8 +99,8 @@ function newLogErrors(offset) {
     .filter((entry) => entry?.source === "Server" && entry.level === "ERROR");
 }
 
-const api = (await reachable(`${apiBase}/health`)) ? null : await startApi();
-const server = (await reachable(base)) ? null : await startServer();
+if (!(await reachable(`${apiBase}/health`))) await startApi();
+if (!(await reachable(base))) await startServer();
 const logOffset = existsSync(LOG) ? statSync(LOG).size : 0;
 const cookie = `${SESSION_COOKIE}=${await createTestSession()}`;
 let failed = 0;
@@ -120,11 +136,11 @@ for (const entry of newLogErrors(logOffset)) {
   failed++;
 }
 
-server?.kill();
-api?.kill();
-
+// Exit explicitly: the servers' output pipes would otherwise keep Node running after the
+// result is printed. The exit handler stops the servers this run started.
 if (failed) {
   console.error(`\n${failed} smoke check(s) failed. Full log: ${LOG}`);
   process.exit(1);
 }
 console.log("\nAll smoke checks passed");
+process.exit(0);
