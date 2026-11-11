@@ -19,6 +19,8 @@ const LOG = ".next/dev/logs/next-development.log";
 
 const checks = [
   { path: "/", signedIn: false, expect: (r) => r.status === 200 && r.body.includes("Sign up") },
+  { path: "/privacy", signedIn: false, expect: (r) => r.status === 200 && r.body.includes("Privacy Policy") },
+  { path: "/privacy", signedIn: true, expect: (r) => r.status === 200 && r.body.includes("Privacy Policy") },
   { path: "/dashboard", signedIn: false, expect: (r) => r.body.includes("NEXT_REDIRECT") },
   { path: "/dashboard", signedIn: true, expect: (r) => r.status === 200 && r.body.includes("All applications") },
   { path: "/api/auth/providers", signedIn: false, expect: (r) => r.status === 200 && r.body.includes('"google"') },

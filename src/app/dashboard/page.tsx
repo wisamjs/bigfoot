@@ -106,6 +106,17 @@ async function Dashboard() {
           </section>
         </Container>
       </main>
+      <footer className="border-t border-line py-6">
+        <Container className="flex flex-wrap justify-between gap-2 text-sm leading-[1.6] text-body">
+          <p className="m-0">Bigfoot</p>
+          <Link
+            href="/privacy"
+            className="rounded-control underline underline-offset-4 transition-colors hover:text-heading"
+          >
+            Privacy Policy
+          </Link>
+        </Container>
+      </footer>
     </>
   );
 }
