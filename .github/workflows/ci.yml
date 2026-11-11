@@ -8,6 +8,8 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # Runs share one concurrency group, so a hung run would block every other run.
+    timeout-minutes: 10
     env:
       # Throwaway secrets: only sign the smoke test's fake session and its API tokens.
       AUTH_SECRET: ci-smoke-secret-not-used-in-production
@@ -29,7 +31,23 @@ jobs:
       - run: npm run test:api
       # Smoke runs before build: dev and build share .next/.
       - run: npm run smoke
+        timeout-minutes: 2
       - run: npm run build
     concurrency:
       # Runs share the bigfoot_test schema, so never run two at once.
       group: bigfoot-test-database
+
+  # Migrations are applied to the dev database by hand after their PR merges (applying
+  # earlier breaks main). Goes red on main until every merged migration is applied.
+  migrations-applied:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          working-directory: api
+      - run: npm run db:status

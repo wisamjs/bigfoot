@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
-import { Ubuntu } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const ubuntu = Ubuntu({
+// Ubuntu, latin subset, shipped in the repo (licence: fonts/UFL.txt) so dev, smoke and
+// build never need to reach Google Fonts.
+const ubuntu = localFont({
   variable: "--font-ubuntu",
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  src: [
+    { path: "./fonts/ubuntu-latin-400.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/ubuntu-latin-500.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/ubuntu-latin-700.woff2", weight: "700", style: "normal" },
+  ],
 });
 
 export const metadata: Metadata = {
