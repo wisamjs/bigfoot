@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 
 export type CurrentUser = {
-  /** Owner id for the job seeker's Applications. */
+  /** Job seeker id: scopes every Application to this job seeker. */
   id: string;
   name: string;
   firstName: string;

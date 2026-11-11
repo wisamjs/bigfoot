@@ -10,7 +10,7 @@ import { findCurrentUser } from "@/lib/dal";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
-async function run(mutate: (ownerId: string) => Promise<unknown>): Promise<ActionResult> {
+async function run(mutate: (jobSeekerId: string) => Promise<unknown>): Promise<ActionResult> {
   const user = await findCurrentUser();
   if (!user) return { ok: false, error: "Your session has ended. Sign in again." };
   try {
@@ -25,13 +25,13 @@ async function run(mutate: (ownerId: string) => Promise<unknown>): Promise<Actio
 }
 
 export async function createApplicationAction(fields: Partial<ApplicationFields>) {
-  return run((owner) => api.createApplication(owner, fields));
+  return run((jobSeekerId) => api.createApplication(jobSeekerId, fields));
 }
 
 export async function updateApplicationAction(id: string, changes: Partial<ApplicationFields>) {
-  return run((owner) => api.updateApplication(owner, id, changes));
+  return run((jobSeekerId) => api.updateApplication(jobSeekerId, id, changes));
 }
 
 export async function deleteApplicationAction(id: string) {
-  return run((owner) => api.deleteApplication(owner, id));
+  return run((jobSeekerId) => api.deleteApplication(jobSeekerId, id));
 }

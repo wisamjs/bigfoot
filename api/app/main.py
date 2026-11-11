@@ -12,7 +12,7 @@ from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 from pydantic import AfterValidator, BaseModel, ConfigDict, model_validator
 
-from app.auth import OwnerId
+from app.auth import JobSeekerId
 from app.domain import NextRound, Round, Stage
 from app.settings import Settings, get_settings
 
@@ -139,18 +139,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {"status": "ok"}
 
     @app.get("/applications")
-    def list_applications(request: Request, owner: OwnerId) -> list[Application]:
+    def list_applications(request: Request, job_seeker: JobSeekerId) -> list[Application]:
         with pool(request).connection() as conn:
             rows = conn.execute(
-                sql.SQL("select {} from applications where owner_id = %s order by created_at").format(COLUMNS),
-                (owner,),
+                sql.SQL("select {} from applications where job_seeker_id = %s order by created_at").format(COLUMNS),
+                (job_seeker,),
             ).fetchall()
         return [Application(**row) for row in rows]
 
     @app.post("/applications", status_code=status.HTTP_201_CREATED)
-    def create_application(request: Request, owner: OwnerId, body: ApplicationCreate) -> Application:
+    def create_application(request: Request, job_seeker: JobSeekerId, body: ApplicationCreate) -> Application:
         values = body.model_dump(exclude_none=True)
-        values["owner_id"] = owner
+        values["job_seeker_id"] = job_seeker
         query = sql.SQL("insert into applications ({}) values ({}) returning {}").format(
             sql.SQL(", ").join(map(sql.Identifier, values)),
             sql.SQL(", ").join(sql.Placeholder() * len(values)),
@@ -162,25 +162,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.patch("/applications/{application_id}")
     def update_application(
-        request: Request, owner: OwnerId, application_id: UUID, body: ApplicationPatch
+        request: Request, job_seeker: JobSeekerId, application_id: UUID, body: ApplicationPatch
     ) -> Application:
         changes = body.model_dump(exclude_unset=True)
         assignments = [sql.SQL("{} = %s").format(sql.Identifier(name)) for name in changes]
         assignments.append(sql.SQL("updated_at = now()"))
-        query = sql.SQL("update applications set {} where id = %s and owner_id = %s returning {}").format(
+        query = sql.SQL("update applications set {} where id = %s and job_seeker_id = %s returning {}").format(
             sql.SQL(", ").join(assignments), COLUMNS
         )
         with pool(request).connection() as conn:
-            row = conn.execute(query, [*changes.values(), application_id, owner]).fetchone()
+            row = conn.execute(query, [*changes.values(), application_id, job_seeker]).fetchone()
         if row is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Application not found")
         return Application(**row)
 
     @app.delete("/applications/{application_id}", status_code=status.HTTP_204_NO_CONTENT)
-    def delete_application(request: Request, owner: OwnerId, application_id: UUID) -> None:
+    def delete_application(request: Request, job_seeker: JobSeekerId, application_id: UUID) -> None:
         with pool(request).connection() as conn:
             deleted = conn.execute(
-                "delete from applications where id = %s and owner_id = %s", (application_id, owner)
+                "delete from applications where id = %s and job_seeker_id = %s", (application_id, job_seeker)
             ).rowcount
         if not deleted:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Application not found")

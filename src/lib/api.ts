@@ -3,7 +3,7 @@ import { SignJWT } from "jose";
 import type { Application, ApplicationFields } from "@/lib/applications";
 
 // Client for the FastAPI service (api/). Every request carries a short-lived token naming the
-// job seeker; FastAPI scopes all reads and writes to that owner (docs/adr/0001).
+// job seeker; FastAPI scopes all reads and writes to that job seeker (docs/adr/0001).
 
 const API_URL = process.env.API_URL ?? "http://localhost:8000";
 
@@ -16,12 +16,12 @@ export class ApiError extends Error {
   }
 }
 
-async function token(ownerId: string) {
+async function token(jobSeekerId: string) {
   const secret = process.env.API_SECRET;
   if (!secret) throw new Error("API_SECRET is not set (see .env.example)");
   return new SignJWT()
     .setProtectedHeader({ alg: "HS256" })
-    .setSubject(ownerId)
+    .setSubject(jobSeekerId)
     .setIssuer("bigfoot-web")
     .setAudience("bigfoot-api")
     .setIssuedAt()
@@ -29,11 +29,11 @@ async function token(ownerId: string) {
     .sign(new TextEncoder().encode(secret));
 }
 
-async function request<T>(ownerId: string, path: string, init: { method?: string; body?: unknown } = {}) {
+async function request<T>(jobSeekerId: string, path: string, init: { method?: string; body?: unknown } = {}) {
   const res = await fetch(`${API_URL}${path}`, {
     method: init.method ?? "GET",
     headers: {
-      authorization: `Bearer ${await token(ownerId)}`,
+      authorization: `Bearer ${await token(jobSeekerId)}`,
       ...(init.body === undefined ? {} : { "content-type": "application/json" }),
     },
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
@@ -74,21 +74,21 @@ async function errorMessage(res: Response) {
   return `Request failed (${res.status})`;
 }
 
-export function listApplications(ownerId: string) {
-  return request<Application[]>(ownerId, "/applications");
+export function listApplications(jobSeekerId: string) {
+  return request<Application[]>(jobSeekerId, "/applications");
 }
 
-export function createApplication(ownerId: string, fields: Partial<ApplicationFields>) {
-  return request<Application>(ownerId, "/applications", { method: "POST", body: fields });
+export function createApplication(jobSeekerId: string, fields: Partial<ApplicationFields>) {
+  return request<Application>(jobSeekerId, "/applications", { method: "POST", body: fields });
 }
 
-export function updateApplication(ownerId: string, id: string, changes: Partial<ApplicationFields>) {
-  return request<Application>(ownerId, `/applications/${encodeURIComponent(id)}`, {
+export function updateApplication(jobSeekerId: string, id: string, changes: Partial<ApplicationFields>) {
+  return request<Application>(jobSeekerId, `/applications/${encodeURIComponent(id)}`, {
     method: "PATCH",
     body: changes,
   });
 }
 
-export function deleteApplication(ownerId: string, id: string) {
-  return request<void>(ownerId, `/applications/${encodeURIComponent(id)}`, { method: "DELETE" });
+export function deleteApplication(jobSeekerId: string, id: string) {
+  return request<void>(jobSeekerId, `/applications/${encodeURIComponent(id)}`, { method: "DELETE" });
 }

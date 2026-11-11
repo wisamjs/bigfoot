@@ -70,7 +70,7 @@ def test_create_trims_text_and_blanks_become_null(client, token):
         {"stage": "saved"},
         {"previous_round": "waiting"},  # Waiting and Scheduled are only for Next round
         {"next_round": "offer"},  # outcomes are Stages, never Rounds
-        {"owner_id": "mallory"},
+        {"job_seeker_id": "mallory"},
     ],
 )
 def test_create_rejects_invalid_fields(client, token, fields):
