@@ -1,0 +1,4 @@
+#!/bin/sh
+# Typecheck, lint and design-token check before every commit.
+# Installed by `npm install` (the "prepare" script sets core.hooksPath).
+exec npm run --silent check

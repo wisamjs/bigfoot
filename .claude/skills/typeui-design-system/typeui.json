@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "source": "workspace-visual-schema",
+  "name": "Candy",
+  "slug": "candy",
+  "project": {
+    "name": "Candy",
+    "logoUrl": null
+  },
+  "importSource": {
+    "type": "manual",
+    "importedAt": "2026-11-10T23:06:15.951Z",
+    "sourceName": "TypeUI design skill: Candy"
+  },
+  "components": [
+    "color",
+    "typography",
+    "layout",
+    "radius",
+    "shadow",
+    "borders",
+    "button",
+    "button-group",
+    "card",
+    "input",
+    "alert",
+    "badge",
+    "list",
+    "avatar",
+    "icon-shape",
+    "accordion",
+    "dropdown",
+    "modal",
+    "tabs",
+    "table",
+    "pagination",
+    "sidebar",
+    "radio",
+    "checkbox",
+    "toggle",
+    "tooltip",
+    "popovers",
+    "content"
+  ]
+}

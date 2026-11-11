@@ -1,0 +1,12 @@
+{
+  "designSystemId": "4923a3f9-249b-44f9-b348-cb665800180e",
+  "installScope": "project",
+  "packageId": "0bc4318c-ef66-481a-9694-ff3a851f771b",
+  "skillFolderName": "typeui-design-system",
+  "slug": "candy",
+  "source": "workspace",
+  "templateSlug": "candy",
+  "type": "typeui-design-system",
+  "variant": "workspace",
+  "workspaceId": "6a66ea31-db78-4679-bd1c-bbb9024fe662"
+}
