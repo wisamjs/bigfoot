@@ -42,7 +42,7 @@ async function Dashboard() {
                 Welcome back, {user.firstName}
               </h1>
               <p className="m-0 text-base leading-[1.7] text-body">
-                Here’s where your search stands this week.
+                Here’s where the hunt stands this week.
               </p>
             </div>
           </div>
@@ -52,7 +52,12 @@ async function Dashboard() {
               <StatCard icon={BriefcaseBusiness} label="Active applications" value={stats.active} />
               <StatCard icon={CalendarCheck} label="Interviewing" value={stats.interviewing} />
               <StatCard icon={MessageSquareReply} label="Response rate" value={`${stats.responseRate}%`} />
-              <StatCard icon={Gift} label="Offers" value={stats.offers} />
+              <StatCard
+                icon={Gift}
+                label="Offers"
+                value={stats.offers}
+                note={stats.offers > 0 ? "You found your Bigfoot." : "Still out there."}
+              />
             </ul>
           </section>
 
@@ -151,7 +156,17 @@ function Avatar({ user }: { user: CurrentUser }) {
   );
 }
 
-function StatCard({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string | number }) {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  note,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string | number;
+  note?: string;
+}) {
   return (
     <li className="card flex items-center gap-4 p-6">
       <span className="icon-shape size-12 shrink-0 rounded-card">
@@ -160,6 +175,7 @@ function StatCard({ icon: Icon, label, value }: { icon: LucideIcon; label: strin
       <div>
         <p className="m-0 text-sm leading-[1.6] text-body">{label}</p>
         <p className="m-0 text-[30px] font-bold leading-[1.25] text-heading">{value}</p>
+        {note && <p className="m-0 text-xs leading-4 text-body">{note}</p>}
       </div>
     </li>
   );

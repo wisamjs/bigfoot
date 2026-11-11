@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Footprints } from "lucide-react";
 
 type Variant = "brand" | "secondary" | "tertiary";
 type Size = "sm" | "md" | "lg" | "xl";
@@ -15,9 +16,14 @@ export function buttonClasses(variant: Variant = "brand", size: Size = "md") {
   return `btn btn-${variant} ${sizes[size]}`;
 }
 
-/** brand.md: no logo set, so use a text mark based on the project name. */
+/** Text mark plus a footprint: job hunting is chasing Bigfoot. Matches src/app/icon.svg. */
 export function Wordmark() {
-  return <span className="text-xl font-bold text-heading">Bigfoot</span>;
+  return (
+    <span className="inline-flex items-center gap-2 text-xl font-bold text-heading">
+      <Footprints className="size-5 text-fg-brand" aria-hidden />
+      Bigfoot
+    </span>
+  );
 }
 
 /** layout.md: max-width 1152px, centered, 24px horizontal padding. */

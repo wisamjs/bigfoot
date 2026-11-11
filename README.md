@@ -1,6 +1,6 @@
 # Bigfoot
 
-A calm job search tracker. Bigfoot keeps every Application in one Pipeline, from the day you apply to the offer on your desk, so nothing lives in a spreadsheet or a forgotten email thread.
+A job search tracker. Job hunting is chasing Bigfoot: Bigfoot keeps every Application in one Pipeline until you find yours, so nothing lives in a spreadsheet or a forgotten email thread.
 
 ![Bigfoot landing page](docs/screenshots/landing.png)
 

@@ -42,7 +42,7 @@ export function Features() {
         <SectionHeader
           id="features-title"
           eyebrow="Features"
-          title="Everything your job search needs, nothing it doesn’t"
+          title="Everything you need for the hunt, nothing you don’t"
           lead="Bigfoot replaces the spreadsheet, the sticky notes and the calendar reminders with one focused workspace."
         />
         <ul className="m-0 grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-2 lg:grid-cols-3">

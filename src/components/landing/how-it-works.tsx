@@ -19,7 +19,7 @@ const steps: { icon: LucideIcon; label: string; title: string; body: string }[] 
     icon: Trophy,
     label: "Decide",
     title: "Compare offers",
-    body: "Put offers side by side on salary, equity and team fit, then accept with confidence.",
+    body: "Put offers side by side on salary, equity and team fit, then say yes to your Bigfoot.",
   },
 ];
 

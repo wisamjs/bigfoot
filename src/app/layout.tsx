@@ -11,7 +11,7 @@ const ubuntu = Ubuntu({
 export const metadata: Metadata = {
   title: "Bigfoot: job application tracker",
   description:
-    "Track every application, interview and follow-up in one pipeline. Bigfoot keeps your job search organised from saved role to signed offer.",
+    "Job hunting is chasing Bigfoot. Track every application, interview and follow-up in one pipeline until you find yours.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

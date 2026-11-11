@@ -28,8 +28,7 @@ export function Footer() {
               <Wordmark />
             </Link>
             <p className="m-0 text-base leading-[1.7] text-body">
-              The calm way to run a job search. Track every application from saved role to signed
-              offer.
+              Job hunting is chasing Bigfoot. Track every application until you find yours.
             </p>
           </div>
           {columns.map((col) => (

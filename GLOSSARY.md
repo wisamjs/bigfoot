@@ -5,8 +5,8 @@ Bigfoot is a job search tracker: it follows each role a job seeker is pursuing f
 ## Language
 
 **Bigfoot**:
-The product itself. Refer to the software by name.
-_Avoid_: the application, the platform
+The product itself. Refer to the software by name. The name comes from the brand idea that job hunting is chasing Bigfoot, and an offer is finding yours. That hunt is a voice for marketing and microcopy only: it never renames a domain term.
+_Avoid_: the application, the platform; hunt words as nouns (sighting, trail, tracks)
 
 **Job seeker**:
 The person running a job search in Bigfoot.

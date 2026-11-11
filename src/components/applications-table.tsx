@@ -436,7 +436,8 @@ export function ApplicationsTable({ applications }: { applications: Application[
         <div className="card flex flex-col items-center gap-4 p-12 text-center">
           <p className="m-0 text-base font-medium text-heading">No applications yet</p>
           <p className="m-0 max-w-[48ch] text-sm text-body">
-            Add the roles you’ve applied to. You can edit every field right here in the table.
+            Bigfoot’s out there somewhere. Add the roles you’ve applied to, then edit every field
+            right here in the table.
           </p>
           <button type="button" onClick={() => setAdding(true)} className={buttonClasses("brand", "md")}>
             <Plus className="size-4" aria-hidden />
