@@ -16,6 +16,8 @@ import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
 const base = process.env.SMOKE_URL ?? "http://localhost:3300";
 const apiBase = process.env.API_URL ?? "http://localhost:8000";
 const LOG = ".next/dev/logs/next-development.log";
+// Generous enough for a first compile in `next dev`; short enough that a hung request fails fast.
+const REQUEST_TIMEOUT_MS = 20_000;
 
 const checks = [
   { path: "/", signedIn: false, expect: (r) => r.status === 200 && r.body.includes("Sign up") },
@@ -38,10 +40,14 @@ async function reachable(url) {
 async function start(url, command, args, options = {}) {
   const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"], ...options });
   let output = "";
+  let exited = false;
   child.stdout.on("data", (d) => (output += d));
   child.stderr.on("data", (d) => (output += d));
+  child.on("exit", () => (exited = true));
   for (let i = 0; i < 120; i++) {
     if (await reachable(url)) return child;
+    // e.g. `next dev` quits at once when another dev server for this project runs on another port.
+    if (exited) throw new Error(`${command} ${args.join(" ")} exited before serving ${url}\n${output}`);
     await new Promise((r) => setTimeout(r, 500));
   }
   child.kill();
@@ -86,11 +92,19 @@ let failed = 0;
 for (const check of checks) {
   const target = check.url ? check.url() : base + check.path;
   const label = `${check.url ? target : check.path} (${check.signedIn ? "signed in" : "signed out"})`;
-  const res = await fetch(target, {
-    headers: check.signedIn ? { cookie } : {},
-    redirect: "manual",
-  });
-  const result = { status: res.status, body: await res.text() };
+  let result;
+  try {
+    const res = await fetch(target, {
+      headers: check.signedIn ? { cookie } : {},
+      redirect: "manual",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    result = { status: res.status, body: await res.text() };
+  } catch (error) {
+    console.error(`✗ ${label}: ${error.name === "TimeoutError" ? `no response in ${REQUEST_TIMEOUT_MS / 1000}s` : error.message}`);
+    failed++;
+    continue;
+  }
   if (check.expect(result)) {
     console.log(`✓ ${label}`);
   } else {

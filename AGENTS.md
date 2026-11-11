@@ -14,6 +14,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - **Domain language**: `GLOSSARY.md`. Use its terms in code, UI copy and tickets.
 - **UI work**: read `.claude/skills/typeui-design-system/` (TypeUI Candy) before writing or restyling components. Token values live only in `src/app/globals.css`.
 - **Verify**: `npm run check` (types, lint, design tokens), then `npm run smoke` with the dev server running (every route, signed in and out; fails on server errors logged to `.next/dev/logs/next-development.log`, which build and lint miss).
-- **Stale dev CSS**: stop `next dev` before `npm run build` (they share `.next/`). If a Tailwind class has no effect in dev (also after edits made outside the editor, e.g. `sed`), restart with `rm -rf .next/dev && npm run dev -- -p 3300` before debugging; `npm run build` output is the authoritative CSS.
+- **Stale dev CSS**: stop `next dev` before `npm run build` (they share `.next/`). If a Tailwind class has no effect in dev (also after edits made outside the editor, e.g. `sed`), restart with `rm -rf .next/dev && npm run dev` before debugging; `npm run build` output is the authoritative CSS.
 - **Signed-in pages without Google**: `node scripts/dev-session.mjs` prints an `authjs.session-token` cookie value for a test user.
 - **TypeUI MCP installs**: results are too large to read; apply the saved result with `python3 scripts/typeui-apply.py <result-file>`.
