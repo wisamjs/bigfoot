@@ -1,6 +1,6 @@
 import { CalendarClock } from "lucide-react";
 import { Badge } from "@/components/ui";
-import { BOARD_STAGES, type Application } from "@/lib/mock-data";
+import { getBoardColumns, ROUND_OPTIONS, STAGE_OPTIONS, type Application } from "@/lib/applications";
 
 type Props = {
   title: string;
@@ -11,10 +11,11 @@ type Props = {
 };
 
 export function PipelineBoard({ title, subtitle, applications, decorative = false }: Props) {
+  const columns = getBoardColumns(applications);
   const a11y = decorative
     ? {
         role: "img" as const,
-        "aria-label": `${title}: pipeline board with ${BOARD_STAGES.join(", ")} columns`,
+        "aria-label": `${title}: pipeline board with ${columns.map((c) => c.label).join(", ")} columns`,
       }
     : {};
 
@@ -28,28 +29,45 @@ export function PipelineBoard({ title, subtitle, applications, decorative = fals
           {subtitle}
         </span>
       </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {BOARD_STAGES.map((stage) => {
-          const jobs = applications.filter((a) => a.stage === stage);
-          return (
-            <section key={stage} aria-label={decorative ? undefined : stage} className="rounded-control bg-surface p-3">
+      {columns.length === 0 ? (
+        <p className="m-0 rounded-control bg-surface p-6 text-center text-sm text-body">
+          Open applications show up here, grouped by their next round.
+        </p>
+      ) : (
+        // Columns wrap onto new rows rather than scrolling sideways, so the later rounds and
+        // Offer are never hidden off-screen.
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-4">
+          {columns.map((column) => (
+            <section
+              key={column.id}
+              aria-label={decorative ? undefined : column.label}
+              className="rounded-control bg-surface p-3"
+            >
               <div className="mb-3 flex items-center justify-between">
-                <span className="text-xs font-medium uppercase tracking-[0.4px] text-body">{stage}</span>
-                <span className="text-xs font-medium text-body">{jobs.length}</span>
+                <span className="text-xs font-medium uppercase tracking-[0.4px] text-body">{column.label}</span>
+                <span className="text-xs font-medium text-body">{column.applications.length}</span>
               </div>
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
-                {jobs.map((job) => (
-                  <li key={job.id} className="rounded-control border border-line bg-card-strong p-3 shadow-xs">
-                    <p className="m-0 text-sm font-medium leading-5 text-heading">{job.company}</p>
-                    <p className="m-0 mb-2 text-xs leading-4 text-body">{job.role}</p>
-                    <Badge tone={job.status.tone}>{job.status.label}</Badge>
-                  </li>
-                ))}
+                {column.applications.map((job) => {
+                  const badge =
+                    job.stage === "offer"
+                      ? STAGE_OPTIONS.offer
+                      : job.previous_round
+                        ? { ...ROUND_OPTIONS[job.previous_round], label: `After ${ROUND_OPTIONS[job.previous_round].label}` }
+                        : null;
+                  return (
+                    <li key={job.id} className="rounded-control border border-line bg-card-strong p-3 shadow-xs">
+                      <p className="m-0 text-sm font-medium leading-5 text-heading">{job.company}</p>
+                      <p className={`m-0 text-xs leading-4 text-body ${badge ? "mb-2" : ""}`}>{job.title}</p>
+                      {badge && <Badge tone={badge.tone}>{badge.label}</Badge>}
+                    </li>
+                  );
+                })}
               </ul>
             </section>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

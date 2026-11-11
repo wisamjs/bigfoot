@@ -12,9 +12,13 @@
     "tokens": "node scripts/check-tokens.mjs",
     "check": "npm run typecheck && npm run lint && npm run tokens",
     "smoke": "node scripts/smoke.mjs",
-    "prepare": "git config core.hooksPath .githooks || true"
+    "prepare": "git config core.hooksPath .githooks || true",
+    "dev:api": "cd api && uv run uvicorn --factory app.main:create_app --port 8000 --reload",
+    "test:api": "cd api && uv run pytest"
   },
   "dependencies": {
+    "@tanstack/react-table": "^9.3.1",
+    "jose": "^6.2.17",
     "lucide-react": "^1.71.0",
     "next": "16.4.6",
     "next-auth": "^5.0.0-beta.32",

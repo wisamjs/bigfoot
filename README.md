@@ -1,6 +1,6 @@
 # Bigfoot
 
-A calm job search tracker. Bigfoot keeps every Application in one Pipeline, from the role you just saved to the offer on your desk, so nothing lives in a spreadsheet or a forgotten email thread.
+A calm job search tracker. Bigfoot keeps every Application in one Pipeline, from the day you apply to the offer on your desk, so nothing lives in a spreadsheet or a forgotten email thread.
 
 ![Bigfoot landing page](docs/screenshots/landing.png)
 
@@ -12,31 +12,34 @@ Bigfoot is an early proof of concept, built as a side project.
 
 - Landing page
 - Sign in with Google
-- A dashboard with stats, the Pipeline board, a table of all Applications and upcoming next steps
+- A dashboard with stats, the Pipeline board (grouped by next round), upcoming rounds, and a table of all your Applications
+- Adding, editing and deleting Applications right in the table: text fields save when you leave them, dropdowns save when you pick a value
 
 **Not built yet**
 
-The dashboard shows the same demo Pipeline to everyone who signs in: there is no database, so nothing you do is saved. These features appear on the landing page but are still planned:
+These features appear on the landing page but are still planned:
 
-- Adding, editing and moving Applications between Stages
+- Moving Applications on the board by drag and drop
 - Interview prep notes
 - Follow-up reminders
 - Contacts and referrals
 - Search analytics
 - One-click capture from a job link
 
-![Bigfoot dashboard with demo data](docs/screenshots/dashboard.png)
+![Bigfoot dashboard](docs/screenshots/dashboard.png)
 
 ## Tech stack
 
 - [Next.js 16](https://nextjs.org) (App Router, Cache Components) and React 19
 - [Auth.js](https://authjs.dev) with Google sign-in and encrypted cookie sessions
 - [Tailwind CSS 4](https://tailwindcss.com), with every design token defined in [`src/app/globals.css`](src/app/globals.css)
-- TypeScript throughout
+- [TanStack Table](https://tanstack.com/table) for the editable Applications table
+- [FastAPI](https://fastapi.tiangolo.com) (Python, in [`api/`](api)) serving Applications from [Supabase](https://supabase.com) Postgres. The browser never calls it: the Next.js server does, with a short-lived token naming the signed-in user ([ADR 0001](docs/adr/0001-fastapi-behind-nextjs-with-authjs.md))
+- TypeScript and Python
 
 ## Run it locally
 
-You need Node.js 24 and a Google account.
+You need Node.js 24, [uv](https://docs.astral.sh/uv/getting-started/installation/), a Google account and a Supabase project.
 
 1. Clone the repo and install dependencies:
 
@@ -44,6 +47,7 @@ You need Node.js 24 and a Google account.
    git clone https://github.com/wisamjs/bigfoot.git
    cd bigfoot
    npm install
+   cd api && uv sync && cd ..
    ```
 
 2. Copy the example environment file:
@@ -64,17 +68,27 @@ You need Node.js 24 and a Google account.
    3. Add `http://localhost:3300/api/auth/callback/google` as an authorized redirect URI.
    4. Paste the client ID and secret into `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` in `.env.local`.
 
-5. Start the dev server on port 3300 (the port the redirect URI expects):
+5. Set up the database:
+   1. Apply [`supabase/migrations`](supabase/migrations) to your Supabase project (SQL editor or `supabase db push`).
+   2. In the Supabase dashboard, click **Connect → Session pooler**, and paste the URI (with your database password) into `DATABASE_URL` in `.env.local`.
+   3. Generate the API secret and paste it into `API_SECRET`:
+
+      ```bash
+      openssl rand -base64 33
+      ```
+
+6. Start the API and the dev server (port 3300 is the one the redirect URI expects), in two terminals:
 
    ```bash
+   npm run dev:api
    npm run dev -- -p 3300
    ```
 
-6. Open [http://localhost:3300](http://localhost:3300) and sign in.
+7. Open [http://localhost:3300](http://localhost:3300) and sign in.
 
 ### Skip Google sign-in
 
-To see the dashboard without setting up Google (step 4), you only need `AUTH_SECRET`. Generate a session cookie for a test user:
+To see the dashboard without setting up Google (step 4), you only need `AUTH_SECRET` (plus the database and API from steps 5 and 6). Generate a session cookie for a test user:
 
 ```bash
 node scripts/dev-session.mjs
@@ -87,16 +101,17 @@ In your browser's developer tools, add a cookie named `authjs.session-token` for
 | Command | What it checks |
 | --- | --- |
 | `npm run check` | Types, lint, and that components use design tokens instead of raw colors and corner radii |
-| `npm run smoke` | Loads every route signed in and signed out against the running dev server, and fails on any server error |
+| `npm run test:api` | API tests (pytest) against the real database, in a throwaway `bigfoot_test` schema rebuilt for every test |
+| `npm run smoke` | Loads every route signed in and signed out against the running dev server and API (starting either if needed), and fails on any server error |
 | `npm run build` | Production build (stop `next dev` first: they share `.next/`) |
 
-[CI](.github/workflows/ci.yml) runs all three on every push and pull request.
+[CI](.github/workflows/ci.yml) runs all four on every push and pull request. It needs a `DATABASE_URL` repository secret.
 
 ## How it was built
 
 Bigfoot was built with AI coding agents working from the project rules in [`AGENTS.md`](AGENTS.md).
 
-[`GLOSSARY.md`](GLOSSARY.md) defines the product's terms (Application, Stage, Pipeline, Next step).
+[`GLOSSARY.md`](GLOSSARY.md) defines the product's terms (Application, Stage, Round, Pipeline).
 
 ## License
 

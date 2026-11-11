@@ -13,21 +13,28 @@ The person running a job search in Bigfoot.
 _Avoid_: candidate, applicant
 
 **Application**:
-One role at one company that the job seeker is pursuing, tracked from the moment it is saved, even before anything is submitted.
+One role at one company that the job seeker has applied to.
 _Avoid_: job, opportunity, lead
 
 **Stage**:
-Where an Application currently sits: Saved, Applied, Interviewing, Offer or Rejected.
+Where an Application currently sits: In Progress, Offer, or one of the Closed stages.
 _Avoid_: status, phase, column
 
+**Closed stage**:
+A Stage that ends an Application without an offer: Rejected, Position Filled, Withdrawn, No Open Position or Not the Right Fit.
+_Avoid_: outcome, archived
+
 **Pipeline**:
-All of a job seeker's Applications, grouped by Stage. Rejected Applications belong to the Pipeline but are not shown on the board.
+All of a job seeker's Applications, grouped by Stage. Applications in a Closed stage belong to the Pipeline but are not shown on the board.
 _Avoid_: board, funnel, tracker
 
-**Next step**:
-The single action the job seeker owes an Application, optionally with a date.
-_Avoid_: task, to-do, reminder
+**Round**:
+One kind of conversation in a company's hiring process: Informal Chat, Recruiter Screen, Hiring Manager, Technical, Behavioural, Leadership or Onsite Loop. An outcome is never a Round.
+_Avoid_: interview stage, step
 
-**Source**:
-Where the job seeker found an Application, such as a referral, a recruiter or LinkedIn.
-_Avoid_: channel, origin
+**Previous round**:
+The most recent Round the job seeker has completed for an Application.
+
+**Next round**:
+What comes next for an Application: a Round, or Scheduled (something is booked but its kind is unknown) or Waiting (the company owes a reply).
+_Avoid_: upcoming interview

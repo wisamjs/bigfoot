@@ -43,6 +43,39 @@
   --fg-warning: #7c2d12;
   --line-warning-subtle: #fed7aa;
 
+  /* Round and Stage colours (badges and dropdowns): background, text, border */
+  --on-brand: #ffffff;
+  --tone-purple: #ede4f7;
+  --tone-purple-fg: #5b2a86;
+  --tone-purple-line: #d6c2ee;
+  --tone-slate: #dfe9ee;
+  --tone-slate-fg: #2f4a57;
+  --tone-slate-line: #bcd2dc;
+  --tone-blue: #dce9fb;
+  --tone-blue-fg: #1e4f9c;
+  --tone-blue-line: #b7d0f5;
+  --tone-green: #e1f3dc;
+  --tone-green-fg: #2f6b23;
+  --tone-green-line: #bfe3b4;
+  --tone-yellow: #fcf1c7;
+  --tone-yellow-fg: #74560a;
+  --tone-yellow-line: #f2dc8a;
+  --tone-orange: #fbdccb;
+  --tone-orange-fg: #8a3a12;
+  --tone-orange-line: #f3bc9c;
+  --tone-red: #9b1c1c;
+  --tone-red-fg: #ffffff;
+  --tone-red-line: #7f1616;
+  --tone-gray: #ececec;
+  --tone-gray-fg: #3f3f46;
+  --tone-gray-line: #d4d4d8;
+
+  /* Danger (errors, destructive actions) */
+  --danger-soft: #fdecec;
+  --fg-danger: #9b1c1c;
+  --line-danger-subtle: #f5c2c2;
+  --line-danger: #c53030;
+
   /* Button glint */
   --color-1-400: rgba(255, 255, 255, 0.3);
   --color-1-700: rgba(79, 17, 53, 0.18);
@@ -89,6 +122,37 @@
     --fg-warning: #fbbf24;
     --line-warning-subtle: #7c2d12;
 
+    --on-brand: #2a0a1d;
+    --tone-purple: #2e1a45;
+    --tone-purple-fg: #d9c2f5;
+    --tone-purple-line: #4a2d6e;
+    --tone-slate: #1c2a31;
+    --tone-slate-fg: #bcd2dc;
+    --tone-slate-line: #2f4a57;
+    --tone-blue: #14284a;
+    --tone-blue-fg: #b7d0f5;
+    --tone-blue-line: #1e4f9c;
+    --tone-green: #15301a;
+    --tone-green-fg: #bfe3b4;
+    --tone-green-line: #2f6b23;
+    --tone-yellow: #3a2e08;
+    --tone-yellow-fg: #f2dc8a;
+    --tone-yellow-line: #74560a;
+    --tone-orange: #3e1d0c;
+    --tone-orange-fg: #f3bc9c;
+    --tone-orange-line: #8a3a12;
+    --tone-red: #b42323;
+    --tone-red-fg: #ffffff;
+    --tone-red-line: #d14545;
+    --tone-gray: #27272a;
+    --tone-gray-fg: #d4d4d8;
+    --tone-gray-line: #3f3f46;
+
+    --danger-soft: #3b0d0d;
+    --fg-danger: #fca5a5;
+    --line-danger-subtle: #7f1d1d;
+    --line-danger: #f87171;
+
     --color-1-400: rgba(255, 255, 255, 0.14);
     --color-1-700: rgba(0, 0, 0, 0.3);
   }
@@ -129,6 +193,37 @@
   --color-warning-soft: var(--warning-soft);
   --color-fg-warning: var(--fg-warning);
   --color-line-warning-subtle: var(--line-warning-subtle);
+
+  --color-on-brand: var(--on-brand);
+  --color-tone-purple: var(--tone-purple);
+  --color-tone-purple-fg: var(--tone-purple-fg);
+  --color-tone-purple-line: var(--tone-purple-line);
+  --color-tone-slate: var(--tone-slate);
+  --color-tone-slate-fg: var(--tone-slate-fg);
+  --color-tone-slate-line: var(--tone-slate-line);
+  --color-tone-blue: var(--tone-blue);
+  --color-tone-blue-fg: var(--tone-blue-fg);
+  --color-tone-blue-line: var(--tone-blue-line);
+  --color-tone-green: var(--tone-green);
+  --color-tone-green-fg: var(--tone-green-fg);
+  --color-tone-green-line: var(--tone-green-line);
+  --color-tone-yellow: var(--tone-yellow);
+  --color-tone-yellow-fg: var(--tone-yellow-fg);
+  --color-tone-yellow-line: var(--tone-yellow-line);
+  --color-tone-orange: var(--tone-orange);
+  --color-tone-orange-fg: var(--tone-orange-fg);
+  --color-tone-orange-line: var(--tone-orange-line);
+  --color-tone-red: var(--tone-red);
+  --color-tone-red-fg: var(--tone-red-fg);
+  --color-tone-red-line: var(--tone-red-line);
+  --color-tone-gray: var(--tone-gray);
+  --color-tone-gray-fg: var(--tone-gray-fg);
+  --color-tone-gray-line: var(--tone-gray-line);
+
+  --color-danger-soft: var(--danger-soft);
+  --color-fg-danger: var(--fg-danger);
+  --color-line-danger-subtle: var(--line-danger-subtle);
+  --color-line-danger: var(--line-danger);
 
   --shadow-xs: var(--shadow-xs);
   --shadow-md: var(--shadow-md);

@@ -5,10 +5,13 @@ import { Suspense } from "react";
 import type { LucideIcon } from "lucide-react";
 import { BriefcaseBusiness, CalendarCheck, CalendarClock, Gift, MessageSquareReply } from "lucide-react";
 import { SignOutButton } from "@/components/auth-button";
+import { ApplicationsTable } from "@/components/applications-table";
+import { LocalTime } from "@/components/local-time";
 import { PipelineBoard } from "@/components/pipeline-board";
-import { Badge, Container, Wordmark } from "@/components/ui";
+import { Container, Wordmark } from "@/components/ui";
+import { listApplications } from "@/lib/api";
+import { getStats, getUpcoming, ROUND_OPTIONS } from "@/lib/applications";
 import { getCurrentUser, type CurrentUser } from "@/lib/dal";
-import { applications, getStats, getUpcoming, type Stage } from "@/lib/mock-data";
 
 export const metadata: Metadata = {
   title: "Dashboard · Bigfoot",
@@ -24,6 +27,7 @@ export default function DashboardPage() {
 
 async function Dashboard() {
   const user = await getCurrentUser();
+  const applications = await listApplications(user.id);
   const stats = getStats(applications);
   const upcoming = getUpcoming(applications);
 
@@ -34,10 +38,7 @@ async function Dashboard() {
         <Container className="flex flex-col gap-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <Badge tone="warning" pill>
-                Demo data
-              </Badge>
-              <h1 className="mt-3 mb-2 text-[32px] font-bold leading-[1.1] text-heading md:text-[40px]">
+              <h1 className="m-0 mb-2 text-[32px] font-bold leading-[1.1] text-heading md:text-[40px]">
                 Welcome back, {user.firstName}
               </h1>
               <p className="m-0 text-base leading-[1.7] text-body">
@@ -55,45 +56,49 @@ async function Dashboard() {
             </ul>
           </section>
 
+          <section aria-labelledby="upcoming-title">
+            <h2 id="upcoming-title" className="m-0 mb-4 text-xl font-bold leading-[1.25] text-heading">
+              Coming up
+            </h2>
+            {upcoming.length === 0 ? (
+              <p className="card m-0 p-6 text-sm text-body">
+                Add a next round date to an application and it shows up here.
+              </p>
+            ) : (
+              <ol className="card m-0 grid list-none grid-cols-1 gap-x-6 gap-y-4 p-6 sm:grid-cols-2 lg:grid-cols-4">
+                {upcoming.map((a) => (
+                  <li key={a.id} className="flex min-w-0 items-start gap-3">
+                    <span className="icon-shape size-8 shrink-0 rounded-control">
+                      <CalendarClock className="size-4" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="m-0 text-sm font-medium leading-5 text-heading">
+                        {a.next_round ? ROUND_OPTIONS[a.next_round].label : "Next round"} · {a.company}
+                      </p>
+                      <p className="m-0 text-sm leading-[1.6] text-body">
+                        <LocalTime iso={a.next_round_at} />
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+
           <section aria-labelledby="pipeline-title">
             <h2 id="pipeline-title" className="sr-only">
               Pipeline
             </h2>
             <PipelineBoard
               title="Pipeline"
-              subtitle={`${upcoming.length} upcoming steps`}
+              subtitle={`${upcoming.length} upcoming ${upcoming.length === 1 ? "round" : "rounds"}`}
               applications={applications}
             />
           </section>
 
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-            <section aria-labelledby="apps-title" className="min-w-0 lg:col-span-2">
-              <h2 id="apps-title" className="m-0 mb-4 text-xl font-bold leading-[1.25] text-heading">
-                All applications
-              </h2>
-              <ApplicationsTable />
-            </section>
-            <section aria-labelledby="upcoming-title">
-              <h2 id="upcoming-title" className="m-0 mb-4 text-xl font-bold leading-[1.25] text-heading">
-                Coming up
-              </h2>
-              <ol className="card m-0 flex list-none flex-col gap-4 p-6">
-                {upcoming.map((a) => (
-                  <li key={a.id} className="flex items-start gap-3">
-                    <span className="icon-shape size-8 shrink-0 rounded-control">
-                      <CalendarClock className="size-4" aria-hidden />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="m-0 text-sm font-medium leading-5 text-heading">{a.nextStep}</p>
-                      <p className="m-0 text-sm leading-[1.6] text-body">
-                        {a.company} · {a.nextStepDate}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </section>
-          </div>
+          <section aria-labelledby="apps-title" className="min-w-0">
+            <ApplicationsTable applications={applications} />
+          </section>
         </Container>
       </main>
     </>
@@ -157,54 +162,6 @@ function StatCard({ icon: Icon, label, value }: { icon: LucideIcon; label: strin
         <p className="m-0 text-[30px] font-bold leading-[1.25] text-heading">{value}</p>
       </div>
     </li>
-  );
-}
-
-const stageTone: Record<Stage, "neutral" | "brand" | "success" | "warning"> = {
-  Saved: "neutral",
-  Applied: "neutral",
-  Interviewing: "brand",
-  Offer: "success",
-  Rejected: "warning",
-};
-
-/** tables.md: 24px wrapper, scrollable, row headers with scope="row", no border on last row. */
-function ApplicationsTable() {
-  return (
-    <div className="overflow-x-auto rounded-card border border-line bg-surface shadow-xs">
-      <table className="w-full min-w-[640px] border-collapse text-left text-sm text-body">
-        <caption className="sr-only">All applications with stage and next step</caption>
-        <thead className="border-b border-line bg-surface">
-          <tr>
-            {["Company", "Role", "Stage", "Applied", "Next step"].map((h) => (
-              <th key={h} scope="col" className="px-6 py-3 font-medium">
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {applications.map((a, i) => (
-            <tr
-              key={a.id}
-              className={`bg-surface-white transition-colors hover:bg-surface ${
-                i < applications.length - 1 ? "border-b border-line" : ""
-              }`}
-            >
-              <th scope="row" className="whitespace-nowrap px-6 py-4 font-medium text-heading">
-                {a.company}
-              </th>
-              <td className="px-6 py-4">{a.role}</td>
-              <td className="px-6 py-4">
-                <Badge tone={stageTone[a.stage]}>{a.stage}</Badge>
-              </td>
-              <td className="whitespace-nowrap px-6 py-4">{a.appliedOn ?? "Not yet"}</td>
-              <td className="px-6 py-4">{a.nextStep}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   );
 }
 

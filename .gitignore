@@ -46,3 +46,8 @@ next-env.d.ts
 
 # Python bytecode
 __pycache__/
+
+# python (api/)
+__pycache__/
+.venv/
+.pytest_cache/

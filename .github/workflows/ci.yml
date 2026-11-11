@@ -9,16 +9,27 @@ jobs:
   check:
     runs-on: ubuntu-latest
     env:
-      # Throwaway secret: only signs the smoke test's fake session.
+      # Throwaway secrets: only sign the smoke test's fake session and its API tokens.
       AUTH_SECRET: ci-smoke-secret-not-used-in-production
+      API_SECRET: ci-api-secret-not-used-in-production
+      # Supabase session-pooler URL. Tests and smoke only touch the bigfoot_test schema.
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
+      - uses: astral-sh/setup-uv@v6
+        with:
+          working-directory: api
       - run: npm ci
       - run: npm run check
+      # Rebuilds the bigfoot_test schema, which smoke then reads.
+      - run: npm run test:api
       # Smoke runs before build: dev and build share .next/.
       - run: npm run smoke
       - run: npm run build
+    concurrency:
+      # Runs share the bigfoot_test schema, so never run two at once.
+      group: bigfoot-test-database

@@ -10,4 +10,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/",
     error: "/",
   },
+  callbacks: {
+    // token.sub is the Google account id: the stable owner of the job seeker's Applications.
+    session({ session, token }) {
+      if (token.sub) session.user.id = token.sub;
+      return session;
+    },
+  },
 });
