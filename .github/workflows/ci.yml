@@ -32,6 +32,11 @@ jobs:
       # Smoke runs before build: dev and build share .next/.
       - run: npm run smoke
         timeout-minutes: 2
+      # axe-core in the runner's preinstalled Chrome, light and dark.
+      - run: npm run a11y
+        timeout-minutes: 3
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
       - run: npm run build
     concurrency:
       # Runs share the bigfoot_test schema, so never run two at once.

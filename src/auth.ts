@@ -5,6 +5,8 @@ import Google from "next-auth/providers/google";
 // and the session cookie is encrypted with AUTH_SECRET (see .env.example).
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [Google],
+  // The Privacy Policy (/privacy, Cookies) says the session cookie expires after 30 days.
+  session: { maxAge: 30 * 24 * 60 * 60 },
   pages: {
     // Send sign-in prompts and auth errors back to the landing page.
     signIn: "/",
