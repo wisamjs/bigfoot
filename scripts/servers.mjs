@@ -1,6 +1,7 @@
 // Reuses the dev server and API if they are running, otherwise starts them and stops them when
 // the process exits. Shared by scripts/smoke.mjs and scripts/a11y.mjs.
-// The API it starts reads the `bigfoot_test` schema (created by `npm run test:api`).
+// The API it starts reads the test schema (TEST_SCHEMA, default `bigfoot_test`), which
+// `npm run test:api` creates.
 import { spawn } from "node:child_process";
 
 export async function reachable(url) {
@@ -53,7 +54,7 @@ function startApi(apiBase) {
   const port = new URL(apiBase).port || "8000";
   return start(`${apiBase}/health`, "uv", ["run", "uvicorn", "--factory", "app.main:create_app", "--port", port], {
     cwd: "api",
-    env: { ...process.env, DB_SCHEMA: process.env.DB_SCHEMA ?? "bigfoot_test" },
+    env: { ...process.env, DB_SCHEMA: process.env.TEST_SCHEMA ?? "bigfoot_test" },
   });
 }
 

@@ -107,8 +107,8 @@ With the dev server and API running, `npm run screenshots` retakes the two scree
 
 | Command | What it checks |
 | --- | --- |
-| `npm run check` | Types, lint, and that components use design tokens instead of raw colors and corner radii |
-| `npm run test:api` | API tests (pytest) against the real database, in a throwaway `bigfoot_test` schema rebuilt for every test |
+| `npm run check` | Types, lint, that components use design tokens instead of raw colours and corner radii, Canadian spelling (cspell), and Vitest |
+| `npm run test:api` | API tests (pytest) against the real database, in a throwaway `bigfoot_test` schema (one per run in CI) rebuilt for every test |
 | `npm run smoke` | Loads every route signed in and signed out against the running dev server and API (starting either if needed), and fails on any server error |
 | `npm run build` | Production build (stop `next dev` first: they share `.next/`) |
 

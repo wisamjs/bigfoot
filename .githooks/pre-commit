@@ -1,4 +1,4 @@
 #!/bin/sh
-# Typecheck, lint, design-token check and Vitest before every commit.
+# Typecheck, lint, design-token check, spelling and Vitest before every commit.
 # Installed by `npm install` (the "prepare" script sets core.hooksPath).
 exec npm run --silent check

@@ -8,14 +8,14 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    # Runs share one concurrency group, so a hung run would block every other run.
     timeout-minutes: 10
     env:
       # Throwaway secrets: only sign the smoke test's fake session and its API tokens.
       AUTH_SECRET: ci-smoke-secret-not-used-in-production
       API_SECRET: ci-api-secret-not-used-in-production
-      # Supabase session-pooler URL. Tests and smoke only touch the bigfoot_test schema.
+      # Supabase session-pooler URL. Tests, smoke and a11y only touch this run's own schema.
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      TEST_SCHEMA: bigfoot_test_${{ github.run_id }}_${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -27,7 +27,7 @@ jobs:
           working-directory: api
       - run: npm ci
       - run: npm run check
-      # Rebuilds the bigfoot_test schema, which smoke then reads.
+      # Builds this run's test schema, which smoke and a11y then read.
       - run: npm run test:api
       # Smoke runs before build: dev and build share .next/.
       - run: npm run smoke
@@ -38,9 +38,10 @@ jobs:
         env:
           CHROME_PATH: /usr/bin/google-chrome
       - run: npm run build
-    concurrency:
-      # Runs share the bigfoot_test schema, so never run two at once.
-      group: bigfoot-test-database
+      - name: Drop this run's test schema
+        if: always()
+        working-directory: api
+        run: uv run python ../scripts/drop-test-schema.py
 
   # Migrations are applied to the dev database by hand after their PR merges (applying
   # earlier breaks main). Goes red on main until every merged migration is applied.

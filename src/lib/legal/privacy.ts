@@ -9,6 +9,23 @@ export const PRIVACY_CHANGES: readonly { date: string; summary: string }[] = [
   { date: "2026-11-11", summary: "First version." },
 ];
 
+/**
+ * Hosting plans the policy's retention periods depend on. Changing a plan changes the policy:
+ * add an entry to PRIVACY_CHANGES too.
+ * - Vercel runtime logs: Hobby 1 hour, Pro 1 day (https://vercel.com/docs/logs/runtime#limits)
+ * - Supabase daily backups: Pro 7 days, Team 14 (https://supabase.com/docs/guides/platform/backups)
+ */
+export const HOSTING_PLANS = { vercel: "hobby", supabase: "pro" } as const;
+
+const LOG_RETENTION = { hobby: "1 hour", pro: "1 day" } as const;
+const BACKUP_RETENTION_DAYS = { pro: 7, team: 14 } as const;
+
+/** How long Vercel keeps server logs, as the policy says it. */
+export const SERVER_LOG_RETENTION = LOG_RETENTION[HOSTING_PLANS.vercel];
+
+/** How many days each daily database backup is kept. */
+export const BACKUP_DAYS = BACKUP_RETENTION_DAYS[HOSTING_PLANS.supabase];
+
 /** Where job seekers send privacy questions and requests. */
 export const PRIVACY_CONTACT_EMAIL = "wisamzaghal@gmail.com";
 

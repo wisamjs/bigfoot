@@ -20,11 +20,11 @@ export function readAuthSecret() {
   throw new Error("AUTH_SECRET not found in the environment or .env.local");
 }
 
-export async function createTestSession() {
+export async function createTestSession(jobSeekerId = TEST_JOB_SEEKER_ID) {
   return encode({
     secret: readAuthSecret(),
     salt: SESSION_COOKIE,
-    token: { name: "Test User", email: "test.user@example.test", picture: null, sub: TEST_JOB_SEEKER_ID },
+    token: { name: "Test User", email: "test.user@example.test", picture: null, sub: jobSeekerId },
   });
 }
 

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Retakes the README screenshots in docs/screenshots/ from the running dev server and API:
 //   landing.png    signed out, 1440×990 viewport at 2x
-//   dashboard.png  signed in as the dev-session test user, full page at 1440px wide and 2x,
-//                  filled with scripts/dev-applications.mjs and emptied again afterwards
+//   dashboard.png  signed in as its own screenshot user, full page at 1440px wide and 2x,
+//                  filled with scripts/dev-applications.mjs and emptied again afterwards.
+//                  The dev-session test user's Applications are never touched.
 // Uses headless Chrome from scripts/chrome.mjs (CHROME_PATH, default: macOS Google Chrome).
 // Needs the dev server at SCREENSHOT_URL (default http://localhost:3300) and the API at
 // API_URL (default http://localhost:8000).
@@ -14,6 +15,8 @@ import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
 const base = process.env.SCREENSHOT_URL ?? "http://localhost:3300";
 const WIDTH = 1440;
 const HEIGHT = 990;
+// Not the dev-session test user, so whatever that user has stays as it was.
+const SCREENSHOT_JOB_SEEKER_ID = "screenshot-user";
 
 /** Captures `path` into `out`, failing instead of saving an error page when `expect` is missing. */
 async function screenshot(chrome, path, out, { expect, fullPage = false }) {
@@ -52,12 +55,19 @@ try {
 
   await screenshot(chrome, "/", "docs/screenshots/landing.png", { expect: "Sign up" });
 
-  await addTestApplications();
+  // Clear anything a crashed run left, then fill before the first dashboard visit, so onboarding
+  // finds Applications and never adds Sample Applications.
+  await removeTestApplications(SCREENSHOT_JOB_SEEKER_ID);
+  await addTestApplications(SCREENSHOT_JOB_SEEKER_ID);
   added = true;
-  await chrome.send("Network.setCookie", { name: SESSION_COOKIE, value: await createTestSession(), url: base });
+  await chrome.send("Network.setCookie", {
+    name: SESSION_COOKIE,
+    value: await createTestSession(SCREENSHOT_JOB_SEEKER_ID),
+    url: base,
+  });
   await screenshot(chrome, "/dashboard", "docs/screenshots/dashboard.png", { expect: "All applications", fullPage: true });
 } finally {
-  // Empty the test user first, so a failure closing Chrome never leaves Applications behind.
-  if (added) await removeTestApplications();
+  // Empty the screenshot user first, so a failure closing Chrome never leaves Applications behind.
+  if (added) await removeTestApplications(SCREENSHOT_JOB_SEEKER_ID);
   await chrome.close();
 }

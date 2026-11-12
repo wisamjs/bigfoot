@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Accessibility check: loads each page in headless Chrome, in light and dark colour schemes,
+// Accessibility check: loads each page in scripts/pages.mjs in headless Chrome, in light and dark colour schemes,
 // runs axe-core's WCAG 2.2 A and AA rules, and fails on any violation.
 // Reuses or starts the dev server (A11Y_URL, default http://localhost:3300) and the API
 // (API_URL, default http://localhost:8000) like smoke does. CHROME_PATH picks Chrome.
@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { launchChrome, sleep } from "./chrome.mjs";
 import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
+import { PAGES } from "./pages.mjs";
 import { ensureServers } from "./servers.mjs";
 
 const base = process.env.A11Y_URL ?? "http://localhost:3300";
@@ -14,11 +15,8 @@ const apiBase = process.env.API_URL ?? "http://localhost:8000";
 const AXE_SOURCE = readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.min.js"), "utf8");
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag22aa"];
 
-const pages = [
-  { path: "/", signedIn: false, expect: "Sign up" },
-  { path: "/privacy", signedIn: false, expect: "Privacy Policy" },
-  { path: "/dashboard", signedIn: true, expect: "All applications" },
-];
+// Every page that renders (not redirects), signed out and signed in.
+const pages = PAGES.filter((page) => !page.redirect);
 
 /** axe violations on `path`, one line per failing element. */
 async function violations(chrome, path, expect) {
