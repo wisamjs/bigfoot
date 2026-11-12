@@ -74,6 +74,11 @@ async function errorMessage(res: Response) {
   return `Request failed (${res.status})`;
 }
 
+/** Records the job seeker; the first time only, gives them Sample Applications. Idempotent. */
+export function onboard(jobSeekerId: string) {
+  return request<{ samples_seeded: boolean }>(jobSeekerId, "/me/onboard", { method: "POST" });
+}
+
 export function listApplications(jobSeekerId: string) {
   return request<Application[]>(jobSeekerId, "/applications");
 }

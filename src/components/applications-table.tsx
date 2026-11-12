@@ -27,7 +27,7 @@ import {
 } from "@/app/dashboard/actions";
 import { useIsClient } from "@/components/local-time";
 import { Modal } from "@/components/modal";
-import { buttonClasses, toneClasses, type Tone } from "@/components/ui";
+import { buttonClasses, SampleBadge, toneClasses, type Tone } from "@/components/ui";
 import {
   isClosed,
   NEXT_ROUNDS,
@@ -275,7 +275,15 @@ const columns = helper.columns([
   helper.accessor("company", {
     header: "Company",
     sortFn: "text",
-    cell: ({ row }) => <TextCell app={row.original} field="company" label="Company" required />,
+    cell: ({ row }) =>
+      row.original.is_sample ? (
+        <div className="flex items-center gap-1 [&>input]:min-w-0">
+          <TextCell app={row.original} field="company" label="Company" required />
+          <SampleBadge />
+        </div>
+      ) : (
+        <TextCell app={row.original} field="company" label="Company" required />
+      ),
   }),
   helper.accessor("title", {
     header: "Title",
@@ -343,7 +351,7 @@ const columns = helper.columns([
 ]);
 
 const columnWidths: Record<string, string> = {
-  company: "min-w-40",
+  company: "min-w-64",
   title: "min-w-48",
   next_round_at: "min-w-52",
   applied_on: "min-w-40",
