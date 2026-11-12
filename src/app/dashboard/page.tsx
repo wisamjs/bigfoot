@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import type { LucideIcon } from "lucide-react";
 import { BriefcaseBusiness, CalendarCheck, CalendarClock, Gift, MessageSquareReply } from "lucide-react";
+import { AppFooter } from "@/components/app-footer";
 import { SignOutButton } from "@/components/auth-button";
 import { ApplicationsTable } from "@/components/applications-table";
 import { LocalTime } from "@/components/local-time";
@@ -107,6 +108,7 @@ async function Dashboard() {
           </section>
         </Container>
       </main>
+      <AppFooter />
     </>
   );
 }

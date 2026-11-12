@@ -151,7 +151,7 @@ function NextRoundAtCell({ app }: { app: Application }) {
       <button
         type="button"
         onClick={() => setEditing(true)}
-        aria-label={`Add next round date, ${app.company}`}
+        aria-label={`Add date of next round, ${app.company}`}
         className={`${cellInput} text-left text-body-subtle hover:text-heading`}
       >
         Add date
