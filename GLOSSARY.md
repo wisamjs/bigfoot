@@ -21,7 +21,6 @@ _Avoid_: job, opportunity, lead
 
 **Sample Application**:
 An Application that Bigfoot creates for a new job seeker, to show how Bigfoot works before they add their own. A job seeker receives sample Applications once. They can be edited or deleted like any other Application, and are always marked as samples.
-_Planned_: the whole term ([BIG-2](https://linear.app/wisamz/issue/BIG-2))
 _Avoid_: demo, example, placeholder, seed data
 
 **Stage**:

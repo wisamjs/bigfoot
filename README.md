@@ -13,6 +13,7 @@ Bigfoot is an early proof of concept, built as a side project.
 - Landing page
 - Sign in with Google
 - A dashboard with stats, the Pipeline board (grouped by next round), upcoming rounds, and a table of all your Applications
+- A few Sample Applications for new job seekers, so the dashboard shows how Bigfoot works before they add their own
 - Adding, editing and deleting Applications right in the table: text fields save when you leave them, dropdowns save when you pick a value
 
 **Not built yet**
@@ -96,7 +97,7 @@ node scripts/dev-session.mjs
 
 In your browser's developer tools, add a cookie named `authjs.session-token` for `localhost` with that value, then open [http://localhost:3300/dashboard](http://localhost:3300/dashboard).
 
-The test user starts with no Applications. To fill their dashboard, run `node scripts/dev-applications.mjs add` (and `remove` to empty it again).
+Like any new job seeker, the test user receives Sample Applications the first time they open the dashboard. For a fuller dashboard, run `node scripts/dev-applications.mjs remove` and then `add` (and `remove` again to empty it).
 
 ### Retake the screenshots
 

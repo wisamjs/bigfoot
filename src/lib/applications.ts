@@ -44,12 +44,14 @@ export type Application = {
   next_round: NextRound | null;
   /** ISO timestamp */
   next_round_at: string | null;
+  /** A Sample Application Bigfoot created for a new job seeker; stays marked after edits. */
+  is_sample: boolean;
   created_at: string;
   updated_at: string;
 };
 
 /** Fields the job seeker can edit. */
-export type ApplicationFields = Omit<Application, "id" | "created_at" | "updated_at">;
+export type ApplicationFields = Omit<Application, "id" | "is_sample" | "created_at" | "updated_at">;
 
 type Option = { label: string; tone: Tone };
 

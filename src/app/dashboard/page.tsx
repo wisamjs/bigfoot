@@ -9,7 +9,7 @@ import { ApplicationsTable } from "@/components/applications-table";
 import { LocalTime } from "@/components/local-time";
 import { PipelineBoard } from "@/components/pipeline-board";
 import { Container, Wordmark } from "@/components/ui";
-import { listApplications } from "@/lib/api";
+import { listApplications, onboard } from "@/lib/api";
 import { getStats, getUpcoming, ROUND_OPTIONS } from "@/lib/applications";
 import { getCurrentUser, type CurrentUser } from "@/lib/dal";
 
@@ -27,6 +27,7 @@ export default function DashboardPage() {
 
 async function Dashboard() {
   const user = await getCurrentUser();
+  await onboard(user.id);
   const applications = await listApplications(user.id);
   const stats = getStats(applications);
   const upcoming = getUpcoming(applications);

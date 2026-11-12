@@ -1,5 +1,5 @@
 import { CalendarClock } from "lucide-react";
-import { Badge } from "@/components/ui";
+import { Badge, SampleBadge } from "@/components/ui";
 import { getBoardColumns, ROUND_OPTIONS, STAGE_OPTIONS, type Application } from "@/lib/applications";
 
 type Props = {
@@ -57,7 +57,10 @@ export function PipelineBoard({ title, subtitle, applications, decorative = fals
                         : null;
                   return (
                     <li key={job.id} className="rounded-control border border-line bg-card-strong p-3 shadow-xs">
-                      <p className="m-0 text-sm font-medium leading-5 text-heading">{job.company}</p>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="m-0 min-w-0 text-sm font-medium leading-5 text-heading">{job.company}</p>
+                        {job.is_sample && <SampleBadge />}
+                      </div>
                       <p className={`m-0 text-xs leading-4 text-body ${badge ? "mb-2" : ""}`}>{job.title}</p>
                       {badge && <Badge tone={badge.tone}>{badge.label}</Badge>}
                     </li>

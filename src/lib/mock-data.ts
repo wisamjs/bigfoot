@@ -1,4 +1,4 @@
-// Sample Applications for the landing-page preview. The dashboard reads real data from the API.
+// Made-up Applications for the landing-page preview. The dashboard reads real data from the API.
 import type { Application } from "@/lib/applications";
 
 function sample(
@@ -12,6 +12,7 @@ function sample(
     salary: null,
     applied_on: "2026-11-01",
     next_round_at: null,
+    is_sample: false,
     created_at: "2026-11-01T00:00:00Z",
     updated_at: "2026-11-01T00:00:00Z",
     ...fields,

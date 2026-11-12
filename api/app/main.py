@@ -2,7 +2,7 @@
 
 import re
 from contextlib import asynccontextmanager
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -14,6 +14,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, model_validator
 
 from app.auth import JobSeekerId
 from app.domain import NextRound, Round, Stage
+from app.samples import sample_applications
 from app.settings import Settings, get_settings
 
 URL_PATTERN = re.compile(r"^https?://\S+$", re.IGNORECASE)
@@ -94,8 +95,13 @@ class Application(BaseModel):
     previous_round: Round | None
     next_round: NextRound | None
     next_round_at: datetime | None
+    is_sample: bool
     created_at: datetime
     updated_at: datetime
+
+
+class Onboarding(BaseModel):
+    samples_seeded: bool
 
 
 COLUMNS = sql.SQL(", ").join(sql.Identifier(name) for name in Application.model_fields)
@@ -138,11 +144,48 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.post("/me/onboard")
+    def onboard(request: Request, job_seeker: JobSeekerId) -> Onboarding:
+        """Record the job seeker, and give them Sample Applications the first time only.
+
+        Idempotent, and safe to call concurrently: the insert waits on any other transaction
+        inserting the same job seeker, and `for update` serialises the seeding check.
+        """
+        with pool(request).connection() as conn, conn.transaction():
+            conn.execute(
+                "insert into job_seekers (job_seeker_id) values (%s) on conflict (job_seeker_id) do nothing",
+                (job_seeker,),
+            )
+            row = conn.execute(
+                "select samples_seeded_at from job_seekers where job_seeker_id = %s for update", (job_seeker,)
+            ).fetchone()
+            conn.execute("update job_seekers set last_seen_at = now() where job_seeker_id = %s", (job_seeker,))
+            if row["samples_seeded_at"] is not None:
+                return Onboarding(samples_seeded=False)
+            # A job seeker who already has Applications never needs samples.
+            has_applications = conn.execute(
+                "select exists (select 1 from applications where job_seeker_id = %s)", (job_seeker,)
+            ).fetchone()["exists"]
+            if not has_applications:
+                for sample in sample_applications(datetime.now(UTC)):
+                    values = {**sample, "job_seeker_id": job_seeker, "is_sample": True}
+                    conn.execute(
+                        sql.SQL("insert into applications ({}) values ({})").format(
+                            sql.SQL(", ").join(map(sql.Identifier, values)),
+                            sql.SQL(", ").join(sql.Placeholder() * len(values)),
+                        ),
+                        list(values.values()),
+                    )
+            conn.execute(
+                "update job_seekers set samples_seeded_at = now() where job_seeker_id = %s", (job_seeker,)
+            )
+        return Onboarding(samples_seeded=not has_applications)
+
     @app.get("/applications")
     def list_applications(request: Request, job_seeker: JobSeekerId) -> list[Application]:
         with pool(request).connection() as conn:
             rows = conn.execute(
-                sql.SQL("select {} from applications where job_seeker_id = %s order by created_at").format(COLUMNS),
+                sql.SQL("select {} from applications where job_seeker_id = %s order by created_at, id").format(COLUMNS),
                 (job_seeker,),
             ).fetchall()
         return [Application(**row) for row in rows]
