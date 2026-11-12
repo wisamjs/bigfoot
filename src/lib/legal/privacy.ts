@@ -2,10 +2,15 @@
 // reused (e.g. a dashboard notice when the policy changes).
 
 /** The date the current version of the policy takes effect (ISO yyyy-mm-dd). */
-export const PRIVACY_EFFECTIVE_DATE = "2026-11-11";
+export const PRIVACY_EFFECTIVE_DATE = "2026-11-12";
 
 /** Newest first. The first entry's date must equal PRIVACY_EFFECTIVE_DATE. */
 export const PRIVACY_CHANGES: readonly { date: string; summary: string }[] = [
+  {
+    date: "2026-11-12",
+    summary:
+      "You can delete your account yourself on your Account page, instead of emailing us. We keep a record of each account deletion, without your Google account id.",
+  },
   { date: "2026-11-11", summary: "First version." },
 ];
 

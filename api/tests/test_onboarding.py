@@ -81,8 +81,9 @@ def test_job_seekers_with_applications_are_never_seeded(client, token):
 def test_job_seekers_from_before_the_migration_are_never_seeded(settings, client, token):
     """The migration records everyone who already has Applications as seeded, so deleting
     them all afterwards doesn't bring samples."""
-    *earlier, job_seekers_migration = sorted(MIGRATIONS.glob("*.sql"))
-    assert job_seekers_migration.stem.endswith("create_job_seekers")
+    migrations = sorted(MIGRATIONS.glob("*.sql"))
+    at = next(i for i, m in enumerate(migrations) if m.stem.endswith("create_job_seekers"))
+    earlier, job_seekers_migration, later = migrations[:at], migrations[at], migrations[at + 1 :]
     schema = sql.Identifier(TEST_SCHEMA)
     with psycopg.connect(settings.database_url, prepare_threshold=None, autocommit=True) as conn:
         conn.execute(sql.SQL("drop schema {} cascade").format(schema))
@@ -92,6 +93,8 @@ def test_job_seekers_from_before_the_migration_are_never_seeded(settings, client
             conn.execute(migration.read_text())
         conn.execute("insert into applications (job_seeker_id, company, title) values ('carol', 'Ramp', 'Engineer')")
         conn.execute(job_seekers_migration.read_text())
+        for migration in later:
+            conn.execute(migration.read_text())
         conn.execute("delete from applications")
 
     assert onboard(client, token("carol")) == {"samples_seeded": False}

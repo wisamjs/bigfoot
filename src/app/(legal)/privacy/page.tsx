@@ -75,8 +75,9 @@ export default function PrivacyPage() {
             A few service providers help us run Bigfoot. Your data is stored in the United States.
           </li>
           <li>
-            You can edit or delete any Application in your dashboard. To get a copy of your data or
-            delete your account, email us.
+            You can edit or delete any Application in your dashboard, and delete your account
+            yourself on your <A href="/account">Account page</A>. To get a copy of your data, email
+            us.
           </li>
         </ul>
       </section>
@@ -243,6 +244,12 @@ export default function PrivacyPage() {
             <strong>Server logs:</strong> up to {SERVER_LOG_RETENTION}.
           </li>
           <li>
+            <strong>Account deletions:</strong> when you delete your account, we record that an
+            account was deleted and when. The record holds a one-way hash of your Google account id,
+            not the id itself, and nothing else about you. We keep it while Bigfoot runs, so we can
+            show we honoured your request.
+          </li>
+          <li>
             <strong>Emails you send us:</strong> as long as we need them to answer you, and up to 2
             years for privacy requests and complaints, so we can show how we handled them.
           </li>
@@ -269,13 +276,13 @@ export default function PrivacyPage() {
             again.
           </li>
           <li>
-            <strong>Delete it.</strong> Delete any Application in your dashboard. To delete your
-            account, email us. Deleting your account removes you and all of your Applications.
+            <strong>Delete it.</strong> Delete any Application in your dashboard. Delete your
+            account on your <A href="/account">Account page</A>: it removes you and all of your
+            Applications straight away, and signs you out.
           </li>
           <li>
-            <strong>Withdraw consent.</strong> Sign out and ask us to delete your account. You can
-            also remove
-            Bigfoot’s access in your{" "}
+            <strong>Withdraw consent.</strong> Delete your account on your{" "}
+            <A href="/account">Account page</A>. You can also remove Bigfoot’s access in your{" "}
             <A href={GOOGLE_THIRD_PARTY_ACCESS}>Google account’s third-party connections</A>.
           </li>
         </ul>

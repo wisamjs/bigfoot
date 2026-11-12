@@ -1,0 +1,72 @@
+import Image from "next/image";
+import Link from "next/link";
+import { SignOutButton } from "@/components/auth-button";
+import { Container, Wordmark } from "@/components/ui";
+import type { CurrentUser } from "@/lib/dal";
+
+const links = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/account", label: "Account" },
+] as const;
+
+/** Header for signed-in pages: who is signed in, the signed-in pages, and Sign out. */
+export function AppHeader({ user, current }: { user: CurrentUser; current: (typeof links)[number]["href"] }) {
+  return (
+    <header className="sticky top-0 z-50 border-b border-line bg-surface/80 backdrop-blur-md supports-[not(backdrop-filter:blur(0))]:bg-surface">
+      <Container className="flex h-[72px] items-center justify-between gap-4">
+        <Link href="/" aria-label="Bigfoot home" className="rounded-control">
+          <Wordmark />
+        </Link>
+        <div className="flex items-center gap-4">
+          <div className="hidden items-center gap-2.5 md:flex">
+            <Avatar user={user} />
+            <div className="leading-tight">
+              <p className="m-0 text-sm font-medium text-heading">{user.name}</p>
+              <p className="m-0 text-xs text-body">{user.email}</p>
+            </div>
+          </div>
+          <nav aria-label="Signed in">
+            <ul className="m-0 flex list-none items-center gap-2 p-0">
+              {links.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    aria-current={link.href === current ? "page" : undefined}
+                    className="rounded-control px-3 py-2 text-sm font-medium text-body transition-colors hover:text-heading aria-[current=page]:text-heading aria-[current=page]:underline aria-[current=page]:underline-offset-4"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <SignOutButton />
+        </div>
+      </Container>
+    </header>
+  );
+}
+
+/** avatars.md: base size 32px, circular, cover fit; initials when Google has no photo. */
+export function Avatar({ user }: { user: CurrentUser }) {
+  if (user.image) {
+    return (
+      <Image
+        src={user.image}
+        alt=""
+        width={32}
+        height={32}
+        className="size-8 rounded-full object-cover"
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden
+      className="grid size-8 place-items-center rounded-full bg-brand-soft text-xs font-medium text-fg-brand-strong"
+    >
+      {user.firstName.slice(0, 1).toUpperCase()}
+    </span>
+  );
+}
