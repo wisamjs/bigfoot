@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Smoke test: request every route, signed out and signed in, then fail on any server error
+// Smoke test: request every page in scripts/pages.mjs, plus the auth and API endpoints below,
+// then fail on any server error
 // logged while serving them. Catches request-time render errors that build and lint miss
 // (e.g. Cache Components prerender errors, which are logged by the dev server, not returned
 // in the response).
@@ -7,10 +8,11 @@
 // Reuses the running dev server (Next allows one per project) at SMOKE_URL
 // (default http://localhost:3300); otherwise starts `next dev` on that port and stops it after.
 // Likewise reuses the API at API_URL (default http://localhost:8000), or starts it against the
-// `bigfoot_test` schema (created by `npm run test:api`) and stops it after.
+// test schema (TEST_SCHEMA, default `bigfoot_test`, created by `npm run test:api`) and stops it after.
 // Server errors are read from .next/dev/logs/next-development.log, which every dev server writes.
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
+import { PAGES } from "./pages.mjs";
 import { ensureServers } from "./servers.mjs";
 
 const base = process.env.SMOKE_URL ?? "http://localhost:3300";
@@ -20,11 +22,12 @@ const LOG = ".next/dev/logs/next-development.log";
 const REQUEST_TIMEOUT_MS = 20_000;
 
 const checks = [
-  { path: "/", signedIn: false, expect: (r) => r.status === 200 && r.body.includes("Sign up") },
-  { path: "/privacy", signedIn: false, expect: (r) => r.status === 200 && r.body.includes("Privacy Policy") },
-  { path: "/privacy", signedIn: true, expect: (r) => r.status === 200 && r.body.includes("Privacy Policy") },
-  { path: "/dashboard", signedIn: false, expect: (r) => r.body.includes("NEXT_REDIRECT") },
-  { path: "/dashboard", signedIn: true, expect: (r) => r.status === 200 && r.body.includes("All applications") },
+  ...PAGES.map((page) => ({
+    ...page,
+    expect: page.redirect
+      ? (r) => r.body.includes("NEXT_REDIRECT")
+      : (r) => r.status === 200 && r.body.includes(page.expect),
+  })),
   { path: "/api/auth/providers", signedIn: false, expect: (r) => r.status === 200 && r.body.includes('"google"') },
   // The API rejects requests without a token from the Next.js server.
   { url: () => `${apiBase}/applications`, signedIn: false, expect: (r) => r.status === 401 },

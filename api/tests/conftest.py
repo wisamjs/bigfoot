@@ -1,6 +1,8 @@
-"""Tests run against the real Supabase Postgres, in a throwaway `bigfoot_test` schema
-rebuilt from supabase/migrations before each test."""
+"""Tests run against the real Supabase Postgres, in a throwaway schema (`bigfoot_test`, or
+TEST_SCHEMA) rebuilt from supabase/migrations before each test."""
 
+import os
+import re
 import time
 from collections.abc import Iterator
 from dataclasses import replace
@@ -16,7 +18,10 @@ from app.auth import AUDIENCE, ISSUER
 from app.main import create_app
 from app.settings import Settings, get_settings
 
-TEST_SCHEMA = "bigfoot_test"
+# CI gives each run its own schema (bigfoot_test_<run id>), so runs never share one.
+TEST_SCHEMA = os.environ.get("TEST_SCHEMA", "bigfoot_test")
+if not re.fullmatch(r"bigfoot_test[a-z0-9_]*", TEST_SCHEMA):
+    raise RuntimeError(f"TEST_SCHEMA must start with bigfoot_test, got {TEST_SCHEMA!r}")
 MIGRATIONS = Path(__file__).resolve().parents[2] / "supabase" / "migrations"
 
 

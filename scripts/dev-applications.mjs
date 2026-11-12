@@ -22,10 +22,10 @@ function readApiSecret() {
 }
 
 // Same token the Next.js server sends (src/lib/api.ts).
-async function token() {
+async function token(jobSeekerId) {
   return new SignJWT()
     .setProtectedHeader({ alg: "HS256" })
-    .setSubject(TEST_JOB_SEEKER_ID)
+    .setSubject(jobSeekerId)
     .setIssuer("bigfoot-web")
     .setAudience("bigfoot-api")
     .setIssuedAt()
@@ -33,11 +33,11 @@ async function token() {
     .sign(new TextEncoder().encode(readApiSecret()));
 }
 
-async function call(method, path, body) {
+async function call(jobSeekerId, method, path, body) {
   const res = await fetch(`${apiBase}${path}`, {
     method,
     headers: {
-      authorization: `Bearer ${await token()}`,
+      authorization: `Bearer ${await token(jobSeekerId)}`,
       ...(body ? { "content-type": "application/json" } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
@@ -70,20 +70,20 @@ function applications() {
   ].map((a) => ({ applied_on, ...a }));
 }
 
-export async function addTestApplications() {
-  const existing = await call("GET", "/applications");
+export async function addTestApplications(jobSeekerId = TEST_JOB_SEEKER_ID) {
+  const existing = await call(jobSeekerId, "GET", "/applications");
   if (existing.length) {
     throw new Error(
       `The test user already has ${existing.length} Applications. ` +
         "Run `node scripts/dev-applications.mjs remove` first if they can go.",
     );
   }
-  for (const a of applications()) await call("POST", "/applications", a);
+  for (const a of applications()) await call(jobSeekerId, "POST", "/applications", a);
 }
 
-export async function removeTestApplications() {
-  const existing = await call("GET", "/applications");
-  for (const a of existing) await call("DELETE", `/applications/${a.id}`);
+export async function removeTestApplications(jobSeekerId = TEST_JOB_SEEKER_ID) {
+  const existing = await call(jobSeekerId, "GET", "/applications");
+  for (const a of existing) await call(jobSeekerId, "DELETE", `/applications/${a.id}`);
   return existing.length;
 }
 

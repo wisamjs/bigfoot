@@ -10,11 +10,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Bigfoot
 
-- **Tickets**: before starting a Linear `BIG-n` ticket, fetch it with its relations; every "blocked by" ticket must be Done, otherwise stop and name the blockers. Work on the ticket's Linear branch name (`wisamzaghal/big-n-…`); commit and PR titles end with `(BIG-n)`. A finished ticket ends with a pushed branch and a PR whose body starts `Closes BIG-n`; share the PR URL.
+- **Tickets**: before starting a Linear `BIG-n` ticket, fetch it with its relations; every "blocked by" ticket must be Done, otherwise stop and name the blockers. Branch, commit titles and PR name the ticket as `scripts/check-pr-naming.mjs` requires (CI runs it). A finished ticket ends with a pushed branch and a PR; share the PR URL.
+- **Review**: `CODING_STANDARDS.md`.
 - **Domain language**: `GLOSSARY.md`. Use its terms in code, UI copy and tickets.
-- **Spelling**: Canadian English (behaviour, colour, centre, licence as a noun) in code, UI copy, docs and tickets. A quoted legal or product term keeps its source's spelling.
+- **Spelling**: Canadian English everywhere, tickets included; cspell in `npm run check` enforces it in the repo. Words and quoted US-spelled terms go in `cspell.json`.
 - **UI work**: read `.claude/skills/typeui-design-system/` (TypeUI Candy) before writing or restyling components. Token values live only in `src/app/globals.css`.
-- **Verify**: `npm run check` (types, lint, design tokens, Vitest), then `npm run smoke` (every route, signed in and out; fails on server errors logged to `.next/dev/logs/next-development.log`, which build and lint miss), then `npm run a11y` (axe-core WCAG 2.2 AA in headless Chrome, light and dark; add new pages to its list). Smoke and a11y reuse running servers; CI starts them cold, so when smoke is slow or flaky, read the CI run (`gh run list`) too.
+- **Verify**: `npm run check` (types, lint, design tokens, spelling, Vitest), then `npm run smoke` (every page in `scripts/pages.mjs`, signed in and out; fails on server errors logged to `.next/dev/logs/next-development.log`, which build and lint miss), then `npm run a11y` (axe-core WCAG 2.2 AA on the same pages, light and dark). Smoke and a11y reuse running servers; CI starts them cold, so when smoke is slow or flaky, read the CI run (`gh run list`) too.
 - **Migrations**: apply a merged migration to the dev database (`npm run db:status` lists what's missing and how); CI on main stays red until you do.
 - **Stale dev CSS**: stop `next dev` before `npm run build` (they share `.next/`). If a Tailwind class has no effect in dev (also after edits made outside the editor, e.g. `sed`), restart with `rm -rf .next/dev && npm run dev` before debugging; `npm run build` output is the authoritative CSS.
 - **Signed-in pages without Google**: `node scripts/dev-session.mjs` prints an `authjs.session-token` cookie value for a test user; `node scripts/dev-applications.mjs add|remove` fills or empties their dashboard. `npm run screenshots` retakes the README screenshots.

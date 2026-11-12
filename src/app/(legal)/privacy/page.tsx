@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
+  BACKUP_DAYS,
   formatPolicyDate,
   PRIVACY_CHANGES,
   PRIVACY_CONTACT_EMAIL,
   PRIVACY_EFFECTIVE_DATE,
+  SERVER_LOG_RETENTION,
 } from "@/lib/legal/privacy";
 import { SUBPROCESSORS } from "@/lib/legal/subprocessors";
+import { SESSION_MAX_AGE_DAYS } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "Privacy Policy · Bigfoot",
@@ -132,6 +135,7 @@ export default function PrivacyPage() {
         </ul>
         <p>
           We <strong>do not sell</strong> your personal information, and we{" "}
+          {/* cspell:disable-next-line -- the CCPA's own term, quoted in its US spelling */}
           <strong>do not share</strong> it for “cross-context behavioral advertising”, as those
           terms are defined in California law. We do not use your Applications to train AI models,
           and we do not make automated decisions about you.
@@ -208,7 +212,8 @@ export default function PrivacyPage() {
         <ul className={list}>
           <li>
             a session cookie that keeps you signed in. It is encrypted, holds your name, email,
-            profile photo and Google account id, and expires after 30 days or when you sign out;
+            profile photo and Google account id, and expires after {SESSION_MAX_AGE_DAYS} days or
+            when you sign out;
             and
           </li>
           <li>short-lived cookies that protect the sign-in process from forgery.</li>
@@ -231,13 +236,11 @@ export default function PrivacyPage() {
             <strong>Applications:</strong> until you delete them, or until you delete your account.
           </li>
           <li>
-            {/* Supabase Pro keeps 7 days of daily backups (BIG-1). */}
-            <strong>Backups:</strong> our database is backed up daily, and each backup is kept for 7
-            days. Deleted data leaves the backups within 7 days.
+            <strong>Backups:</strong> our database is backed up daily, and each backup is kept for{" "}
+            {BACKUP_DAYS} days. Deleted data leaves the backups within {BACKUP_DAYS} days.
           </li>
           <li>
-            {/* Vercel's runtime log retention on the Hobby plan; it changes with the plan. */}
-            <strong>Server logs:</strong> up to 1 hour.
+            <strong>Server logs:</strong> up to {SERVER_LOG_RETENTION}.
           </li>
           <li>
             <strong>Emails you send us:</strong> as long as we need them to answer you, and up to 2

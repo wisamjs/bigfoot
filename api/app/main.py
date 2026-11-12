@@ -114,7 +114,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # Supabase's session pooler rejects server-side prepared statements across clients.
         conn.prepare_threshold = None
         conn.execute(sql.SQL("set search_path to {}").format(sql.Identifier(settings.db_schema)))
-        # Timestamps go out in UTC whatever the server's default zone; browsers localise them.
+        # Timestamps go out in UTC whatever the server's default zone; browsers localize them.
         conn.execute("set timezone to 'UTC'")
         conn.commit()
 
@@ -149,7 +149,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         """Record the job seeker, and give them Sample Applications the first time only.
 
         Idempotent, and safe to call concurrently: the insert waits on any other transaction
-        inserting the same job seeker, and `for update` serialises the seeding check.
+        inserting the same job seeker, and `for update` serializes the seeding check.
         """
         with pool(request).connection() as conn, conn.transaction():
             conn.execute(
