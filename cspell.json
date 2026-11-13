@@ -47,6 +47,7 @@
     "/\\b(?:center|colors?|gray)-[\\w:\\-\\[\\]./]*/g"
   ],
   "words": [
+    "Airtable",
     "authjs",
     "autouse",
     "Cedarline",

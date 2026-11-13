@@ -25,7 +25,7 @@ import {
   deleteApplicationAction,
   updateApplicationAction,
 } from "@/app/dashboard/actions";
-import { useIsClient } from "@/components/local-time";
+import { useIsClient } from "@/components/use-is-client";
 import { Modal } from "@/components/modal";
 import { buttonClasses, dangerButtonClasses, inputClasses, SampleBadge, toneClasses, type Tone } from "@/components/ui";
 import {

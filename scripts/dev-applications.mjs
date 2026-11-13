@@ -47,7 +47,7 @@ async function call(jobSeekerId, method, path, body) {
   return res.status === 204 ? null : res.json();
 }
 
-/** `days` from today at `hour` local time, so Coming up always lists future rounds. */
+/** `days` from today at `hour` local time, so Coming up always has rounds around today. */
 function at(days, hour) {
   const d = new Date();
   d.setDate(d.getDate() + days);
@@ -62,6 +62,9 @@ function applications() {
     { company: "Datadog", title: "Software Engineer", previous_round: "recruiter_screen", next_round: "technical", next_round_at: at(2, 14) },
     { company: "Figma", title: "Senior Engineer", previous_round: "technical", next_round: "onsite_loop", next_round_at: at(5, 10) },
     { company: "Linear", title: "Product Engineer", previous_round: "hiring_manager", next_round: "behavioural", next_round_at: at(6, 11) },
+    { company: "Airtable", title: "Frontend Engineer", next_round: "hiring_manager", next_round_at: at(2, 10) },
+    { company: "Asana", title: "Software Engineer", previous_round: "recruiter_screen", next_round: "technical", next_round_at: at(2, 16) },
+    { company: "Miro", title: "Senior Engineer", next_round: "informal_chat", next_round_at: at(-2, 13) },
     { company: "Stripe", title: "Software Engineer II", next_round: "waiting" },
     { company: "Shopify", title: "Senior Developer", previous_round: "informal_chat", next_round: "scheduled" },
     { company: "Ramp", title: "Staff Engineer", stage: "offer", previous_round: "onsite_loop" },
