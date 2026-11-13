@@ -114,6 +114,15 @@ With the dev server and API running, `npm run screenshots` retakes the two scree
 
 [CI](.github/workflows/ci.yml) runs all four on every push and pull request. It needs a `DATABASE_URL` repository secret.
 
+## Databases
+
+Two Supabase projects, both in `us-east-1`:
+
+- **`Bigfoot`** (Free plan) is for local development (`public` schema) and CI (throwaway `bigfoot_test_*` schemas). `.env.local` and the CI `DATABASE_URL` secret point here.
+- **`bigfoot-prod`** (Pro plan: daily backups, never pauses) holds real job seekers' data. Its `DATABASE_URL` is only in Vercel's Production environment and the password manager, never in the repo or CI.
+
+[`docs/runbooks/database.md`](docs/runbooks/database.md) covers connecting to prod, applying migrations and restoring from a backup.
+
 ## How it was built
 
 Bigfoot was built with AI coding agents working from the project rules in [`AGENTS.md`](AGENTS.md).
