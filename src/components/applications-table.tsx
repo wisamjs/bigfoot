@@ -27,7 +27,7 @@ import {
 } from "@/app/dashboard/actions";
 import { useIsClient } from "@/components/local-time";
 import { Modal } from "@/components/modal";
-import { buttonClasses, SampleBadge, toneClasses, type Tone } from "@/components/ui";
+import { buttonClasses, dangerButtonClasses, inputClasses, SampleBadge, toneClasses, type Tone } from "@/components/ui";
 import {
   isClosed,
   NEXT_ROUNDS,
@@ -545,8 +545,7 @@ function SortIcon({ sorted }: { sorted: false | "asc" | "desc" }) {
 // ---------------------------------------------------------------------------
 // Dialogs
 
-const formInput =
-  "block w-full rounded-card border border-line-medium bg-surface-white px-3 py-2.5 text-sm text-heading shadow-xs transition-all duration-200 placeholder:text-body hover:border-line-brand-subtle focus:border-line-brand focus:outline-none focus:ring-1 focus:ring-brand";
+const formInput = inputClasses;
 
 function Field({ id, label, children }: { id: string; label: string; children: ReactNode }) {
   return (
@@ -649,7 +648,7 @@ function DeleteConfirmation({ app, onDone }: { app: Application; onDone: () => v
           type="button"
           onClick={remove}
           disabled={isPending}
-          className="btn border-line-danger bg-danger-soft px-4 py-2.5 text-sm text-fg-danger hover:bg-line-danger-subtle disabled:opacity-60"
+          className={dangerButtonClasses}
         >
           {isPending ? "Deleting…" : "Delete"}
         </button>

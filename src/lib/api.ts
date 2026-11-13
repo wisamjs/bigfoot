@@ -79,6 +79,11 @@ export function onboard(jobSeekerId: string) {
   return request<{ samples_seeded: boolean }>(jobSeekerId, "/me/onboard", { method: "POST" });
 }
 
+/** Deletes the job seeker and all of their Applications. Idempotent. */
+export function deleteAccount(jobSeekerId: string) {
+  return request<void>(jobSeekerId, "/me", { method: "DELETE" });
+}
+
 export function listApplications(jobSeekerId: string) {
   return request<Application[]>(jobSeekerId, "/applications");
 }

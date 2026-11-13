@@ -1,5 +1,6 @@
 """Bigfoot API: create, read, update and delete a job seeker's Applications."""
 
+import hashlib
 import re
 from contextlib import asynccontextmanager
 from datetime import UTC, date, datetime
@@ -107,6 +108,11 @@ class Onboarding(BaseModel):
 COLUMNS = sql.SQL(", ").join(sql.Identifier(name) for name in Application.model_fields)
 
 
+def job_seeker_hash(job_seeker: str) -> str:
+    """How account_deletions records a job seeker: a SHA-256 hex digest, never the id itself."""
+    return hashlib.sha256(job_seeker.encode()).hexdigest()
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
 
@@ -180,6 +186,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "update job_seekers set samples_seeded_at = now() where job_seeker_id = %s", (job_seeker,)
             )
         return Onboarding(samples_seeded=not has_applications)
+
+    @app.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+    def delete_account(request: Request, job_seeker: JobSeekerId) -> None:
+        """Delete the job seeker and all of their Applications, in one transaction.
+
+        Idempotent: deleting an account that is already gone succeeds and logs nothing. Signing
+        in again afterwards makes a new job seeker, who receives Sample Applications again.
+        """
+        with pool(request).connection() as conn, conn.transaction():
+            applications = conn.execute(
+                "delete from applications where job_seeker_id = %s", (job_seeker,)
+            ).rowcount
+            job_seekers = conn.execute(
+                "delete from job_seekers where job_seeker_id = %s", (job_seeker,)
+            ).rowcount
+            if applications or job_seekers:
+                conn.execute(
+                    "insert into account_deletions (job_seeker_hash) values (%s)", (job_seeker_hash(job_seeker),)
+                )
 
     @app.get("/applications")
     def list_applications(request: Request, job_seeker: JobSeekerId) -> list[Application]:

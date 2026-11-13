@@ -1,18 +1,16 @@
 import type { Metadata } from "next";
-import Image from "next/image";
-import Link from "next/link";
 import { Suspense } from "react";
 import type { LucideIcon } from "lucide-react";
 import { BriefcaseBusiness, CalendarCheck, CalendarClock, Gift, MessageSquareReply } from "lucide-react";
 import { AppFooter } from "@/components/app-footer";
-import { SignOutButton } from "@/components/auth-button";
+import { AppHeader } from "@/components/app-header";
 import { ApplicationsTable } from "@/components/applications-table";
 import { LocalTime } from "@/components/local-time";
 import { PipelineBoard } from "@/components/pipeline-board";
 import { Container, Wordmark } from "@/components/ui";
 import { listApplications, onboard } from "@/lib/api";
 import { getStats, getUpcoming, ROUND_OPTIONS } from "@/lib/applications";
-import { getCurrentUser, type CurrentUser } from "@/lib/dal";
+import { getCurrentUser } from "@/lib/dal";
 
 export const metadata: Metadata = {
   title: "Dashboard · Bigfoot",
@@ -35,7 +33,7 @@ async function Dashboard() {
 
   return (
     <>
-      <DashboardHeader user={user} />
+      <AppHeader user={user} current="/dashboard" />
       <main className="py-12">
         <Container className="flex flex-col gap-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
@@ -110,52 +108,6 @@ async function Dashboard() {
       </main>
       <AppFooter />
     </>
-  );
-}
-
-function DashboardHeader({ user }: { user: CurrentUser }) {
-  return (
-    <header className="sticky top-0 z-50 border-b border-line bg-surface/80 backdrop-blur-md supports-[not(backdrop-filter:blur(0))]:bg-surface">
-      <Container className="flex h-[72px] items-center justify-between gap-4">
-        <Link href="/" aria-label="Bigfoot home" className="rounded-control">
-          <Wordmark />
-        </Link>
-        <div className="flex items-center gap-4">
-          <div className="hidden items-center gap-2.5 sm:flex">
-            <Avatar user={user} />
-            <div className="leading-tight">
-              <p className="m-0 text-sm font-medium text-heading">{user.name}</p>
-              <p className="m-0 text-xs text-body">{user.email}</p>
-            </div>
-          </div>
-          <SignOutButton />
-        </div>
-      </Container>
-    </header>
-  );
-}
-
-/** avatars.md: base size 32px, circular, cover fit; initials when Google has no photo. */
-function Avatar({ user }: { user: CurrentUser }) {
-  if (user.image) {
-    return (
-      <Image
-        src={user.image}
-        alt=""
-        width={32}
-        height={32}
-        className="size-8 rounded-full object-cover"
-        referrerPolicy="no-referrer"
-      />
-    );
-  }
-  return (
-    <span
-      aria-hidden
-      className="grid size-8 place-items-center rounded-full bg-brand-soft text-xs font-medium text-fg-brand-strong"
-    >
-      {user.firstName.slice(0, 1).toUpperCase()}
-    </span>
   );
 }
 

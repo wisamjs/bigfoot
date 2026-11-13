@@ -16,6 +16,14 @@ export function buttonClasses(variant: Variant = "brand", size: Size = "md") {
   return `btn btn-${variant} ${sizes[size]}`;
 }
 
+/** buttons.md danger variant, base size: for actions that delete something for good. */
+export const dangerButtonClasses =
+  "btn border-line-danger bg-danger-soft px-4 py-2.5 text-sm text-fg-danger hover:bg-line-danger-subtle disabled:cursor-not-allowed disabled:opacity-60";
+
+/** inputs.md: full width, contrasting background, brand focus ring. */
+export const inputClasses =
+  "block w-full rounded-card border border-line-medium bg-surface-white px-3 py-2.5 text-sm text-heading shadow-xs transition-all duration-200 placeholder:text-body hover:border-line-brand-subtle focus:border-line-brand focus:outline-none focus:ring-1 focus:ring-brand";
+
 /** Text mark plus a footprint: job hunting is chasing Bigfoot. Matches src/app/icon.svg. */
 export function Wordmark() {
   return (
