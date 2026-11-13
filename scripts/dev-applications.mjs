@@ -62,6 +62,8 @@ function applications() {
     { company: "Datadog", title: "Software Engineer", previous_round: "recruiter_screen", next_round: "technical", next_round_at: at(2, 14) },
     { company: "Figma", title: "Senior Engineer", previous_round: "technical", next_round: "onsite_loop", next_round_at: at(5, 10) },
     { company: "Linear", title: "Product Engineer", previous_round: "hiring_manager", next_round: "behavioural", next_round_at: at(6, 11) },
+    { company: "Airtable", title: "Frontend Engineer", next_round: "hiring_manager", next_round_at: at(2, 10) },
+    { company: "Asana", title: "Software Engineer", previous_round: "recruiter_screen", next_round: "technical", next_round_at: at(2, 16) },
     { company: "Stripe", title: "Software Engineer II", next_round: "waiting" },
     { company: "Shopify", title: "Senior Developer", previous_round: "informal_chat", next_round: "scheduled" },
     { company: "Ramp", title: "Staff Engineer", stage: "offer", previous_round: "onsite_loop" },

@@ -4,7 +4,7 @@ import hashlib
 import re
 from contextlib import asynccontextmanager
 from datetime import UTC, date, datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, get_args
 from uuid import UUID
 
 from fastapi import FastAPI, HTTPException, Request, status
@@ -108,6 +108,24 @@ class Onboarding(BaseModel):
 COLUMNS = sql.SQL(", ").join(sql.Identifier(name) for name in Application.model_fields)
 
 
+# Advancing a round (GLOSSARY.md): once a Next round's date passes, a Round becomes the Previous
+# round; anything else (Scheduled, or no Next round) stays as it was. Either way the Next round
+# becomes Waiting with no date. Only In Progress Applications advance, and Waiting keeps its date.
+ADVANCE_ROUNDS = sql.SQL(
+    """
+    update applications set
+      previous_round = case when next_round in ({rounds}) then next_round else previous_round end,
+      next_round = 'waiting',
+      next_round_at = null,
+      updated_at = now()
+    where job_seeker_id = %s
+      and stage = 'in_progress'
+      and next_round_at <= now()
+      and next_round is distinct from 'waiting'
+    """
+).format(rounds=sql.SQL(", ").join(map(sql.Literal, get_args(Round))))
+
+
 def job_seeker_hash(job_seeker: str) -> str:
     """How account_deletions records a job seeker: a SHA-256 hex digest, never the id itself."""
     return hashlib.sha256(job_seeker.encode()).hexdigest()
@@ -208,7 +226,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/applications")
     def list_applications(request: Request, job_seeker: JobSeekerId) -> list[Application]:
-        with pool(request).connection() as conn:
+        """The job seeker's Applications, after advancing every round whose date has passed."""
+        with pool(request).connection() as conn, conn.transaction():
+            conn.execute(ADVANCE_ROUNDS, (job_seeker,))
             rows = conn.execute(
                 sql.SQL("select {} from applications where job_seeker_id = %s order by created_at, id").format(COLUMNS),
                 (job_seeker,),

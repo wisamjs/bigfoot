@@ -44,3 +44,7 @@ The most recent Round the job seeker has completed for an Application.
 **Next round**:
 What comes next for an Application: a Round, or Scheduled (something is booked but its kind is unknown) or Waiting (the company owes a reply).
 _Avoid_: upcoming interview
+
+**Advancing a round**:
+What happens once a Next round's date passes on an In Progress Application: a Round becomes the Previous round, and the Next round becomes Waiting with no date. Scheduled also becomes Waiting but leaves the Previous round as it was, since its kind is unknown. Waiting keeps its date. Bigfoot advances rounds whenever it reads a job seeker's Applications, without telling them.
+_Avoid_: auto-update, rollover

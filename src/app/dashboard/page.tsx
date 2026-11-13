@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import type { LucideIcon } from "lucide-react";
-import { BriefcaseBusiness, CalendarCheck, CalendarClock, Gift, MessageSquareReply } from "lucide-react";
+import { BriefcaseBusiness, CalendarCheck, Gift, MessageSquareReply } from "lucide-react";
 import { AppFooter } from "@/components/app-footer";
 import { AppHeader } from "@/components/app-header";
 import { ApplicationsTable } from "@/components/applications-table";
-import { LocalTime } from "@/components/local-time";
+import { ComingUpCalendar } from "@/components/coming-up-calendar";
 import { PipelineBoard } from "@/components/pipeline-board";
 import { Container, Wordmark } from "@/components/ui";
 import { listApplications, onboard } from "@/lib/api";
-import { getStats, getUpcoming, ROUND_OPTIONS } from "@/lib/applications";
+import { getStats, getUpcoming } from "@/lib/applications";
 import { getCurrentUser } from "@/lib/dal";
 
 export const metadata: Metadata = {
@@ -65,29 +65,7 @@ async function Dashboard() {
             <h2 id="upcoming-title" className="m-0 mb-4 text-xl font-bold leading-[1.25] text-heading">
               Coming up
             </h2>
-            {upcoming.length === 0 ? (
-              <p className="card m-0 p-6 text-sm text-body">
-                Add a next round date to an application and it shows up here.
-              </p>
-            ) : (
-              <ol className="card m-0 grid list-none grid-cols-1 gap-x-6 gap-y-4 p-6 sm:grid-cols-2 lg:grid-cols-4">
-                {upcoming.map((a) => (
-                  <li key={a.id} className="flex min-w-0 items-start gap-3">
-                    <span className="icon-shape size-8 shrink-0 rounded-control">
-                      <CalendarClock className="size-4" aria-hidden />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="m-0 text-sm font-medium leading-5 text-heading">
-                        {a.next_round ? ROUND_OPTIONS[a.next_round].label : "Next round"} · {a.company}
-                      </p>
-                      <p className="m-0 text-sm leading-[1.6] text-body">
-                        <LocalTime iso={a.next_round_at} />
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            )}
+            <ComingUpCalendar nextRounds={upcoming} />
           </section>
 
           <section aria-labelledby="pipeline-title">

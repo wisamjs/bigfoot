@@ -103,10 +103,12 @@ export function getStats(apps: Application[]) {
   };
 }
 
-/** Open Applications with a dated next round, soonest first. */
-export function getUpcoming(apps: Application[]) {
+export type DatedApplication = Application & { next_round_at: string };
+
+/** Open Applications with a dated next round, past or future, soonest first. */
+export function getUpcoming(apps: Application[]): DatedApplication[] {
   return apps
-    .filter((a): a is Application & { next_round_at: string } => !isClosed(a.stage) && a.next_round_at !== null)
+    .filter((a): a is DatedApplication => !isClosed(a.stage) && a.next_round_at !== null)
     .sort((a, b) => a.next_round_at.localeCompare(b.next_round_at));
 }
 
