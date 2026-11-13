@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Accessibility check: loads each page in scripts/pages.mjs in headless Chrome, in light and dark colour schemes,
 // runs axe-core's WCAG 2.2 A and AA rules, and fails on any violation.
-// Reuses or starts the dev server (A11Y_URL, default http://localhost:3300) and the API
+// Uses this checkout's dev server (A11Y_URL, default http://localhost:3300) and API
 // (API_URL, default http://localhost:8000) like smoke does. CHROME_PATH picks Chrome.
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -10,8 +10,10 @@ import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
 import { PAGES } from "./pages.mjs";
 import { ensureServers } from "./servers.mjs";
 
-const base = process.env.A11Y_URL ?? "http://localhost:3300";
-const apiBase = process.env.API_URL ?? "http://localhost:8000";
+const { base } = await ensureServers(
+  process.env.A11Y_URL ?? "http://localhost:3300",
+  process.env.API_URL ?? "http://localhost:8000",
+);
 const AXE_SOURCE = readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.min.js"), "utf8");
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag22aa"];
 
@@ -40,7 +42,6 @@ async function violations(chrome, path, expect) {
   return result.value;
 }
 
-await ensureServers(base, apiBase);
 const chrome = await launchChrome();
 let failed = 0;
 try {

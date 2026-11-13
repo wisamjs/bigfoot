@@ -65,7 +65,9 @@ def test_samples_can_be_edited_and_stay_marked(client, token):
 
 
 def test_is_sample_cannot_be_set_by_the_client(client, token):
-    res = client.post("/applications", json={"company": "Ramp", "title": "Engineer", "is_sample": True}, headers=token())
+    res = client.post(
+        "/applications", json={"company": "Ramp", "title": "Engineer", "is_sample": True}, headers=token()
+    )
     assert res.status_code == 422
 
 

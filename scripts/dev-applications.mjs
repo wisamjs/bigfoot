@@ -3,13 +3,12 @@
 // the dashboard can be seen filled (Pipeline board, Coming up, table, closed Applications).
 //   node scripts/dev-applications.mjs add      # refuses if the test user already has Applications
 //   node scripts/dev-applications.mjs remove   # deletes every Application the test user has
-// Needs the API running at API_URL (default http://localhost:8000) with the same API_SECRET.
+// Needs the API running at API_URL (default http://localhost:8000) with the same API_SECRET;
+// API_URL is read per call, so scripts/servers.mjs can point it at a server it started.
 // These are dev fixtures for the test user, not Sample Applications (GLOSSARY.md).
 import { readFileSync } from "node:fs";
 import { SignJWT } from "jose";
 import { TEST_JOB_SEEKER_ID } from "./dev-session.mjs";
-
-const apiBase = process.env.API_URL ?? "http://localhost:8000";
 
 function readApiSecret() {
   if (process.env.API_SECRET) return process.env.API_SECRET;
@@ -33,7 +32,9 @@ async function token(jobSeekerId) {
     .sign(new TextEncoder().encode(readApiSecret()));
 }
 
-async function call(jobSeekerId, method, path, body) {
+/** A request to the API as `jobSeekerId`, with the token the Next.js server would send. */
+export async function call(jobSeekerId, method, path, body) {
+  const apiBase = process.env.API_URL ?? "http://localhost:8000";
   const res = await fetch(`${apiBase}${path}`, {
     method,
     headers: {

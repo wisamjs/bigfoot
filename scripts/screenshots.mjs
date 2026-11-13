@@ -5,14 +5,18 @@
 //                  filled with scripts/dev-applications.mjs and emptied again afterwards.
 //                  The dev-session test user's Applications are never touched.
 // Uses headless Chrome from scripts/chrome.mjs (CHROME_PATH, default: macOS Google Chrome).
-// Needs the dev server at SCREENSHOT_URL (default http://localhost:3300) and the API at
-// API_URL (default http://localhost:8000).
+// Uses this checkout's dev server (SCREENSHOT_URL, default http://localhost:3300) and API
+// (API_URL, default http://localhost:8000) like smoke does.
 import { writeFileSync } from "node:fs";
 import { launchChrome, sleep } from "./chrome.mjs";
 import { addTestApplications, removeTestApplications } from "./dev-applications.mjs";
 import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
+import { ensureServers } from "./servers.mjs";
 
-const base = process.env.SCREENSHOT_URL ?? "http://localhost:3300";
+const { base } = await ensureServers(
+  process.env.SCREENSHOT_URL ?? "http://localhost:3300",
+  process.env.API_URL ?? "http://localhost:8000",
+);
 const WIDTH = 1440;
 const HEIGHT = 990;
 // Not the dev-session test user, so whatever that user has stays as it was.
@@ -71,3 +75,7 @@ try {
   if (added) await removeTestApplications(SCREENSHOT_JOB_SEEKER_ID);
   await chrome.close();
 }
+
+// Exit explicitly: started servers' output pipes would otherwise keep Node running. The exit
+// handler in scripts/servers.mjs stops them.
+process.exit(0);

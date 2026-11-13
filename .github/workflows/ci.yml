@@ -43,10 +43,13 @@ jobs:
         working-directory: api
         run: uv run python ../scripts/drop-test-schema.py
 
-  # Migrations are applied to the dev database by hand after their PR merges (applying
-  # earlier breaks main). Goes red on main until every merged migration is applied.
+  # Applies merged migrations to the dev database (applying before merge would break main),
+  # then fails if any is still missing. One at a time, so two quick merges never race.
   migrations-applied:
     if: github.event_name == 'push'
+    concurrency:
+      group: migrations-applied
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -56,4 +59,4 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           working-directory: api
-      - run: npm run db:status
+      - run: npm run db:status -- --apply

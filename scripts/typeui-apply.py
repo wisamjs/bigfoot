@@ -7,6 +7,7 @@ prints a short summary.
 
     python3 scripts/typeui-apply.py <saved-result-file>
 """
+
 import json
 import shutil
 import sys
@@ -55,9 +56,7 @@ def main():
         target.write_text(f["content"])
 
     names = sorted({Path(f["path"]).name for f in files})
-    name_line = next(
-        (line for line in result.get("text", "").splitlines() if line.startswith("Prepared")), ""
-    )
+    name_line = next((line for line in result.get("text", "").splitlines() if line.startswith("Prepared")), "")
     print(name_line or "Design skill applied.")
     print(f"Wrote {len(files)} files into {', '.join(SKILL_DIRS)}:")
     print("  " + ", ".join(names))
