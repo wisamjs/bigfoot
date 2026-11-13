@@ -16,9 +16,13 @@ export async function launchChrome() {
   const chrome = spawn(
     chromePath,
     ["--headless=new", `--remote-debugging-port=${PORT}`, "--hide-scrollbars", `--user-data-dir=${profile}`, "about:blank"],
-    { stdio: "ignore" },
+    { stdio: ["ignore", "ignore", "pipe"] },
   );
-  const exited = new Promise((resolve) => chrome.once("exit", resolve));
+  // Kept so a failed start can say why; Chrome logs harmless noise here on success.
+  let stderr = "";
+  chrome.stderr.on("data", (d) => (stderr = (stderr + d).slice(-4000)));
+  let exitCode = null;
+  const exited = new Promise((resolve) => chrome.once("exit", (code) => resolve((exitCode = code))));
   // Chrome keeps writing to its profile until it exits, so remove the profile after that.
   const close = async () => {
     chrome.kill();
@@ -26,7 +30,8 @@ export async function launchChrome() {
     rmSync(profile, { recursive: true, force: true, maxRetries: 3 });
   };
   let page;
-  for (let i = 0; i < 50 && !page; i++) {
+  // Up to 30s: a cold CI runner can be slow to start Chrome.
+  for (let i = 0; i < 150 && !page && exitCode === null; i++) {
     try {
       const targets = await (await fetch(`http://127.0.0.1:${PORT}/json`)).json();
       page = targets.find((t) => t.type === "page");
@@ -35,7 +40,7 @@ export async function launchChrome() {
   }
   if (!page) {
     await close();
-    throw new Error(`Chrome did not start (CHROME_PATH=${chromePath})`);
+    throw new Error(`Chrome did not start (CHROME_PATH=${chromePath}, exit code ${exitCode})\n${stderr}`);
   }
 
   const ws = new WebSocket(page.webSocketDebuggerUrl);
