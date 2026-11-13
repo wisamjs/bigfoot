@@ -5,18 +5,20 @@
 // (e.g. Cache Components prerender errors, which are logged by the dev server, not returned
 // in the response).
 //
-// Reuses the running dev server (Next allows one per project) at SMOKE_URL
-// (default http://localhost:3300); otherwise starts `next dev` on that port and stops it after.
-// Likewise reuses the API at API_URL (default http://localhost:8000), or starts it against the
-// test schema (TEST_SCHEMA, default `bigfoot_test`, created by `npm run test:api`) and stops it after.
+// Uses this checkout's dev server and API via scripts/servers.mjs: SMOKE_URL
+// (default http://localhost:3300) and API_URL (default http://localhost:8000) when they serve this
+// checkout, otherwise its own on free ports. A started API reads the test schema
+// (TEST_SCHEMA, default `bigfoot_test`, created by `npm run test:api`).
 // Server errors are read from .next/dev/logs/next-development.log, which every dev server writes.
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
 import { PAGES } from "./pages.mjs";
 import { ensureServers } from "./servers.mjs";
 
-const base = process.env.SMOKE_URL ?? "http://localhost:3300";
-const apiBase = process.env.API_URL ?? "http://localhost:8000";
+const { base, apiBase } = await ensureServers(
+  process.env.SMOKE_URL ?? "http://localhost:3300",
+  process.env.API_URL ?? "http://localhost:8000",
+);
 const LOG = ".next/dev/logs/next-development.log";
 // Generous enough for a first compile in `next dev`; short enough that a hung request fails fast.
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -50,7 +52,6 @@ function newLogErrors(offset) {
     .filter((entry) => entry?.source === "Server" && entry.level === "ERROR");
 }
 
-await ensureServers(base, apiBase);
 const logOffset = existsSync(LOG) ? statSync(LOG).size : 0;
 const cookie = `${SESSION_COOKIE}=${await createTestSession()}`;
 let failed = 0;

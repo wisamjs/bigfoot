@@ -200,9 +200,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         ),
                         list(values.values()),
                     )
-            conn.execute(
-                "update job_seekers set samples_seeded_at = now() where job_seeker_id = %s", (job_seeker,)
-            )
+            conn.execute("update job_seekers set samples_seeded_at = now() where job_seeker_id = %s", (job_seeker,))
         return Onboarding(samples_seeded=not has_applications)
 
     @app.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
@@ -213,12 +211,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         in again afterwards makes a new job seeker, who receives Sample Applications again.
         """
         with pool(request).connection() as conn, conn.transaction():
-            applications = conn.execute(
-                "delete from applications where job_seeker_id = %s", (job_seeker,)
-            ).rowcount
-            job_seekers = conn.execute(
-                "delete from job_seekers where job_seeker_id = %s", (job_seeker,)
-            ).rowcount
+            applications = conn.execute("delete from applications where job_seeker_id = %s", (job_seeker,)).rowcount
+            job_seekers = conn.execute("delete from job_seekers where job_seeker_id = %s", (job_seeker,)).rowcount
             if applications or job_seekers:
                 conn.execute(
                     "insert into account_deletions (job_seeker_hash) values (%s)", (job_seeker_hash(job_seeker),)
