@@ -31,8 +31,11 @@ function rounds(n: number) {
 }
 
 /**
- * Coming up as a month grid (BIG-36). Days and times are the job seeker's own, so the grid
- * renders only in the browser; the server sends a placeholder of the same size.
+ * Coming up as a month grid (BIG-36): only Next rounds still ahead. The API advances an In
+ * Progress Application's past round on read, so a past date here is an Offer's or one that
+ * passed after the page loaded.
+ * Days and times are the job seeker's own, so the grid renders only in the browser; the server
+ * sends a placeholder of the same size.
  */
 export function ComingUpCalendar({ nextRounds }: { nextRounds: DatedApplication[] }) {
   const isClient = useIsClient();
@@ -50,7 +53,8 @@ export function ComingUpCalendar({ nextRounds }: { nextRounds: DatedApplication[
   const todayKey = dayKey(now);
   const start = monthStart(now, offset);
   const weeks = monthWeeks(start);
-  const byDay = groupByDay(nextRounds);
+  const ahead = nextRounds.filter((a) => new Date(a.next_round_at) >= now);
+  const byDay = groupByDay(ahead);
   const selectedDay = weeks.flat().find((d) => d.key === selected && d.inMonth);
 
   const goTo = (next: number) => {
@@ -103,7 +107,6 @@ export function ComingUpCalendar({ nextRounds }: { nextRounds: DatedApplication[
                   isToday={day.key === todayKey}
                   isSelected={day.key === selected}
                   alignTooltipRight={column >= 4}
-                  now={now}
                   onSelect={() => select(day.key)}
                 />
               ))}
@@ -112,7 +115,7 @@ export function ComingUpCalendar({ nextRounds }: { nextRounds: DatedApplication[
         </tbody>
       </table>
 
-      {nextRounds.length === 0 && (
+      {ahead.length === 0 && (
         <p className="m-0 mt-4 text-sm text-body">Add a Next round date to an Application and it shows up here.</p>
       )}
 
@@ -127,21 +130,14 @@ export function ComingUpCalendar({ nextRounds }: { nextRounds: DatedApplication[
             {dayFormat.format(selectedDay.date)}
           </h3>
           <ul className="m-0 flex list-none flex-col gap-2 p-0">
-            {(byDay.get(selectedDay.key) ?? []).map((a) => {
-              const at = new Date(a.next_round_at);
-              return (
-                <li
-                  key={a.id}
-                  className={`flex flex-wrap items-baseline justify-between gap-x-4 text-sm ${at < now ? "text-body" : "text-heading"}`}
-                >
-                  <span className="font-medium">{label(a)}</span>
-                  <time dateTime={a.next_round_at} className="text-body">
-                    {timeFormat.format(at)}
-                    {at < now && <span className="sr-only"> (past)</span>}
-                  </time>
-                </li>
-              );
-            })}
+            {(byDay.get(selectedDay.key) ?? []).map((a) => (
+              <li key={a.id} className="flex flex-wrap items-baseline justify-between gap-x-4 text-sm text-heading">
+                <span className="font-medium">{label(a)}</span>
+                <time dateTime={a.next_round_at} className="text-body">
+                  {timeFormat.format(new Date(a.next_round_at))}
+                </time>
+              </li>
+            ))}
           </ul>
         </section>
       )}
@@ -155,7 +151,6 @@ function DayCell({
   isToday,
   isSelected,
   alignTooltipRight,
-  now,
   onSelect,
 }: {
   day: CalendarDay;
@@ -163,7 +158,6 @@ function DayCell({
   isToday: boolean;
   isSelected: boolean;
   alignTooltipRight: boolean;
-  now: Date;
   onSelect: () => void;
 }) {
   if (!day.inMonth) return <td className="border border-line-medium" />;
@@ -205,7 +199,7 @@ function DayCell({
             {number}
             <ul className="m-0 mt-1 flex w-full list-none flex-col gap-1 p-0">
               {events.slice(0, SHOWN_PER_DAY).map((a) => (
-                <EventChip key={a.id} application={a} past={new Date(a.next_round_at) < now} alignRight={alignTooltipRight} />
+                <EventChip key={a.id} application={a} alignRight={alignTooltipRight} />
               ))}
             </ul>
             {hidden > 0 && (
@@ -227,22 +221,19 @@ function DayCell({
 }
 
 /** Display only: focusable so keyboard users can see the time, but it does nothing on click. */
-function EventChip({ application: a, past, alignRight }: { application: DatedApplication; past: boolean; alignRight: boolean }) {
+function EventChip({ application: a, alignRight }: { application: DatedApplication; alignRight: boolean }) {
   const at = new Date(a.next_round_at);
   const tone = a.next_round ? ROUND_OPTIONS[a.next_round].tone : "neutral";
   return (
     <li
       tabIndex={0}
-      className={`group relative rounded-control border px-1.5 py-0.5 text-xs font-medium leading-4 ${
-        past ? "border-line bg-surface text-body" : toneClasses[tone]
-      }`}
+      className={`group relative rounded-control border px-1.5 py-0.5 text-xs font-medium leading-4 ${toneClasses[tone]}`}
     >
       <span className="block truncate" aria-hidden>
         {label(a)}
       </span>
       <span className="sr-only">
         {label(a)}, {fullFormat.format(at)}
-        {past && " (past)"}
       </span>
       <span
         aria-hidden
