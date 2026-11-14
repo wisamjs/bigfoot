@@ -18,6 +18,11 @@ A statement backed by none of these is a defect, however reasonable it sounds. S
 that makes an existing statement untrue, such as a new SDK, a plan change or a removed feature,
 without updating the copy and adding a `PRIVACY_CHANGES` entry.
 
+## GLOSSARY.md describes the product as it is
+
+A PR that changes what a screen shows or does updates every GLOSSARY.md term that describes that
+screen, in the same PR. A definition that names a removed view, column or control is a defect.
+
 ## Green CI before approval
 
 Approve only when the PR's latest `CI` and `PR naming` runs succeeded. A cancelled or skipped

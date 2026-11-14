@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Adds or removes a fixed set of Applications for the dev-session test user, through the API, so
-// the dashboard can be seen filled (Pipeline board, Coming up, table, Done Applications).
+// the dashboard can be seen filled (Pipeline board, Coming up, Done Applications), long
+// Interview labels included.
 //   node scripts/dev-applications.mjs add      # refuses if the test user already has Applications
 //   node scripts/dev-applications.mjs remove   # deletes every Application the test user has
 // Needs the API running at API_URL (default http://localhost:8000) with the same API_SECRET;
@@ -66,6 +67,8 @@ function applications() {
     { company: "Linear", title: "Product Engineer", interviews: [["hiring_manager", -4, 13], ["behavioural", 6, 11]] },
     { company: "Airtable", title: "Frontend Engineer", interviews: [["hiring_manager", 2, 10]] },
     { company: "Asana", title: "Software Engineer", interviews: [["recruiter_screen", -2, 9], ["technical", 2, 16], ["leadership", 9, 16]] },
+    // The longest kind, so captures and a11y always see how a label wraps beside its date.
+    { company: "Okta", title: "Engineering Manager", interviews: [["cross_functional_interview", 3, 16], ["be_system_design", 4, 11]] },
     { company: "Stripe", title: "Software Engineer II", interviews: [] },
     { company: "Shopify", title: "Senior Developer", interviews: [["informal_chat"]] },
     { company: "Ramp", title: "Staff Engineer", status: "done", outcome: "offer", interviews: [["onsite_loop", -6, 10]] },
@@ -95,6 +98,21 @@ export async function removeTestApplications(jobSeekerId = TEST_JOB_SEEKER_ID) {
   const existing = await call(jobSeekerId, "GET", "/applications");
   for (const a of existing) await call(jobSeekerId, "DELETE", `/applications/${a.id}`);
   return existing.length;
+}
+
+/**
+ * Runs `fn` with `jobSeekerId` holding exactly these Applications, emptied again afterwards.
+ * Filled before their first dashboard visit, so onboarding never adds Sample Applications.
+ */
+export async function withTestApplications(jobSeekerId, fn) {
+  // Clear anything a crashed run left.
+  await removeTestApplications(jobSeekerId);
+  await addTestApplications(jobSeekerId);
+  try {
+    return await fn();
+  } finally {
+    await removeTestApplications(jobSeekerId);
+  }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
