@@ -1,9 +1,16 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import type { ReactNode } from "react";
 import {
+  ChangeLog,
+  LegalContents,
+  LegalHeader,
+  LegalLink as A,
+  LegalSection,
+  legalH3 as h3,
+  legalList as list,
+} from "@/components/legal";
+import {
   BACKUP_DAYS,
-  formatPolicyDate,
   PRIVACY_CHANGES,
   PRIVACY_CONTACT_EMAIL,
   PRIVACY_EFFECTIVE_DATE,
@@ -40,19 +47,9 @@ const sections = [
 type SectionId = (typeof sections)[number]["id"];
 
 export default function PrivacyPage() {
-  const effective = formatPolicyDate(PRIVACY_EFFECTIVE_DATE);
-
   return (
     <article className="text-base leading-[1.7] text-body">
-      <header className="mb-10">
-        <h1 className="m-0 mb-6 text-[32px] font-bold leading-[1.1] tracking-[-0.8px] text-heading md:text-[40px] lg:text-[60px]">
-          Privacy Policy
-        </h1>
-        <p className="m-0 text-sm leading-[1.6]">
-          Effective <time dateTime={PRIVACY_EFFECTIVE_DATE}>{effective}</time>.{" "}
-          <A href="#changes">See what changed</A>.
-        </p>
-      </header>
+      <LegalHeader title="Privacy Policy" effective={PRIVACY_EFFECTIVE_DATE} />
 
       <section aria-labelledby="summary" className="card mb-12 p-6 md:p-8">
         <h2 id="summary" className="m-0 mb-4 text-xl font-bold leading-[1.25] text-heading">
@@ -82,18 +79,7 @@ export default function PrivacyPage() {
         </ul>
       </section>
 
-      <nav aria-labelledby="contents" className="mb-12">
-        <h2 id="contents" className="m-0 mb-4 text-xl font-bold leading-[1.25] text-heading">
-          Contents
-        </h2>
-        <ol className="m-0 flex list-decimal flex-col gap-2 pl-6">
-          {sections.map((s) => (
-            <li key={s.id}>
-              <A href={`#${s.id}`}>{s.title}</A>
-            </li>
-          ))}
-        </ol>
-      </nav>
+      <LegalContents sections={sections} />
 
       <p>
         This policy explains how Bigfoot handles personal information about job seekers in the
@@ -335,17 +321,7 @@ export default function PrivacyPage() {
           the change below. We do not store your email address, so this page is where changes
           appear.
         </p>
-        <h3 className={h3}>Change log</h3>
-        <ul className={list}>
-          {PRIVACY_CHANGES.map((c) => (
-            <li key={c.date}>
-              <time dateTime={c.date} className="font-medium text-heading">
-                {formatPolicyDate(c.date)}
-              </time>
-              : {c.summary}
-            </li>
-          ))}
-        </ul>
+        <ChangeLog changes={PRIVACY_CHANGES} />
       </Section>
 
       <Section id="contact">
@@ -361,38 +337,14 @@ export default function PrivacyPage() {
   );
 }
 
-const h3 = "m-0 mt-6 mb-2 text-lg font-bold leading-[1.25] text-heading";
-const list = "my-4 flex list-disc flex-col gap-2 pl-6";
 const th = "px-4 py-3 text-xs font-medium uppercase tracking-[0.4px] text-heading";
 const td = "px-4 py-3";
 
 function Section({ id, children }: { id: SectionId; children: ReactNode }) {
-  const title = sections.find((s) => s.id === id)!.title;
   return (
-    <section aria-labelledby={id} className="mt-12 scroll-mt-6 [&_p]:my-4 [&_p]:max-w-[70ch]">
-      <h2 id={id} className="m-0 mb-4 text-2xl font-bold leading-[1.25] text-heading">
-        {title}
-      </h2>
+    <LegalSection id={id} title={sections.find((s) => s.id === id)!.title}>
       {children}
-    </section>
-  );
-}
-
-/** typography.md inline link: fg-brand, underlined, underline removed on hover. */
-function A({ href, children }: { href: string; children: ReactNode }) {
-  const className =
-    "rounded-control text-fg-brand underline underline-offset-4 transition-colors hover:no-underline";
-  if (href.startsWith("/")) {
-    return (
-      <Link href={href} className={className}>
-        {children}
-      </Link>
-    );
-  }
-  return (
-    <a href={href} className={className}>
-      {children}
-    </a>
+    </LegalSection>
   );
 }
 

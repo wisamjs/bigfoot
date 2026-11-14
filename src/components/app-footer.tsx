@@ -2,8 +2,10 @@ import Link from "next/link";
 import { Container } from "@/components/ui";
 
 // Legal links for signed-in pages, which are too busy for the landing Footer.
-// Add Terms here when BIG-4 publishes them.
-const links = [{ label: "Privacy Policy", href: "/privacy" }];
+const links = [
+  { label: "Privacy Policy", href: "/privacy" },
+  { label: "Terms of Service", href: "/terms" },
+];
 
 export function AppFooter() {
   return (
