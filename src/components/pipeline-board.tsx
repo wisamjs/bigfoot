@@ -1,9 +1,10 @@
 import { CalendarClock } from "lucide-react";
 import { Badge, SampleBadge } from "@/components/ui";
+import { ApplicationWhen } from "@/components/application-when";
 import {
   getBoardColumns,
   INTERVIEW_OPTIONS,
-  lastCompletedInterview,
+  nextInterview,
   OUTCOME_OPTIONS,
   type Application,
 } from "@/lib/applications";
@@ -37,11 +38,11 @@ export function PipelineBoard({ title, subtitle, applications, decorative = fals
       </div>
       {columns.length === 0 ? (
         <p className="m-0 rounded-control bg-surface p-6 text-center text-sm text-body">
-          Open applications show up here, grouped by their next interview.
+          Open applications show up here, grouped by whether an interview is booked.
         </p>
       ) : (
-        // Columns wrap onto new rows rather than scrolling sideways, so the later rounds and
-        // Offer are never hidden off-screen.
+        // Columns wrap onto new rows rather than scrolling sideways, so no column is
+        // hidden off-screen.
         <div className="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-4">
           {columns.map((column) => (
             <section
@@ -55,21 +56,22 @@ export function PipelineBoard({ title, subtitle, applications, decorative = fals
               </div>
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
                 {column.applications.map((job) => {
-                  const last = lastCompletedInterview(job);
-                  const badge =
-                    job.outcome === "offer"
-                      ? OUTCOME_OPTIONS.offer
-                      : last
-                        ? { ...INTERVIEW_OPTIONS[last.kind], label: `After ${INTERVIEW_OPTIONS[last.kind].label}` }
-                        : null;
+                  const next = nextInterview(job);
                   return (
                     <li key={job.id} className="rounded-control border border-line bg-card-strong p-3 shadow-xs">
                       <div className="flex items-start justify-between gap-2">
                         <p className="m-0 min-w-0 text-sm font-medium leading-5 text-heading">{job.company}</p>
                         {job.is_sample && <SampleBadge />}
                       </div>
-                      <p className={`m-0 text-xs leading-4 text-body ${badge ? "mb-2" : ""}`}>{job.title}</p>
-                      {badge && <Badge tone={badge.tone}>{badge.label}</Badge>}
+                      <p className="m-0 mb-2 text-xs leading-4 text-body">{job.title}</p>
+                      {job.outcome === "offer" ? (
+                        <Badge tone={OUTCOME_OPTIONS.offer.tone}>{OUTCOME_OPTIONS.offer.label}</Badge>
+                      ) : (
+                        <div className="flex flex-col items-start gap-1 text-xs text-body">
+                          {next && <Badge tone={INTERVIEW_OPTIONS[next.kind].tone}>{INTERVIEW_OPTIONS[next.kind].label}</Badge>}
+                          <ApplicationWhen app={job} />
+                        </div>
+                      )}
                     </li>
                   );
                 })}

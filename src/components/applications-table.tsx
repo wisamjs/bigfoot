@@ -25,7 +25,7 @@ import {
   deleteApplicationAction,
   updateApplicationAction,
 } from "@/app/dashboard/actions";
-import { useIsClient } from "@/components/use-is-client";
+import { ApplicationWhen } from "@/components/application-when";
 import { Modal } from "@/components/modal";
 import {
   Badge,
@@ -140,8 +140,6 @@ function PostingUrlCell({ app }: { app: Application }) {
   );
 }
 
-const whenFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
-const sinceFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
 
 /**
  * What the Application is waiting on: its next Interview, or Waiting when none is booked.
@@ -154,19 +152,8 @@ function NextInterviewCell({ app }: { app: Application }) {
   return <Badge tone={option.tone}>{option.label}</Badge>;
 }
 
-/** The next Interview's date, or "Waiting since" the last one (or the applied date). */
 function WhenCell({ app }: { app: Application }) {
-  // The server can't know the viewer's time zone, so this cell renders after hydration.
-  const isClient = useIsClient();
-  if (!isClient) return <div className="h-5" />;
-  const next = nextInterview(app);
-  if (next?.at) return <time dateTime={next.at}>{whenFormat.format(new Date(next.at))}</time>;
-  if (app.is_waiting && app.waiting_since) {
-    // A date-only value (YYYY-MM-DD) is the applied date: format it as that calendar day, not UTC midnight.
-    const since = app.waiting_since.length === 10 ? new Date(`${app.waiting_since}T00:00`) : new Date(app.waiting_since);
-    return <span className="text-body">Waiting since {sinceFormat.format(since)}</span>;
-  }
-  return <span className="text-body-subtle">—</span>;
+  return <ApplicationWhen app={app} />;
 }
 
 /**
