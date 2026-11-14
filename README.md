@@ -6,26 +6,7 @@ A job search tracker. Job hunting is chasing Bigfoot: Bigfoot keeps every Applic
 
 ## Status
 
-Bigfoot is an early proof of concept, built as a side project.
-
-**Works today**
-
-- Landing page
-- Sign in with Google
-- A dashboard with stats, upcoming Interviews, and the Pipeline board (grouped by next Interview, with Done Applications on request); open a card to edit its Application and Interviews
-- A few Sample Applications for new job seekers, so the dashboard shows how Bigfoot works before they add their own
-- Adding, editing and deleting Applications right in the table: text fields save when you leave them, dropdowns save when you pick a value
-
-**Not built yet**
-
-These features appear on the landing page but are still planned:
-
-- Moving Applications on the board by drag and drop
-- Interview prep notes
-- Follow-up reminders
-- Contacts and referrals
-- Search analytics
-- One-click capture from a job link
+Bigfoot is an early proof of concept, built as a side project. Sign in with Google, add the roles you've applied to, log their Interviews, and follow them on a Pipeline board and a calendar of what's coming up.
 
 ![Bigfoot dashboard](docs/screenshots/dashboard.png)
 
@@ -34,7 +15,6 @@ These features appear on the landing page but are still planned:
 - [Next.js 16](https://nextjs.org) (App Router, Cache Components) and React 19
 - [Auth.js](https://authjs.dev) with Google sign-in and encrypted cookie sessions
 - [Tailwind CSS 4](https://tailwindcss.com), with every design token defined in [`src/app/globals.css`](src/app/globals.css)
-- [TanStack Table](https://tanstack.com/table) for the editable Applications table
 - [FastAPI](https://fastapi.tiangolo.com) (Python, in [`api/`](api)) serving Applications from [Supabase](https://supabase.com) Postgres. The browser never calls it: the Next.js server does, with a short-lived token naming the signed-in user ([ADR 0001](docs/adr/0001-fastapi-behind-nextjs-with-authjs.md))
 - TypeScript and Python
 
