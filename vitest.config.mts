@@ -1,7 +1,39 @@
 import { fileURLToPath } from "node:url";
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-// The same `@/` alias as tsconfig.json, so tests import (and vi.mock) modules the way the app does.
+// Unit tests (*.test.ts) run in Node; component tests (*.test.tsx) in happy-dom, which unlike
+// jsdom has HTMLDialogElement.showModal(). Neither moves focus or handles Escape the way a
+// browser does for a modal <dialog>, so `npm run a11y` checks that in Chrome.
+// Async Server Components aren't supported by Vitest: smoke and a11y cover those pages.
+
+const resolve = { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } };
+
 export default defineConfig({
-  resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
+  test: {
+    projects: [
+      {
+        resolve,
+        test: { name: "unit", environment: "node", include: ["src/**/*.test.ts", "scripts/**/*.test.ts"] },
+      },
+      {
+        plugins: [react()],
+        resolve,
+        test: {
+          name: "components",
+          environment: "happy-dom",
+          include: ["src/**/*.test.tsx"],
+          setupFiles: ["./src/test/setup.ts"],
+        },
+      },
+    ],
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: ["src/**/*.test.{ts,tsx}", "src/test/**"],
+      reporter: ["text-summary", "html"],
+      // Current coverage minus 2 points. Raise these as tests are added; never lower them.
+      thresholds: { statements: 47, branches: 46, functions: 50, lines: 48 },
+    },
+  },
 });

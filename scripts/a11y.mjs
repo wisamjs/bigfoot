@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 // Accessibility check: loads each page in scripts/pages.mjs in headless Chrome, in light and dark colour schemes,
 // runs axe-core's WCAG 2.2 A and AA rules, and fails on any violation. Then does the same for each
-// page's `states` (dialogs, toggles), signed in as its own job seeker holding the Applications from
+// page's `states` (dialogs, toggles), and uses each open dialog by keyboard (focus stays inside,
+// Escape closes it, focus returns to its opener), signed in as its own job seeker holding the Applications from
 // scripts/dev-applications.mjs, emptied again afterwards.
 // Uses this checkout's dev server (A11Y_URL, default http://localhost:3300) and API
 // (API_URL, default http://localhost:8000) like smoke does. CHROME_PATH picks Chrome.
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { enterState, launchChrome, openPage } from "./chrome.mjs";
+import { dialogKeyboardProblems, enterState, launchChrome, openPage } from "./chrome.mjs";
 import { withTestApplications } from "./dev-applications.mjs";
 import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
 import { PAGES } from "./pages.mjs";
@@ -86,6 +87,8 @@ try {
             await openPage(chrome, `${base}${page.path}`, page.expect);
             await enterState(chrome, state);
             report(`${page.path} ${state.name} (${scheme})`, await violations(chrome, `${page.path} ${state.name}`));
+            // Keyboard behaviour doesn't depend on the colour scheme, so check it once. Last: it closes the dialog.
+            if (scheme === SCHEMES[0]) report(`${page.path} ${state.name} keyboard`, await dialogKeyboardProblems(chrome));
           }
         }
       }

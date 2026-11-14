@@ -87,12 +87,14 @@ With the dev server and API running, `npm run screenshots` retakes the two scree
 
 | Command | What it checks |
 | --- | --- |
-| `npm run check` | Types, lint, that components use design tokens instead of raw colours and corner radii, Canadian spelling (cspell), and Vitest |
+| `npm run check` | Types, lint, that components use design tokens instead of raw colours and corner radii, Canadian spelling (cspell), and `npm test`. The pre-commit hook runs it |
+| `npm test` | Vitest unit and component tests (React Testing Library in happy-dom), failing if coverage drops below the floor in `vitest.config.mts`. `npm run test:watch` reruns them on save |
 | `npm run test:api` | API tests (pytest) against the real database, in a throwaway `bigfoot_test` schema (one per run in CI) rebuilt for every test |
 | `npm run smoke` | Loads every route signed in and signed out against the running dev server and API (starting either if needed), and fails on any server error |
+| `npm run a11y` | axe-core WCAG 2.2 AA on the same pages and their open dialogs, light and dark, and uses each dialog by keyboard: focus stays inside, Escape closes it, focus returns |
 | `npm run build` | Production build (stop `next dev` first: they share `.next/`) |
 
-[CI](.github/workflows/ci.yml) runs all four on every push and pull request. It needs a `DATABASE_URL` repository secret.
+[CI](.github/workflows/ci.yml) runs all of these on every push and pull request. It needs a `DATABASE_URL` repository secret.
 
 ## How it was built
 
