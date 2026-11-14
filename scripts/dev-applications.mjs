@@ -7,31 +7,8 @@
 // Needs the API running at API_URL (default http://localhost:8000) with the same API_SECRET;
 // API_URL is read per call, so scripts/servers.mjs can point it at a server it started.
 // These are dev fixtures for the test user, not Sample Applications (GLOSSARY.md).
-import { readFileSync } from "node:fs";
-import { SignJWT } from "jose";
+import { apiToken } from "./dev-api-token.mjs";
 import { TEST_JOB_SEEKER_ID } from "./dev-session.mjs";
-
-function readApiSecret() {
-  if (process.env.API_SECRET) return process.env.API_SECRET;
-  try {
-    const env = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
-    const match = env.match(/^API_SECRET="?([^"\n]+)"?/m);
-    if (match) return match[1];
-  } catch {}
-  throw new Error("API_SECRET not found in the environment or .env.local");
-}
-
-// Same token the Next.js server sends (src/lib/api.ts).
-async function token(jobSeekerId) {
-  return new SignJWT()
-    .setProtectedHeader({ alg: "HS256" })
-    .setSubject(jobSeekerId)
-    .setIssuer("bigfoot-web")
-    .setAudience("bigfoot-api")
-    .setIssuedAt()
-    .setExpirationTime("60s")
-    .sign(new TextEncoder().encode(readApiSecret()));
-}
 
 /** A request to the API as `jobSeekerId`, with the token the Next.js server would send. */
 export async function call(jobSeekerId, method, path, body) {
@@ -39,7 +16,7 @@ export async function call(jobSeekerId, method, path, body) {
   const res = await fetch(`${apiBase}${path}`, {
     method,
     headers: {
-      authorization: `Bearer ${await token(jobSeekerId)}`,
+      authorization: `Bearer ${await apiToken(jobSeekerId)}`,
       ...(body ? { "content-type": "application/json" } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,

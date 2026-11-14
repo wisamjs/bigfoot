@@ -14,6 +14,9 @@ class Settings:
     database_url: str
     api_secret: str
     db_schema: str
+    # Serve /docs, /redoc and /openapi.json. Off unless API_DOCS=true: they are for developers,
+    # since the browser never calls the API (docs/adr/0001).
+    api_docs: bool = False
 
 
 def get_settings() -> Settings:
@@ -27,4 +30,5 @@ def get_settings() -> Settings:
         database_url=os.environ["DATABASE_URL"],
         api_secret=os.environ["API_SECRET"],
         db_schema=schema,
+        api_docs=os.environ.get("API_DOCS", "").lower() == "true",
     )
