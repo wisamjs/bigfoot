@@ -8,9 +8,10 @@
 // Uses this checkout's dev server (SCREENSHOT_URL, default http://localhost:3300) and API
 // (API_URL, default http://localhost:8000) like smoke does.
 import { writeFileSync } from "node:fs";
-import { launchChrome, sleep } from "./chrome.mjs";
-import { addTestApplications, removeTestApplications } from "./dev-applications.mjs";
+import { launchChrome, openPage } from "./chrome.mjs";
+import { withTestApplications } from "./dev-applications.mjs";
 import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
+import { PAGES } from "./pages.mjs";
 import { ensureServers } from "./servers.mjs";
 
 const { base } = await ensureServers(
@@ -22,19 +23,13 @@ const HEIGHT = 990;
 // Not the dev-session test user, so whatever that user has stays as it was.
 const SCREENSHOT_JOB_SEEKER_ID = "screenshot-user";
 
-/** Captures `path` into `out`, failing instead of saving an error page when `expect` is missing. */
-async function screenshot(chrome, path, out, { expect, fullPage = false }) {
-  const loaded = chrome.nextEvent("Page.loadEventFired");
-  await chrome.send("Page.navigate", { url: `${base}${path}` });
-  await loaded;
-  // Let fonts, images and client components settle.
-  await sleep(2500);
-  const { result } = await chrome.send("Runtime.evaluate", { expression: "document.body.innerText" });
-  if (!result.value?.includes(expect)) {
-    throw new Error(`${base}${path} did not show "${expect}"; see .next/dev/logs/next-development.log`);
-  }
-  // The Next.js dev tools badge only exists in development.
-  await chrome.send("Runtime.evaluate", { expression: `document.querySelectorAll("nextjs-portal").forEach((e) => e.remove())` });
+/** The text scripts/pages.mjs expects on `path`, so a screenshot is never of an error page. */
+function expected(path, signedIn) {
+  return PAGES.find((p) => p.path === path && p.signedIn === signedIn).expect;
+}
+
+async function screenshot(chrome, path, out, { signedIn, fullPage = false }) {
+  await openPage(chrome, `${base}${path}`, expected(path, signedIn));
   let clip;
   if (fullPage) {
     const { cssContentSize } = await chrome.send("Page.getLayoutMetrics");
@@ -46,7 +41,6 @@ async function screenshot(chrome, path, out, { expect, fullPage = false }) {
 }
 
 const chrome = await launchChrome();
-let added = false;
 try {
   await chrome.send("Page.enable");
   await chrome.send("Emulation.setDeviceMetricsOverride", { width: WIDTH, height: HEIGHT, deviceScaleFactor: 2, mobile: false });
@@ -57,22 +51,17 @@ try {
     ],
   });
 
-  await screenshot(chrome, "/", "docs/screenshots/landing.png", { expect: "Sign up" });
+  await screenshot(chrome, "/", "docs/screenshots/landing.png", { signedIn: false });
 
-  // Clear anything a crashed run left, then fill before the first dashboard visit, so onboarding
-  // finds Applications and never adds Sample Applications.
-  await removeTestApplications(SCREENSHOT_JOB_SEEKER_ID);
-  await addTestApplications(SCREENSHOT_JOB_SEEKER_ID);
-  added = true;
-  await chrome.send("Network.setCookie", {
-    name: SESSION_COOKIE,
-    value: await createTestSession(SCREENSHOT_JOB_SEEKER_ID),
-    url: base,
+  await withTestApplications(SCREENSHOT_JOB_SEEKER_ID, async () => {
+    await chrome.send("Network.setCookie", {
+      name: SESSION_COOKIE,
+      value: await createTestSession(SCREENSHOT_JOB_SEEKER_ID),
+      url: base,
+    });
+    await screenshot(chrome, "/dashboard", "docs/screenshots/dashboard.png", { signedIn: true, fullPage: true });
   });
-  await screenshot(chrome, "/dashboard", "docs/screenshots/dashboard.png", { expect: "Add application", fullPage: true });
 } finally {
-  // Empty the screenshot user first, so a failure closing Chrome never leaves Applications behind.
-  if (added) await removeTestApplications(SCREENSHOT_JOB_SEEKER_ID);
   await chrome.close();
 }
 

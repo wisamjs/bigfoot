@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 // Accessibility check: loads each page in scripts/pages.mjs in headless Chrome, in light and dark colour schemes,
-// runs axe-core's WCAG 2.2 A and AA rules, and fails on any violation.
+// runs axe-core's WCAG 2.2 A and AA rules, and fails on any violation. Then does the same for each
+// page's `states` (dialogs, toggles), signed in as its own job seeker holding the Applications from
+// scripts/dev-applications.mjs, emptied again afterwards.
 // Uses this checkout's dev server (A11Y_URL, default http://localhost:3300) and API
 // (API_URL, default http://localhost:8000) like smoke does. CHROME_PATH picks Chrome.
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { launchChrome, sleep } from "./chrome.mjs";
+import { enterState, launchChrome, openPage } from "./chrome.mjs";
+import { withTestApplications } from "./dev-applications.mjs";
 import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
 import { PAGES } from "./pages.mjs";
 import { ensureServers } from "./servers.mjs";
@@ -16,21 +19,15 @@ const { base } = await ensureServers(
 );
 const AXE_SOURCE = readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.min.js"), "utf8");
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag22aa"];
+// Not the dev-session test user, so whatever that user has stays as it was.
+const STATES_JOB_SEEKER_ID = "a11y-user";
+const SCHEMES = ["light", "dark"];
 
 // Every page that renders (not redirects), signed out and signed in.
 const pages = PAGES.filter((page) => !page.redirect);
 
-/** axe violations on `path`, one line per failing element. */
-async function violations(chrome, path, expect) {
-  const loaded = chrome.nextEvent("Page.loadEventFired");
-  await chrome.send("Page.navigate", { url: `${base}${path}` });
-  await loaded;
-  // Let fonts and client components settle.
-  await sleep(1500);
-  const { result: text } = await chrome.send("Runtime.evaluate", { expression: "document.body.innerText" });
-  if (!text.value?.includes(expect)) throw new Error(`${path} did not show "${expect}"`);
-  // The Next.js dev tools badge only exists in development.
-  await chrome.send("Runtime.evaluate", { expression: `document.querySelectorAll("nextjs-portal").forEach((e) => e.remove())` });
+/** axe violations on the page as it stands, one line per failing element. */
+async function violations(chrome, where) {
   await chrome.send("Runtime.evaluate", { expression: AXE_SOURCE });
   const { result, exceptionDetails } = await chrome.send("Runtime.evaluate", {
     expression: `axe.run(document, { runOnly: { type: "tag", values: ${JSON.stringify(WCAG_TAGS)} } }).then((r) =>
@@ -38,32 +35,61 @@ async function violations(chrome, path, expect) {
     awaitPromise: true,
     returnByValue: true,
   });
-  if (exceptionDetails) throw new Error(`axe failed on ${path}: ${exceptionDetails.exception?.description ?? exceptionDetails.text}`);
+  if (exceptionDetails) throw new Error(`axe failed on ${where}: ${exceptionDetails.exception?.description ?? exceptionDetails.text}`);
   return result.value;
 }
 
-const chrome = await launchChrome();
 let failed = 0;
+
+function report(label, found) {
+  if (found.length === 0) {
+    console.log(`✓ ${label}`);
+    return;
+  }
+  failed += found.length;
+  console.error(`✗ ${label}`);
+  for (const line of found) console.error(`    ${line}`);
+}
+
+async function signIn(chrome, jobSeekerId) {
+  await chrome.send("Network.clearBrowserCookies");
+  if (jobSeekerId !== null) {
+    await chrome.send("Network.setCookie", { name: SESSION_COOKIE, value: await createTestSession(jobSeekerId), url: base });
+  }
+}
+
+async function setScheme(chrome, scheme) {
+  await chrome.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: scheme }] });
+}
+
+const chrome = await launchChrome();
 try {
   await chrome.send("Page.enable");
   await chrome.send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 990, deviceScaleFactor: 1, mobile: false });
-  for (const scheme of ["light", "dark"]) {
-    await chrome.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: scheme }] });
+  for (const scheme of SCHEMES) {
+    await setScheme(chrome, scheme);
     for (const page of pages) {
-      await chrome.send("Network.clearBrowserCookies");
-      if (page.signedIn) {
-        await chrome.send("Network.setCookie", { name: SESSION_COOKIE, value: await createTestSession(), url: base });
-      }
-      const label = `${page.path} (${page.signedIn ? "signed in" : "signed out"}, ${scheme})`;
-      const found = await violations(chrome, page.path, page.expect);
-      if (found.length === 0) {
-        console.log(`✓ ${label}`);
-      } else {
-        failed += found.length;
-        console.error(`✗ ${label}`);
-        for (const line of found) console.error(`    ${line}`);
-      }
+      await signIn(chrome, page.signedIn ? undefined : null);
+      await openPage(chrome, `${base}${page.path}`, page.expect);
+      report(`${page.path} (${page.signedIn ? "signed in" : "signed out"}, ${scheme})`, await violations(chrome, page.path));
     }
+  }
+
+  const withStates = pages.filter((page) => page.states?.length);
+  if (withStates.length) {
+    await withTestApplications(STATES_JOB_SEEKER_ID, async () => {
+      for (const scheme of SCHEMES) {
+        await setScheme(chrome, scheme);
+        for (const page of withStates) {
+          await signIn(chrome, page.signedIn ? STATES_JOB_SEEKER_ID : null);
+          for (const state of page.states) {
+            await openPage(chrome, `${base}${page.path}`, page.expect);
+            await enterState(chrome, state);
+            report(`${page.path} ${state.name} (${scheme})`, await violations(chrome, `${page.path} ${state.name}`));
+          }
+        }
+      }
+    });
   }
 } finally {
   await chrome.close();

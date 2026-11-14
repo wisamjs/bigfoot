@@ -17,6 +17,7 @@
     "smoke": "node scripts/smoke.mjs",
     "a11y": "node scripts/a11y.mjs",
     "screenshots": "node scripts/screenshots.mjs",
+    "capture": "node scripts/capture.mjs",
     "prepare": "git config core.hooksPath .githooks || true",
     "dev:api": "cd api && uv run uvicorn --factory app.main:create_app --port 8000 --reload",
     "test:api": "cd api && uv run pytest",

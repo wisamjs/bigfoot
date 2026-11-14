@@ -1,5 +1,5 @@
-// Headless Chrome over the DevTools protocol, shared by scripts/screenshots.mjs and
-// scripts/a11y.mjs. CHROME_PATH picks the binary (default: macOS Google Chrome; CI sets it).
+// Headless Chrome over the DevTools protocol, shared by scripts/screenshots.mjs, scripts/a11y.mjs
+// and scripts/capture.mjs. CHROME_PATH picks the binary (default: macOS Google Chrome; CI sets it).
 import { spawn } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -9,6 +9,47 @@ const chromePath = process.env.CHROME_PATH ?? "/Applications/Google Chrome.app/C
 const PORT = 9333;
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Loads `url`, waits for fonts and client components to settle, and fails unless the page shows
+ * `expect` (so an error page is never checked or captured). Removes the Next.js dev tools badge.
+ */
+export async function openPage(chrome, url, expect) {
+  const loaded = chrome.nextEvent("Page.loadEventFired");
+  await chrome.send("Page.navigate", { url });
+  await loaded;
+  await sleep(2000);
+  await expectText(chrome, expect, url);
+  await chrome.send("Runtime.evaluate", { expression: `document.querySelectorAll("nextjs-portal").forEach((e) => e.remove())` });
+}
+
+async function expectText(chrome, expect, where) {
+  const { result } = await chrome.send("Runtime.evaluate", { expression: "document.body.innerText" });
+  if (!result.value?.includes(expect)) {
+    throw new Error(`${where} did not show "${expect}"; see .next/dev/logs/next-development.log`);
+  }
+}
+
+/**
+ * Runs a page state's steps (scripts/pages.mjs): each clicks the first element matching `click`
+ * whose text includes `text`. Then fails unless the page shows the state's `expect`.
+ */
+export async function enterState(chrome, state) {
+  for (const step of state.steps) {
+    const { result } = await chrome.send("Runtime.evaluate", {
+      returnByValue: true,
+      expression: `(() => {
+        const el = [...document.querySelectorAll(${JSON.stringify(step.click)})]
+          .find((e) => e.textContent.includes(${JSON.stringify(step.text ?? "")}));
+        el?.click();
+        return Boolean(el);
+      })()`,
+    });
+    if (!result.value) throw new Error(`State "${state.name}": nothing matches ${JSON.stringify(step)}`);
+    await sleep(400);
+  }
+  await expectText(chrome, state.expect, `State "${state.name}"`);
+}
 
 /** Starts headless Chrome and returns a DevTools client for its first tab. */
 export async function launchChrome() {

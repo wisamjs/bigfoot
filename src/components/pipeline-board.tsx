@@ -10,6 +10,9 @@ import {
   type Interview,
 } from "@/lib/applications";
 
+// Also draws the landing page's decorative board (src/components/landing/hero.tsx): after a
+// layout change, check docs/screenshots/landing.png too.
+
 type Props = {
   title: string;
   subtitle: string;
