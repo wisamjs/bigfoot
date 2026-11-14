@@ -7,6 +7,8 @@ import { getUpcoming } from "@/lib/applications";
 import { previewApplications } from "@/lib/mock-data";
 
 export function Hero() {
+  const upcoming = getUpcoming(previewApplications).length;
+
   return (
     <section id="top" aria-labelledby="hero-title" className="hero-atmosphere py-24">
       <Container>
@@ -46,7 +48,7 @@ export function Hero() {
           <PipelineBoard
             decorative
             title="Pipeline"
-            subtitle={`${getUpcoming(previewApplications).length} upcoming interviews`}
+            subtitle={`${upcoming} upcoming ${upcoming === 1 ? "Interview" : "Interviews"}`}
             applications={previewApplications}
           />
         </div>
