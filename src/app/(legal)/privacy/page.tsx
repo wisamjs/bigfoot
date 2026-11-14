@@ -112,7 +112,7 @@ export default function PrivacyPage() {
         <h3 className={h3}>What you enter</h3>
         <p>
           Your Applications: the company, job title, posting link, location, salary, the date you
-          applied, the Stage, your previous and next Rounds, and when the next Round is.
+          applied, its Status and Outcome, and each Interview: its kind and, if you give one, its date.
         </p>
         <h3 className={h3}>Technical information</h3>
         <p>
@@ -129,7 +129,7 @@ export default function PrivacyPage() {
         <p>We use your personal information only to:</p>
         <ul className={list}>
           <li>sign you in and keep you signed in;</li>
-          <li>store and show your Applications and upcoming Rounds;</li>
+          <li>store and show your Applications and their Interviews;</li>
           <li>keep Bigfoot secure, prevent abuse, and fix errors;</li>
           <li>answer you when you contact us; and</li>
           <li>meet our legal obligations.</li>

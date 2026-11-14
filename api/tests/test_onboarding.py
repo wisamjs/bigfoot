@@ -31,15 +31,21 @@ def test_first_time_seeds_sample_applications(client, token):
     apps = applications(client, token())
     assert 3 <= len(apps) <= 4
     assert all(a["is_sample"] for a in apps)
-    assert {a["stage"] for a in apps} >= {"in_progress", "offer", "rejected"}
-    assert "waiting" in {a["next_round"] for a in apps}
+    assert {(a["status"], a["outcome"]) for a in apps} >= {
+        ("in_progress", None),
+        ("done", "offer"),
+        ("done", "rejected"),
+    }
+    # One with a completed and an upcoming Interview, one new and Waiting.
+    assert any([i["completed"] for i in a["interviews"]] == [True, False] for a in apps)
+    assert any(a["is_waiting"] and not a["interviews"] for a in apps)
     # Nothing that looks personal or real.
     assert all(a["posting_url"] is None and a["salary"] is None and a["location"] is None for a in apps)
 
     today = datetime.now(UTC).date()
     assert all(date.fromisoformat(a["applied_on"]) < today for a in apps)
-    upcoming = [a for a in apps if a["next_round_at"]]
-    assert upcoming and all(datetime.fromisoformat(a["next_round_at"]) > datetime.now(UTC) for a in upcoming)
+    upcoming = [i for a in apps for i in a["interviews"] if not i["completed"]]
+    assert upcoming and all(datetime.fromisoformat(i["at"]) > datetime.now(UTC) for i in upcoming)
 
 
 def test_samples_are_only_for_that_job_seeker(client, token):

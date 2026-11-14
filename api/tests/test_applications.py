@@ -47,10 +47,10 @@ def test_rejects_tokens_signed_with_another_secret(client):
 
 def test_create_applies_defaults(client, token):
     app = create(client, token())
-    assert app["stage"] == "in_progress"
+    assert app["status"] == "in_progress" and app["outcome"] is None
     # The UI always sends the job seeker's local date; this server default is the UTC date.
     assert app["applied_on"] == datetime.now(UTC).date().isoformat()
-    assert app["previous_round"] is None and app["next_round"] is None
+    assert app["interviews"] == []
 
 
 def test_create_trims_text_and_blanks_become_null(client, token):
@@ -67,9 +67,12 @@ def test_create_trims_text_and_blanks_become_null(client, token):
         {"title": ""},
         {"posting_url": "ramp.com/jobs"},
         {"posting_url": "javascript:alert(1)"},
-        {"stage": "saved"},
-        {"previous_round": "waiting"},  # Waiting and Scheduled are only for Next round
-        {"next_round": "offer"},  # outcomes are Stages, never Rounds
+        {"status": "saved"},
+        {"status": "done"},  # an Outcome is required when Done
+        {"status": "done", "outcome": "waiting"},  # Waiting is derived, never an Outcome
+        {"outcome": "offer"},  # an Outcome only goes with Done
+        {"stage": "offer"},  # replaced by status and outcome
+        {"next_round": "technical"},  # replaced by Interviews
         {"job_seeker_id": "mallory"},
     ],
 )
@@ -85,13 +88,11 @@ def test_create_accepts_every_field(client, token):
         posting_url="https://ramp.com/careers/123",
         location="New York",
         applied_on="2026-10-02",
-        stage="offer",
-        previous_round="onsite_loop",
-        next_round="scheduled",
-        next_round_at="2026-11-14T15:00:00Z",
+        status="done",
+        outcome="position_filled",
     )
-    assert app["previous_round"] == "onsite_loop"
-    assert app["next_round_at"].startswith("2026-11-14T15:00:00")
+    assert (app["status"], app["outcome"]) == ("done", "position_filled")
+    assert app["is_waiting"] is False and app["waiting_since"] is None
 
 
 # Read
@@ -109,21 +110,41 @@ def test_list_returns_only_the_callers_applications(client, token):
 
 def test_patch_changes_only_the_fields_sent(client, token):
     app = create(client, token(), location="Remote")
-    res = client.patch(f"/applications/{app['id']}", json={"next_round": "technical"}, headers=token())
+    res = client.patch(f"/applications/{app['id']}", json={"salary": "$200k"}, headers=token())
     assert res.status_code == 200
     updated = res.json()
-    assert updated["next_round"] == "technical"
+    assert updated["salary"] == "$200k"
     assert updated["location"] == "Remote"
     assert updated["updated_at"] > app["updated_at"]
 
 
 def test_patch_null_clears_an_optional_field(client, token):
-    app = create(client, token(), next_round="waiting")
-    res = client.patch(f"/applications/{app['id']}", json={"next_round": None}, headers=token())
-    assert res.json()["next_round"] is None
+    app = create(client, token(), location="Remote")
+    res = client.patch(f"/applications/{app['id']}", json={"location": None}, headers=token())
+    assert res.json()["location"] is None
 
 
-@pytest.mark.parametrize("field", ["company", "title", "applied_on", "stage"])
+def test_patch_finishes_and_reopens_an_application(client, token):
+    app = create(client, token())
+    url = f"/applications/{app['id']}"
+    done = client.patch(url, json={"status": "done", "outcome": "withdrawn"}, headers=token()).json()
+    assert (done["status"], done["outcome"]) == ("done", "withdrawn")
+    # The Outcome alone can change while Done.
+    assert client.patch(url, json={"outcome": "offer"}, headers=token()).json()["outcome"] == "offer"
+    # Reopening clears the Outcome.
+    reopened = client.patch(url, json={"status": "in_progress"}, headers=token()).json()
+    assert (reopened["status"], reopened["outcome"]) == ("in_progress", None)
+
+
+@pytest.mark.parametrize(
+    "changes", [{"status": "done"}, {"outcome": "offer"}, {"status": "in_progress", "outcome": "offer"}]
+)
+def test_patch_needs_an_outcome_exactly_when_done(client, token, changes):
+    app = create(client, token())
+    assert client.patch(f"/applications/{app['id']}", json=changes, headers=token()).status_code == 422
+
+
+@pytest.mark.parametrize("field", ["company", "title", "applied_on", "status"])
 def test_patch_cannot_clear_a_required_field(client, token, field):
     app = create(client, token())
     res = client.patch(f"/applications/{app['id']}", json={field: None}, headers=token())
@@ -150,3 +171,8 @@ def test_delete_someone_elses_application_is_not_found(client, token):
     app = create(client, token("alice"))
     assert client.delete(f"/applications/{app['id']}", headers=token("bob")).status_code == 404
     assert len(client.get("/applications", headers=token("alice")).json()) == 1
+
+
+def test_the_api_has_no_stage_or_rounds(client, token):
+    app = create(client, token())
+    assert not {"stage", "previous_round", "next_round", "next_round_at"} & app.keys()

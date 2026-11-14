@@ -12,7 +12,7 @@ Bigfoot is an early proof of concept, built as a side project.
 
 - Landing page
 - Sign in with Google
-- A dashboard with stats, the Pipeline board (grouped by next round), upcoming rounds, and a table of all your Applications
+- A dashboard with stats, the Pipeline board (grouped by next Interview), upcoming Interviews, and a table of all your Applications
 - A few Sample Applications for new job seekers, so the dashboard shows how Bigfoot works before they add their own
 - Adding, editing and deleting Applications right in the table: text fields save when you leave them, dropdowns save when you pick a value
 
@@ -118,7 +118,7 @@ With the dev server and API running, `npm run screenshots` retakes the two scree
 
 Bigfoot was built with AI coding agents working from the project rules in [`AGENTS.md`](AGENTS.md).
 
-[`GLOSSARY.md`](GLOSSARY.md) defines the product's terms (Application, Stage, Round, Pipeline).
+[`GLOSSARY.md`](GLOSSARY.md) defines the product's terms (Application, Status, Outcome, Interview, Pipeline).
 
 ## License
 

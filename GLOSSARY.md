@@ -11,7 +11,7 @@ The product itself. Refer to the software by name. The name comes from the brand
 _Avoid_: the application, the platform; hunt words as nouns (sighting, trail, tracks)
 
 **Job seeker**:
-The person running a job search in Bigfoot: its user. A job seeker has one account, created the first time they sign in with Google; there is no separate sign-up. Deleting the account removes the job seeker and all of their Applications.
+The person running a job search in Bigfoot: its user. A job seeker has one account, created the first time they sign in with Google; there is no separate sign-up. Deleting the account removes the job seeker and all of their Applications and Interviews.
 _Avoid_: user, owner, candidate, applicant
 
 **Application**:
@@ -22,29 +22,30 @@ _Avoid_: job, opportunity, lead
 An Application that Bigfoot creates for a new job seeker, to show how Bigfoot works before they add their own. A job seeker receives sample Applications once. They can be edited or deleted like any other Application, and are always marked as samples.
 _Avoid_: demo, example, placeholder, seed data
 
-**Stage**:
-Where an Application currently sits: In Progress, Offer, or one of the Closed stages.
-_Avoid_: status, phase, column
+**Status**:
+Whether an Application is still going: In Progress or Done. A new Application is In Progress. Waiting and Scheduled are not Statuses.
+_Avoid_: stage, phase, column
 
-**Closed stage**:
-A Stage that ends an Application without an offer: Rejected, Position Filled, Withdrawn, No Open Position or Not the Right Fit.
-_Avoid_: outcome, archived
+**Outcome**:
+How a Done Application ended: Offer, Rejected, Position Filled, Withdrawn, No Open Position or Not the Right Fit. Required when the Status is Done, and only then. Reopening an Application clears it.
+_Avoid_: closed stage, result, archived
 
 **Pipeline**:
-All of a job seeker's Applications, grouped by Stage. Applications in a Closed stage belong to the Pipeline but are not shown on the board.
+All of a job seeker's Applications. The board shows the In Progress ones, grouped by what they are waiting on, plus Offers; the rest belong to the Pipeline but are not shown on it. _Planned_ (BIG-47): the board is rebuilt around Waiting.
 _Avoid_: board, funnel, tracker
 
-**Round**:
-One kind of conversation in a company's hiring process: Informal Chat, Recruiter Screen, Hiring Manager, Technical, Behavioural, Leadership or Onsite Loop. An outcome is never a Round.
-_Avoid_: interview stage, step
+**Interview**:
+One conversation in a company's hiring process, belonging to one Application. It has a required, editable kind and an optional date and time, and no title. An Application can have many; kinds can repeat. Interviews are ordered by date, undated ones first, with no manual order and no per-company template. A cancelled Interview is deleted. Deleting the Application deletes its Interviews. _Planned_: adding, editing and deleting Interviews in the Application modal (BIG-46); showing every Interview on the Coming up calendar (BIG-47).
+_Avoid_: round, step, stage, meeting
 
-**Previous round**:
-The most recent Round the job seeker has completed for an Application.
+**Interview kind**:
+What sort of conversation an Interview is: Informal Chat, Recruiter Screen, Hiring Manager, Technical, Behavioural, Leadership, Onsite Loop, AI Assisted Coding Challenge, Coding Challenge, FE System Design, BE System Design, Technical Deep-Dive, Cross-Functional Interview, Strategy & Values Alignment or People Management. An Outcome is never a kind.
+_Avoid_: round, type
 
-**Next round**:
-What comes next for an Application: a Round, or Scheduled (something is booked but its kind is unknown) or Waiting (the company owes a reply).
-_Avoid_: upcoming interview
+**Completed** (an Interview):
+Derived, never stored: the Interview's date is in the past, or it has no date. Nothing is written when Bigfoot reads Applications.
+_Avoid_: done (that is a Status), past
 
-**Advancing a round**:
-What happens once a Next round's date passes on an In Progress Application: a Round becomes the Previous round, and the Next round becomes Waiting with no date. Scheduled also becomes Waiting but leaves the Previous round as it was, since its kind is unknown. Waiting keeps its date. Bigfoot advances rounds whenever it reads a job seeker's Applications, without telling them.
-_Avoid_: auto-update, rollover
+**Waiting**:
+Derived, never stored: an In Progress Application with no upcoming Interview, including a brand-new one. It shows "Waiting since" the date of the last completed Interview, or the applied date when there is none. A Done Application is never Waiting. _Planned_: showing "Waiting since" and the Waiting board columns (BIG-46, BIG-47).
+_Avoid_: pending, scheduled
