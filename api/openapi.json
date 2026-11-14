@@ -1,0 +1,1512 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Bigfoot API",
+    "description": "Bigfoot's data API: a job seeker's Applications and their Interviews, in Supabase Postgres.\n\nThe browser never calls it. The Next.js server does, with a short-lived token naming the\nsigned-in job seeker, and every route reads and writes only that job seeker's data\n([ADR 0001](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0001-fastapi-behind-nextjs-with-authjs.md)).\nTerms such as Application, Interview, Waiting and Sample Application are defined in\n[GLOSSARY.md](https://github.com/wisamjs/bigfoot/blob/main/GLOSSARY.md).\n\nTo try a request, run `node scripts/dev-api-token.mjs`, click **Authorize** and paste the token.\n",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Check the API is up",
+        "description": "Always `ok` while the API is serving. Doesn't touch the database.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/onboard": {
+      "post": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Onboard the job seeker",
+        "description": "Record the job seeker, and give them Sample Applications the first time only.\n\nIdempotent, and safe to call concurrently: the insert waits on any other transaction\ninserting the same job seeker, and `for update` serializes the seeding check.",
+        "operationId": "onboard_me_onboard_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Onboarding"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerToken": []
+          }
+        ]
+      }
+    },
+    "/me": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Get the job seeker's record",
+        "description": "The job seeker's own record, for their data export. 404 until they are onboarded.",
+        "operationId": "get_job_seeker_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobSeeker"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The job seeker hasn't been onboarded yet.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerToken": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Delete the job seeker's account",
+        "description": "Delete the job seeker and all of their Applications, in one transaction.\n\nIdempotent: deleting an account that is already gone succeeds and logs nothing. Signing\nin again afterwards makes a new job seeker, who receives Sample Applications again.",
+        "operationId": "delete_account_me_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerToken": []
+          }
+        ]
+      }
+    },
+    "/applications": {
+      "get": {
+        "tags": [
+          "Applications"
+        ],
+        "summary": "List the job seeker's Applications",
+        "description": "Every Application of the job seeker, oldest first, each with its Interviews and Waiting data.",
+        "operationId": "list_applications_applications_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Application"
+                  },
+                  "type": "array",
+                  "title": "Response List Applications Applications Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerToken": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Applications"
+        ],
+        "summary": "Add an Application",
+        "description": "Add an Application for the job seeker. It starts In Progress with no Interviews unless the body\nsays otherwise; a Done Application needs an Outcome.",
+        "operationId": "create_application_applications_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Application"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerToken": []
+          }
+        ]
+      }
+    },
+    "/applications/{application_id}": {
+      "patch": {
+        "tags": [
+          "Applications"
+        ],
+        "summary": "Edit an Application",
+        "description": "Change some of an Application's fields and return it with its Interviews.\n\nOnly the fields sent change. Setting the status to `in_progress` without an outcome reopens the\nApplication and clears its Outcome; setting it to `done` needs an Outcome, sent now or already set.",
+        "operationId": "update_application_applications__application_id__patch",
+        "security": [
+          {
+            "BearerToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The Application's id.",
+              "title": "Application Id"
+            },
+            "description": "The Application's id."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Application"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Application with this id belongs to the job seeker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The body is invalid (a list of field errors), or the change would leave a Done Application without an Outcome or an In Progress one with an Outcome (a message).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorMessage"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Applications"
+        ],
+        "summary": "Delete an Application",
+        "description": "Delete an Application and all of its Interviews. Sample Applications can be deleted like any other.",
+        "operationId": "delete_application_applications__application_id__delete",
+        "security": [
+          {
+            "BearerToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The Application's id.",
+              "title": "Application Id"
+            },
+            "description": "The Application's id."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Application with this id belongs to the job seeker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/applications/{application_id}/interviews": {
+      "get": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "List an Application's Interviews",
+        "description": "The Application's Interviews, ordered by date, undated first.",
+        "operationId": "list_interviews_applications__application_id__interviews_get",
+        "security": [
+          {
+            "BearerToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The Application's id.",
+              "title": "Application Id"
+            },
+            "description": "The Application's id."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Interview"
+                  },
+                  "title": "Response List Interviews Applications  Application Id  Interviews Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Application with this id belongs to the job seeker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "Add an Interview",
+        "description": "Add an Interview to an Application. Kinds can repeat; the date is optional.",
+        "operationId": "create_interview_applications__application_id__interviews_post",
+        "security": [
+          {
+            "BearerToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The Application's id.",
+              "title": "Application Id"
+            },
+            "description": "The Application's id."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterviewCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Application with this id belongs to the job seeker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/applications/{application_id}/interviews/{interview_id}": {
+      "patch": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "Edit an Interview",
+        "description": "Change an Interview's kind or date. Only the fields sent change; send null for `at` to clear the date.",
+        "operationId": "update_interview_applications__application_id__interviews__interview_id__patch",
+        "security": [
+          {
+            "BearerToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The Application's id.",
+              "title": "Application Id"
+            },
+            "description": "The Application's id."
+          },
+          {
+            "name": "interview_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The Interview's id.",
+              "title": "Interview Id"
+            },
+            "description": "The Interview's id."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterviewPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The Application isn't the job seeker's, or has no Interview with this id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "Delete an Interview",
+        "description": "Delete an Interview, for example a cancelled one.",
+        "operationId": "delete_interview_applications__application_id__interviews__interview_id__delete",
+        "security": [
+          {
+            "BearerToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The Application's id.",
+              "title": "Application Id"
+            },
+            "description": "The Application's id."
+          },
+          {
+            "name": "interview_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The Interview's id.",
+              "title": "Interview Id"
+            },
+            "description": "The Interview's id."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The Application isn't the job seeker's, or has no Interview with this id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Application": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "company": {
+            "type": "string",
+            "title": "Company",
+            "description": "The company the job seeker applied to.",
+            "examples": [
+              "Northwind Robotics"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "The role's job title.",
+            "examples": [
+              "Frontend Engineer"
+            ]
+          },
+          "posting_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posting Url",
+            "description": "The job posting, as an http(s) URL.",
+            "examples": [
+              "https://jobs.example.com/northwind/frontend-engineer"
+            ]
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location",
+            "description": "Where the role is, as the job seeker writes it.",
+            "examples": [
+              "Remote"
+            ]
+          },
+          "salary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salary",
+            "description": "The pay range, as the job seeker writes it.",
+            "examples": [
+              "$120k–$140k"
+            ]
+          },
+          "applied_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Applied On",
+            "description": "When the job seeker applied.",
+            "examples": [
+              "2026-11-02"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "in_progress",
+              "done"
+            ],
+            "title": "Status",
+            "description": "Whether the Application is still going (GLOSSARY.md, Status)."
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "offer",
+                  "rejected",
+                  "position_filled",
+                  "withdrawn",
+                  "no_open_position",
+                  "not_the_right_fit"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome",
+            "description": "How a Done Application ended. Required when the status is `done`, and only then."
+          },
+          "interviews": {
+            "items": {
+              "$ref": "#/components/schemas/Interview"
+            },
+            "type": "array",
+            "title": "Interviews",
+            "description": "Ordered by date, undated first."
+          },
+          "is_waiting": {
+            "type": "boolean",
+            "title": "Is Waiting",
+            "description": "Derived (GLOSSARY.md, Waiting): In Progress with no upcoming Interview, including a new one."
+          },
+          "waiting_since": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waiting Since",
+            "description": "While waiting: when the last dated, completed Interview happened (a timestamp), or else the applied date. Null when not waiting.",
+            "examples": [
+              "2026-11-08T17:00:00Z"
+            ]
+          },
+          "is_sample": {
+            "type": "boolean",
+            "title": "Is Sample",
+            "description": "A Sample Application that Bigfoot created for a new job seeker."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "company",
+          "title",
+          "posting_url",
+          "location",
+          "salary",
+          "applied_on",
+          "status",
+          "outcome",
+          "interviews",
+          "is_waiting",
+          "waiting_since",
+          "is_sample",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "Application",
+        "description": "One role at one company that the job seeker has applied to, with its Interviews."
+      },
+      "ApplicationCreate": {
+        "properties": {
+          "company": {
+            "type": "string",
+            "title": "Company",
+            "description": "The company the job seeker applied to.",
+            "examples": [
+              "Northwind Robotics"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "The role's job title.",
+            "examples": [
+              "Frontend Engineer"
+            ]
+          },
+          "posting_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posting Url",
+            "description": "The job posting, as an http(s) URL.",
+            "examples": [
+              "https://jobs.example.com/northwind/frontend-engineer"
+            ]
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location",
+            "description": "Where the role is, as the job seeker writes it.",
+            "examples": [
+              "Remote"
+            ]
+          },
+          "salary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salary",
+            "description": "The pay range, as the job seeker writes it.",
+            "examples": [
+              "$120k–$140k"
+            ]
+          },
+          "applied_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied On",
+            "description": "When the job seeker applied. Defaults to today.",
+            "examples": [
+              "2026-11-02"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "in_progress",
+              "done"
+            ],
+            "title": "Status",
+            "description": "Whether the Application is still going (GLOSSARY.md, Status).",
+            "default": "in_progress"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "offer",
+                  "rejected",
+                  "position_filled",
+                  "withdrawn",
+                  "no_open_position",
+                  "not_the_right_fit"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome",
+            "description": "How a Done Application ended. Required when the status is `done`, and only then."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "company",
+          "title"
+        ],
+        "title": "ApplicationCreate",
+        "description": "A new Application. Blank optional text is stored as null."
+      },
+      "ApplicationPatch": {
+        "properties": {
+          "company": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company",
+            "description": "The company the job seeker applied to.",
+            "examples": [
+              "Northwind Robotics"
+            ]
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title",
+            "description": "The role's job title.",
+            "examples": [
+              "Frontend Engineer"
+            ]
+          },
+          "posting_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posting Url",
+            "description": "The job posting, as an http(s) URL.",
+            "examples": [
+              "https://jobs.example.com/northwind/frontend-engineer"
+            ]
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location",
+            "description": "Where the role is, as the job seeker writes it.",
+            "examples": [
+              "Remote"
+            ]
+          },
+          "salary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salary",
+            "description": "The pay range, as the job seeker writes it.",
+            "examples": [
+              "$120k–$140k"
+            ]
+          },
+          "applied_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied On",
+            "description": "When the job seeker applied. Cannot be cleared.",
+            "examples": [
+              "2026-11-02"
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "in_progress",
+                  "done"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status",
+            "description": "Whether the Application is still going (GLOSSARY.md, Status). Cannot be cleared.",
+            "examples": [
+              "done"
+            ]
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "offer",
+                  "rejected",
+                  "position_filled",
+                  "withdrawn",
+                  "no_open_position",
+                  "not_the_right_fit"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome",
+            "description": "How a Done Application ended. Required when the status is `done`, and only then.",
+            "examples": [
+              "offer"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ApplicationPatch",
+        "description": "Only the fields sent are changed; send null to clear an optional field.\n\nSetting the status to in_progress without an outcome clears the outcome (reopening)."
+      },
+      "ErrorMessage": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "description": "What went wrong.",
+            "examples": [
+              "Application not found"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorMessage"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "Health"
+      },
+      "Interview": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id",
+            "description": "The Application this Interview belongs to."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "informal_chat",
+              "recruiter_screen",
+              "hiring_manager",
+              "technical",
+              "behavioural",
+              "leadership",
+              "onsite_loop",
+              "ai_assisted_coding_challenge",
+              "coding_challenge",
+              "fe_system_design",
+              "be_system_design",
+              "technical_deep_dive",
+              "cross_functional_interview",
+              "strategy_and_values_alignment",
+              "people_management"
+            ],
+            "title": "Kind",
+            "description": "What sort of conversation the Interview is (GLOSSARY.md, Interview kind).",
+            "examples": [
+              "technical"
+            ]
+          },
+          "at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At",
+            "description": "When the Interview happens, with a time zone. Null when it has no date yet.",
+            "examples": [
+              "2026-11-20T17:00:00Z"
+            ]
+          },
+          "completed": {
+            "type": "boolean",
+            "title": "Completed",
+            "description": "Derived, never stored: the date is in the past, or there is no date.",
+            "examples": [
+              false
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "application_id",
+          "kind",
+          "at",
+          "completed",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "Interview",
+        "description": "One conversation in a company's hiring process, belonging to one Application."
+      },
+      "InterviewCreate": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "informal_chat",
+              "recruiter_screen",
+              "hiring_manager",
+              "technical",
+              "behavioural",
+              "leadership",
+              "onsite_loop",
+              "ai_assisted_coding_challenge",
+              "coding_challenge",
+              "fe_system_design",
+              "be_system_design",
+              "technical_deep_dive",
+              "cross_functional_interview",
+              "strategy_and_values_alignment",
+              "people_management"
+            ],
+            "title": "Kind",
+            "description": "What sort of conversation the Interview is (GLOSSARY.md, Interview kind).",
+            "examples": [
+              "technical"
+            ]
+          },
+          "at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At",
+            "description": "When the Interview happens, with a time zone. Null when it has no date yet.",
+            "examples": [
+              "2026-11-20T17:00:00Z"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "InterviewCreate",
+        "description": "A new Interview for an Application."
+      },
+      "InterviewPatch": {
+        "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "informal_chat",
+                  "recruiter_screen",
+                  "hiring_manager",
+                  "technical",
+                  "behavioural",
+                  "leadership",
+                  "onsite_loop",
+                  "ai_assisted_coding_challenge",
+                  "coding_challenge",
+                  "fe_system_design",
+                  "be_system_design",
+                  "technical_deep_dive",
+                  "cross_functional_interview",
+                  "strategy_and_values_alignment",
+                  "people_management"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind",
+            "description": "What sort of conversation the Interview is (GLOSSARY.md, Interview kind). Cannot be cleared.",
+            "examples": [
+              "onsite_loop"
+            ]
+          },
+          "at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At",
+            "description": "When the Interview happens, with a time zone. Null when it has no date yet.",
+            "examples": [
+              "2026-11-27T15:30:00Z"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "InterviewPatch",
+        "description": "Only the fields sent are changed; send null for `at` to clear the date."
+      },
+      "JobSeeker": {
+        "properties": {
+          "job_seeker_id": {
+            "type": "string",
+            "title": "Job Seeker Id",
+            "description": "The Google account id."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When they first signed in: their account's created date."
+          },
+          "samples_seeded_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Samples Seeded At",
+            "description": "When they received their Sample Applications; null until then."
+          },
+          "last_seen_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Seen At",
+            "description": "When they last signed in."
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_seeker_id",
+          "created_at",
+          "samples_seeded_at",
+          "last_seen_at"
+        ],
+        "title": "JobSeeker",
+        "description": "Everything Bigfoot's database holds about the job seeker besides their Applications."
+      },
+      "Onboarding": {
+        "properties": {
+          "samples_seeded": {
+            "type": "boolean",
+            "title": "Samples Seeded",
+            "description": "Whether this call gave the job seeker Sample Applications. True the first time only."
+          }
+        },
+        "type": "object",
+        "required": [
+          "samples_seeded"
+        ],
+        "title": "Onboarding"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "BearerToken": {
+        "type": "http",
+        "description": "A short-lived HS256 JWT signed with API_SECRET, with `sub` set to the job seeker's id, `aud` 'bigfoot-api' and `iss` 'bigfoot-web'. The Next.js server signs one per request; locally, `node scripts/dev-api-token.mjs` prints one for the test job seeker.",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Account",
+      "description": "The signed-in job seeker: onboarding, exporting and deleting the account."
+    },
+    {
+      "name": "Applications",
+      "description": "Roles the job seeker has applied to, each with its Interviews."
+    },
+    {
+      "name": "Interviews",
+      "description": "Conversations in a company's hiring process, one Application each."
+    },
+    {
+      "name": "Health",
+      "description": "Whether the API is up. Needs no token."
+    }
+  ]
+}
