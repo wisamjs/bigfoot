@@ -1,4 +1,6 @@
 #!/bin/sh
-# npm run check (types, lint, Python lint, design tokens, spelling, Vitest) before every commit.
+# npm run check (types, lint, Python lint, design tokens, spelling, then every Vitest test with the
+# coverage floor) before every commit; a failing test blocks it. The whole suite takes about a
+# second, so it runs in full rather than only the tests related to staged files.
 # Installed by `npm install` (the "prepare" script sets core.hooksPath).
 exec npm run --silent check
