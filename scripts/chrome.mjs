@@ -1,12 +1,24 @@
 // Headless Chrome over the DevTools protocol, shared by scripts/screenshots.mjs, scripts/a11y.mjs
 // and scripts/capture.mjs. CHROME_PATH picks the binary (default: macOS Google Chrome; CI sets it).
 import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const chromePath = process.env.CHROME_PATH ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-const PORT = 9333;
+
+/**
+ * The DevTools port Chrome picked, from the file it writes into its profile; undefined until then.
+ * Chrome picks a free port (--remote-debugging-port=0) so checks running at once in several git
+ * checkouts never connect to each other's browser.
+ */
+function devToolsPort(profile) {
+  try {
+    return readFileSync(join(profile, "DevToolsActivePort"), "utf8").split("\n")[0] || undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -117,7 +129,7 @@ export async function launchChrome() {
   const profile = mkdtempSync(join(tmpdir(), "bigfoot-chrome-"));
   const chrome = spawn(
     chromePath,
-    ["--headless=new", `--remote-debugging-port=${PORT}`, "--hide-scrollbars", `--user-data-dir=${profile}`, "about:blank"],
+    ["--headless=new", "--remote-debugging-port=0", "--hide-scrollbars", `--user-data-dir=${profile}`, "about:blank"],
     { stdio: ["ignore", "ignore", "pipe"] },
   );
   // Kept so a failed start can say why; Chrome logs harmless noise here on success.
@@ -135,7 +147,8 @@ export async function launchChrome() {
   // Up to 30s: a cold CI runner can be slow to start Chrome.
   for (let i = 0; i < 150 && !page && exitCode === null; i++) {
     try {
-      const targets = await (await fetch(`http://127.0.0.1:${PORT}/json`)).json();
+      const port = devToolsPort(profile);
+      const targets = port ? await (await fetch(`http://127.0.0.1:${port}/json`)).json() : [];
       page = targets.find((t) => t.type === "page");
     } catch {}
     if (!page) await sleep(200);

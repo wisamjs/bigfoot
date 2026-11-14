@@ -1,0 +1,165 @@
+import { describe, expect, it } from "vitest";
+import type { Application } from "./applications";
+import { applicationsCsv, dataExportJson, exportFileName, neutralizeFormula } from "./data-export";
+
+const ts = "2026-11-02T15:00:00.000Z";
+
+function application(overrides: Partial<Application> = {}): Application {
+  return {
+    id: "a1",
+    company: "Ramp",
+    title: "Engineer",
+    posting_url: null,
+    location: null,
+    salary: null,
+    applied_on: "2026-11-01",
+    status: "in_progress",
+    outcome: null,
+    interviews: [],
+    is_waiting: true,
+    waiting_since: "2026-11-01",
+    is_sample: false,
+    created_at: ts,
+    updated_at: ts,
+    ...overrides,
+  };
+}
+
+/** Parses the simple CSV applicationsCsv writes: quoted cells may hold commas, quotes and newlines. */
+function parseCsv(text: string) {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted && c === '"' && text[i + 1] === '"') {
+      cell += '"';
+      i++;
+    } else if (c === '"') {
+      quoted = !quoted;
+    } else if (!quoted && c === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (!quoted && c === "\r" && text[i + 1] === "\n") {
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+      i++;
+    } else {
+      cell += c;
+    }
+  }
+  return rows;
+}
+
+describe("applicationsCsv", () => {
+  it("starts with a UTF-8 byte order mark and ends lines with CRLF, for Excel", () => {
+    const csv = applicationsCsv([application()]);
+    expect(csv.startsWith("﻿Company,")).toBe(true);
+    expect(csv.endsWith("\r\n")).toBe(true);
+  });
+
+  it("writes one row per Application with display labels and ISO dates", () => {
+    const rows = parseCsv(
+      applicationsCsv([
+        application({
+          company: "Café, Inc.",
+          status: "done",
+          outcome: "not_the_right_fit",
+          is_sample: true,
+          interviews: [
+            { id: "i1", application_id: "a1", kind: "recruiter_screen", at: null, completed: true, created_at: ts, updated_at: ts },
+            { id: "i2", application_id: "a1", kind: "fe_system_design", at: ts, completed: true, created_at: ts, updated_at: ts },
+          ],
+        }),
+        application({ company: "Second" }),
+      ]).slice(1),
+    );
+    expect(rows).toHaveLength(3);
+    const [header, first] = rows;
+    const row = Object.fromEntries(header.map((h, i) => [h, first[i]]));
+    expect(row).toEqual({
+      Company: "Café, Inc.",
+      Title: "Engineer",
+      "Job posting URL": "",
+      Location: "",
+      Salary: "",
+      "Applied date": "2026-11-01",
+      Status: "Done",
+      Outcome: "Not the Right Fit",
+      Interviews: "Recruiter Screen (no date); FE System Design (2026-11-02T15:00:00Z)",
+      "Sample Application": "Yes",
+      Created: "2026-11-02T15:00:00Z",
+      Updated: "2026-11-02T15:00:00Z",
+    });
+    expect(rows[2][0]).toBe("Second");
+  });
+
+  it("quotes cells holding quotes and newlines", () => {
+    const rows = parseCsv(applicationsCsv([application({ title: 'Say "hi"\nthere' })]).slice(1));
+    expect(rows[1][1]).toBe('Say "hi"\nthere');
+  });
+
+  it("neutralizes cells a spreadsheet would run as a formula", () => {
+    const rows = parseCsv(
+      applicationsCsv([
+        application({ company: "=HYPERLINK(\"http://evil\")", title: "+1", location: "-2", salary: "@SUM(A1)" }),
+      ]).slice(1),
+    );
+    expect(rows[1].slice(0, 5)).toEqual(["'=HYPERLINK(\"http://evil\")", "'+1", "", "'-2", "'@SUM(A1)"]);
+  });
+});
+
+describe("neutralizeFormula", () => {
+  it.each(["=1", "+1", "-1", "@A1", "\t=1", "\r=1"])("prefixes %j", (value) => {
+    expect(neutralizeFormula(value)).toBe(`'${value}`);
+  });
+
+  it.each(["Ramp", "2026-11-01", "", "a=b", "$120k"])("leaves %j alone", (value) => {
+    expect(neutralizeFormula(value)).toBe(value);
+  });
+});
+
+describe("dataExportJson", () => {
+  const user = { id: "google-123", name: "Ada Lovelace", firstName: "Ada", email: "ada@example.com", image: null };
+  const now = new Date("2026-11-14T05:00:00Z");
+
+  it("holds the profile and every Application field, is_sample included", () => {
+    const app = application({ is_sample: true });
+    const record = {
+      job_seeker_id: "google-123",
+      created_at: "2026-11-10T12:00:00Z",
+      samples_seeded_at: "2026-11-10T12:00:01Z",
+      last_seen_at: "2026-11-13T12:00:00Z",
+    };
+    const data = JSON.parse(dataExportJson(user, record, [app], now));
+    expect(data).toEqual({
+      exported_at: "2026-11-14T05:00:00.000Z",
+      profile: {
+        name: "Ada Lovelace",
+        email: "ada@example.com",
+        photo_url: null,
+        google_account_id: "google-123",
+        account_created_at: "2026-11-10T12:00:00Z",
+        samples_received_at: "2026-11-10T12:00:01Z",
+        last_seen_at: "2026-11-13T12:00:00Z",
+      },
+      applications: [app],
+    });
+  });
+
+  it("still exports when the job seeker has no database record yet", () => {
+    const data = JSON.parse(dataExportJson(user, null, [], now));
+    expect(data.profile.account_created_at).toBeNull();
+    expect(data.applications).toEqual([]);
+  });
+});
+
+describe("exportFileName", () => {
+  it("includes the UTC date and the format", () => {
+    expect(exportFileName("csv", new Date("2026-11-11T23:30:00Z"))).toBe("bigfoot-export-2026-11-11.csv");
+    expect(exportFileName("json", new Date("2026-11-11T00:00:00Z"))).toBe("bigfoot-export-2026-11-11.json");
+  });
+});

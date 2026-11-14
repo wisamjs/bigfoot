@@ -1,37 +1,22 @@
 import type { LucideIcon } from "lucide-react";
-import { BarChart3, BellRing, Kanban, Link2, NotebookPen, Users } from "lucide-react";
+import { CalendarDays, Kanban, ListChecks } from "lucide-react";
 import { Container, SectionHeader } from "@/components/ui";
 
 const features: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: Kanban,
     title: "Pipeline board",
-    body: "Drag roles from Saved to Offer. Each column shows what needs your attention today.",
+    body: "See every Application grouped by what it’s waiting on: a reply, an Interview or your answer to an Offer.",
   },
   {
-    icon: NotebookPen,
-    title: "Interview prep notes",
-    body: "Keep research, STAR stories and questions to ask on the card for each role.",
+    icon: ListChecks,
+    title: "Interviews",
+    body: "Log each Interview with its kind and date. Every card lists them all, completed ones muted.",
   },
   {
-    icon: BellRing,
-    title: "Follow-up reminders",
-    body: "Bigfoot nudges you to follow up after a week of silence, so nothing goes cold.",
-  },
-  {
-    icon: Users,
-    title: "Contacts and referrals",
-    body: "Link recruiters, hiring managers and referrers to each role, with every conversation logged.",
-  },
-  {
-    icon: BarChart3,
-    title: "Search analytics",
-    body: "See response rates by source and stage, so you know where to spend your time.",
-  },
-  {
-    icon: Link2,
-    title: "One-click capture",
-    body: "Paste a job link and Bigfoot fills in the company, title, salary range and location.",
+    icon: CalendarDays,
+    title: "Coming up",
+    body: "A calendar of your Interviews, with the next one at the top of your dashboard.",
   },
 ];
 
@@ -42,10 +27,10 @@ export function Features() {
         <SectionHeader
           id="features-title"
           eyebrow="Features"
-          title="Everything you need for the hunt, nothing you don’t"
-          lead="Bigfoot replaces the spreadsheet, the sticky notes and the calendar reminders with one focused workspace."
+          title="Your search in one place"
+          lead="Add an Application, log its Interviews and see what’s next."
         />
-        <ul className="m-0 grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="m-0 grid list-none grid-cols-1 gap-6 p-0 lg:grid-cols-3">
           {features.map(({ icon: Icon, title, body }) => (
             <li key={title} className="card p-8">
               {/* Icon shape LG: 48px container, 24px icon, 24px radius */}

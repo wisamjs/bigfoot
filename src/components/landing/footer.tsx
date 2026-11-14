@@ -6,14 +6,12 @@ const columns = [
     title: "Product",
     links: [
       { label: "Features", href: "/#features" },
-      { label: "How it works", href: "/#how-it-works" },
     ],
   },
   {
     title: "Company",
     links: [
       { label: "Privacy", href: "/privacy" },
-      { label: "Terms", href: "#" },
     ],
   },
 ];

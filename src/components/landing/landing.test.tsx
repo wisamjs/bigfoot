@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 import { Features } from "./features";
 import { Footer } from "./footer";
 import { Hero } from "./hero";
-import { HowItWorks } from "./how-it-works";
 import { Navbar } from "./navbar";
 
 // The sign-in buttons post to Server Actions, which need Auth.js and a request.
@@ -25,22 +24,16 @@ describe("landing sections", () => {
     expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
   });
 
-  it.each([
-    ["Features", Features, 6],
-    ["How it works", HowItWorks, 3],
-  ])("%s is a section named by its h2, with an h3 per item", (_, Section, items) => {
-    render(<Section />);
+  it("Features is a section named by its h2, with an h3 per feature", () => {
+    render(<Features />);
     const section = sectionNamedBy(2);
-    expect(within(section).getAllByRole("heading", { level: 3 })).toHaveLength(items);
+    expect(within(section).getAllByRole("heading", { level: 3 })).toHaveLength(3);
   });
 
   it("Navbar links to the sections on the page", () => {
     render(<Navbar />);
     const nav = screen.getByRole("navigation", { name: "Primary" });
-    expect(within(nav).getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual([
-      "#features",
-      "#how-it-works",
-    ]);
+    expect(within(nav).getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual(["#features"]);
   });
 
   it("Footer heads each link column", () => {
