@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { GoogleAuthButton } from "@/components/auth-button";
+import { SignInNote } from "@/components/sign-in-note";
 import { Container, Wordmark } from "@/components/ui";
 
 const links = [
@@ -75,6 +76,7 @@ export function Navbar() {
               </GoogleAuthButton>
               <GoogleAuthButton className="flex-1">Sign up</GoogleAuthButton>
             </div>
+            <SignInNote className="mt-4" />
           </Container>
         </div>
       )}

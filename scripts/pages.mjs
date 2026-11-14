@@ -11,6 +11,8 @@ export const PAGES = [
   { path: "/", signedIn: true, expect: "Sign up" },
   { path: "/privacy", signedIn: false, expect: "Privacy Policy" },
   { path: "/privacy", signedIn: true, expect: "Privacy Policy" },
+  { path: "/terms", signedIn: false, expect: "Terms of Service" },
+  { path: "/terms", signedIn: true, expect: "Terms of Service" },
   { path: "/dashboard", signedIn: false, redirect: true },
   {
     path: "/dashboard",

@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { GoogleAuthButton } from "@/components/auth-button";
 import { PipelineBoard } from "@/components/pipeline-board";
+import { SignInNote } from "@/components/sign-in-note";
 import { Badge, Container } from "@/components/ui";
 import { getUpcoming } from "@/lib/applications";
 import { previewApplications } from "@/lib/mock-data";
@@ -32,16 +32,7 @@ export function Hero() {
               Sign in
             </GoogleAuthButton>
           </div>
-          <p className="mx-auto mt-4 max-w-[70ch] text-sm leading-[1.6] text-body">
-            Signing in with Google shares your name, email and photo with Bigfoot. Read our{" "}
-            <Link
-              href="/privacy"
-              className="rounded-control text-fg-brand underline underline-offset-4 transition-colors hover:no-underline"
-            >
-              Privacy Policy
-            </Link>
-            .
-          </p>
+          <SignInNote className="mx-auto mt-4 max-w-[70ch]" />
         </div>
 
         <div className="mt-16">
