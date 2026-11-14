@@ -19,9 +19,9 @@ function interviewCount(n: number) {
 }
 
 /**
- * Coming up as a small month grid beside an agenda (BIG-36): only Interviews still ahead, so one
- * that passed after the page loaded drops off.
- * The grid marks days with a dot; the agenda lists the shown month's Interviews, or one day's
+ * Coming up as a small month grid beside an agenda (BIG-36): every dated Interview of an In
+ * Progress Application, with past ones muted.
+ * The grid marks days with a dot (muted when all of the day's Interviews are past); the agenda lists the shown month's Interviews, or one day's
  * once that day is picked.
  * Days and times are the job seeker's own, so the calendar renders only in the browser; the server
  * sends a placeholder of about the same size.
@@ -47,8 +47,7 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
   const todayKey = dayKey(now);
   const start = monthStart(now, offset);
   const weeks = monthWeeks(start);
-  const ahead = interviews.filter((d) => new Date(d.interview.at) >= now);
-  const byDay = groupByDay(ahead, (d) => d.interview.at);
+  const byDay = groupByDay(interviews, (d) => d.interview.at);
   const days = weeks.flat().filter((d) => d.inMonth);
   const selectedDay = days.find((d) => d.key === selected);
   const agendaDays = (selectedDay ? [selectedDay] : days).filter((d) => byDay.has(d.key));
@@ -104,6 +103,7 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
                     key={day.key}
                     day={day}
                     count={day.inMonth ? (byDay.get(day.key)?.length ?? 0) : 0}
+                    allPast={(byDay.get(day.key) ?? []).every((d) => new Date(d.interview.at) < now)}
                     isToday={day.key === todayKey}
                     isSelected={day.key === selected}
                     onSelect={() => showAgenda(day.key === selected ? null : day.key)}
@@ -136,7 +136,7 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
 
           {agendaDays.length === 0 ? (
             <p className="m-0 text-sm text-body">
-              {ahead.length === 0
+              {interviews.length === 0
                 ? "Add a dated Interview to an Application and it shows up here."
                 : `Nothing in ${monthOnlyFormat.format(start)} yet.`}
             </p>
@@ -149,7 +149,7 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
             >
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
                 {agendaDays.flatMap((d) => byDay.get(d.key) ?? []).map((d) => (
-                  <AgendaItem key={d.interview.id} item={d} />
+                  <AgendaItem key={d.interview.id} item={d} past={new Date(d.interview.at) < now} />
                 ))}
               </ul>
             </div>
@@ -163,12 +163,14 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
 function DayCell({
   day,
   count,
+  allPast,
   isToday,
   isSelected,
   onSelect,
 }: {
   day: CalendarDay;
   count: number;
+  allPast: boolean;
   isToday: boolean;
   isSelected: boolean;
   onSelect: () => void;
@@ -184,7 +186,7 @@ function DayCell({
       {day.date.getDate()}
     </span>
   );
-  const dot = <span className={`size-1.5 rounded-full ${count > 0 ? "bg-brand" : ""}`} aria-hidden />;
+  const dot = <span className={`size-1.5 rounded-full ${count > 0 ? (allPast ? "bg-line-medium" : "bg-brand") : ""}`} aria-hidden />;
 
   return (
     <td aria-current={isToday ? "date" : undefined} className="p-0.5 text-center">
@@ -211,18 +213,19 @@ function DayCell({
   );
 }
 
-function AgendaItem({ item: { application, interview } }: { item: DatedInterview }) {
+function AgendaItem({ item: { application, interview }, past }: { item: DatedInterview; past: boolean }) {
   const at = new Date(interview.at);
   const kind = INTERVIEW_OPTIONS[interview.kind];
+  const tone = past ? "gray" : kind.tone;
   return (
     <li className="flex items-center gap-3 rounded-control bg-surface px-3 py-2 text-sm">
       <time dateTime={interview.at} className="flex w-10 shrink-0 flex-col items-center leading-tight">
         <span className="text-xs text-body">{weekdayFormat.format(at)}</span>
-        <span className="text-base font-medium text-heading">{at.getDate()}</span>
+        <span className={`text-base font-medium ${past ? "text-body" : "text-heading"}`}>{at.getDate()}</span>
       </time>
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="truncate font-medium text-heading">{application.company}</span>
-        <Badge tone={kind.tone}>{kind.label}</Badge>
+        <span className={`truncate font-medium ${past ? "text-body" : "text-heading"}`}>{application.company}</span>
+        <Badge tone={tone}>{kind.label}</Badge>
       </div>
       <span className="shrink-0 text-body">{timeFormat.format(at)}</span>
     </li>

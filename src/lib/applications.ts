@@ -149,33 +149,39 @@ export function getStats(apps: Application[]) {
 
 export type DatedInterview = { application: Application; interview: Interview & { at: string } };
 
+function dated(application: Application, interviews: Interview[]): DatedInterview[] {
+  return interviews.map((interview) => ({ application, interview: interview as DatedInterview["interview"] }));
+}
+
 /** Upcoming Interviews of open Applications, soonest first. */
 export function getUpcoming(apps: Application[]): DatedInterview[] {
   return apps
     .filter((a) => !isDone(a))
-    .flatMap((application) =>
-      upcomingInterviews(application).map((interview) => ({ application, interview: interview as DatedInterview["interview"] })),
-    )
+    .flatMap((a) => dated(a, upcomingInterviews(a)))
     .sort((a, b) => a.interview.at.localeCompare(b.interview.at));
 }
 
-export type BoardColumn = { id: InterviewKind | "waiting" | "offer"; label: string; applications: Application[] };
+/** Every dated Interview of open Applications, past and upcoming, by date. Done Applications drop off. */
+export function getCalendarInterviews(apps: Application[]): DatedInterview[] {
+  return apps
+    .filter((a) => !isDone(a))
+    .flatMap((a) => dated(a, a.interviews.filter((i) => i.at !== null)))
+    .sort((a, b) => a.interview.at.localeCompare(b.interview.at));
+}
+
+export type BoardColumn = { id: "waiting" | "scheduled" | "offer"; label: string; applications: Application[] };
 
 /**
- * The Pipeline board: one column per upcoming Interview kind (in hiring-process order), Waiting
- * for Applications with nothing upcoming, then Offer. Done Applications other than an Offer stay
- * off the board, and empty columns are left out. BIG-47 rebuilds the board around Waiting.
+ * The Pipeline board: Waiting (In Progress, nothing upcoming), Interview scheduled (In Progress,
+ * something upcoming) and Offer (Done with Outcome Offer). Other Done Applications stay off the
+ * board, and empty columns are left out.
  */
 export function getBoardColumns(apps: Application[]): BoardColumn[] {
   const open = apps.filter((a) => !isDone(a));
   const columns: BoardColumn[] = [
     { id: "waiting", label: "Waiting", applications: open.filter((a) => a.is_waiting) },
-    ...INTERVIEW_KINDS.map((kind) => ({
-      id: kind,
-      label: INTERVIEW_OPTIONS[kind].label,
-      applications: open.filter((a) => nextInterview(a)?.kind === kind),
-    })),
-    { id: "offer", label: "Offer", applications: apps.filter((a) => a.outcome === "offer") },
+    { id: "scheduled", label: "Interview scheduled", applications: open.filter((a) => nextInterview(a)) },
+    { id: "offer", label: "Offer", applications: apps.filter((a) => isDone(a) && a.outcome === "offer") },
   ];
   return columns.filter((c) => c.applications.length > 0);
 }
