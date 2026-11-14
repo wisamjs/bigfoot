@@ -1,6 +1,12 @@
 import { CalendarClock } from "lucide-react";
 import { Badge, SampleBadge } from "@/components/ui";
-import { getBoardColumns, ROUND_OPTIONS, STAGE_OPTIONS, type Application } from "@/lib/applications";
+import {
+  getBoardColumns,
+  INTERVIEW_OPTIONS,
+  lastCompletedInterview,
+  OUTCOME_OPTIONS,
+  type Application,
+} from "@/lib/applications";
 
 type Props = {
   title: string;
@@ -31,7 +37,7 @@ export function PipelineBoard({ title, subtitle, applications, decorative = fals
       </div>
       {columns.length === 0 ? (
         <p className="m-0 rounded-control bg-surface p-6 text-center text-sm text-body">
-          Open applications show up here, grouped by their next round.
+          Open applications show up here, grouped by their next interview.
         </p>
       ) : (
         // Columns wrap onto new rows rather than scrolling sideways, so the later rounds and
@@ -49,11 +55,12 @@ export function PipelineBoard({ title, subtitle, applications, decorative = fals
               </div>
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
                 {column.applications.map((job) => {
+                  const last = lastCompletedInterview(job);
                   const badge =
-                    job.stage === "offer"
-                      ? STAGE_OPTIONS.offer
-                      : job.previous_round
-                        ? { ...ROUND_OPTIONS[job.previous_round], label: `After ${ROUND_OPTIONS[job.previous_round].label}` }
+                    job.outcome === "offer"
+                      ? OUTCOME_OPTIONS.offer
+                      : last
+                        ? { ...INTERVIEW_OPTIONS[last.kind], label: `After ${INTERVIEW_OPTIONS[last.kind].label}` }
                         : null;
                   return (
                     <li key={job.id} className="rounded-control border border-line bg-card-strong p-3 shadow-xs">

@@ -2,10 +2,15 @@
 // reused (e.g. a dashboard notice when the policy changes).
 
 /** The date the current version of the policy takes effect (ISO yyyy-mm-dd). */
-export const PRIVACY_EFFECTIVE_DATE = "2026-11-12";
+export const PRIVACY_EFFECTIVE_DATE = "2026-11-13";
 
 /** Newest first. The first entry's date must equal PRIVACY_EFFECTIVE_DATE. */
 export const PRIVACY_CHANGES: readonly { date: string; summary: string }[] = [
+  {
+    date: "2026-11-13",
+    summary:
+      "An Application now holds a list of Interviews, each with a kind and an optional date, and a Status and Outcome, instead of one previous and one next round. We store the same kind of information; we only describe it differently.",
+  },
   {
     date: "2026-11-12",
     summary:

@@ -1,29 +1,50 @@
 // Made-up Applications for the landing-page preview. The dashboard reads real data from the API.
-import type { Application } from "@/lib/applications";
+import type { Application, InterviewKind } from "@/lib/applications";
 
+/** Past (completed) Interviews of the given kinds, and optionally an upcoming one. */
 function sample(
   id: string,
-  fields: Pick<Application, "company" | "title" | "stage" | "previous_round" | "next_round">,
+  company: string,
+  title: string,
+  options: { done?: InterviewKind[]; next?: InterviewKind; offer?: boolean } = {},
 ): Application {
+  const interview = (kind: InterviewKind, i: number, completed: boolean) => ({
+    id: `${id}-${i}`,
+    application_id: id,
+    kind,
+    at: completed ? `2026-11-0${i + 2}T17:00:00Z` : "2099-01-01T17:00:00Z",
+    completed,
+    created_at: "2026-11-01T00:00:00Z",
+    updated_at: "2026-11-01T00:00:00Z",
+  });
+  const interviews = [
+    ...(options.done ?? []).map((kind, i) => interview(kind, i, true)),
+    ...(options.next ? [interview(options.next, 9, false)] : []),
+  ];
   return {
     id,
+    company,
+    title,
     posting_url: null,
     location: null,
     salary: null,
     applied_on: "2026-11-01",
-    next_round_at: null,
+    status: options.offer ? "done" : "in_progress",
+    outcome: options.offer ? "offer" : null,
+    interviews,
+    is_waiting: !options.offer && !options.next,
+    waiting_since: !options.offer && !options.next ? "2026-11-01" : null,
     is_sample: false,
     created_at: "2026-11-01T00:00:00Z",
     updated_at: "2026-11-01T00:00:00Z",
-    ...fields,
   };
 }
 
 export const previewApplications: Application[] = [
-  sample("stripe", { company: "Stripe", title: "Software Engineer II", stage: "in_progress", previous_round: null, next_round: "recruiter_screen" }),
-  sample("notion", { company: "Notion", title: "Full-stack Engineer", stage: "in_progress", previous_round: null, next_round: "recruiter_screen" }),
-  sample("datadog", { company: "Datadog", title: "Software Engineer", stage: "in_progress", previous_round: "recruiter_screen", next_round: "technical" }),
-  sample("linear", { company: "Linear", title: "Product Engineer", stage: "in_progress", previous_round: "hiring_manager", next_round: "technical" }),
-  sample("figma", { company: "Figma", title: "Senior Engineer", stage: "in_progress", previous_round: "technical", next_round: "onsite_loop" }),
-  sample("ramp", { company: "Ramp", title: "Staff Engineer", stage: "offer", previous_round: "onsite_loop", next_round: null }),
+  sample("stripe", "Stripe", "Software Engineer II", { next: "recruiter_screen" }),
+  sample("notion", "Notion", "Full-stack Engineer", { next: "recruiter_screen" }),
+  sample("datadog", "Datadog", "Software Engineer", { done: ["recruiter_screen"], next: "technical" }),
+  sample("linear", "Linear", "Product Engineer", { done: ["hiring_manager"], next: "technical" }),
+  sample("figma", "Figma", "Senior Engineer", { done: ["technical"], next: "onsite_loop" }),
+  sample("ramp", "Ramp", "Staff Engineer", { done: ["onsite_loop"], offer: true }),
 ];

@@ -27,14 +27,23 @@ import {
 } from "@/app/dashboard/actions";
 import { useIsClient } from "@/components/use-is-client";
 import { Modal } from "@/components/modal";
-import { buttonClasses, dangerButtonClasses, inputClasses, SampleBadge, toneClasses, type Tone } from "@/components/ui";
 import {
-  isClosed,
-  NEXT_ROUNDS,
-  ROUND_OPTIONS,
-  ROUNDS,
-  STAGE_OPTIONS,
-  STAGES,
+  Badge,
+  buttonClasses,
+  dangerButtonClasses,
+  inputClasses,
+  SampleBadge,
+  toneClasses,
+  type Tone,
+} from "@/components/ui";
+import {
+  INTERVIEW_OPTIONS,
+  isDone,
+  nextInterview,
+  OUTCOME_OPTIONS,
+  OUTCOMES,
+  STATUS_OPTIONS,
+  WAITING_OPTION,
   type Application,
   type ApplicationFields,
 } from "@/lib/applications";
@@ -131,110 +140,79 @@ function PostingUrlCell({ app }: { app: Application }) {
   );
 }
 
-/** <input type="datetime-local"> wants local wall-clock time; the API stores an instant. */
-function toLocalInput(iso: string) {
-  const date = new Date(iso);
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+const whenFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
+const sinceFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
+
+/**
+ * What the Application is waiting on: its next Interview, or Waiting when none is booked.
+ * Read-only until Interviews can be edited in the Application modal (BIG-46).
+ */
+function NextInterviewCell({ app }: { app: Application }) {
+  const next = nextInterview(app);
+  if (isDone(app)) return <span className="text-body-subtle">—</span>;
+  const option = next ? INTERVIEW_OPTIONS[next.kind] : WAITING_OPTION;
+  return <Badge tone={option.tone}>{option.label}</Badge>;
 }
 
-function NextRoundAtCell({ app }: { app: Application }) {
-  const { save, resetKey } = useEditing();
-  // An empty date shows a quiet button instead of the browser's "yyyy-mm-dd, --:--" placeholder.
-  const [editing, setEditing] = useState(false);
+/** The next Interview's date, or "Waiting since" the last one (or the applied date). */
+function WhenCell({ app }: { app: Application }) {
   // The server can't know the viewer's time zone, so this cell renders after hydration.
   const isClient = useIsClient();
-  if (!isClient) return <div className="h-[34px]" />;
-
-  const saved = app.next_round_at ? toLocalInput(app.next_round_at) : "";
-  if (!saved && !editing) {
-    return (
-      <button
-        type="button"
-        onClick={() => setEditing(true)}
-        aria-label={`Add date of next round, ${app.company}`}
-        className={`${cellInput} text-left text-body-subtle hover:text-heading`}
-      >
-        Add date
-      </button>
-    );
+  if (!isClient) return <div className="h-5" />;
+  const next = nextInterview(app);
+  if (next?.at) return <time dateTime={next.at}>{whenFormat.format(new Date(next.at))}</time>;
+  if (app.is_waiting && app.waiting_since) {
+    // A date-only value (YYYY-MM-DD) is the applied date: format it as that calendar day, not UTC midnight.
+    const since = app.waiting_since.length === 10 ? new Date(`${app.waiting_since}T00:00`) : new Date(app.waiting_since);
+    return <span className="text-body">Waiting since {sinceFormat.format(since)}</span>;
   }
-  return (
-    <input
-      key={`${app.updated_at}-${resetKey}`}
-      type="datetime-local"
-      defaultValue={saved}
-      autoFocus={editing}
-      aria-label={`Next round date, ${app.company}`}
-      className={cellInput}
-      onKeyDown={(e) => commitKeys(e, saved)}
-      onBlur={(e) => {
-        setEditing(false);
-        const value = e.currentTarget.value;
-        if (value === saved) return;
-        save(app, { next_round_at: value ? new Date(value).toISOString() : null });
-      }}
-    />
-  );
+  return <span className="text-body-subtle">—</span>;
 }
 
-type SelectField = "stage" | "previous_round" | "next_round";
-
-const selectFields: Record<
-  SelectField,
-  { label: string; options: Record<string, { label: string; tone: Tone }>; order: readonly string[]; optional: boolean }
-> = {
-  stage: { label: "Stage", options: STAGE_OPTIONS, order: STAGES, optional: false },
-  previous_round: { label: "Previous round", options: ROUND_OPTIONS, order: ROUNDS, optional: true },
-  next_round: { label: "Next round", options: ROUND_OPTIONS, order: NEXT_ROUNDS, optional: true },
-};
-
-function SelectCell({ app, field }: { app: Application; field: SelectField }) {
+/**
+ * Status and Outcome in one dropdown: In Progress, or Done with one of the Outcomes. It saves as
+ * soon as a value is picked and takes the colour of the chosen value.
+ */
+function StatusCell({ app }: { app: Application }) {
   const { save, resetKey } = useEditing();
-  return (
-    <ToneSelect
-      key={`${app.updated_at}-${resetKey}`}
-      app={app}
-      field={field}
-      onChange={(value) => save(app, { [field]: value })}
-    />
-  );
+  return <StatusSelect key={`${app.updated_at}-${resetKey}`} app={app} onChange={(changes) => save(app, changes)} />;
 }
 
-/** Dropdowns save as soon as a value is picked, and take the colour of the chosen value. */
-function ToneSelect({
+function StatusSelect({
   app,
-  field,
   onChange,
 }: {
   app: Application;
-  field: SelectField;
-  onChange: (value: string | null) => void;
+  onChange: (changes: Pick<ApplicationFields, "status" | "outcome">) => void;
 }) {
-  const { label, options, order, optional } = selectFields[field];
-  const [value, setValue] = useState<string>(app[field] ?? "");
-  const tone: Tone = value ? options[value].tone : "neutral";
+  const [value, setValue] = useState<string>(app.outcome ?? "in_progress");
+  const tone: Tone = value === "in_progress" ? STATUS_OPTIONS.in_progress.tone : OUTCOME_OPTIONS[value as keyof typeof OUTCOME_OPTIONS].tone;
 
   return (
     <div className="relative inline-flex">
       <select
         value={value}
-        aria-label={`${label}, ${app.company}`}
+        aria-label={`Status, ${app.company}`}
         onChange={(e) => {
           setValue(e.target.value);
-          onChange(e.target.value || null);
+          onChange(
+            e.target.value === "in_progress"
+              ? { status: "in_progress", outcome: null }
+              : { status: "done", outcome: e.target.value as ApplicationFields["outcome"] },
+          );
         }}
         className={`cursor-pointer appearance-none rounded-full border py-0.5 pr-7 pl-2.5 text-xs font-medium leading-5 whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${toneClasses[tone]}`}
       >
-        {optional && (
-          <option value="" className="bg-surface-white text-heading">
-            —
-          </option>
-        )}
-        {order.map((key) => (
-          <option key={key} value={key} className="bg-surface-white text-heading">
-            {options[key].label}
-          </option>
-        ))}
+        <option value="in_progress" className="bg-surface-white text-heading">
+          {STATUS_OPTIONS.in_progress.label}
+        </option>
+        <optgroup label="Done">
+          {OUTCOMES.map((outcome) => (
+            <option key={outcome} value={outcome} className="bg-surface-white text-heading">
+              {OUTCOME_OPTIONS[outcome].label}
+            </option>
+          ))}
+        </optgroup>
       </select>
       <ChevronDown className="pointer-events-none absolute top-1/2 right-2 size-3.5 -translate-y-1/2" aria-hidden />
     </div>
@@ -266,10 +244,12 @@ const features = tableFeatures({
 
 const helper = createColumnHelper<typeof features, Application>();
 
-/** Sort dropdown columns in list order (hiring-process order for rounds); blanks last. */
+/** Sort dropdown columns in list order; blanks last. */
 function orderOf(list: readonly string[], value: string | null) {
   return value === null ? undefined : list.indexOf(value);
 }
+
+const STATUS_ORDER = ["in_progress", ...OUTCOMES] as const;
 
 const columns = helper.columns([
   helper.accessor("company", {
@@ -290,32 +270,25 @@ const columns = helper.columns([
     sortFn: "text",
     cell: ({ row }) => <TextCell app={row.original} field="title" label="Title" required />,
   }),
-  helper.accessor((a) => orderOf(STAGES, a.stage), {
-    id: "stage",
-    header: "Stage",
+  helper.accessor((a) => orderOf(STATUS_ORDER, a.outcome ?? "in_progress"), {
+    id: "status",
+    header: "Status",
     sortFn: "basic",
-    cell: ({ row }) => <SelectCell app={row.original} field="stage" />,
+    cell: ({ row }) => <StatusCell app={row.original} />,
   }),
-  helper.accessor((a) => orderOf(ROUNDS, a.previous_round), {
-    id: "previous_round",
-    header: "Previous round",
+  helper.accessor((a) => (isDone(a) ? undefined : (nextInterview(a)?.kind ?? "waiting")), {
+    id: "next_interview",
+    header: "Next interview",
+    sortFn: "text",
+    sortUndefined: "last",
+    cell: ({ row }) => <NextInterviewCell app={row.original} />,
+  }),
+  helper.accessor((a) => nextInterview(a)?.at ?? undefined, {
+    id: "next_interview_at",
+    header: "When",
     sortFn: "basic",
     sortUndefined: "last",
-    cell: ({ row }) => <SelectCell app={row.original} field="previous_round" />,
-  }),
-  helper.accessor((a) => orderOf(NEXT_ROUNDS, a.next_round), {
-    id: "next_round",
-    header: "Next round",
-    sortFn: "basic",
-    sortUndefined: "last",
-    cell: ({ row }) => <SelectCell app={row.original} field="next_round" />,
-  }),
-  helper.accessor((a) => a.next_round_at ?? undefined, {
-    id: "next_round_at",
-    header: "Next round date",
-    sortFn: "basic",
-    sortUndefined: "last",
-    cell: ({ row }) => <NextRoundAtCell app={row.original} />,
+    cell: ({ row }) => <WhenCell app={row.original} />,
   }),
   helper.accessor("applied_on", {
     header: "Applied",
@@ -353,7 +326,7 @@ const columns = helper.columns([
 const columnWidths: Record<string, string> = {
   company: "min-w-64",
   title: "min-w-48",
-  next_round_at: "min-w-52",
+  next_interview_at: "min-w-52",
   applied_on: "min-w-40",
   location: "min-w-36",
   salary: "min-w-36",
@@ -364,17 +337,17 @@ const columnWidths: Record<string, string> = {
 // Table
 
 export function ApplicationsTable({ applications }: { applications: Application[] }) {
-  const [showClosed, setShowClosed] = useState(false);
+  const [showDone, setShowDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetKey, setResetKey] = useState(0);
   const [adding, setAdding] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Application | null>(null);
   const [isSaving, startTransition] = useTransition();
 
-  const closedCount = applications.filter((a) => isClosed(a.stage)).length;
+  const doneCount = applications.filter(isDone).length;
   const data = useMemo(
-    () => (showClosed ? applications : applications.filter((a) => !isClosed(a.stage))),
-    [applications, showClosed],
+    () => (showDone ? applications : applications.filter((a) => !isDone(a))),
+    [applications, showDone],
   );
 
   const table = useTable({
@@ -382,7 +355,7 @@ export function ApplicationsTable({ applications }: { applications: Application[
     columns,
     data,
     getRowId: (row) => row.id,
-    initialState: { sorting: [{ id: "next_round_at", desc: false }] },
+    initialState: { sorting: [{ id: "next_interview_at", desc: false }] },
     enableSortingRemoval: false,
   });
 
@@ -413,15 +386,15 @@ export function ApplicationsTable({ applications }: { applications: Application[
           All applications
         </h2>
         <div className="flex flex-wrap items-center gap-4">
-          {closedCount > 0 && (
+          {doneCount > 0 && (
             <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-heading">
               <input
                 type="checkbox"
-                checked={showClosed}
-                onChange={(e) => setShowClosed(e.target.checked)}
+                checked={showDone}
+                onChange={(e) => setShowDone(e.target.checked)}
                 className="size-4 cursor-pointer rounded-control accent-brand"
               />
-              Show closed ({closedCount})
+              Show done ({doneCount})
             </label>
           )}
           <button type="button" onClick={() => setAdding(true)} className={buttonClasses("brand", "sm")}>
@@ -517,7 +490,7 @@ export function ApplicationsTable({ applications }: { applications: Application[
               {rows.length === 0 && (
                 <tr className="bg-surface-white">
                   <td colSpan={columns.length} className="px-6 py-8 text-center text-sm text-body">
-                    Every application is closed. Turn on “Show closed” to see them.
+                    Every application is done. Turn on “Show done” to see them.
                   </td>
                 </tr>
               )}

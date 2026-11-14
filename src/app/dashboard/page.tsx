@@ -65,7 +65,7 @@ async function Dashboard() {
             <h2 id="upcoming-title" className="m-0 mb-4 text-xl font-bold leading-[1.25] text-heading">
               Coming up
             </h2>
-            <ComingUpCalendar nextRounds={upcoming} />
+            <ComingUpCalendar interviews={upcoming} />
           </section>
 
           <section aria-labelledby="pipeline-title">
@@ -74,7 +74,7 @@ async function Dashboard() {
             </h2>
             <PipelineBoard
               title="Pipeline"
-              subtitle={`${upcoming.length} upcoming ${upcoming.length === 1 ? "round" : "rounds"}`}
+              subtitle={`${upcoming.length} upcoming ${upcoming.length === 1 ? "interview" : "interviews"}`}
               applications={applications}
             />
           </section>

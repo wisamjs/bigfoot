@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useIsClient } from "@/components/use-is-client";
 import { Badge, buttonClasses } from "@/components/ui";
-import { ROUND_OPTIONS, type DatedApplication } from "@/lib/applications";
+import { INTERVIEW_OPTIONS, type DatedInterview } from "@/lib/applications";
 import { dayKey, groupByDay, monthStart, monthWeeks, type CalendarDay } from "@/lib/calendar";
 
 const monthFormat = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" });
@@ -14,20 +14,19 @@ const weekdayLongFormat = new Intl.DateTimeFormat(undefined, { weekday: "long" }
 const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" });
 const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
 
-function rounds(n: number) {
-  return `${n} Next ${n === 1 ? "round" : "rounds"}`;
+function interviewCount(n: number) {
+  return `${n} ${n === 1 ? "Interview" : "Interviews"}`;
 }
 
 /**
- * Coming up as a small month grid beside an agenda (BIG-36): only Next rounds still ahead. The
- * API advances an In Progress Application's past round on read, so a past date here is an Offer's
- * or one that passed after the page loaded.
- * The grid marks days with a dot; the agenda lists the shown month's Next rounds, or one day's
+ * Coming up as a small month grid beside an agenda (BIG-36): only Interviews still ahead, so one
+ * that passed after the page loaded drops off.
+ * The grid marks days with a dot; the agenda lists the shown month's Interviews, or one day's
  * once that day is picked.
  * Days and times are the job seeker's own, so the calendar renders only in the browser; the server
  * sends a placeholder of about the same size.
  */
-export function ComingUpCalendar({ nextRounds }: { nextRounds: DatedApplication[] }) {
+export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] }) {
   const isClient = useIsClient();
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
@@ -48,8 +47,8 @@ export function ComingUpCalendar({ nextRounds }: { nextRounds: DatedApplication[
   const todayKey = dayKey(now);
   const start = monthStart(now, offset);
   const weeks = monthWeeks(start);
-  const ahead = nextRounds.filter((a) => new Date(a.next_round_at) >= now);
-  const byDay = groupByDay(ahead);
+  const ahead = interviews.filter((d) => new Date(d.interview.at) >= now);
+  const byDay = groupByDay(ahead, (d) => d.interview.at);
   const days = weeks.flat().filter((d) => d.inMonth);
   const selectedDay = days.find((d) => d.key === selected);
   const agendaDays = (selectedDay ? [selectedDay] : days).filter((d) => byDay.has(d.key));
@@ -126,7 +125,7 @@ export function ComingUpCalendar({ nextRounds }: { nextRounds: DatedApplication[
               tabIndex={-1}
               className="m-0 text-base font-medium text-heading focus-visible:outline-none"
             >
-              {selectedDay ? dayFormat.format(selectedDay.date) : `Next rounds in ${monthOnlyFormat.format(start)}`}
+              {selectedDay ? dayFormat.format(selectedDay.date) : `Interviews in ${monthOnlyFormat.format(start)}`}
             </h3>
             {selectedDay && (
               <button type="button" className={buttonClasses("tertiary", "sm")} onClick={() => showAgenda(null)}>
@@ -138,7 +137,7 @@ export function ComingUpCalendar({ nextRounds }: { nextRounds: DatedApplication[
           {agendaDays.length === 0 ? (
             <p className="m-0 text-sm text-body">
               {ahead.length === 0
-                ? "Add a Next round date to an Application and it shows up here."
+                ? "Add a dated Interview to an Application and it shows up here."
                 : `Nothing in ${monthOnlyFormat.format(start)} yet.`}
             </p>
           ) : (
@@ -149,8 +148,8 @@ export function ComingUpCalendar({ nextRounds }: { nextRounds: DatedApplication[
               className="min-h-0 flex-1 overflow-y-auto rounded-control focus-visible:outline-2 focus-visible:outline-offset-2"
             >
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                {agendaDays.flatMap((d) => byDay.get(d.key) ?? []).map((a) => (
-                  <AgendaItem key={a.id} application={a} />
+                {agendaDays.flatMap((d) => byDay.get(d.key) ?? []).map((d) => (
+                  <AgendaItem key={d.interview.id} item={d} />
                 ))}
               </ul>
             </div>
@@ -198,7 +197,7 @@ function DayCell({
         <button
           type="button"
           aria-pressed={isSelected}
-          aria-label={`${dayFormat.format(day.date)}, ${rounds(count)}`}
+          aria-label={`${dayFormat.format(day.date)}, ${interviewCount(count)}`}
           className={`flex h-11 w-full flex-col items-center justify-center gap-0.5 rounded-control hover:bg-surface ${
             isSelected ? "bg-surface ring-1 ring-line-brand-subtle" : ""
           }`}
@@ -212,18 +211,18 @@ function DayCell({
   );
 }
 
-function AgendaItem({ application: a }: { application: DatedApplication }) {
-  const at = new Date(a.next_round_at);
-  const round = a.next_round ? ROUND_OPTIONS[a.next_round] : null;
+function AgendaItem({ item: { application, interview } }: { item: DatedInterview }) {
+  const at = new Date(interview.at);
+  const kind = INTERVIEW_OPTIONS[interview.kind];
   return (
     <li className="flex items-center gap-3 rounded-control bg-surface px-3 py-2 text-sm">
-      <time dateTime={a.next_round_at} className="flex w-10 shrink-0 flex-col items-center leading-tight">
+      <time dateTime={interview.at} className="flex w-10 shrink-0 flex-col items-center leading-tight">
         <span className="text-xs text-body">{weekdayFormat.format(at)}</span>
         <span className="text-base font-medium text-heading">{at.getDate()}</span>
       </time>
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="truncate font-medium text-heading">{a.company}</span>
-        <Badge tone={round?.tone ?? "neutral"}>{round?.label ?? "Next round"}</Badge>
+        <span className="truncate font-medium text-heading">{application.company}</span>
+        <Badge tone={kind.tone}>{kind.label}</Badge>
       </div>
       <span className="shrink-0 text-body">{timeFormat.format(at)}</span>
     </li>

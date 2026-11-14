@@ -1,5 +1,5 @@
 // Month-grid arithmetic for the Coming up calendar. Every function works in the time zone of the
-// machine it runs on, so call them in the browser: a Next round belongs to the job seeker's day.
+// machine it runs on, so call them in the browser: an Interview belongs to the job seeker's day.
 
 export type CalendarDay = {
   /** Local midnight. */
@@ -39,11 +39,11 @@ export function monthWeeks(start: Date): CalendarDay[][] {
   return weeks;
 }
 
-/** Items grouped by the local day of `at`, each day in time order. */
-export function groupByDay<T extends { next_round_at: string }>(items: T[]): Map<string, T[]> {
+/** Items grouped by the local day of their timestamp (`at`), each day in time order. */
+export function groupByDay<T>(items: T[], at: (item: T) => string): Map<string, T[]> {
   const days = new Map<string, T[]>();
-  for (const item of [...items].sort((a, b) => a.next_round_at.localeCompare(b.next_round_at))) {
-    const key = dayKey(new Date(item.next_round_at));
+  for (const item of [...items].sort((a, b) => at(a).localeCompare(at(b)))) {
+    const key = dayKey(new Date(at(item)));
     days.set(key, [...(days.get(key) ?? []), item]);
   }
   return days;

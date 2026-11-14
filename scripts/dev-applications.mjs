@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Adds or removes a fixed set of Applications for the dev-session test user, through the API, so
-// the dashboard can be seen filled (Pipeline board, Coming up, table, closed Applications).
+// the dashboard can be seen filled (Pipeline board, Coming up, table, Done Applications).
 //   node scripts/dev-applications.mjs add      # refuses if the test user already has Applications
 //   node scripts/dev-applications.mjs remove   # deletes every Application the test user has
 // Needs the API running at API_URL (default http://localhost:8000) with the same API_SECRET;
@@ -48,7 +48,7 @@ export async function call(jobSeekerId, method, path, body) {
   return res.status === 204 ? null : res.json();
 }
 
-/** `days` from today at `hour` local time, so Coming up always lists future rounds. */
+/** `days` from today at `hour` local time, so Coming up always lists future Interviews. */
 function at(days, hour) {
   const d = new Date();
   d.setDate(d.getDate() + days);
@@ -56,20 +56,21 @@ function at(days, hour) {
   return d.toISOString();
 }
 
+// Interviews are [kind, days from today, hour]; negative days are completed, none is undated.
 function applications() {
   const applied_on = at(-14, 9).slice(0, 10);
   return [
-    { company: "Notion", title: "Full-stack Engineer", next_round: "recruiter_screen", next_round_at: at(1, 15) },
-    { company: "Datadog", title: "Software Engineer", previous_round: "recruiter_screen", next_round: "technical", next_round_at: at(2, 14) },
-    { company: "Figma", title: "Senior Engineer", previous_round: "technical", next_round: "onsite_loop", next_round_at: at(5, 10) },
-    { company: "Linear", title: "Product Engineer", previous_round: "hiring_manager", next_round: "behavioural", next_round_at: at(6, 11) },
-    { company: "Airtable", title: "Frontend Engineer", next_round: "hiring_manager", next_round_at: at(2, 10) },
-    { company: "Asana", title: "Software Engineer", previous_round: "recruiter_screen", next_round: "technical", next_round_at: at(2, 16) },
-    { company: "Stripe", title: "Software Engineer II", next_round: "waiting" },
-    { company: "Shopify", title: "Senior Developer", previous_round: "informal_chat", next_round: "scheduled" },
-    { company: "Ramp", title: "Staff Engineer", stage: "offer", previous_round: "onsite_loop" },
-    { company: "Vercel", title: "Frontend Engineer", stage: "rejected", previous_round: "technical" },
-    { company: "Plaid", title: "Software Engineer", stage: "withdrawn", previous_round: "recruiter_screen" },
+    { company: "Notion", title: "Full-stack Engineer", interviews: [["recruiter_screen", 1, 15]] },
+    { company: "Datadog", title: "Software Engineer", interviews: [["recruiter_screen", -5, 11], ["technical", 2, 14]] },
+    { company: "Figma", title: "Senior Engineer", interviews: [["technical", -3, 10], ["onsite_loop", 5, 10]] },
+    { company: "Linear", title: "Product Engineer", interviews: [["hiring_manager", -4, 13], ["behavioural", 6, 11]] },
+    { company: "Airtable", title: "Frontend Engineer", interviews: [["hiring_manager", 2, 10]] },
+    { company: "Asana", title: "Software Engineer", interviews: [["recruiter_screen", -2, 9], ["technical", 2, 16], ["leadership", 9, 16]] },
+    { company: "Stripe", title: "Software Engineer II", interviews: [] },
+    { company: "Shopify", title: "Senior Developer", interviews: [["informal_chat"]] },
+    { company: "Ramp", title: "Staff Engineer", status: "done", outcome: "offer", interviews: [["onsite_loop", -6, 10]] },
+    { company: "Vercel", title: "Frontend Engineer", status: "done", outcome: "rejected", interviews: [["technical", -8, 10]] },
+    { company: "Plaid", title: "Software Engineer", status: "done", outcome: "withdrawn", interviews: [["recruiter_screen"]] },
   ].map((a) => ({ applied_on, ...a }));
 }
 
@@ -81,7 +82,13 @@ export async function addTestApplications(jobSeekerId = TEST_JOB_SEEKER_ID) {
         "Run `node scripts/dev-applications.mjs remove` first if they can go.",
     );
   }
-  for (const a of applications()) await call(jobSeekerId, "POST", "/applications", a);
+  for (const { interviews, ...fields } of applications()) {
+    const application = await call(jobSeekerId, "POST", "/applications", fields);
+    for (const [kind, days, hour] of interviews) {
+      const body = days === undefined ? { kind } : { kind, at: at(days, hour) };
+      await call(jobSeekerId, "POST", `/applications/${application.id}/interviews`, body);
+    }
+  }
 }
 
 export async function removeTestApplications(jobSeekerId = TEST_JOB_SEEKER_ID) {

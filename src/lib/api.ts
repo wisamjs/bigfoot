@@ -1,6 +1,6 @@
 import "server-only";
 import { SignJWT } from "jose";
-import type { Application, ApplicationFields } from "@/lib/applications";
+import type { Application, ApplicationFields, Interview, InterviewFields } from "@/lib/applications";
 
 // Client for the FastAPI service (api/). Every request carries a short-lived token naming the
 // job seeker; FastAPI scopes all reads and writes to that job seeker (docs/adr/0001).
@@ -50,10 +50,10 @@ const FIELD_LABELS: Record<string, string> = {
   location: "Location",
   salary: "Salary",
   applied_on: "Applied date",
-  stage: "Stage",
-  previous_round: "Previous round",
-  next_round: "Next round",
-  next_round_at: "Next round date",
+  status: "Status",
+  outcome: "Outcome",
+  kind: "Interview kind",
+  at: "Interview date",
 };
 
 /** FastAPI errors: {detail: string} or, for validation, {detail: [{loc, msg}]}. */
@@ -101,4 +101,36 @@ export function updateApplication(jobSeekerId: string, id: string, changes: Part
 
 export function deleteApplication(jobSeekerId: string, id: string) {
   return request<void>(jobSeekerId, `/applications/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export function listInterviews(jobSeekerId: string, applicationId: string) {
+  return request<Interview[]>(jobSeekerId, `/applications/${encodeURIComponent(applicationId)}/interviews`);
+}
+
+export function createInterview(jobSeekerId: string, applicationId: string, fields: Partial<InterviewFields>) {
+  return request<Interview>(jobSeekerId, `/applications/${encodeURIComponent(applicationId)}/interviews`, {
+    method: "POST",
+    body: fields,
+  });
+}
+
+export function updateInterview(
+  jobSeekerId: string,
+  applicationId: string,
+  id: string,
+  changes: Partial<InterviewFields>,
+) {
+  return request<Interview>(
+    jobSeekerId,
+    `/applications/${encodeURIComponent(applicationId)}/interviews/${encodeURIComponent(id)}`,
+    { method: "PATCH", body: changes },
+  );
+}
+
+export function deleteInterview(jobSeekerId: string, applicationId: string, id: string) {
+  return request<void>(
+    jobSeekerId,
+    `/applications/${encodeURIComponent(applicationId)}/interviews/${encodeURIComponent(id)}`,
+    { method: "DELETE" },
+  );
 }

@@ -36,11 +36,14 @@ describe("groupByDay", () => {
     const late = new Date(2026, 10, 16, 23, 30).toISOString();
     const early = new Date(2026, 10, 16, 9, 0).toISOString();
     const next = new Date(2026, 10, 17, 0, 15).toISOString();
-    const days = groupByDay([
-      { id: "late", next_round_at: late },
-      { id: "next", next_round_at: next },
-      { id: "early", next_round_at: early },
-    ]);
+    const days = groupByDay(
+      [
+        { id: "late", at: late },
+        { id: "next", at: next },
+        { id: "early", at: early },
+      ],
+      (item) => item.at,
+    );
     expect([...days.keys()]).toEqual(["2026-11-16", "2026-11-17"]);
     expect(days.get("2026-11-16")?.map((a) => a.id)).toEqual(["early", "late"]);
   });
