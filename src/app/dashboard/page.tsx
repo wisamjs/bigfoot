@@ -9,7 +9,7 @@ import { ComingUpCalendar } from "@/components/coming-up-calendar";
 import { PipelineBoard } from "@/components/pipeline-board";
 import { Container, Wordmark } from "@/components/ui";
 import { listApplications, onboard } from "@/lib/api";
-import { getStats, getUpcoming } from "@/lib/applications";
+import { getCalendarInterviews, getStats, getUpcoming } from "@/lib/applications";
 import { getCurrentUser } from "@/lib/dal";
 
 export const metadata: Metadata = {
@@ -65,7 +65,7 @@ async function Dashboard() {
             <h2 id="upcoming-title" className="m-0 mb-4 text-xl font-bold leading-[1.25] text-heading">
               Coming up
             </h2>
-            <ComingUpCalendar interviews={upcoming} />
+            <ComingUpCalendar interviews={getCalendarInterviews(applications)} />
           </section>
 
           <section aria-labelledby="pipeline-title">

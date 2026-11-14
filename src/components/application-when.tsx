@@ -1,0 +1,22 @@
+"use client";
+
+import { useIsClient } from "@/components/use-is-client";
+import { nextInterview, type Application } from "@/lib/applications";
+
+const whenFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
+const sinceFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
+
+/** The next Interview's date, or "Waiting since" the last one (or the applied date). */
+export function ApplicationWhen({ app }: { app: Application }) {
+  // The server can't know the viewer's time zone, so this renders after hydration.
+  const isClient = useIsClient();
+  if (!isClient) return <div className="h-5" />;
+  const next = nextInterview(app);
+  if (next?.at) return <time dateTime={next.at}>{whenFormat.format(new Date(next.at))}</time>;
+  if (app.is_waiting && app.waiting_since) {
+    // A date-only value (YYYY-MM-DD) is the applied date: format it as that calendar day, not UTC midnight.
+    const since = app.waiting_since.length === 10 ? new Date(`${app.waiting_since}T00:00`) : new Date(app.waiting_since);
+    return <span className="text-body">Waiting since {sinceFormat.format(since)}</span>;
+  }
+  return <span className="text-body-subtle">—</span>;
+}

@@ -31,11 +31,11 @@ How a Done Application ended: Offer, Rejected, Position Filled, Withdrawn, No Op
 _Avoid_: closed stage, result, archived
 
 **Pipeline**:
-All of a job seeker's Applications. The board shows the In Progress ones, grouped by what they are waiting on, plus Offers; the rest belong to the Pipeline but are not shown on it. _Planned_ (BIG-47): the board is rebuilt around Waiting.
+All of a job seeker's Applications. The board shows the In Progress ones, grouped by what they are waiting on, plus Offers; the rest belong to the Pipeline but are not shown on it. Its columns are Waiting, Interview scheduled and Offer; empty ones are left out.
 _Avoid_: board, funnel, tracker
 
 **Interview**:
-One conversation in a company's hiring process, belonging to one Application. It has a required, editable kind and an optional date and time, and no title. An Application can have many; kinds can repeat. Interviews are ordered by date, undated ones first, with no manual order and no per-company template. A cancelled Interview is deleted. Deleting the Application deletes its Interviews. _Planned_: adding, editing and deleting Interviews in the Application modal (BIG-46); showing every Interview on the Coming up calendar (BIG-47).
+One conversation in a company's hiring process, belonging to one Application. It has a required, editable kind and an optional date and time, and no title. An Application can have many; kinds can repeat. Interviews are ordered by date, undated ones first, with no manual order and no per-company template. A cancelled Interview is deleted. Deleting the Application deletes its Interviews. The Coming up calendar shows every dated Interview of an In Progress Application, past ones muted. _Planned_: adding, editing and deleting Interviews in the Application modal (BIG-46).
 _Avoid_: round, step, stage, meeting
 
 **Interview kind**:
@@ -47,5 +47,5 @@ Derived, never stored: the Interview's date is in the past, or it has no date. N
 _Avoid_: done (that is a Status), past
 
 **Waiting**:
-Derived, never stored: an In Progress Application with no upcoming Interview, including a brand-new one. It shows "Waiting since" the date of the last completed Interview, or the applied date when there is none. A Done Application is never Waiting. _Planned_: showing "Waiting since" and the Waiting board columns (BIG-46, BIG-47).
+Derived, never stored: an In Progress Application with no upcoming Interview, including a brand-new one. It shows "Waiting since" the date of the last completed Interview, or the applied date when there is none. A Done Application is never Waiting. The Pipeline board and Applications table show "Waiting since". _Planned_: the same in the Application modal (BIG-46).
 _Avoid_: pending, scheduled
