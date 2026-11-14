@@ -154,6 +154,18 @@ class Onboarding(BaseModel):
     samples_seeded: bool
 
 
+class JobSeeker(BaseModel):
+    """Everything Bigfoot's database holds about the job seeker besides their Applications."""
+
+    # The Google account id.
+    job_seeker_id: str
+    # When they first signed in: their account's created date.
+    created_at: datetime
+    # When they received their Sample Applications; null until then.
+    samples_seeded_at: datetime | None
+    last_seen_at: datetime
+
+
 APPLICATION_COLUMNS = (
     "id, company, title, posting_url, location, salary, applied_on, status, outcome, is_sample, created_at, updated_at"
 )
@@ -275,6 +287,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         )
             conn.execute("update job_seekers set samples_seeded_at = now() where job_seeker_id = %s", (job_seeker,))
         return Onboarding(samples_seeded=not has_applications)
+
+    @app.get("/me")
+    def get_job_seeker(request: Request, job_seeker: JobSeekerId) -> JobSeeker:
+        """The job seeker's own record, for their data export. 404 until they are onboarded."""
+        with pool(request).connection() as conn:
+            row = conn.execute(
+                "select job_seeker_id, created_at, samples_seeded_at, last_seen_at from job_seekers"
+                " where job_seeker_id = %s",
+                (job_seeker,),
+            ).fetchone()
+        if row is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Job seeker not found")
+        return JobSeeker(**row)
 
     @app.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
     def delete_account(request: Request, job_seeker: JobSeekerId) -> None:

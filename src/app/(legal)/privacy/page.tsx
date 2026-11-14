@@ -75,9 +75,9 @@ export default function PrivacyPage() {
             A few service providers help us run Bigfoot. Your data is stored in the United States.
           </li>
           <li>
-            You can edit or delete any Application in your dashboard, and delete your account
-            yourself on your <A href="/account">Account page</A>. To get a copy of your data, email
-            us.
+            You can edit or delete any Application in your dashboard. On your{" "}
+            <A href="/account">Account page</A>, you can download a copy of your data and delete
+            your account yourself.
           </li>
         </ul>
       </section>
@@ -267,8 +267,10 @@ export default function PrivacyPage() {
         </p>
         <ul className={list}>
           <li>
-            <strong>See your data.</strong> Your Applications are all on your dashboard. Email us
-            for a copy of everything we hold about you.
+            <strong>See your data, and take it with you.</strong> Your Applications are all on your
+            dashboard. Download a copy of everything we hold about you on your{" "}
+            <A href="/account">Account page</A>: a CSV spreadsheet of your Applications, or a JSON
+            file with your profile and every Application.
           </li>
           <li>
             <strong>Correct it.</strong> Edit any Application in your dashboard. Your name, email
