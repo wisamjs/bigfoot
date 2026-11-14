@@ -77,7 +77,7 @@ To send requests from the docs as the test job seeker, print a token (valid for 
 node scripts/dev-api-token.mjs
 ```
 
-Click **Authorize**, paste the token, then **Try it out** on any route. The schema is committed as [`api/openapi.json`](api/openapi.json): after changing the API, run `npm run openapi` and commit the result.
+Click **Authorize**, paste the token, then **Try it out** on any route. The schema is committed as [`api/openapi.json`](api/openapi.json): after changing the API, run `npm run openapi` and commit the result. If you forget, the pre-commit hook rewrites it and stops the commit until you `git add` it.
 
 ### Skip Google sign-in
 
@@ -99,7 +99,7 @@ With the dev server and API running, `npm run screenshots` retakes the two scree
 
 | Command | What it checks |
 | --- | --- |
-| `npm run check` | Types, lint, that `api/openapi.json` matches the API (`npm run openapi` rewrites it), that components use design tokens instead of raw colours and corner radii, Canadian spelling (cspell), and `npm test`. The pre-commit hook runs it |
+| `npm run check` | Types, lint, that the staged `api/openapi.json` matches the API (if not, it rewrites the file for you to `git add`), that components use design tokens instead of raw colours and corner radii, Canadian spelling (cspell), and `npm test`. The pre-commit hook runs it |
 | `npm test` | Vitest unit and component tests (React Testing Library in happy-dom), failing if coverage drops below the floor in `vitest.config.mts`. `npm run test:watch` reruns them on save |
 | `npm run openapi` | Rewrites [`api/openapi.json`](api/openapi.json) from the API code; browse it at [`/docs`](http://localhost:8000/docs) with the API running ([Try the API](#try-the-api)) |
 | `npm run test:api` | API tests (pytest) against the real database, in a throwaway `bigfoot_test` schema (one per run in CI) rebuilt for every test |
