@@ -5,9 +5,9 @@ import { ApplicationWhen, InterviewWhen } from "@/components/application-when";
 import {
   getBoardColumns,
   INTERVIEW_OPTIONS,
-  upcomingInterviews,
   OUTCOME_OPTIONS,
   type Application,
+  type Interview,
 } from "@/lib/applications";
 
 type Props = {
@@ -86,7 +86,6 @@ export function PipelineBoard({
 }
 
 function Card({ job, onOpen }: { job: Application; onOpen?: (app: Application) => void }) {
-  const upcoming = upcomingInterviews(job);
   return (
     <li
       className={`relative rounded-control border border-line bg-card-strong p-3 shadow-xs ${
@@ -113,27 +112,36 @@ function Card({ job, onOpen }: { job: Application; onOpen?: (app: Application) =
         {job.is_sample && <SampleBadge />}
       </div>
       <p className="m-0 mb-2 text-xs leading-4 text-body">{job.title}</p>
-      {job.outcome ? (
-        <Badge tone={OUTCOME_OPTIONS[job.outcome].tone}>{OUTCOME_OPTIONS[job.outcome].label}</Badge>
-      ) : upcoming.length > 0 ? (
-        // Every upcoming Interview, soonest first, each in its own box so its kind and date stay
-        // together: side by side when they fit, the date below when the card is narrow.
-        <ul aria-label="Upcoming Interviews" className="m-0 flex list-none flex-col gap-2 p-0">
-          {upcoming.map((interview) => (
-            <li
-              key={interview.id}
-              className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-control border border-line bg-surface px-2 py-1.5 text-xs text-body"
-            >
-              <Badge tone={INTERVIEW_OPTIONS[interview.kind].tone}>{INTERVIEW_OPTIONS[interview.kind].label}</Badge>
-              <InterviewWhen at={interview.at} />
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <div className="text-xs text-body">
-          <ApplicationWhen app={job} />
-        </div>
-      )}
+      <div className="flex flex-col items-start gap-2 text-xs text-body">
+        {job.outcome && (
+          <Badge tone={OUTCOME_OPTIONS[job.outcome].tone}>{OUTCOME_OPTIONS[job.outcome].label}</Badge>
+        )}
+        {job.interviews.length > 0 && (
+          // Every Interview in date order (undated, then past, then upcoming), each in its own box
+          // so its kind and date stay together at any card width. Completed ones are muted.
+          <ul aria-label="Interviews" className="m-0 flex w-full list-none flex-col gap-2 p-0">
+            {job.interviews.map((interview) => (
+              <InterviewItem key={interview.id} interview={interview} />
+            ))}
+          </ul>
+        )}
+        {job.is_waiting && <ApplicationWhen app={job} />}
+      </div>
+    </li>
+  );
+}
+
+function InterviewItem({ interview }: { interview: Interview }) {
+  const kind = INTERVIEW_OPTIONS[interview.kind];
+  return (
+    <li
+      className={`flex flex-wrap items-center gap-x-2 gap-y-1 rounded-control border border-line px-2 py-1.5 ${
+        interview.completed ? "" : "bg-surface"
+      }`}
+    >
+      <Badge tone={interview.completed ? "gray" : kind.tone}>{kind.label}</Badge>
+      <InterviewWhen at={interview.at} />
+      {interview.completed && <span className="sr-only">(past)</span>}
     </li>
   );
 }

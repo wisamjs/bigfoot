@@ -21,7 +21,7 @@ export function ApplicationWhen({ app }: { app: Application }) {
   return <span className="text-body-subtle">—</span>;
 }
 
-// Upcoming Interviews are never far off, so a card leaves out the year to keep each row short.
+// A card leaves out the year to keep each Interview short; its Interviews are rarely a year apart.
 const shortWhenFormat = new Intl.DateTimeFormat(undefined, {
   month: "short",
   day: "numeric",
@@ -29,11 +29,11 @@ const shortWhenFormat = new Intl.DateTimeFormat(undefined, {
   minute: "2-digit",
 });
 
-/** One upcoming Interview's date and time, in the viewer's time zone, without the year. */
+/** One Interview's date and time, in the viewer's time zone, without the year. */
 export function InterviewWhen({ at }: { at: string | null }) {
   const isClient = useIsClient();
   if (!isClient) return <span className="block h-5" />;
-  if (!at) return <span className="text-body-subtle">No date</span>;
+  if (!at) return <span>No date</span>;
   return (
     <time dateTime={at} className="whitespace-nowrap">
       {shortWhenFormat.format(new Date(at))}
