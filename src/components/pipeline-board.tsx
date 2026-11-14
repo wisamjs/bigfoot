@@ -59,9 +59,9 @@ export function PipelineBoard({
           Open applications show up here, grouped by whether an interview is booked.
         </p>
       ) : (
-        // Columns wrap onto new rows rather than scrolling sideways, so no column is
-        // hidden off-screen.
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-4">
+        // Columns stretch to fill the board (auto-fit drops empty tracks) and wrap onto new rows
+        // rather than scrolling sideways, so no column is hidden off-screen.
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-4">
           {columns.map((column) => (
             <section
               key={column.id}
@@ -117,9 +117,8 @@ function Card({ job, onOpen }: { job: Application; onOpen?: (app: Application) =
           <Badge tone={OUTCOME_OPTIONS[job.outcome].tone}>{OUTCOME_OPTIONS[job.outcome].label}</Badge>
         )}
         {job.interviews.length > 0 && (
-          // Every Interview in date order (undated, then past, then upcoming), each in its own box
-          // so its kind and date stay together at any card width. Completed ones are muted.
-          <ul aria-label="Interviews" className="m-0 flex w-full list-none flex-col gap-2 p-0">
+          // Every Interview in date order (undated, then past, then upcoming), one row each.
+          <ul aria-label="Interviews" className="m-0 flex w-full list-none flex-col gap-1.5 p-0">
             {job.interviews.map((interview) => (
               <InterviewItem key={interview.id} interview={interview} />
             ))}
@@ -131,17 +130,29 @@ function Card({ job, onOpen }: { job: Application; onOpen?: (app: Application) =
   );
 }
 
+/**
+ * One Interview as a row: its kind on the left, its date on the right. An upcoming one is a
+ * coloured badge in a box; a completed one (past or undated) is plain, struck-through grey text.
+ */
 function InterviewItem({ interview }: { interview: Interview }) {
   const kind = INTERVIEW_OPTIONS[interview.kind];
+  if (interview.completed) {
+    return (
+      <li className="flex flex-wrap items-center gap-x-3 gap-y-0.5 border border-transparent px-2 py-0.5 text-body line-through">
+        <span>{kind.label}</span>
+        <span className="ml-auto">
+          <InterviewWhen at={interview.at} />
+        </span>
+        <span className="sr-only">(past)</span>
+      </li>
+    );
+  }
   return (
-    <li
-      className={`flex flex-wrap items-center gap-x-2 gap-y-1 rounded-control border border-line px-2 py-1.5 ${
-        interview.completed ? "" : "bg-surface"
-      }`}
-    >
-      <Badge tone={interview.completed ? "gray" : kind.tone}>{kind.label}</Badge>
-      <InterviewWhen at={interview.at} />
-      {interview.completed && <span className="sr-only">(past)</span>}
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-control border border-line bg-surface px-2 py-1.5 text-heading">
+      <Badge tone={kind.tone}>{kind.label}</Badge>
+      <span className="ml-auto">
+        <InterviewWhen at={interview.at} />
+      </span>
     </li>
   );
 }
