@@ -116,10 +116,14 @@ function Card({ job, onOpen }: { job: Application; onOpen?: (app: Application) =
       {job.outcome ? (
         <Badge tone={OUTCOME_OPTIONS[job.outcome].tone}>{OUTCOME_OPTIONS[job.outcome].label}</Badge>
       ) : upcoming.length > 0 ? (
-        // Every upcoming Interview, soonest first: one row each, its kind beside its date.
-        <ul aria-label="Upcoming Interviews" className="m-0 flex list-none flex-col gap-1.5 p-0">
+        // Every upcoming Interview, soonest first, each in its own box so its kind and date stay
+        // together: side by side when they fit, the date below when the card is narrow.
+        <ul aria-label="Upcoming Interviews" className="m-0 flex list-none flex-col gap-2 p-0">
           {upcoming.map((interview) => (
-            <li key={interview.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-body">
+            <li
+              key={interview.id}
+              className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-control border border-line bg-surface px-2 py-1.5 text-xs text-body"
+            >
               <Badge tone={INTERVIEW_OPTIONS[interview.kind].tone}>{INTERVIEW_OPTIONS[interview.kind].label}</Badge>
               <InterviewWhen at={interview.at} />
             </li>
