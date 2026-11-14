@@ -3,10 +3,12 @@ import { Suspense, type ReactNode } from "react";
 import { AppFooter } from "@/components/app-footer";
 import { AppHeader, Avatar } from "@/components/app-header";
 import { DeleteAccountForm } from "@/components/delete-account-form";
-import { Container, Wordmark } from "@/components/ui";
+import { Download } from "lucide-react";
+import { buttonClasses, Container, Wordmark } from "@/components/ui";
 import { GOOGLE_PERMISSIONS_URL } from "@/lib/account";
 import { listApplications } from "@/lib/api";
 import { getCurrentUser } from "@/lib/dal";
+import { EXPORT_CONTENT_TYPES, type ExportFormat } from "@/lib/data-export";
 import { BACKUP_DAYS, SERVER_LOG_RETENTION } from "@/lib/legal/privacy";
 
 export const metadata: Metadata = {
@@ -49,6 +51,35 @@ async function Account() {
               Your name, email and photo come from your Google account. To change them, change them
               in Google, then sign in to Bigfoot again.
             </p>
+          </section>
+
+          <section aria-labelledby="download-title" className="card flex flex-col gap-4 p-6">
+            <h2 id="download-title" className="m-0 text-xl font-bold leading-[1.25] text-heading">
+              Download my data
+            </h2>
+            <p className="m-0 text-base leading-[1.7] text-body">
+              Download a copy of everything Bigfoot holds about you, to keep your records, move them
+              somewhere else, or check what we store.
+            </p>
+            <ul className="m-0 flex list-none flex-col gap-4 p-0 sm:flex-row">
+              {DOWNLOADS.map(({ format, label, type, description }) => (
+                <li key={format} className="flex flex-1 flex-col items-start gap-2">
+                  <a
+                    href={`/account/export?format=${format}`}
+                    download
+                    type={type}
+                    aria-describedby={`download-${format}-hint`}
+                    className={buttonClasses("secondary")}
+                  >
+                    <Download aria-hidden="true" className="size-4" />
+                    Download {label}
+                  </a>
+                  <p id={`download-${format}-hint`} className="m-0 text-sm leading-[1.6] text-body">
+                    {description}
+                  </p>
+                </li>
+              ))}
+            </ul>
           </section>
 
           <section
@@ -104,6 +135,21 @@ async function Account() {
 }
 
 const list = "m-0 flex list-disc flex-col gap-2 pl-6";
+
+const DOWNLOADS: { format: ExportFormat; label: string; type: string; description: string }[] = [
+  {
+    format: "csv",
+    label: "CSV",
+    type: EXPORT_CONTENT_TYPES.csv,
+    description: "A spreadsheet of your Applications, one per row. Opens in Excel or Google Sheets.",
+  },
+  {
+    format: "json",
+    label: "JSON",
+    type: EXPORT_CONTENT_TYPES.json,
+    description: "Everything, for moving to another tool: your profile and every field of every Application.",
+  },
+];
 
 function Subheading({ children }: { children: ReactNode }) {
   return <h3 className="m-0 mt-2 text-base font-medium leading-[1.25] text-heading">{children}</h3>;

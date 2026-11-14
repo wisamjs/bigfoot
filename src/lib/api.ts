@@ -79,6 +79,26 @@ export function onboard(jobSeekerId: string) {
   return request<{ samples_seeded: boolean }>(jobSeekerId, "/me/onboard", { method: "POST" });
 }
 
+/** What the database holds about the job seeker besides their Applications (GET /me). */
+export type JobSeekerRecord = {
+  /** The Google account id. */
+  job_seeker_id: string;
+  /** ISO timestamp: when they first signed in. */
+  created_at: string;
+  samples_seeded_at: string | null;
+  last_seen_at: string;
+};
+
+/** The job seeker's own record; null if they were never onboarded. */
+export async function getJobSeeker(jobSeekerId: string) {
+  try {
+    return await request<JobSeekerRecord>(jobSeekerId, "/me");
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
 /** Deletes the job seeker and all of their Applications. Idempotent. */
 export function deleteAccount(jobSeekerId: string) {
   return request<void>(jobSeekerId, "/me", { method: "DELETE" });

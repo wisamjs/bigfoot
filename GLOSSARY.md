@@ -11,7 +11,7 @@ The product itself. Refer to the software by name. The name comes from the brand
 _Avoid_: the application, the platform; hunt words as nouns (sighting, trail, tracks)
 
 **Job seeker**:
-The person running a job search in Bigfoot: its user. A job seeker has one account, created the first time they sign in with Google; there is no separate sign-up. Deleting the account removes the job seeker and all of their Applications and Interviews.
+The person running a job search in Bigfoot: its user. A job seeker has one account, created the first time they sign in with Google; there is no separate sign-up. On the Account page they can download a copy of their data (a CSV of their Applications, or JSON with their profile and every Application) and delete their account. Deleting the account removes the job seeker and all of their Applications and Interviews.
 _Avoid_: user, owner, candidate, applicant
 
 **Application**:
