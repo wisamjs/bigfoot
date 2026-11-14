@@ -3,10 +3,10 @@ import { Suspense } from "react";
 import { BriefcaseBusiness, CalendarCheck } from "lucide-react";
 import { AppFooter } from "@/components/app-footer";
 import { AppHeader } from "@/components/app-header";
-import { ApplicationsTable } from "@/components/applications-table";
+import { AddApplicationButton } from "@/components/application-dialogs";
 import { ComingUpCalendar } from "@/components/coming-up-calendar";
 import { NextInterviewStat } from "@/components/next-interview-stat";
-import { PipelineBoard } from "@/components/pipeline-board";
+import { DashboardPipeline } from "@/components/dashboard-pipeline";
 import { StatCard } from "@/components/stat-card";
 import { Container, Wordmark } from "@/components/ui";
 import { listApplications, onboard } from "@/lib/api";
@@ -46,6 +46,7 @@ async function Dashboard() {
                 Here’s where the hunt stands this week.
               </p>
             </div>
+            <AddApplicationButton />
           </div>
 
           <section aria-label="Search summary">
@@ -67,15 +68,10 @@ async function Dashboard() {
             <h2 id="pipeline-title" className="sr-only">
               Pipeline
             </h2>
-            <PipelineBoard
-              title="Pipeline"
+            <DashboardPipeline
               subtitle={`${upcoming.length} upcoming ${upcoming.length === 1 ? "interview" : "interviews"}`}
               applications={applications}
             />
-          </section>
-
-          <section aria-labelledby="apps-title" className="min-w-0">
-            <ApplicationsTable applications={applications} />
           </section>
         </Container>
       </main>
