@@ -137,15 +137,13 @@ export function lastCompletedInterview(app: Application): Interview | null {
   return app.interviews.filter((i) => i.completed).at(-1) ?? null;
 }
 
+/** The dashboard's three numbers: Open, Active, and the Next Interview across In Progress Applications. */
 export function getStats(apps: Application[]) {
-  const responded = apps.filter(
-    (a) => a.interviews.length > 0 || (isDone(a) && a.outcome !== "withdrawn"),
-  );
+  const open = apps.filter((a) => !isDone(a));
   return {
-    active: apps.filter((a) => !isDone(a)).length,
-    interviewing: apps.filter((a) => !isDone(a) && a.interviews.length > 0).length,
-    responseRate: apps.length ? Math.round((responded.length / apps.length) * 100) : 0,
-    offers: apps.filter((a) => a.outcome === "offer").length,
+    open: open.length,
+    active: open.filter((a) => nextInterview(a) !== null).length,
+    next: getUpcoming(apps)[0] ?? null,
   };
 }
 

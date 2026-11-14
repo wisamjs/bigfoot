@@ -2,7 +2,7 @@
 
 import { refresh } from "next/cache";
 import * as api from "@/lib/api";
-import type { ApplicationFields } from "@/lib/applications";
+import type { ApplicationFields, InterviewFields } from "@/lib/applications";
 import { findCurrentUser } from "@/lib/dal";
 
 // Inputs are untrusted (Server Actions are plain POST endpoints): FastAPI validates every
@@ -34,4 +34,16 @@ export async function updateApplicationAction(id: string, changes: Partial<Appli
 
 export async function deleteApplicationAction(id: string) {
   return run((jobSeekerId) => api.deleteApplication(jobSeekerId, id));
+}
+
+export async function createInterviewAction(applicationId: string, fields: Partial<InterviewFields>) {
+  return run((jobSeekerId) => api.createInterview(jobSeekerId, applicationId, fields));
+}
+
+export async function updateInterviewAction(applicationId: string, id: string, changes: Partial<InterviewFields>) {
+  return run((jobSeekerId) => api.updateInterview(jobSeekerId, applicationId, id, changes));
+}
+
+export async function deleteInterviewAction(applicationId: string, id: string) {
+  return run((jobSeekerId) => api.deleteInterview(jobSeekerId, applicationId, id));
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getBoardColumns, getCalendarInterviews, type Application, type Interview } from "./applications";
+import { getBoardColumns, getCalendarInterviews, getStats, type Application, type Interview } from "./applications";
 
 function interview(id: string, at: string | null, completed: boolean): Interview {
   return { id, application_id: "a", kind: "technical", at, completed, created_at: "", updated_at: "" };
@@ -60,5 +60,22 @@ describe("getCalendarInterviews", () => {
     const undated = application("undated", { is_waiting: false, interviews: [interview("none", null, true)] });
     const result = getCalendarInterviews([scheduled, rejected, undated]);
     expect(result.map((d) => d.interview.id)).toEqual(["past", "next"]);
+  });
+});
+
+describe("getStats", () => {
+  it("counts Open and Active, and finds the soonest upcoming Interview of In Progress Applications", () => {
+    const sooner = application("sooner", {
+      is_waiting: false,
+      interviews: [interview("soon", "2026-11-20T15:00:00Z", false)],
+    });
+    const stats = getStats([waiting, scheduled, sooner, offer, rejected]);
+    expect(stats.open).toBe(3);
+    expect(stats.active).toBe(2);
+    expect(stats.next?.application.id).toBe("sooner");
+  });
+
+  it("has no next Interview when nothing is scheduled", () => {
+    expect(getStats([waiting, rejected]).next).toBeNull();
   });
 });
