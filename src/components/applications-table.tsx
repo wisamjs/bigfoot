@@ -9,7 +9,7 @@ import {
   tableFeatures,
   useTable,
 } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ExternalLink, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ExternalLink, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   createContext,
   useContext,
@@ -26,6 +26,7 @@ import {
   updateApplicationAction,
 } from "@/app/dashboard/actions";
 import { useIsClient } from "@/components/use-is-client";
+import { EditApplicationForm } from "@/components/edit-application-modal";
 import { Modal } from "@/components/modal";
 import {
   Badge,
@@ -56,6 +57,7 @@ type Editing = {
   resetKey: number;
   save: (app: Application, changes: Partial<ApplicationFields>) => void;
   confirmDelete: (app: Application) => void;
+  edit: (app: Application) => void;
 };
 
 const EditingContext = createContext<Editing | null>(null);
@@ -145,7 +147,6 @@ const sinceFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
 
 /**
  * What the Application is waiting on: its next Interview, or Waiting when none is booked.
- * Read-only until Interviews can be edited in the Application modal (BIG-46).
  */
 function NextInterviewCell({ app }: { app: Application }) {
   const next = nextInterview(app);
@@ -219,17 +220,27 @@ function StatusSelect({
   );
 }
 
-function DeleteCell({ app }: { app: Application }) {
-  const { confirmDelete } = useEditing();
+function ActionsCell({ app }: { app: Application }) {
+  const { confirmDelete, edit } = useEditing();
   return (
-    <button
-      type="button"
-      onClick={() => confirmDelete(app)}
-      aria-label={`Delete ${app.company}, ${app.title}`}
-      className="rounded-control p-1.5 text-body transition-colors hover:bg-danger-soft hover:text-fg-danger"
-    >
-      <Trash2 className="size-4" aria-hidden />
-    </button>
+    <div className="flex items-center gap-1">
+      <button
+        type="button"
+        onClick={() => edit(app)}
+        aria-label={`Edit Interviews, ${app.company}, ${app.title}`}
+        className="rounded-control p-1.5 text-body transition-colors hover:bg-card hover:text-heading"
+      >
+        <Pencil className="size-4" aria-hidden />
+      </button>
+      <button
+        type="button"
+        onClick={() => confirmDelete(app)}
+        aria-label={`Delete ${app.company}, ${app.title}`}
+        className="rounded-control p-1.5 text-body transition-colors hover:bg-danger-soft hover:text-fg-danger"
+      >
+        <Trash2 className="size-4" aria-hidden />
+      </button>
+    </div>
   );
 }
 
@@ -319,7 +330,7 @@ const columns = helper.columns([
   helper.display({
     id: "actions",
     header: () => <span className="sr-only">Actions</span>,
-    cell: ({ row }) => <DeleteCell app={row.original} />,
+    cell: ({ row }) => <ActionsCell app={row.original} />,
   }),
 ]);
 
@@ -342,6 +353,7 @@ export function ApplicationsTable({ applications }: { applications: Application[
   const [resetKey, setResetKey] = useState(0);
   const [adding, setAdding] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Application | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [isSaving, startTransition] = useTransition();
 
   const doneCount = applications.filter(isDone).length;
@@ -363,6 +375,7 @@ export function ApplicationsTable({ applications }: { applications: Application[
     () => ({
       resetKey,
       confirmDelete: setPendingDelete,
+      edit: (app) => setEditingId(app.id),
       save(app, changes) {
         setError(null);
         startTransition(async () => {
@@ -378,6 +391,8 @@ export function ApplicationsTable({ applications }: { applications: Application[
   );
 
   const rows = table.getRowModel().rows;
+  // Looked up by id, so the modal shows the Interviews as saved after each change.
+  const editingApp = applications.find((a) => a.id === editingId) ?? null;
 
   return (
     <EditingContext value={editing}>
@@ -501,6 +516,10 @@ export function ApplicationsTable({ applications }: { applications: Application[
 
       <Modal open={adding} onClose={() => setAdding(false)} title="Add application">
         <AddApplicationForm onDone={() => setAdding(false)} />
+      </Modal>
+
+      <Modal open={editingApp !== null} onClose={() => setEditingId(null)} title="Edit application" wide>
+        {editingApp && <EditApplicationForm app={editingApp} onDone={() => setEditingId(null)} />}
       </Modal>
 
       <Modal open={pendingDelete !== null} onClose={() => setPendingDelete(null)} title="Delete application?">

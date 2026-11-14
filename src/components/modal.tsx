@@ -12,11 +12,13 @@ export function Modal({
   onClose,
   title,
   children,
+  wide = false,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
+  wide?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -33,7 +35,7 @@ export function Modal({
       ref={ref}
       aria-labelledby={titleId}
       onClose={onClose}
-      className="m-auto w-[calc(100%-32px)] max-w-md rounded-card border border-line bg-surface-white p-5 text-body shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+      className={`m-auto w-[calc(100%-32px)] ${wide ? "max-w-xl" : "max-w-md"} rounded-card border border-line bg-surface-white p-5 text-body shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm`}
     >
       <div className="flex items-center justify-between gap-4 border-b border-line pb-4">
         <h2 id={titleId} className="m-0 text-xl font-bold leading-[1.25] text-heading">

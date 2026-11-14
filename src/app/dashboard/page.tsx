@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import type { LucideIcon } from "lucide-react";
-import { BriefcaseBusiness, CalendarCheck, Gift, MessageSquareReply } from "lucide-react";
+import { BriefcaseBusiness, CalendarCheck } from "lucide-react";
 import { AppFooter } from "@/components/app-footer";
 import { AppHeader } from "@/components/app-header";
 import { ApplicationsTable } from "@/components/applications-table";
 import { ComingUpCalendar } from "@/components/coming-up-calendar";
+import { NextInterviewStat } from "@/components/next-interview-stat";
 import { PipelineBoard } from "@/components/pipeline-board";
+import { StatCard } from "@/components/stat-card";
 import { Container, Wordmark } from "@/components/ui";
 import { listApplications, onboard } from "@/lib/api";
 import { getStats, getUpcoming } from "@/lib/applications";
@@ -48,16 +49,10 @@ async function Dashboard() {
           </div>
 
           <section aria-label="Search summary">
-            <ul className="m-0 grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-2 lg:grid-cols-4">
-              <StatCard icon={BriefcaseBusiness} label="Active applications" value={stats.active} />
-              <StatCard icon={CalendarCheck} label="Interviewing" value={stats.interviewing} />
-              <StatCard icon={MessageSquareReply} label="Response rate" value={`${stats.responseRate}%`} />
-              <StatCard
-                icon={Gift}
-                label="Offers"
-                value={stats.offers}
-                note={stats.offers > 0 ? "You found your Bigfoot." : "Still out there."}
-              />
+            <ul className="m-0 grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-3">
+              <StatCard icon={BriefcaseBusiness} label="Open" value={stats.open} note="Applications In Progress" />
+              <StatCard icon={CalendarCheck} label="Active" value={stats.active} note="With an upcoming Interview" />
+              <NextInterviewStat next={stats.next} />
             </ul>
           </section>
 
@@ -89,31 +84,6 @@ async function Dashboard() {
   );
 }
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  note,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string | number;
-  note?: string;
-}) {
-  return (
-    <li className="card flex items-center gap-4 p-6">
-      <span className="icon-shape size-12 shrink-0 rounded-card">
-        <Icon className="size-6" aria-hidden />
-      </span>
-      <div>
-        <p className="m-0 text-sm leading-[1.6] text-body">{label}</p>
-        <p className="m-0 text-[30px] font-bold leading-[1.25] text-heading">{value}</p>
-        {note && <p className="m-0 text-xs leading-4 text-body">{note}</p>}
-      </div>
-    </li>
-  );
-}
-
 function DashboardSkeleton() {
   return (
     <div aria-busy="true" aria-live="polite">
@@ -125,8 +95,8 @@ function DashboardSkeleton() {
       <Container className="flex flex-col gap-8 py-12">
         <span className="sr-only">Loading your dashboard…</span>
         <div className="h-10 w-72 animate-pulse rounded-control bg-card" />
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {[0, 1, 2, 3].map((i) => (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          {[0, 1, 2].map((i) => (
             <div key={i} className="h-24 animate-pulse rounded-card bg-card" />
           ))}
         </div>

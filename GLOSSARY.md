@@ -35,7 +35,7 @@ All of a job seeker's Applications. The board shows the In Progress ones, groupe
 _Avoid_: board, funnel, tracker
 
 **Interview**:
-One conversation in a company's hiring process, belonging to one Application. It has a required, editable kind and an optional date and time, and no title. An Application can have many; kinds can repeat. Interviews are ordered by date, undated ones first, with no manual order and no per-company template. A cancelled Interview is deleted. Deleting the Application deletes its Interviews. _Planned_: adding, editing and deleting Interviews in the Application modal (BIG-46); showing every Interview on the Coming up calendar (BIG-47).
+One conversation in a company's hiring process, belonging to one Application. It has a required, editable kind and an optional date and time, and no title. An Application can have many; kinds can repeat. Interviews are ordered by date, undated ones first, with no manual order and no per-company template. A cancelled Interview is deleted. Deleting the Application deletes its Interviews. _Planned_ (BIG-47): showing every Interview on the Coming up calendar.
 _Avoid_: round, step, stage, meeting
 
 **Interview kind**:
@@ -47,5 +47,5 @@ Derived, never stored: the Interview's date is in the past, or it has no date. N
 _Avoid_: done (that is a Status), past
 
 **Waiting**:
-Derived, never stored: an In Progress Application with no upcoming Interview, including a brand-new one. It shows "Waiting since" the date of the last completed Interview, or the applied date when there is none. A Done Application is never Waiting. _Planned_: showing "Waiting since" and the Waiting board columns (BIG-46, BIG-47).
+Derived, never stored: an In Progress Application with no upcoming Interview, including a brand-new one. It shows "Waiting since" the date of the last completed Interview, or the applied date when there is none. A Done Application is never Waiting. _Planned_ (BIG-47): the Waiting board columns.
 _Avoid_: pending, scheduled
