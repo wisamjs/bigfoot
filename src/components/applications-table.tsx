@@ -26,7 +26,6 @@ import {
   updateApplicationAction,
 } from "@/app/dashboard/actions";
 import { ApplicationWhen } from "@/components/application-when";
-import { useIsClient } from "@/components/use-is-client";
 import { Modal } from "@/components/modal";
 import {
   Badge,
