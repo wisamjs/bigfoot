@@ -10,7 +10,7 @@ const sinceFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
 export function ApplicationWhen({ app }: { app: Application }) {
   // The server can't know the viewer's time zone, so this renders after hydration.
   const isClient = useIsClient();
-  if (!isClient) return <div className="h-5" />;
+  if (!isClient) return <span className="block h-5" />;
   const next = nextInterview(app);
   if (next?.at) return <time dateTime={next.at}>{whenFormat.format(new Date(next.at))}</time>;
   if (app.is_waiting && app.waiting_since) {
@@ -19,4 +19,24 @@ export function ApplicationWhen({ app }: { app: Application }) {
     return <span className="text-body">Waiting since {sinceFormat.format(since)}</span>;
   }
   return <span className="text-body-subtle">—</span>;
+}
+
+// Upcoming Interviews are never far off, so a card leaves out the year to keep each row short.
+const shortWhenFormat = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+/** One upcoming Interview's date and time, in the viewer's time zone, without the year. */
+export function InterviewWhen({ at }: { at: string | null }) {
+  const isClient = useIsClient();
+  if (!isClient) return <span className="block h-5" />;
+  if (!at) return <span className="text-body-subtle">No date</span>;
+  return (
+    <time dateTime={at} className="whitespace-nowrap">
+      {shortWhenFormat.format(new Date(at))}
+    </time>
+  );
 }

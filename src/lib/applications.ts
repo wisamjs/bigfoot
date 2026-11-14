@@ -169,19 +169,29 @@ export function getCalendarInterviews(apps: Application[]): DatedInterview[] {
     .sort((a, b) => a.interview.at.localeCompare(b.interview.at));
 }
 
-export type BoardColumn = { id: "waiting" | "scheduled" | "offer"; label: string; applications: Application[] };
+export type BoardColumn = {
+  id: "waiting" | "scheduled" | "offer" | "done";
+  label: string;
+  applications: Application[];
+};
+
+/** Done Applications that ended without an Offer: the board's optional Done column. */
+export function doneWithoutOffer(apps: Application[]): Application[] {
+  return apps.filter((a) => isDone(a) && a.outcome !== "offer");
+}
 
 /**
  * The Pipeline board: Waiting (In Progress, nothing upcoming), Interview scheduled (In Progress,
- * something upcoming) and Offer (Done with Outcome Offer). Other Done Applications stay off the
- * board, and empty columns are left out.
+ * something upcoming) and Offer (Done with Outcome Offer). Other Done Applications appear in a
+ * Done column only when showDone is set. Empty columns are left out.
  */
-export function getBoardColumns(apps: Application[]): BoardColumn[] {
+export function getBoardColumns(apps: Application[], { showDone = false } = {}): BoardColumn[] {
   const open = apps.filter((a) => !isDone(a));
   const columns: BoardColumn[] = [
     { id: "waiting", label: "Waiting", applications: open.filter((a) => a.is_waiting) },
     { id: "scheduled", label: "Interview scheduled", applications: open.filter((a) => nextInterview(a)) },
     { id: "offer", label: "Offer", applications: apps.filter((a) => isDone(a) && a.outcome === "offer") },
+    { id: "done", label: "Done", applications: showDone ? doneWithoutOffer(apps) : [] },
   ];
   return columns.filter((c) => c.applications.length > 0);
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
-import { useState, useTransition, type FormEvent } from "react";
+import { ExternalLink, Plus, Trash2 } from "lucide-react";
+import { useState, useTransition, type ChangeEvent, type FormEvent } from "react";
 import {
   createInterviewAction,
   deleteInterviewAction,
@@ -9,7 +9,7 @@ import {
   updateInterviewAction,
   type ActionResult,
 } from "@/app/dashboard/actions";
-import { buttonClasses, inputClasses } from "@/components/ui";
+import { buttonClasses, dangerButtonClasses, inputClasses } from "@/components/ui";
 import {
   INTERVIEW_KINDS,
   INTERVIEW_OPTIONS,
@@ -37,11 +37,20 @@ function fromLocalInput(value: string) {
 }
 
 /**
- * The Application edit dialog's body: Status and Outcome, then the Interview list. Interviews
+ * The Application edit dialog's body: Status and Outcome, the details, then the Interview list. Interviews
  * save one row at a time through the nested API routes; Status and Outcome save together,
  * because Done needs an Outcome.
  */
-export function EditApplicationForm({ app, onDone }: { app: Application; onDone: () => void }) {
+export function EditApplicationForm({
+  app,
+  onDone,
+  onDelete,
+}: {
+  app: Application;
+  onDone: () => void;
+  /** Asks to delete the Application; the caller confirms first. */
+  onDelete: () => void;
+}) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -61,6 +70,12 @@ export function EditApplicationForm({ app, onDone }: { app: Application; onDone:
       </p>
 
       <StatusForm key={`${app.updated_at}-${app.status}-${app.outcome}`} app={app} onError={setError} />
+
+      <DetailsForm
+        key={`${app.company}-${app.title}-${app.applied_on}-${app.location}-${app.salary}-${app.posting_url}`}
+        app={app}
+        onError={setError}
+      />
 
       <section aria-labelledby="interviews-title" className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-4">
@@ -99,7 +114,11 @@ export function EditApplicationForm({ app, onDone }: { app: Application; onDone:
           {error}
         </p>
       )}
-      <div className="flex justify-end border-t border-line pt-4">
+      <div className="flex justify-between gap-3 border-t border-line pt-4">
+        <button type="button" onClick={onDelete} className={dangerButtonClasses}>
+          <Trash2 className="size-4" aria-hidden />
+          Delete application
+        </button>
         <button type="button" onClick={onDone} className={buttonClasses("secondary", "md")}>
           Close
         </button>
@@ -175,6 +194,113 @@ function StatusForm({ app, onError }: { app: Application; onError: (message: str
       >
         {isPending ? "Saving…" : "Save status"}
       </button>
+    </form>
+  );
+}
+
+type DetailField = "company" | "title" | "applied_on" | "location" | "salary" | "posting_url";
+
+/**
+ * The Application's details: company, title, applied date, location, salary and job posting. They save together
+ * with one button, so a value typed before closing the dialog is never half-saved.
+ */
+function DetailsForm({ app, onError }: { app: Application; onError: (message: string | null) => void }) {
+  const saved: Record<DetailField, string> = {
+    company: app.company,
+    title: app.title,
+    applied_on: app.applied_on,
+    location: app.location ?? "",
+    salary: app.salary ?? "",
+    posting_url: app.posting_url ?? "",
+  };
+  const [values, setValues] = useState(saved);
+  const [isPending, startTransition] = useTransition();
+  const changed = (Object.keys(saved) as DetailField[]).filter((field) => values[field].trim() !== saved[field]);
+
+  function field(name: DetailField) {
+    return {
+      id: `edit-${name.replace("_", "-")}`,
+      value: values[name],
+      onChange: (e: ChangeEvent<HTMLInputElement>) => setValues({ ...values, [name]: e.target.value }),
+      className: inputClasses,
+    };
+  }
+
+  function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    onError(null);
+    const changes = Object.fromEntries(changed.map((name) => [name, values[name].trim() || null]));
+    startTransition(async () => {
+      const result = await updateApplicationAction(app.id, changes);
+      if (!result.ok) onError(result.error);
+    });
+  }
+
+  return (
+    <form onSubmit={submit} aria-labelledby="details-title" className="flex flex-col gap-4">
+      <h3 id="details-title" className="m-0 text-base font-bold leading-[1.25] text-heading">
+        Details
+      </h3>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="edit-company" className="mb-2 block text-sm font-medium text-heading">
+            Company
+          </label>
+          <input type="text" required {...field("company")} />
+        </div>
+        <div>
+          <label htmlFor="edit-title" className="mb-2 block text-sm font-medium text-heading">
+            Title
+          </label>
+          <input type="text" required {...field("title")} />
+        </div>
+        <div>
+          <label htmlFor="edit-applied-on" className="mb-2 block text-sm font-medium text-heading">
+            Applied
+          </label>
+          <input type="date" required {...field("applied_on")} />
+        </div>
+        <div>
+          <label htmlFor="edit-location" className="mb-2 block text-sm font-medium text-heading">
+            Location (optional)
+          </label>
+          <input type="text" placeholder="Remote" {...field("location")} />
+        </div>
+        <div>
+          <label htmlFor="edit-salary" className="mb-2 block text-sm font-medium text-heading">
+            Salary (optional)
+          </label>
+          <input type="text" placeholder="$150k–$180k" {...field("salary")} />
+        </div>
+        <div>
+          <label htmlFor="edit-posting-url" className="mb-2 block text-sm font-medium text-heading">
+            Job posting URL (optional)
+          </label>
+          <div className="flex items-center gap-1">
+            <input type="url" placeholder="https://" {...field("posting_url")} />
+            {app.posting_url && (
+              <a
+                href={app.posting_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Open the ${app.company} job posting in a new tab`}
+                className="shrink-0 rounded-control p-2.5 text-body transition-colors hover:bg-card hover:text-heading"
+              >
+                <ExternalLink className="size-4" aria-hidden />
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <button
+          type="submit"
+          disabled={changed.length === 0 || isPending}
+          className={`${buttonClasses("brand", "md")} disabled:opacity-60`}
+        >
+          {isPending ? "Saving…" : "Save details"}
+        </button>
+      </div>
     </form>
   );
 }

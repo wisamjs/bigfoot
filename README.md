@@ -12,7 +12,7 @@ Bigfoot is an early proof of concept, built as a side project.
 
 - Landing page
 - Sign in with Google
-- A dashboard with stats, the Pipeline board (grouped by next Interview), upcoming Interviews, and a table of all your Applications
+- A dashboard with stats, upcoming Interviews, and the Pipeline board (grouped by next Interview, with Done Applications on request); open a card to edit its Application and Interviews
 - A few Sample Applications for new job seekers, so the dashboard shows how Bigfoot works before they add their own
 - Adding, editing and deleting Applications right in the table: text fields save when you leave them, dropdowns save when you pick a value
 

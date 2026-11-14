@@ -53,6 +53,15 @@ describe("getBoardColumns", () => {
     expect(getBoardColumns([scheduled]).map((c) => c.id)).toEqual(["scheduled"]);
     expect(getBoardColumns([rejected])).toEqual([]);
   });
+
+  it("adds a Done column for Done Applications other than Offers when asked", () => {
+    const columns = getBoardColumns([waiting, offer, rejected], { showDone: true });
+    expect(columns.map((c) => [c.id, c.applications.map((a) => a.id)])).toEqual([
+      ["waiting", ["waiting"]],
+      ["offer", ["offer"]],
+      ["done", ["rejected"]],
+    ]);
+  });
 });
 
 describe("getCalendarInterviews", () => {

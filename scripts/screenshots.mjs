@@ -69,7 +69,7 @@ try {
     value: await createTestSession(SCREENSHOT_JOB_SEEKER_ID),
     url: base,
   });
-  await screenshot(chrome, "/dashboard", "docs/screenshots/dashboard.png", { expect: "All applications", fullPage: true });
+  await screenshot(chrome, "/dashboard", "docs/screenshots/dashboard.png", { expect: "Add application", fullPage: true });
 } finally {
   // Empty the screenshot user first, so a failure closing Chrome never leaves Applications behind.
   if (added) await removeTestApplications(SCREENSHOT_JOB_SEEKER_ID);

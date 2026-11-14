@@ -1,10 +1,11 @@
+import type { ReactNode } from "react";
 import { CalendarClock } from "lucide-react";
 import { Badge, SampleBadge } from "@/components/ui";
-import { ApplicationWhen } from "@/components/application-when";
+import { ApplicationWhen, InterviewWhen } from "@/components/application-when";
 import {
   getBoardColumns,
   INTERVIEW_OPTIONS,
-  nextInterview,
+  upcomingInterviews,
   OUTCOME_OPTIONS,
   type Application,
 } from "@/lib/applications";
@@ -13,12 +14,26 @@ type Props = {
   title: string;
   subtitle: string;
   applications: Application[];
+  /** Show Done Applications other than Offers in a Done column. */
+  showDone?: boolean;
+  /** Controls beside the subtitle, such as the Show done toggle. */
+  actions?: ReactNode;
+  /** Makes each card a button that opens the Application. */
+  onOpen?: (app: Application) => void;
   /** Render as a decorative picture (landing page) instead of readable content. */
   decorative?: boolean;
 };
 
-export function PipelineBoard({ title, subtitle, applications, decorative = false }: Props) {
-  const columns = getBoardColumns(applications);
+export function PipelineBoard({
+  title,
+  subtitle,
+  applications,
+  showDone = false,
+  actions,
+  onOpen,
+  decorative = false,
+}: Props) {
+  const columns = getBoardColumns(applications, { showDone });
   const a11y = decorative
     ? {
         role: "img" as const,
@@ -31,10 +46,13 @@ export function PipelineBoard({ title, subtitle, applications, decorative = fals
     <div className={`card p-4 text-left ${decorative ? "shadow-2xl" : ""}`} {...a11y}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 px-2 pt-1">
         <span className="text-base font-medium text-heading">{title}</span>
-        <span className="flex items-center gap-1.5 text-sm text-body">
-          <CalendarClock className="size-4" aria-hidden />
-          {subtitle}
-        </span>
+        <div className="flex flex-wrap items-center gap-4">
+          <span className="flex items-center gap-1.5 text-sm text-body">
+            <CalendarClock className="size-4" aria-hidden />
+            {subtitle}
+          </span>
+          {actions}
+        </div>
       </div>
       {columns.length === 0 ? (
         <p className="m-0 rounded-control bg-surface p-6 text-center text-sm text-body">
@@ -55,31 +73,63 @@ export function PipelineBoard({ title, subtitle, applications, decorative = fals
                 <span className="text-xs font-medium text-body">{column.applications.length}</span>
               </div>
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
-                {column.applications.map((job) => {
-                  const next = nextInterview(job);
-                  return (
-                    <li key={job.id} className="rounded-control border border-line bg-card-strong p-3 shadow-xs">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="m-0 min-w-0 text-sm font-medium leading-5 text-heading">{job.company}</p>
-                        {job.is_sample && <SampleBadge />}
-                      </div>
-                      <p className="m-0 mb-2 text-xs leading-4 text-body">{job.title}</p>
-                      {job.outcome === "offer" ? (
-                        <Badge tone={OUTCOME_OPTIONS.offer.tone}>{OUTCOME_OPTIONS.offer.label}</Badge>
-                      ) : (
-                        <div className="flex flex-col items-start gap-1 text-xs text-body">
-                          {next && <Badge tone={INTERVIEW_OPTIONS[next.kind].tone}>{INTERVIEW_OPTIONS[next.kind].label}</Badge>}
-                          <ApplicationWhen app={job} />
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
+                {column.applications.map((job) => (
+                  <Card key={job.id} job={job} onOpen={onOpen} />
+                ))}
               </ul>
             </section>
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+function Card({ job, onOpen }: { job: Application; onOpen?: (app: Application) => void }) {
+  const upcoming = upcomingInterviews(job);
+  return (
+    <li
+      className={`relative rounded-control border border-line bg-card-strong p-3 shadow-xs ${
+        onOpen ? "cursor-pointer transition-all duration-200 hover:border-line-medium hover:shadow-md" : ""
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="m-0 min-w-0 text-sm font-medium leading-5 text-heading">
+          {onOpen ? (
+            // Stretched button: its ::after covers the card, so the whole card opens the Application.
+            <button
+              type="button"
+              onClick={() => onOpen(job)}
+              className="cursor-pointer text-left after:absolute after:inset-0 after:rounded-control focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-brand"
+            >
+              <span className="sr-only">Edit </span>
+              {job.company}
+              <span className="sr-only">, {job.title}</span>
+            </button>
+          ) : (
+            job.company
+          )}
+        </p>
+        {job.is_sample && <SampleBadge />}
+      </div>
+      <p className="m-0 mb-2 text-xs leading-4 text-body">{job.title}</p>
+      {job.outcome ? (
+        <Badge tone={OUTCOME_OPTIONS[job.outcome].tone}>{OUTCOME_OPTIONS[job.outcome].label}</Badge>
+      ) : upcoming.length > 0 ? (
+        // Every upcoming Interview, soonest first: one row each, its kind beside its date.
+        <ul aria-label="Upcoming Interviews" className="m-0 flex list-none flex-col gap-1.5 p-0">
+          {upcoming.map((interview) => (
+            <li key={interview.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-body">
+              <Badge tone={INTERVIEW_OPTIONS[interview.kind].tone}>{INTERVIEW_OPTIONS[interview.kind].label}</Badge>
+              <InterviewWhen at={interview.at} />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="text-xs text-body">
+          <ApplicationWhen app={job} />
+        </div>
+      )}
+    </li>
   );
 }

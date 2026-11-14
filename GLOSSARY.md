@@ -31,7 +31,7 @@ How a Done Application ended: Offer, Rejected, Position Filled, Withdrawn, No Op
 _Avoid_: closed stage, result, archived
 
 **Pipeline**:
-All of a job seeker's Applications. The board shows the In Progress ones, grouped by what they are waiting on, plus Offers; the rest belong to the Pipeline but are not shown on it. Its columns are Waiting, Interview scheduled and Offer; empty ones are left out.
+All of a job seeker's Applications. The board shows the In Progress ones, grouped by what they are waiting on, plus Offers. Its columns are Waiting, Interview scheduled and Offer, and a Done column for the other Done Applications when "Show done" is on; empty ones are left out. Opening a card edits its Application.
 _Avoid_: board, funnel, tracker
 
 **Interview**:
@@ -47,5 +47,5 @@ Derived, never stored: the Interview's date is in the past, or it has no date. N
 _Avoid_: done (that is a Status), past
 
 **Waiting**:
-Derived, never stored: an In Progress Application with no upcoming Interview, including a brand-new one. It shows "Waiting since" the date of the last completed Interview, or the applied date when there is none. A Done Application is never Waiting. The Pipeline board and Applications table show "Waiting since".
+Derived, never stored: an In Progress Application with no upcoming Interview, including a brand-new one. It shows "Waiting since" the date of the last completed Interview, or the applied date when there is none. A Done Application is never Waiting. The Pipeline board shows "Waiting since".
 _Avoid_: pending, scheduled

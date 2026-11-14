@@ -8,7 +8,7 @@ export const PAGES = [
   { path: "/privacy", signedIn: false, expect: "Privacy Policy" },
   { path: "/privacy", signedIn: true, expect: "Privacy Policy" },
   { path: "/dashboard", signedIn: false, redirect: true },
-  { path: "/dashboard", signedIn: true, expect: "All applications" },
+  { path: "/dashboard", signedIn: true, expect: "Add application" },
   { path: "/account", signedIn: false, redirect: true },
   { path: "/account", signedIn: true, expect: "Delete account" },
 ];
