@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { CalendarClock } from "lucide-react";
+import { CalendarClock, NotebookPen } from "lucide-react";
 import { Badge, SampleBadge } from "@/components/ui";
 import { ApplicationWhen, InterviewWhen } from "@/components/application-when";
 import {
@@ -136,6 +136,7 @@ function Card({ job, onOpen }: { job: Application; onOpen?: (app: Application) =
 /**
  * One Interview as a row: its kind on the left, its date on the right. An upcoming one is a
  * coloured badge in a box; a completed one (past or undated) is plain, struck-through grey text.
+ * One with Interview notes carries a small mark; the notes themselves are read in the side panel.
  */
 function InterviewItem({ interview }: { interview: Interview }) {
   const kind = INTERVIEW_OPTIONS[interview.kind];
@@ -143,6 +144,7 @@ function InterviewItem({ interview }: { interview: Interview }) {
     return (
       <li className="flex flex-wrap items-center gap-x-3 gap-y-0.5 border border-transparent px-2 py-0.5 text-body line-through">
         <span>{kind.label}</span>
+        {interview.notes && <NotesMark />}
         <span className="ml-auto">
           <InterviewWhen at={interview.at} />
         </span>
@@ -153,9 +155,20 @@ function InterviewItem({ interview }: { interview: Interview }) {
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-control border border-line bg-surface px-2 py-1.5 text-heading">
       <Badge tone={kind.tone}>{kind.label}</Badge>
+      {interview.notes && <NotesMark />}
       <span className="ml-auto">
         <InterviewWhen at={interview.at} />
       </span>
     </li>
+  );
+}
+
+/** Says an Interview has Interview notes, without showing them. */
+function NotesMark() {
+  return (
+    <span className="inline-flex items-center text-body">
+      <NotebookPen className="size-3.5" aria-hidden />
+      <span className="sr-only">(has notes)</span>
+    </span>
   );
 }

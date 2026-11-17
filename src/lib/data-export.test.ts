@@ -70,8 +70,9 @@ describe("applicationsCsv", () => {
           outcome: "not_the_right_fit",
           is_sample: true,
           interviews: [
-            { id: "i1", application_id: "a1", kind: "recruiter_screen", at: null, completed: true, created_at: ts, updated_at: ts },
-            { id: "i2", application_id: "a1", kind: "fe_system_design", at: ts, completed: true, created_at: ts, updated_at: ts },
+            { id: "i1", application_id: "a1", kind: "recruiter_screen", at: null, notes: "Friendly, asked about salary.", completed: true, created_at: ts, updated_at: ts },
+            { id: "i2", application_id: "a1", kind: "technical", at: ts, notes: null, completed: true, created_at: ts, updated_at: ts },
+            { id: "i3", application_id: "a1", kind: "fe_system_design", at: ts, notes: "Drew the cache late.\nStart with the diagram.", completed: true, created_at: ts, updated_at: ts },
           ],
         }),
         application({ company: "Second" }),
@@ -89,7 +90,10 @@ describe("applicationsCsv", () => {
       "Applied date": "2026-11-01",
       Status: "Done",
       Outcome: "Not the Right Fit",
-      Interviews: "Recruiter Screen (no date); FE System Design (2026-11-02T15:00:00Z)",
+      Interviews: "Recruiter Screen (no date); Technical (2026-11-02T15:00:00Z); FE System Design (2026-11-02T15:00:00Z)",
+      "Interview notes":
+        "Recruiter Screen (no date): Friendly, asked about salary.\n\n" +
+        "FE System Design (2026-11-02T15:00:00Z): Drew the cache late.\nStart with the diagram.",
       "Sample Application": "Yes",
       Created: "2026-11-02T15:00:00Z",
       Updated: "2026-11-02T15:00:00Z",
@@ -126,8 +130,9 @@ describe("dataExportJson", () => {
   const user = { id: "google-123", name: "Ada Lovelace", firstName: "Ada", email: "ada@example.com", image: null };
   const now = new Date("2026-11-14T05:00:00Z");
 
-  it("holds the profile and every Application field, is_sample included", () => {
-    const app = application({ is_sample: true });
+  it("holds the profile and every Application field, is_sample and Interview notes included", () => {
+    const noted = { id: "i1", application_id: "a1", kind: "technical", at: ts, notes: "Went well.", completed: true, created_at: ts, updated_at: ts } as const;
+    const app = application({ is_sample: true, interviews: [noted] });
     const record = {
       job_seeker_id: "google-123",
       created_at: "2026-11-10T12:00:00Z",
@@ -148,6 +153,7 @@ describe("dataExportJson", () => {
       },
       applications: [app],
     });
+    expect(data.applications[0].interviews[0].notes).toBe("Went well.");
   });
 
   it("still exports when the job seeker has no database record yet", () => {

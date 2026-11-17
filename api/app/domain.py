@@ -34,3 +34,6 @@ InterviewKind = Literal[
     "strategy_and_values_alignment",
     "people_management",
 ]
+
+# Interview notes are plain text; generous enough that nobody writing by hand reaches it.
+INTERVIEW_NOTES_MAX_LENGTH = 20_000

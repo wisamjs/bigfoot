@@ -54,6 +54,7 @@ const FIELD_LABELS: Record<string, string> = {
   outcome: "Outcome",
   kind: "Interview kind",
   at: "Interview date",
+  notes: "Interview notes",
 };
 
 /** FastAPI errors: {detail: string} or, for validation, {detail: [{loc, msg}]}. */
