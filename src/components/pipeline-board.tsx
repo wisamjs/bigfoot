@@ -104,7 +104,7 @@ function Card({ job, onOpen }: { job: Application; onOpen?: (app: Application) =
               onClick={() => onOpen(job)}
               className="cursor-pointer text-left after:absolute after:inset-0 after:rounded-control focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-brand"
             >
-              <span className="sr-only">Edit </span>
+              <span className="sr-only">Open </span>
               {job.company}
               <span className="sr-only">, {job.title}</span>
             </button>

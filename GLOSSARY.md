@@ -31,7 +31,7 @@ How a Done Application ended: Offer, Rejected, Position Filled, Withdrawn, No Op
 _Avoid_: closed stage, result, archived
 
 **Pipeline**:
-All of a job seeker's Applications. The board shows the In Progress ones, grouped by what they are waiting on, plus Offers. Its columns are Waiting, Interview scheduled and Offer, and a Done column for the other Done Applications when "Show done" is on; empty ones are left out. Each card lists all of its Application's Interviews, completed ones muted. Opening a card edits its Application.
+All of a job seeker's Applications. The board shows the In Progress ones, grouped by what they are waiting on, plus Offers. Its columns are Waiting, Interview scheduled and Offer, and a Done column for the other Done Applications when "Show done" is on; empty ones are left out. Each card lists all of its Application's Interviews, completed ones muted. Opening a card shows its whole Application in a side panel beside the board: details, Status, Outcome and every Interview, all editable there. The panel hides the salary behind a Reveal button each time it opens, against someone looking at the screen; the data download still includes it. "Add application" opens the same panel, empty.
 _Avoid_: board, funnel, tracker
 
 **Interview**:
