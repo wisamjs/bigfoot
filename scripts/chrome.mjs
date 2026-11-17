@@ -22,23 +22,42 @@ function devToolsPort(profile) {
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Long enough for `next dev` to compile a page on first request, which a cold server (CI) does.
+const PAGE_TEXT_TIMEOUT_MS = 15_000;
+
 /**
- * Loads `url`, waits for fonts and client components to settle, and fails unless the page shows
- * `expect` (so an error page is never checked or captured). Removes the Next.js dev tools badge.
+ * Loads `url`, waits until the page shows `expect` (so an error page is never checked or
+ * captured) and its fonts have loaded. Removes the Next.js dev tools badge.
  */
 export async function openPage(chrome, url, expect) {
   const loaded = chrome.nextEvent("Page.loadEventFired");
   await chrome.send("Page.navigate", { url });
   await loaded;
-  await sleep(2000);
-  await expectText(chrome, expect, url);
+  await expectText(chrome, expect, url, PAGE_TEXT_TIMEOUT_MS);
+  await chrome.send("Runtime.evaluate", { expression: "document.fonts.ready.then(() => true)", awaitPromise: true });
   await chrome.send("Runtime.evaluate", { expression: `document.querySelectorAll("nextjs-portal").forEach((e) => e.remove())` });
 }
 
-async function expectText(chrome, expect, where) {
-  const { result } = await chrome.send("Runtime.evaluate", { expression: "document.body.innerText" });
-  if (!result.value?.includes(expect)) {
-    throw new Error(`${where} did not show "${expect}"; see .next/dev/logs/next-development.log`);
+/** How a failed wait quotes the page: enough of its text to tell what it was showing. */
+export function seenText(text) {
+  const seen = (text ?? "").replace(/\s+/g, " ").trim();
+  if (!seen) return "nothing";
+  return seen.length > 300 ? `"${seen.slice(0, 300)}…"` : `"${seen}"`;
+}
+
+/** Polls the page's text until it includes `expect`; after `timeoutMs`, fails with the last text seen. */
+async function expectText(chrome, expect, where, timeoutMs = 0) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const { result } = await chrome.send("Runtime.evaluate", { expression: "document.body?.innerText" });
+    if (result.value?.includes(expect)) return;
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `${where} did not show "${expect}"${timeoutMs ? ` within ${timeoutMs / 1000}s` : ""}; ` +
+          `it showed ${seenText(result.value)}. See .next/dev/logs/next-development.log`,
+      );
+    }
+    await sleep(250);
   }
 }
 
