@@ -3,7 +3,7 @@
 // way job seekers do: narrow columns, wrapping labels, dark-mode contrast. Signed in, it uses its
 // own job seeker holding the Applications from scripts/dev-applications.mjs, emptied afterwards.
 //   npm run capture -- /dashboard --width 1000 --selector 'section[aria-labelledby="pipeline-title"]'
-//   npm run capture -- /dashboard --state edit-dialog --selector 'dialog[open]' --theme dark
+//   npm run capture -- /dashboard --state application-panel --selector 'dialog[open]' --theme dark
 // Options:
 //   --width <px>      viewport width (default 1440)
 //   --theme <name>    light, dark or both (default both)

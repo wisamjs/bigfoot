@@ -51,7 +51,8 @@ function applications() {
     { company: "Ramp", title: "Staff Engineer", status: "done", outcome: "offer", interviews: [["onsite_loop", -6, 10]] },
     { company: "Vercel", title: "Frontend Engineer", status: "done", outcome: "rejected", interviews: [["technical", -8, 10]] },
     { company: "Plaid", title: "Software Engineer", status: "done", outcome: "withdrawn", interviews: [["recruiter_screen"]] },
-  ].map((a) => ({ applied_on, ...a }));
+      // Each has a salary, so the panel's hidden salary and its Reveal button are captured and checked.
+  ].map((a) => ({ applied_on, salary: "$150k–$180k", ...a }));
 }
 
 export async function addTestApplications(jobSeekerId = TEST_JOB_SEEKER_ID) {

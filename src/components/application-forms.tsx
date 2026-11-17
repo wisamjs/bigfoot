@@ -1,8 +1,9 @@
 "use client";
 
-import { ExternalLink, Plus, Trash2 } from "lucide-react";
-import { useState, useTransition, type ChangeEvent, type FormEvent } from "react";
+import { ExternalLink, Eye, Plus, Trash2 } from "lucide-react";
+import { useId, useState, useTransition, type ChangeEvent, type FormEvent } from "react";
 import {
+  createApplicationAction,
   createInterviewAction,
   deleteInterviewAction,
   updateApplicationAction,
@@ -36,25 +37,39 @@ function fromLocalInput(value: string) {
   return value ? new Date(value).toISOString() : null;
 }
 
+function todayLocal() {
+  return toLocalInput(new Date().toISOString()).slice(0, 10);
+}
+
+function ErrorMessage({ error }: { error: string | null }) {
+  if (!error) return null;
+  return (
+    <p role="alert" className="m-0 text-sm text-fg-danger">
+      {error}
+    </p>
+  );
+}
+
 /**
- * The Application edit dialog's body: Status and Outcome, the details, then the Interview list. Interviews
- * save one row at a time through the nested API routes; Status and Outcome save together,
- * because Done needs an Outcome.
+ * The whole Application, editable: Status and Outcome, the details, then the Interview list.
+ * Interviews save one row at a time through the nested API routes; Status and Outcome save
+ * together, because Done needs an Outcome.
  */
-export function EditApplicationForm({
+export function ApplicationEditor({
   app,
-  onDone,
   onDelete,
 }: {
   app: Application;
-  onDone: () => void;
   /** Asks to delete the Application; the caller confirms first. */
   onDelete: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
+  // Lives here, not in DetailsForm, so saving the details doesn't hide the salary again. This
+  // component mounts each time the panel opens the Application, which does.
+  const [salaryRevealed, setSalaryRevealed] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  /** Runs a save; shows its error, and tells the caller whether it worked. */
+  /** Runs a save and shows its error. */
   function save(run: () => Promise<ActionResult>) {
     setError(null);
     startTransition(async () => {
@@ -64,16 +79,14 @@ export function EditApplicationForm({
   }
 
   return (
-    <div className="flex flex-col gap-6 pt-6">
-      <p className="m-0 text-base leading-[1.625] text-heading">
-        <span className="font-medium">{app.company}</span>, {app.title}
-      </p>
-
+    <div className="flex flex-col gap-6">
       <StatusForm key={`${app.updated_at}-${app.status}-${app.outcome}`} app={app} onError={setError} />
 
       <DetailsForm
         key={`${app.company}-${app.title}-${app.applied_on}-${app.location}-${app.salary}-${app.posting_url}`}
         app={app}
+        salaryHidden={Boolean(app.salary) && !salaryRevealed}
+        onRevealSalary={() => setSalaryRevealed(true)}
         onError={setError}
       />
 
@@ -109,25 +122,25 @@ export function EditApplicationForm({
         )}
       </section>
 
-      {error && (
-        <p role="alert" className="m-0 text-sm text-fg-danger">
-          {error}
-        </p>
-      )}
-      <div className="flex justify-between gap-3 border-t border-line pt-4">
+      <ErrorMessage error={error} />
+      <div className="flex border-t border-line pt-4">
         <button type="button" onClick={onDelete} className={dangerButtonClasses}>
           <Trash2 className="size-4" aria-hidden />
           Delete application
-        </button>
-        <button type="button" onClick={onDone} className={buttonClasses("secondary", "md")}>
-          Close
         </button>
       </div>
     </div>
   );
 }
 
+/** The details of an Application that doesn't exist yet; adding it creates the Application. */
+export function NewApplicationForm({ onDone }: { onDone: () => void }) {
+  const [error, setError] = useState<string | null>(null);
+  return <DetailsForm error={error} onError={setError} onDone={onDone} />;
+}
+
 function StatusForm({ app, onError }: { app: Application; onError: (message: string | null) => void }) {
+  const id = useId();
   const [status, setStatus] = useState<Status>(app.status);
   const [outcome, setOutcome] = useState<Outcome | "">(app.outcome ?? "");
   const [isPending, startTransition] = useTransition();
@@ -148,11 +161,11 @@ function StatusForm({ app, onError }: { app: Application; onError: (message: str
   return (
     <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
       <div className="min-w-40 flex-1">
-        <label htmlFor="edit-status" className="mb-2 block text-sm font-medium text-heading">
+        <label htmlFor={`${id}-status`} className="mb-2 block text-sm font-medium text-heading">
           Status
         </label>
         <select
-          id="edit-status"
+          id={`${id}-status`}
           value={status}
           onChange={(e) => setStatus(e.target.value as Status)}
           className={inputClasses}
@@ -166,11 +179,11 @@ function StatusForm({ app, onError }: { app: Application; onError: (message: str
       </div>
       {status === "done" && (
         <div className="min-w-40 flex-1">
-          <label htmlFor="edit-outcome" className="mb-2 block text-sm font-medium text-heading">
+          <label htmlFor={`${id}-outcome`} className="mb-2 block text-sm font-medium text-heading">
             Outcome
           </label>
           <select
-            id="edit-outcome"
+            id={`${id}-outcome`}
             value={outcome}
             required
             onChange={(e) => setOutcome(e.target.value as Outcome)}
@@ -198,28 +211,50 @@ function StatusForm({ app, onError }: { app: Application; onError: (message: str
   );
 }
 
-type DetailField = "company" | "title" | "applied_on" | "location" | "salary" | "posting_url";
+const DETAIL_FIELDS = ["company", "title", "applied_on", "location", "salary", "posting_url"] as const;
+type DetailField = (typeof DETAIL_FIELDS)[number];
 
 /**
- * The Application's details: company, title, applied date, location, salary and job posting. They save together
- * with one button, so a value typed before closing the dialog is never half-saved.
+ * An Application's details: company, title, applied date, location, salary and job posting. They
+ * save together with one button, so a value typed before closing the panel is never half-saved.
+ * Without `app` the form is empty and creates the Application.
  */
-function DetailsForm({ app, onError }: { app: Application; onError: (message: string | null) => void }) {
-  const saved: Record<DetailField, string> = {
-    company: app.company,
-    title: app.title,
-    applied_on: app.applied_on,
-    location: app.location ?? "",
-    salary: app.salary ?? "",
-    posting_url: app.posting_url ?? "",
-  };
+function DetailsForm({
+  app,
+  salaryHidden = false,
+  onRevealSalary,
+  error,
+  onError,
+  onDone,
+}: {
+  app?: Application;
+  /** Shows a Reveal button in place of the salary, against someone looking at the screen. */
+  salaryHidden?: boolean;
+  onRevealSalary?: () => void;
+  /** Shown above the buttons; the editor shows its own below all of its forms instead. */
+  error?: string | null;
+  onError: (message: string | null) => void;
+  /** Called after the Application is created, and by Cancel. */
+  onDone?: () => void;
+}) {
+  const id = useId();
+  const [saved] = useState<Record<DetailField, string>>(() => ({
+    company: app?.company ?? "",
+    title: app?.title ?? "",
+    applied_on: app?.applied_on ?? todayLocal(),
+    location: app?.location ?? "",
+    salary: app?.salary ?? "",
+    posting_url: app?.posting_url ?? "",
+  }));
   const [values, setValues] = useState(saved);
+  // Only after Reveal is pressed: a form remounted by a save must not pull focus to the salary.
+  const [focusSalary, setFocusSalary] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const changed = (Object.keys(saved) as DetailField[]).filter((field) => values[field].trim() !== saved[field]);
+  const changed = DETAIL_FIELDS.filter((name) => values[name].trim() !== saved[name]);
 
   function field(name: DetailField) {
     return {
-      id: `edit-${name.replace("_", "-")}`,
+      id: `${id}-${name}`,
       value: values[name],
       onChange: (e: ChangeEvent<HTMLInputElement>) => setValues({ ...values, [name]: e.target.value }),
       className: inputClasses,
@@ -229,56 +264,81 @@ function DetailsForm({ app, onError }: { app: Application; onError: (message: st
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     onError(null);
-    const changes = Object.fromEntries(changed.map((name) => [name, values[name].trim() || null]));
+    const fields = Object.fromEntries((app ? changed : DETAIL_FIELDS).map((name) => [name, values[name].trim() || null]));
     startTransition(async () => {
-      const result = await updateApplicationAction(app.id, changes);
+      const result = await (app ? updateApplicationAction(app.id, fields) : createApplicationAction(fields));
       if (!result.ok) onError(result.error);
+      else if (!app) onDone?.();
     });
   }
 
+  const labelClasses = "mb-2 block text-sm font-medium text-heading";
+
   return (
-    <form onSubmit={submit} aria-labelledby="details-title" className="flex flex-col gap-4">
-      <h3 id="details-title" className="m-0 text-base font-bold leading-[1.25] text-heading">
+    <form onSubmit={submit} aria-labelledby={`${id}-heading`} className="flex flex-col gap-4">
+      <h3 id={`${id}-heading`} className="m-0 text-base font-bold leading-[1.25] text-heading">
         Details
       </h3>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor="edit-company" className="mb-2 block text-sm font-medium text-heading">
+          <label htmlFor={`${id}-company`} className={labelClasses}>
             Company
           </label>
-          <input type="text" required {...field("company")} />
+          <input type="text" required autoFocus={!app} {...field("company")} />
         </div>
         <div>
-          <label htmlFor="edit-title" className="mb-2 block text-sm font-medium text-heading">
+          <label htmlFor={`${id}-title`} className={labelClasses}>
             Title
           </label>
           <input type="text" required {...field("title")} />
         </div>
         <div>
-          <label htmlFor="edit-applied-on" className="mb-2 block text-sm font-medium text-heading">
+          <label htmlFor={`${id}-applied_on`} className={labelClasses}>
             Applied
           </label>
           <input type="date" required {...field("applied_on")} />
         </div>
         <div>
-          <label htmlFor="edit-location" className="mb-2 block text-sm font-medium text-heading">
+          <label htmlFor={`${id}-location`} className={labelClasses}>
             Location (optional)
           </label>
           <input type="text" placeholder="Remote" {...field("location")} />
         </div>
+        {salaryHidden ? (
+          <div role="group" aria-labelledby={`${id}-salary-label`}>
+            <span id={`${id}-salary-label`} className={labelClasses}>
+              Salary (optional)
+            </span>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-body">Hidden</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setFocusSalary(true);
+                  onRevealSalary?.();
+                }}
+                className={buttonClasses("secondary", "md")}
+              >
+                <Eye className="size-4" aria-hidden />
+                Reveal
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <label htmlFor={`${id}-salary`} className={labelClasses}>
+              Salary (optional)
+            </label>
+            <input type="text" placeholder="$150k–$180k" autoFocus={focusSalary} {...field("salary")} />
+          </div>
+        )}
         <div>
-          <label htmlFor="edit-salary" className="mb-2 block text-sm font-medium text-heading">
-            Salary (optional)
-          </label>
-          <input type="text" placeholder="$150k–$180k" {...field("salary")} />
-        </div>
-        <div>
-          <label htmlFor="edit-posting-url" className="mb-2 block text-sm font-medium text-heading">
+          <label htmlFor={`${id}-posting_url`} className={labelClasses}>
             Job posting URL (optional)
           </label>
           <div className="flex items-center gap-1">
             <input type="url" placeholder="https://" {...field("posting_url")} />
-            {app.posting_url && (
+            {app?.posting_url && (
               <a
                 href={app.posting_url}
                 target="_blank"
@@ -292,15 +352,27 @@ function DetailsForm({ app, onError }: { app: Application; onError: (message: st
           </div>
         </div>
       </div>
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={changed.length === 0 || isPending}
-          className={`${buttonClasses("brand", "md")} disabled:opacity-60`}
-        >
-          {isPending ? "Saving…" : "Save details"}
-        </button>
-      </div>
+      <ErrorMessage error={error ?? null} />
+      {app ? (
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={changed.length === 0 || isPending}
+            className={`${buttonClasses("brand", "md")} disabled:opacity-60`}
+          >
+            {isPending ? "Saving…" : "Save details"}
+          </button>
+        </div>
+      ) : (
+        <div className="mt-2 flex justify-end gap-3 border-t border-line pt-4">
+          <button type="button" onClick={onDone} className={buttonClasses("secondary", "md")}>
+            Cancel
+          </button>
+          <button type="submit" disabled={isPending} className={`${buttonClasses("brand", "md")} disabled:opacity-60`}>
+            {isPending ? "Adding…" : "Add application"}
+          </button>
+        </div>
+      )}
     </form>
   );
 }
