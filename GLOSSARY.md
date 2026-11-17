@@ -31,12 +31,24 @@ How a Done Application ended: Offer, Rejected, Position Filled, Withdrawn, No Op
 _Avoid_: closed stage, result, archived
 
 **Pipeline**:
-All of a job seeker's Applications. The board shows the In Progress ones, grouped by what they are waiting on, plus Offers. Its columns are Waiting, Interview scheduled and Offer, and a Done column for the other Done Applications when "Show done" is on; empty ones are left out. Each card lists all of its Application's Interviews, completed ones muted. Opening a card edits its Application.
+All of a job seeker's Applications. The board shows the In Progress ones, grouped by what they are waiting on, plus Offers. Its columns are Waiting, Interview scheduled and Offer, and a Done column for the other Done Applications when "Show done" is on; empty ones are left out. Each card lists all of its Application's Interviews, completed ones muted. Opening a card edits its Application. _Planned_ (BIG-56): opening a card shows the whole Application beside the board, where it is also edited.
 _Avoid_: board, funnel, tracker
 
 **Interview**:
 One conversation in a company's hiring process, belonging to one Application. It has a required, editable kind and an optional date and time, and no title. An Application can have many; kinds can repeat. Interviews are ordered by date, undated ones first, with no manual order and no per-company template. A cancelled Interview is deleted. Deleting the Application deletes its Interviews. The Coming up calendar shows every dated Interview of an In Progress Application, past ones muted.
 _Avoid_: round, step, stage, meeting
+
+**Interview notes**:
+_Planned_ (BIG-62). What the job seeker writes about one Interview: how it went, what they were asked, what they would do differently. Feedback from the company is not Interview notes.
+_Avoid_: feedback, retro, summary
+
+**Questions for them**:
+_Planned_ (BIG-63). Questions the job seeker means to ask the company, kept on the Application because they apply to its whole hiring process.
+_Avoid_: reverse questions, my questions
+
+**Questions to prepare for**:
+_Planned_ (BIG-63). Questions the job seeker expects the company to ask them, kept on the Application.
+_Avoid_: question bank, prep questions
 
 **Interview kind**:
 What sort of conversation an Interview is: Informal Chat, Recruiter Screen, Hiring Manager, Technical, Behavioural, Leadership, Onsite Loop, AI Assisted Coding Challenge, Coding Challenge, FE System Design, BE System Design, Technical Deep-Dive, Cross-Functional Interview, Strategy & Values Alignment or People Management. An Outcome is never a kind.
@@ -49,3 +61,19 @@ _Avoid_: done (that is a Status), past
 **Waiting**:
 Derived, never stored: an In Progress Application with no upcoming Interview, including a brand-new one. It shows "Waiting since" the date of the last completed Interview, or the applied date when there is none. A Done Application is never Waiting. The Pipeline board shows "Waiting since".
 _Avoid_: pending, scheduled
+
+**Assistant**:
+_Planned_ (BIG-66). Bigfoot's AI helper. It answers a fixed set of prompts about the job seeker's own Pipeline and cites the Applications behind each answer. Only job seekers with AI access see it.
+_Avoid_: chatbot, agent, copilot, AI
+
+**AI access**:
+_Planned_ (BIG-60). Whether, and how much, a job seeker may use the Assistant and other AI features: None, Limited or Full. Every job seeker starts at None. Full is still limited, only less so.
+_Avoid_: admin, beta, allowlist, feature flag
+
+**Access token**:
+_Planned_ (BIG-57). A secret a job seeker creates on the Account page so a script or terminal can read and change their Applications without signing in with Google. It can be revoked at any time, and deleting the account revokes it.
+_Avoid_: API key, password
+
+**Insight**:
+_Planned_ (BIG-66). One observation about a job seeker's Pipeline, such as which Interview kind their Rejected Applications ended after. Bigfoot computes it from their Applications and Interviews, and it always names the Applications behind it. The Assistant puts an Insight into words but never computes one.
+_Avoid_: trend, analytics, stat, finding
