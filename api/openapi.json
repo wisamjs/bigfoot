@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Bigfoot API",
-    "description": "Bigfoot's data API: a job seeker's Applications and their Interviews, in Supabase Postgres.\n\nThe browser never calls it. The Next.js server does, with a short-lived token naming the\nsigned-in job seeker, and every route reads and writes only that job seeker's data\n([ADR 0001](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0001-fastapi-behind-nextjs-with-authjs.md)).\nTerms such as Application, Interview, Waiting and Sample Application are defined in\n[GLOSSARY.md](https://github.com/wisamjs/bigfoot/blob/main/GLOSSARY.md).\n\nTo try a request, run `node scripts/dev-api-token.mjs`, click **Authorize** and paste the token.\n",
+    "description": "Bigfoot's data API: a job seeker's Applications and their Interviews, in Supabase Postgres.\n\nEvery route but `/health` needs `Authorization: Bearer <token>`, and reads and writes only the data\nof the job seeker the token names. There are two kinds of token:\n\n- **Access token** (`AccessToken`): a secret starting with `bigfoot_` that a job seeker creates on\n  their Account page and gives a script, such as a cron job. It works on the Applications and\n  Interviews routes, expires after a year, and can be revoked\n  ([ADR 0003](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0003-access-tokens-open-fastapi-to-scripts.md)).\n- **Web token** (`WebToken`): a short-lived JWT the Next.js server signs for the signed-in job\n  seeker. The browser itself never calls this API. Web tokens work on every route, and are the only\n  way to use the Account and Access tokens routes\n  ([ADR 0001](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0001-fastapi-behind-nextjs-with-authjs.md)).\n\nTerms such as Application, Interview, Waiting, Sample Application and Access token are defined in\n[GLOSSARY.md](https://github.com/wisamjs/bigfoot/blob/main/GLOSSARY.md).\n\nTo try a request, click **Authorize** and paste an Access token from the Account page, or a web\ntoken from `node scripts/dev-api-token.mjs`.\n",
     "version": "0.1.0"
   },
   "paths": {
@@ -56,11 +56,21 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "The bearer token is an Access token, which can't use Account routes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
           }
         },
         "security": [
           {
-            "BearerToken": []
+            "WebToken": []
           }
         ]
       }
@@ -94,6 +104,16 @@
               }
             }
           },
+          "403": {
+            "description": "The bearer token is an Access token, which can't use Account routes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
           "404": {
             "description": "The job seeker hasn't been onboarded yet.",
             "content": {
@@ -107,7 +127,7 @@
         },
         "security": [
           {
-            "BearerToken": []
+            "WebToken": []
           }
         ]
       },
@@ -116,7 +136,7 @@
           "Account"
         ],
         "summary": "Delete the job seeker's account",
-        "description": "Delete the job seeker and all of their Applications, in one transaction.\n\nIdempotent: deleting an account that is already gone succeeds and logs nothing. Signing\nin again afterwards makes a new job seeker, who receives Sample Applications again.",
+        "description": "Delete the job seeker, all of their Applications and all of their Access tokens, in one transaction.\n\nIdempotent: deleting an account that is already gone succeeds and logs nothing. Signing\nin again afterwards makes a new job seeker, who receives Sample Applications again.",
         "operationId": "delete_account_me_delete",
         "responses": {
           "204": {
@@ -131,13 +151,213 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "The bearer token is an Access token, which can't use Account routes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
           }
         },
         "security": [
           {
-            "BearerToken": []
+            "WebToken": []
           }
         ]
+      }
+    },
+    "/me/access-tokens": {
+      "get": {
+        "tags": [
+          "Access tokens"
+        ],
+        "summary": "List the job seeker's Access tokens",
+        "description": "Every Access token of the job seeker that hasn't been revoked, oldest first, expired ones\nincluded. Never the secrets.",
+        "operationId": "list_access_tokens_me_access_tokens_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AccessToken"
+                  },
+                  "type": "array",
+                  "title": "Response List Access Tokens Me Access Tokens Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The bearer token is an Access token, which can't use Account routes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WebToken": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Access tokens"
+        ],
+        "summary": "Create an Access token",
+        "description": "Create an Access token and return its secret, this once. Bigfoot stores only a hash of\nthe secret, so a lost one can't be shown again: revoke the token and create another.",
+        "operationId": "create_access_token_me_access_tokens_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessTokenCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewAccessToken"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The bearer token is an Access token, which can't use Account routes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WebToken": []
+          }
+        ]
+      }
+    },
+    "/me/access-tokens/{access_token_id}": {
+      "delete": {
+        "tags": [
+          "Access tokens"
+        ],
+        "summary": "Revoke an Access token",
+        "description": "Revoke an Access token: it stops working straight away and leaves the list. This can't be undone.",
+        "operationId": "revoke_access_token_me_access_tokens__access_token_id__delete",
+        "security": [
+          {
+            "WebToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The Access token's id.",
+              "title": "Access Token Id"
+            },
+            "description": "The Access token's id."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The bearer token is an Access token, which can't use Account routes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Access token with this id belongs to the job seeker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/applications": {
@@ -176,7 +396,10 @@
         },
         "security": [
           {
-            "BearerToken": []
+            "AccessToken": []
+          },
+          {
+            "WebToken": []
           }
         ]
       },
@@ -231,7 +454,10 @@
         },
         "security": [
           {
-            "BearerToken": []
+            "AccessToken": []
+          },
+          {
+            "WebToken": []
           }
         ]
       }
@@ -246,7 +472,10 @@
         "operationId": "update_application_applications__application_id__patch",
         "security": [
           {
-            "BearerToken": []
+            "AccessToken": []
+          },
+          {
+            "WebToken": []
           }
         ],
         "parameters": [
@@ -332,7 +561,10 @@
         "operationId": "delete_application_applications__application_id__delete",
         "security": [
           {
-            "BearerToken": []
+            "AccessToken": []
+          },
+          {
+            "WebToken": []
           }
         ],
         "parameters": [
@@ -396,7 +628,10 @@
         "operationId": "list_interviews_applications__application_id__interviews_get",
         "security": [
           {
-            "BearerToken": []
+            "AccessToken": []
+          },
+          {
+            "WebToken": []
           }
         ],
         "parameters": [
@@ -469,7 +704,10 @@
         "operationId": "create_interview_applications__application_id__interviews_post",
         "security": [
           {
-            "BearerToken": []
+            "AccessToken": []
+          },
+          {
+            "WebToken": []
           }
         ],
         "parameters": [
@@ -550,7 +788,10 @@
         "operationId": "update_interview_applications__application_id__interviews__interview_id__patch",
         "security": [
           {
-            "BearerToken": []
+            "AccessToken": []
+          },
+          {
+            "WebToken": []
           }
         ],
         "parameters": [
@@ -641,7 +882,10 @@
         "operationId": "delete_interview_applications__application_id__interviews__interview_id__delete",
         "security": [
           {
-            "BearerToken": []
+            "AccessToken": []
+          },
+          {
+            "WebToken": []
           }
         ],
         "parameters": [
@@ -710,6 +954,92 @@
   },
   "components": {
     "schemas": {
+      "AccessToken": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "What the job seeker called the token.",
+            "examples": [
+              "Calendar cron job"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At",
+            "description": "When a request last used the token; null until one does.",
+            "examples": [
+              "2026-11-20T17:00:00Z"
+            ]
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At",
+            "description": "When the token stops working: a year after it was created.",
+            "examples": [
+              "2027-11-16T17:00:00Z"
+            ]
+          },
+          "expired": {
+            "type": "boolean",
+            "title": "Expired",
+            "description": "Derived, never stored: `expires_at` has passed, so the token no longer works.",
+            "examples": [
+              false
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "created_at",
+          "last_used_at",
+          "expires_at",
+          "expired"
+        ],
+        "title": "AccessToken",
+        "description": "A secret a job seeker gives a script so it can use the API as them (GLOSSARY.md). Never includes\nthe secret: Bigfoot stores only its hash."
+      },
+      "AccessTokenCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Name",
+            "description": "What the token is for, so the job seeker can tell their tokens apart. Names can repeat.",
+            "examples": [
+              "Calendar cron job"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "AccessTokenCreate",
+        "description": "A new Access token. Only its name is chosen; it always expires a year after it is created."
+      },
       "Application": {
         "properties": {
           "id": {
@@ -1427,6 +1757,81 @@
         "title": "JobSeeker",
         "description": "Everything Bigfoot's database holds about the job seeker besides their Applications."
       },
+      "NewAccessToken": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "What the job seeker called the token.",
+            "examples": [
+              "Calendar cron job"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At",
+            "description": "When a request last used the token; null until one does.",
+            "examples": [
+              "2026-11-20T17:00:00Z"
+            ]
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At",
+            "description": "When the token stops working: a year after it was created.",
+            "examples": [
+              "2027-11-16T17:00:00Z"
+            ]
+          },
+          "expired": {
+            "type": "boolean",
+            "title": "Expired",
+            "description": "Derived, never stored: `expires_at` has passed, so the token no longer works.",
+            "examples": [
+              false
+            ]
+          },
+          "token": {
+            "type": "string",
+            "title": "Token",
+            "description": "The secret to send as `Authorization: Bearer …`. Shown only in this response.",
+            "examples": [
+              "bigfoot_3q2-7wQx0yJm5kV9nRb8sT1uZc4dEfGhIjKlMnOpQr"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "created_at",
+          "last_used_at",
+          "expires_at",
+          "expired",
+          "token"
+        ],
+        "title": "NewAccessToken",
+        "description": "An Access token as returned once, when it is created."
+      },
       "Onboarding": {
         "properties": {
           "samples_seeded": {
@@ -1483,18 +1888,27 @@
       }
     },
     "securitySchemes": {
-      "BearerToken": {
+      "WebToken": {
         "type": "http",
-        "description": "A short-lived HS256 JWT signed with API_SECRET, with `sub` set to the job seeker's id, `aud` 'bigfoot-api' and `iss` 'bigfoot-web'. The Next.js server signs one per request; locally, `node scripts/dev-api-token.mjs` prints one for the test job seeker.",
+        "description": "A short-lived HS256 JWT signed with API_SECRET, with `sub` set to the job seeker's id, `aud` 'bigfoot-api' and `iss` 'bigfoot-web'. The Next.js server signs one per request for the signed-in job seeker; locally, `node scripts/dev-api-token.mjs` prints one for the test job seeker.",
         "scheme": "bearer",
         "bearerFormat": "JWT"
+      },
+      "AccessToken": {
+        "type": "http",
+        "description": "An Access token: a secret starting with `bigfoot_` that a job seeker creates on their Account page and gives a script. It reads and writes that job seeker's Applications and Interviews, expires a year after it is created, and stops working when revoked. It can't reach the Account routes.",
+        "scheme": "bearer"
       }
     }
   },
   "tags": [
     {
       "name": "Account",
-      "description": "The signed-in job seeker: onboarding, exporting and deleting the account."
+      "description": "The signed-in job seeker: onboarding, exporting and deleting the account. Web tokens only."
+    },
+    {
+      "name": "Access tokens",
+      "description": "Secrets that let a job seeker's scripts use the API as them. Web tokens only."
     },
     {
       "name": "Applications",

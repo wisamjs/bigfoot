@@ -11,8 +11,12 @@ The product itself. Refer to the software by name. The name comes from the brand
 _Avoid_: the application, the platform; hunt words as nouns (sighting, trail, tracks)
 
 **Job seeker**:
-The person running a job search in Bigfoot: its user. A job seeker has one account, created the first time they sign in with Google; there is no separate sign-up. On the Account page they can download a copy of their data (a CSV of their Applications, or JSON with their profile and every Application) and delete their account. Deleting the account removes the job seeker and all of their Applications and Interviews.
+The person running a job search in Bigfoot: its user. A job seeker has one account, created the first time they sign in with Google; there is no separate sign-up. On the Account page they can download a copy of their data (a CSV of their Applications, or JSON with their profile, every Application and their Access tokens' names and dates), manage their Access tokens and delete their account. Deleting the account removes the job seeker and all of their Applications, Interviews and Access tokens.
 _Avoid_: user, owner, candidate, applicant
+
+**Access token**:
+A secret a job seeker creates on the Account page and gives a script, such as a cron job, so it can use Bigfoot's API as them without a browser. It reads and writes that job seeker's Applications and Interviews, and nothing else: it can't delete the account or manage Access tokens. A job seeker names each one and can have several. Bigfoot shows the secret once, when the token is created, and stores only a hash of it. The Account page lists each token's name and when it was created, last used and expires. A token expires one year after it is created. Revoking one stops it working straight away and removes it from the list; this can't be undone.
+_Avoid_: API key, personal access token, PAT, credential; delete (a token is revoked)
 
 **Application**:
 One role at one company that the job seeker has applied to.

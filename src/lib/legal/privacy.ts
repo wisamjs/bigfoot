@@ -2,10 +2,15 @@
 // reused (e.g. a dashboard notice when the policy changes).
 
 /** The date the current version of the policy takes effect (ISO yyyy-mm-dd). */
-export const PRIVACY_EFFECTIVE_DATE = "2026-11-14";
+export const PRIVACY_EFFECTIVE_DATE = "2026-11-16";
 
 /** Newest first. The first entry's date must equal PRIVACY_EFFECTIVE_DATE. */
 export const PRIVACY_CHANGES: readonly { date: string; summary: string }[] = [
+  {
+    date: "2026-11-16",
+    summary:
+      "You can create Access tokens on your Account page, so your own scripts can read and change your Applications. We store each token’s name and dates and a one-way hash of its secret, never the secret itself.",
+  },
   {
     date: "2026-11-14",
     summary:

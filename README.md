@@ -10,12 +10,41 @@ Bigfoot is an early proof of concept, built as a side project. Sign in with Goog
 
 ![Bigfoot dashboard](docs/screenshots/dashboard.png)
 
+## Use the API from a terminal
+
+A script can read and change your Applications and Interviews without a browser, for example a cron job that adds an Interview when one appears in your calendar.
+
+1. Sign in, open the **Account** page and create an **Access token**. Copy the secret straight away: Bigfoot shows it once and stores only a hash.
+2. Send it as a bearer token. The production API is at `https://bigfoot-api.vercel.app` (locally, `http://localhost:8000`):
+
+   ```bash
+   export BIGFOOT_TOKEN="bigfoot_…"
+   export BIGFOOT_API="https://bigfoot-api.vercel.app"
+
+   # List your Applications, each with its Interviews
+   curl -H "Authorization: Bearer $BIGFOOT_TOKEN" "$BIGFOOT_API/applications"
+
+   # Add an Application
+   curl -X POST "$BIGFOOT_API/applications" \
+     -H "Authorization: Bearer $BIGFOOT_TOKEN" -H "Content-Type: application/json" \
+     -d '{"company": "Northwind Robotics", "title": "Frontend Engineer"}'
+
+   # Add an Interview to it, using the "id" from the response above
+   curl -X POST "$BIGFOOT_API/applications/<application id>/interviews" \
+     -H "Authorization: Bearer $BIGFOOT_TOKEN" -H "Content-Type: application/json" \
+     -d '{"kind": "technical", "at": "2026-11-20T17:00:00Z"}'
+   ```
+
+Bigfoot doesn't match calendar events to Applications: a script finds the Application itself (for example by `company` in the list) and adds the Interview to it. Every route, field and Interview kind is in [`api/openapi.json`](api/openapi.json), and you can browse them locally ([Try the API](#try-the-api)).
+
+A token can do anything to your Applications and Interviews, so treat it like a password. It can't delete your account or manage tokens. It expires a year after you create it; revoke it on the Account page at any time. A revoked, expired or mistyped token gets `401`.
+
 ## Tech stack
 
 - [Next.js 16](https://nextjs.org) (App Router, Cache Components) and React 19
 - [Auth.js](https://authjs.dev) with Google sign-in and encrypted cookie sessions
 - [Tailwind CSS 4](https://tailwindcss.com), with every design token defined in [`src/app/globals.css`](src/app/globals.css)
-- [FastAPI](https://fastapi.tiangolo.com) (Python, in [`api/`](api)) serving Applications from [Supabase](https://supabase.com) Postgres. The browser never calls it: the Next.js server does, with a short-lived token naming the signed-in user ([ADR 0001](docs/adr/0001-fastapi-behind-nextjs-with-authjs.md))
+- [FastAPI](https://fastapi.tiangolo.com) (Python, in [`api/`](api)) serving Applications from [Supabase](https://supabase.com) Postgres. The browser never calls it: the Next.js server does, with a short-lived token naming the signed-in user ([ADR 0001](docs/adr/0001-fastapi-behind-nextjs-with-authjs.md)). A job seeker's own scripts can call it too, with an Access token ([ADR 0003](docs/adr/0003-access-tokens-open-fastapi-to-scripts.md))
 - TypeScript and Python
 
 ## Run it locally
@@ -71,13 +100,13 @@ You need Node.js 24, [uv](https://docs.astral.sh/uv/getting-started/installation
 
 With `API_DOCS="true"` in `.env.local` (as in `.env.example`), the API serves interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs) (Swagger UI), [`/redoc`](http://localhost:8000/redoc) and [`/openapi.json`](http://localhost:8000/openapi.json). They are off unless `API_DOCS` is `true`, so never set it in production.
 
-To send requests from the docs as the test job seeker, print a token (valid for an hour, signed with `API_SECRET`):
+To send requests from the docs, click **Authorize** and paste an Access token from your local Account page. Or, to act as the test job seeker (and to reach the Account routes, which Access tokens can't), print a web token (valid for an hour, signed with `API_SECRET`):
 
 ```bash
 node scripts/dev-api-token.mjs
 ```
 
-Click **Authorize**, paste the token, then **Try it out** on any route. The schema is committed as [`api/openapi.json`](api/openapi.json): after changing the API, run `npm run openapi` and commit the result. If you forget, the pre-commit hook rewrites it and stops the commit until you `git add` it.
+Paste it into **Authorize**, then **Try it out** on any route. The schema is committed as [`api/openapi.json`](api/openapi.json): after changing the API, run `npm run openapi` and commit the result. If you forget, the pre-commit hook rewrites it and stops the commit until you `git add` it.
 
 ### Skip Google sign-in
 
@@ -122,7 +151,7 @@ Two Supabase projects, both in `us-east-1`:
 
 Bigfoot was built with AI coding agents working from the project rules in [`AGENTS.md`](AGENTS.md).
 
-[`GLOSSARY.md`](GLOSSARY.md) defines the product's terms (Application, Status, Outcome, Interview, Pipeline).
+[`GLOSSARY.md`](GLOSSARY.md) defines the product's terms (Application, Status, Outcome, Interview, Pipeline, Access token).
 
 ## License
 

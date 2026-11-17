@@ -1,4 +1,5 @@
-"""Bigfoot API: create, read, update and delete a job seeker's Applications and their Interviews."""
+"""Bigfoot API: create, read, update and delete a job seeker's Applications and their Interviews,
+and the Access tokens that let their scripts do the same."""
 
 import hashlib
 import re
@@ -13,11 +14,12 @@ from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 
-from app.auth import JobSeekerId
+from app.auth import ACCESS_TOKEN_PREFIX, JobSeekerId, SignedInJobSeekerId, access_token_hash, new_access_token
 from app.domain import InterviewKind, Outcome, Status
 from app.samples import sample_applications
 from app.settings import Settings, get_settings
 
+ACCESS_TOKEN_NAME_MAX = 100  # also a check constraint on access_tokens.name
 URL_PATTERN = re.compile(r"^https?://\S+$", re.IGNORECASE)
 
 
@@ -63,6 +65,7 @@ AT = "When the Interview happens, with a time zone. Null when it has no date yet
 
 ApplicationId = Annotated[UUID, Path(description="The Application's id.")]
 InterviewId = Annotated[UUID, Path(description="The Interview's id.")]
+AccessTokenId = Annotated[UUID, Path(description="The Access token's id.")]
 
 
 class ErrorMessage(BaseModel):
@@ -191,6 +194,45 @@ class Application(BaseModel):
     updated_at: datetime
 
 
+class AccessTokenCreate(BaseModel):
+    """A new Access token. Only its name is chosen; it always expires a year after it is created."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: RequiredText = Field(
+        max_length=ACCESS_TOKEN_NAME_MAX,
+        description="What the token is for, so the job seeker can tell their tokens apart. Names can repeat.",
+        examples=["Calendar cron job"],
+    )
+
+
+class AccessToken(BaseModel):
+    """A secret a job seeker gives a script so it can use the API as them (GLOSSARY.md). Never includes
+    the secret: Bigfoot stores only its hash."""
+
+    id: UUID
+    name: str = Field(description="What the job seeker called the token.", examples=["Calendar cron job"])
+    created_at: datetime
+    last_used_at: datetime | None = Field(
+        description="When a request last used the token; null until one does.", examples=["2026-11-20T17:00:00Z"]
+    )
+    expires_at: datetime = Field(
+        description="When the token stops working: a year after it was created.", examples=["2027-11-16T17:00:00Z"]
+    )
+    expired: bool = Field(
+        description="Derived, never stored: `expires_at` has passed, so the token no longer works.", examples=[False]
+    )
+
+
+class NewAccessToken(AccessToken):
+    """An Access token as returned once, when it is created."""
+
+    token: str = Field(
+        description="The secret to send as `Authorization: Bearer …`. Shown only in this response.",
+        examples=[f"{ACCESS_TOKEN_PREFIX}3q2-7wQx0yJm5kV9nRb8sT1uZc4dEfGhIjKlMnOpQr"],
+    )
+
+
 class Onboarding(BaseModel):
     samples_seeded: bool = Field(
         description="Whether this call gave the job seeker Sample Applications. True the first time only."
@@ -216,6 +258,8 @@ APPLICATION_COLUMNS = (
     "id, company, title, posting_url, location, salary, applied_on, status, outcome, is_sample, created_at, updated_at"
 )
 COLUMNS = sql.SQL(APPLICATION_COLUMNS)
+# `expired` is derived on every read, never stored, like an Interview's `completed`.
+ACCESS_TOKEN_COLUMNS = sql.SQL("id, name, created_at, last_used_at, expires_at, expires_at <= now() as expired")
 INTERVIEW_COLUMNS = sql.SQL("id, application_id, kind, at, created_at, updated_at")
 # Undated Interviews sort first (GLOSSARY.md, Interview).
 INTERVIEW_ORDER = sql.SQL("order by at nulls first, created_at, id")
@@ -259,6 +303,9 @@ def job_seeker_hash(job_seeker: str) -> str:
 UNAUTHORIZED: dict[int | str, dict[str, Any]] = {
     401: {"model": ErrorMessage, "description": "The bearer token is missing, expired or invalid."}
 }
+ACCOUNT_ONLY: dict[int | str, dict[str, Any]] = {
+    403: {"model": ErrorMessage, "description": "The bearer token is an Access token, which can't use Account routes."}
+}
 APPLICATION_NOT_FOUND: dict[int | str, dict[str, Any]] = {
     404: {"model": ErrorMessage, "description": "No Application with this id belongs to the job seeker."}
 }
@@ -272,17 +319,34 @@ INTERVIEW_NOT_FOUND: dict[int | str, dict[str, Any]] = {
 DESCRIPTION = """\
 Bigfoot's data API: a job seeker's Applications and their Interviews, in Supabase Postgres.
 
-The browser never calls it. The Next.js server does, with a short-lived token naming the
-signed-in job seeker, and every route reads and writes only that job seeker's data
-([ADR 0001](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0001-fastapi-behind-nextjs-with-authjs.md)).
-Terms such as Application, Interview, Waiting and Sample Application are defined in
+Every route but `/health` needs `Authorization: Bearer <token>`, and reads and writes only the data
+of the job seeker the token names. There are two kinds of token:
+
+- **Access token** (`AccessToken`): a secret starting with `bigfoot_` that a job seeker creates on
+  their Account page and gives a script, such as a cron job. It works on the Applications and
+  Interviews routes, expires after a year, and can be revoked
+  ([ADR 0003](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0003-access-tokens-open-fastapi-to-scripts.md)).
+- **Web token** (`WebToken`): a short-lived JWT the Next.js server signs for the signed-in job
+  seeker. The browser itself never calls this API. Web tokens work on every route, and are the only
+  way to use the Account and Access tokens routes
+  ([ADR 0001](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0001-fastapi-behind-nextjs-with-authjs.md)).
+
+Terms such as Application, Interview, Waiting, Sample Application and Access token are defined in
 [GLOSSARY.md](https://github.com/wisamjs/bigfoot/blob/main/GLOSSARY.md).
 
-To try a request, run `node scripts/dev-api-token.mjs`, click **Authorize** and paste the token.
+To try a request, click **Authorize** and paste an Access token from the Account page, or a web
+token from `node scripts/dev-api-token.mjs`.
 """
 
 TAGS = [
-    {"name": "Account", "description": "The signed-in job seeker: onboarding, exporting and deleting the account."},
+    {
+        "name": "Account",
+        "description": "The signed-in job seeker: onboarding, exporting and deleting the account. Web tokens only.",
+    },
+    {
+        "name": "Access tokens",
+        "description": "Secrets that let a job seeker's scripts use the API as them. Web tokens only.",
+    },
     {"name": "Applications", "description": "Roles the job seeker has applied to, each with its Interviews."},
     {"name": "Interviews", "description": "Conversations in a company's hiring process, one Application each."},
     {"name": "Health", "description": "Whether the API is up. Needs no token."},
@@ -329,7 +393,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         openapi_url="/openapi.json" if docs else None,
     )
     app.state.settings = settings
-    account = APIRouter(prefix="/me", tags=["Account"], responses=UNAUTHORIZED)
+    account = APIRouter(prefix="/me", tags=["Account"], responses={**UNAUTHORIZED, **ACCOUNT_ONLY})
+    access_tokens = APIRouter(
+        prefix="/me/access-tokens", tags=["Access tokens"], responses={**UNAUTHORIZED, **ACCOUNT_ONLY}
+    )
     applications = APIRouter(prefix="/applications", tags=["Applications"], responses=UNAUTHORIZED)
     interviews = APIRouter(
         prefix="/applications/{application_id}/interviews",
@@ -346,7 +413,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return Health(status="ok")
 
     @account.post("/onboard", summary="Onboard the job seeker")
-    def onboard(request: Request, job_seeker: JobSeekerId) -> Onboarding:
+    def onboard(request: Request, job_seeker: SignedInJobSeekerId) -> Onboarding:
         """Record the job seeker, and give them Sample Applications the first time only.
 
         Idempotent, and safe to call concurrently: the insert waits on any other transaction
@@ -391,7 +458,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         summary="Get the job seeker's record",
         responses={404: {"model": ErrorMessage, "description": "The job seeker hasn't been onboarded yet."}},
     )
-    def get_job_seeker(request: Request, job_seeker: JobSeekerId) -> JobSeeker:
+    def get_job_seeker(request: Request, job_seeker: SignedInJobSeekerId) -> JobSeeker:
         """The job seeker's own record, for their data export. 404 until they are onboarded."""
         with pool(request).connection() as conn:
             row = conn.execute(
@@ -404,8 +471,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return JobSeeker(**row)
 
     @account.delete("", status_code=status.HTTP_204_NO_CONTENT, summary="Delete the job seeker's account")
-    def delete_account(request: Request, job_seeker: JobSeekerId) -> None:
-        """Delete the job seeker and all of their Applications, in one transaction.
+    def delete_account(request: Request, job_seeker: SignedInJobSeekerId) -> None:
+        """Delete the job seeker, all of their Applications and all of their Access tokens, in one transaction.
 
         Idempotent: deleting an account that is already gone succeeds and logs nothing. Signing
         in again afterwards makes a new job seeker, who receives Sample Applications again.
@@ -413,10 +480,57 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         with pool(request).connection() as conn, conn.transaction():
             applications = conn.execute("delete from applications where job_seeker_id = %s", (job_seeker,)).rowcount
             job_seekers = conn.execute("delete from job_seekers where job_seeker_id = %s", (job_seeker,)).rowcount
-            if applications or job_seekers:
+            tokens = conn.execute("delete from access_tokens where job_seeker_id = %s", (job_seeker,)).rowcount
+            if applications or job_seekers or tokens:
                 conn.execute(
                     "insert into account_deletions (job_seeker_hash) values (%s)", (job_seeker_hash(job_seeker),)
                 )
+
+    @access_tokens.get("", summary="List the job seeker's Access tokens")
+    def list_access_tokens(request: Request, job_seeker: SignedInJobSeekerId) -> list[AccessToken]:
+        """Every Access token of the job seeker that hasn't been revoked, oldest first, expired ones
+        included. Never the secrets."""
+        with pool(request).connection() as conn:
+            rows = conn.execute(
+                sql.SQL("select {} from access_tokens where job_seeker_id = %s order by created_at, id").format(
+                    ACCESS_TOKEN_COLUMNS
+                ),
+                (job_seeker,),
+            ).fetchall()
+        return [AccessToken(**row) for row in rows]
+
+    @access_tokens.post("", status_code=status.HTTP_201_CREATED, summary="Create an Access token")
+    def create_access_token(
+        request: Request, job_seeker: SignedInJobSeekerId, body: AccessTokenCreate
+    ) -> NewAccessToken:
+        """Create an Access token and return its secret, this once. Bigfoot stores only a hash of
+        the secret, so a lost one can't be shown again: revoke the token and create another."""
+        token = new_access_token()
+        with pool(request).connection() as conn:
+            row = conn.execute(
+                sql.SQL(
+                    "insert into access_tokens (job_seeker_id, name, token_hash) values (%s, %s, %s) returning {}"
+                ).format(ACCESS_TOKEN_COLUMNS),
+                (job_seeker, body.name, access_token_hash(token)),
+            ).fetchone()
+        return NewAccessToken(**row, token=token)
+
+    @access_tokens.delete(
+        "/{access_token_id}",
+        status_code=status.HTTP_204_NO_CONTENT,
+        summary="Revoke an Access token",
+        responses={
+            404: {"model": ErrorMessage, "description": "No Access token with this id belongs to the job seeker."}
+        },
+    )
+    def revoke_access_token(request: Request, job_seeker: SignedInJobSeekerId, access_token_id: AccessTokenId) -> None:
+        """Revoke an Access token: it stops working straight away and leaves the list. This can't be undone."""
+        with pool(request).connection() as conn:
+            deleted = conn.execute(
+                "delete from access_tokens where id = %s and job_seeker_id = %s", (access_token_id, job_seeker)
+            ).rowcount
+        if not deleted:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Access token not found")
 
     def owned(conn: Any, job_seeker: str, application_id: UUID) -> None:
         """404 unless the Application is the job seeker's."""
@@ -596,6 +710,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if not deleted:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Interview not found")
 
-    for router in (account, applications, interviews):
+    for router in (account, access_tokens, applications, interviews):
         app.include_router(router)
     return app

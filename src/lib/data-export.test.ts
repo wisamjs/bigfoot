@@ -126,7 +126,16 @@ describe("dataExportJson", () => {
   const user = { id: "google-123", name: "Ada Lovelace", firstName: "Ada", email: "ada@example.com", image: null };
   const now = new Date("2026-11-14T05:00:00Z");
 
-  it("holds the profile and every Application field, is_sample included", () => {
+  const accessToken = {
+    id: "t1",
+    name: "Calendar cron job",
+    created_at: "2026-11-12T12:00:00Z",
+    last_used_at: "2026-11-13T08:00:00Z",
+    expires_at: "2027-11-12T12:00:00Z",
+    expired: false,
+  };
+
+  it("holds the profile, every Application field (is_sample included) and Access token names and dates", () => {
     const app = application({ is_sample: true });
     const record = {
       job_seeker_id: "google-123",
@@ -134,7 +143,7 @@ describe("dataExportJson", () => {
       samples_seeded_at: "2026-11-10T12:00:01Z",
       last_seen_at: "2026-11-13T12:00:00Z",
     };
-    const data = JSON.parse(dataExportJson(user, record, [app], now));
+    const data = JSON.parse(dataExportJson(user, record, [app], [accessToken], now));
     expect(data).toEqual({
       exported_at: "2026-11-14T05:00:00.000Z",
       profile: {
@@ -147,13 +156,29 @@ describe("dataExportJson", () => {
         last_seen_at: "2026-11-13T12:00:00Z",
       },
       applications: [app],
+      access_tokens: [
+        {
+          name: "Calendar cron job",
+          created_at: "2026-11-12T12:00:00Z",
+          last_used_at: "2026-11-13T08:00:00Z",
+          expires_at: "2027-11-12T12:00:00Z",
+        },
+      ],
     });
   });
 
+  it("never exports an Access token's secret or hash, even if the API sent one", () => {
+    const leaky = { ...accessToken, token: "bigfoot_secret", token_hash: "abc123" };
+    const text = dataExportJson(user, null, [], [leaky], now);
+    expect(text).not.toContain("bigfoot_secret");
+    expect(text).not.toContain("abc123");
+  });
+
   it("still exports when the job seeker has no database record yet", () => {
-    const data = JSON.parse(dataExportJson(user, null, [], now));
+    const data = JSON.parse(dataExportJson(user, null, [], [], now));
     expect(data.profile.account_created_at).toBeNull();
     expect(data.applications).toEqual([]);
+    expect(data.access_tokens).toEqual([]);
   });
 });
 

@@ -3,9 +3,10 @@
 //   expect    text the page must show
 //   redirect  the page must redirect instead (a11y skips it)
 //   states    what a click opens or reveals (a dialog, a toggled column); a11y checks each one,
-//             signed in as a user holding scripts/dev-applications.mjs's Applications, and
-//             `npm run capture -- --state <name>` captures one. Each step clicks the first element
-//             matching `click` whose text includes `text`; `expect` is text the state must show.
+//             signed in as a user holding scripts/dev-applications.mjs's Applications and Access
+//             token, and `npm run capture -- --state <name>` captures one. Each step clicks the first
+//             element matching `click` whose text includes `text`, or types `value` into the first
+//             element matching `fill`; `expect` is text the state must show.
 export const PAGES = [
   { path: "/", signedIn: false, expect: "Sign up" },
   { path: "/", signedIn: true, expect: "Sign up" },
@@ -37,5 +38,24 @@ export const PAGES = [
     ],
   },
   { path: "/account", signedIn: false, redirect: true },
-  { path: "/account", signedIn: true, expect: "Delete account" },
+  {
+    path: "/account",
+    signedIn: true,
+    expect: "Delete account",
+    states: [
+      {
+        name: "token-created",
+        steps: [
+          { fill: 'input[name="name"]', value: "Laptop script" },
+          { click: "button", text: "Create Access token" },
+        ],
+        expect: "Copy your Access token now",
+      },
+      {
+        name: "revoke-confirmation",
+        steps: [{ click: "button", text: "Revoke" }],
+        expect: "will stop working straight away",
+      },
+    ],
+  },
 ];

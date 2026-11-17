@@ -35,35 +35,47 @@ export async function openPage(chrome, url, expect) {
   await chrome.send("Runtime.evaluate", { expression: `document.querySelectorAll("nextjs-portal").forEach((e) => e.remove())` });
 }
 
-async function expectText(chrome, expect, where) {
-  const { result } = await chrome.send("Runtime.evaluate", { expression: "document.body.innerText" });
-  if (!result.value?.includes(expect)) {
-    throw new Error(`${where} did not show "${expect}"; see .next/dev/logs/next-development.log`);
+/** Fails unless the page shows `expect` within `timeout` ms (a Server Action takes a moment to answer). */
+async function expectText(chrome, expect, where, timeout = 0) {
+  const deadline = Date.now() + timeout;
+  for (;;) {
+    const { result } = await chrome.send("Runtime.evaluate", { expression: "document.body.innerText" });
+    if (result.value?.includes(expect)) return;
+    if (Date.now() >= deadline) {
+      throw new Error(`${where} did not show "${expect}"; see .next/dev/logs/next-development.log`);
+    }
+    await sleep(200);
   }
 }
 
 /**
- * Runs a page state's steps (scripts/pages.mjs): each focuses and clicks the first element matching
- * `click` whose text includes `text`, as a pointer click in Chrome does, so a dialog it opens knows
- * where to return focus. Then fails unless the page shows the state's `expect`.
+ * Runs a page state's steps (scripts/pages.mjs). A `click` step focuses and clicks the first element
+ * matching it whose text includes `text`, as a pointer click in Chrome does, so a dialog it opens
+ * knows where to return focus. A `fill` step types `value` into the first element matching it. Then
+ * fails unless the page shows the state's `expect`, waiting a few seconds for a Server Action.
  */
 export async function enterState(chrome, state) {
   for (const step of state.steps) {
-    const { result } = await chrome.send("Runtime.evaluate", {
-      returnByValue: true,
-      expression: `(() => {
+    const expression = step.fill
+      ? `(() => {
+        const el = document.querySelector(${JSON.stringify(step.fill)});
+        if (el) el.value = ${JSON.stringify(step.value)};
+        el?.dispatchEvent(new Event("input", { bubbles: true }));
+        return Boolean(el);
+      })()`
+      : `(() => {
         const el = [...document.querySelectorAll(${JSON.stringify(step.click)})]
           .find((e) => e.textContent.includes(${JSON.stringify(step.text ?? "")}));
         el?.focus();
         el?.click();
         (window.__clicked ??= []).push(el);
         return Boolean(el);
-      })()`,
-    });
+      })()`;
+    const { result } = await chrome.send("Runtime.evaluate", { returnByValue: true, expression });
     if (!result.value) throw new Error(`State "${state.name}": nothing matches ${JSON.stringify(step)}`);
     await sleep(400);
   }
-  await expectText(chrome, state.expect, `State "${state.name}"`);
+  await expectText(chrome, state.expect, `State "${state.name}"`, 5000);
 }
 
 async function press(chrome, key, keyCode) {

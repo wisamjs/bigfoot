@@ -17,6 +17,7 @@ import {
   SERVER_LOG_RETENTION,
 } from "@/lib/legal/privacy";
 import { SUBPROCESSORS } from "@/lib/legal/subprocessors";
+import { ACCESS_TOKEN_LIFETIME } from "@/lib/account";
 import { SESSION_MAX_AGE_DAYS } from "@/lib/session";
 
 export const metadata: Metadata = {
@@ -99,6 +100,13 @@ export default function PrivacyPage() {
         <p>
           Your Applications: the company, job title, posting link, location, salary, the date you
           applied, its Status and Outcome, and each Interview: its kind and, if you give one, its date.
+        </p>
+        <h3 className={h3}>Access tokens, if you create any</h3>
+        <p>
+          An Access token lets a script of yours use Bigfoot as you. For each one, we store the name
+          you give it, when you created it, when it was last used and when it expires. We store a
+          one-way hash of the token’s secret, not the secret itself, so we cannot show it to you
+          again or use it ourselves.
         </p>
         <h3 className={h3}>Technical information</h3>
         <p>
@@ -223,6 +231,11 @@ export default function PrivacyPage() {
             <strong>Applications:</strong> until you delete them, or until you delete your account.
           </li>
           <li>
+            <strong>Access tokens:</strong> until you revoke them, or until you delete your account.
+            A token stops working {ACCESS_TOKEN_LIFETIME} after you create it, but stays on your
+            Account page until you revoke it.
+          </li>
+          <li>
             <strong>Backups:</strong> our database is backed up daily, and each backup is kept for{" "}
             {BACKUP_DAYS} days. Deleted data leaves the backups within {BACKUP_DAYS} days.
           </li>
@@ -256,7 +269,8 @@ export default function PrivacyPage() {
             <strong>See your data, and take it with you.</strong> Your Applications are all on your
             dashboard. Download a copy of everything we hold about you on your{" "}
             <A href="/account">Account page</A>: a CSV spreadsheet of your Applications, or a JSON
-            file with your profile and every Application.
+            file with your profile, every Application, and the names and dates of your Access
+            tokens.
           </li>
           <li>
             <strong>Correct it.</strong> Edit any Application in your dashboard. Your name, email
@@ -265,8 +279,8 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Delete it.</strong> Delete any Application in your dashboard. Delete your
-            account on your <A href="/account">Account page</A>: it removes you and all of your
-            Applications straight away, and signs you out.
+            account on your <A href="/account">Account page</A>: it removes you, all of your
+            Applications and all of your Access tokens straight away, and signs you out.
           </li>
           <li>
             <strong>Withdraw consent.</strong> Delete your account on your{" "}
@@ -302,7 +316,9 @@ export default function PrivacyPage() {
         <p>
           We protect your information in three ways. Everything sent between your browser and
           Bigfoot is encrypted (HTTPS). Your sign-in cookie is encrypted. And each job seeker can
-          reach only their own Applications. Only the people who run Bigfoot can open the database,
+          reach only their own Applications. An Access token reaches only the Applications of the
+          job seeker who created it, so anyone you give one to can read and change yours until you
+          revoke it or it expires. Only the people who run Bigfoot can open the database,
           and only to run and fix Bigfoot. No system is perfectly secure, so we cannot promise your
           information will never be exposed.
         </p>

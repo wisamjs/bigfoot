@@ -26,7 +26,13 @@ def test_every_operation_has_a_summary_description_and_tag(schema):
     for name, operation in operations(schema):
         assert operation.get("summary"), name
         assert operation.get("description"), name
-        assert operation.get("tags") in (["Account"], ["Applications"], ["Interviews"], ["Health"]), name
+        assert operation.get("tags") in (
+            ["Account"],
+            ["Access tokens"],
+            ["Applications"],
+            ["Interviews"],
+            ["Health"],
+        ), name
 
 
 def test_every_operation_but_health_needs_a_token_and_documents_401(schema):
@@ -34,8 +40,14 @@ def test_every_operation_but_health_needs_a_token_and_documents_401(schema):
         if name == "GET /health":
             assert "security" not in operation
             continue
-        assert operation["security"] == [{"BearerToken": []}], name
         assert "401" in operation["responses"], name
+        if operation["tags"] in (["Account"], ["Access tokens"]):
+            # A script can't reach the account: web tokens only, and an Access token gets 403.
+            assert operation["security"] == [{"WebToken": []}], name
+            assert "403" in operation["responses"], name
+        else:
+            assert operation["security"] == [{"AccessToken": []}, {"WebToken": []}], name
+            assert "403" not in operation["responses"], name
 
 
 def test_routes_with_an_id_document_404(schema):
@@ -46,16 +58,41 @@ def test_routes_with_an_id_document_404(schema):
 
 def test_bodies_document_every_field(schema):
     models = schema["components"]["schemas"]
-    for model in ("ApplicationCreate", "ApplicationPatch", "Application", "InterviewCreate", "InterviewPatch"):
+    for model in (
+        "ApplicationCreate",
+        "ApplicationPatch",
+        "Application",
+        "InterviewCreate",
+        "InterviewPatch",
+        "AccessTokenCreate",
+        "AccessToken",
+        "NewAccessToken",
+    ):
         for field, spec in models[model]["properties"].items():
             if field not in ("id", "created_at", "updated_at"):
                 assert spec.get("description"), f"{model}.{field}"
 
 
-def test_bearer_scheme_drives_the_authorize_dialog(schema):
-    scheme = schema["components"]["securitySchemes"]["BearerToken"]
-    assert scheme["type"] == "http"
-    assert scheme["scheme"] == "bearer"
+def test_both_bearer_schemes_drive_the_authorize_dialog(schema):
+    schemes = schema["components"]["securitySchemes"]
+    assert set(schemes) == {"AccessToken", "WebToken"}
+    for scheme in schemes.values():
+        assert scheme["type"] == "http"
+        assert scheme["scheme"] == "bearer"
+        assert scheme["description"]
+
+
+def test_the_description_explains_both_ways_to_authenticate(schema):
+    description = schema["info"]["description"]
+    assert "Access token" in description
+    assert "Web token" in description
+
+
+def test_only_creating_a_token_returns_its_secret(schema):
+    models = schema["components"]["schemas"]
+    assert "token" in models["NewAccessToken"]["properties"]
+    assert "token" not in models["AccessToken"]["properties"]
+    assert "token_hash" not in str(models)
 
 
 @pytest.mark.parametrize("enabled", [False, True])

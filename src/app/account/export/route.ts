@@ -1,4 +1,4 @@
-import { getJobSeeker, listApplications } from "@/lib/api";
+import { getJobSeeker, listAccessTokens, listApplications } from "@/lib/api";
 import { findCurrentUser } from "@/lib/dal";
 import {
   applicationsCsv,
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   const body =
     format === "csv"
       ? applicationsCsv(applications)
-      : dataExportJson(user, await getJobSeeker(user.id), applications, now);
+      : dataExportJson(user, await getJobSeeker(user.id), applications, await listAccessTokens(user.id), now);
 
   return new Response(body, {
     headers: {

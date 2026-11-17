@@ -80,6 +80,12 @@ export default function TermsPage() {
           You sign in with your Google account, so you also need to follow Google’s rules for it.
           Keep your Google account secure: anyone who can sign in to it can see your Applications.
         </p>
+        <p>
+          On your <A href="/account">Account page</A> you can create Access tokens, which let your
+          own scripts read and change your Applications. Keep them secret: anyone who has one can
+          do the same, and what is done with your Access tokens counts as done by you. Revoke a
+          token on your Account page if someone else may have it.
+        </p>
       </Section>
 
       <Section id="content">
@@ -105,7 +111,8 @@ export default function TermsPage() {
           <li>harass or harm anyone, or enter content that does;</li>
           <li>
             scrape Bigfoot, or use bots or scripts to access it, other than downloading your own
-            data on your Account page;
+            data on your Account page, or reaching your own Applications with an Access token you
+            created there;
           </li>
           <li>
             try to reach other job seekers’ data, or get around Bigfoot’s security or limits;
