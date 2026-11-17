@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { BriefcaseBusiness, CalendarCheck } from "lucide-react";
 import { AppFooter } from "@/components/app-footer";
 import { AppHeader } from "@/components/app-header";
-import { AddApplicationButton } from "@/components/application-dialogs";
+import { AddApplicationButton } from "@/components/application-panel";
 import { ComingUpCalendar } from "@/components/coming-up-calendar";
 import { NextInterviewStat } from "@/components/next-interview-stat";
 import { DashboardPipeline } from "@/components/dashboard-pipeline";
