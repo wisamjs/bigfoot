@@ -61,7 +61,7 @@ describe("PipelineBoard", () => {
   it("opens an Application from its card", async () => {
     const onOpen = vi.fn();
     render(<PipelineBoard title="Pipeline" subtitle="" applications={all} onOpen={onOpen} />);
-    await userEvent.click(screen.getByRole("button", { name: /^Edit Birch\b/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Open Birch\b/ }));
     expect(onOpen).toHaveBeenCalledWith(scheduled);
   });
 

@@ -21,8 +21,16 @@ export const PAGES = [
     states: [
       { name: "show-done", steps: [{ click: "label", text: "Show done" }], expect: "Rejected" },
       {
-        name: "edit-dialog",
+        name: "application-panel",
         steps: [{ click: 'section[aria-label="Interview scheduled"] li button' }],
+        expect: "Save details",
+      },
+      {
+        name: "salary-revealed",
+        steps: [
+          { click: 'section[aria-label="Interview scheduled"] li button' },
+          { click: "dialog[open] button", text: "Reveal" },
+        ],
         expect: "Save details",
       },
       {
@@ -33,7 +41,7 @@ export const PAGES = [
         ],
         expect: "This can’t be undone",
       },
-      { name: "add-dialog", steps: [{ click: "button", text: "Add application" }], expect: "Job posting URL" },
+      { name: "add-panel", steps: [{ click: "button", text: "Add application" }], expect: "Job posting URL" },
     ],
   },
   { path: "/account", signedIn: false, redirect: true },
