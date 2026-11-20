@@ -2,7 +2,7 @@
 
 import { useId, useState, type ReactNode } from "react";
 import { CalendarClock, ChevronDown, ChevronUp, Eye, EyeOff, NotebookPen } from "lucide-react";
-import { Badge, SampleBadge } from "@/components/ui";
+import { Badge, SampleBadge, Skeleton } from "@/components/ui";
 import { ApplicationWhen, InterviewWhen } from "@/components/application-when";
 import {
   getBoardColumns,
@@ -47,12 +47,11 @@ export function PipelineBoard({
     : {};
 
   return (
-    // Card (24px radius, 16px padding) → nested surfaces use 24 - 16 = 8px radius.
-    <div className={`card p-4 text-left ${decorative ? "shadow-2xl" : ""}`} {...a11y}>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 px-2 pt-1">
+    <div className={`${boardClasses} ${decorative ? "shadow-2xl" : ""}`} {...a11y}>
+      <div className={boardHeaderClasses}>
         <span className="text-base font-medium text-heading">{title}</span>
         <div className="flex flex-wrap items-center gap-4">
-          <span className="flex items-center gap-1.5 text-sm text-body">
+          <span className={subtitleClasses}>
             <CalendarClock className="size-4" aria-hidden />
             {subtitle}
           </span>
@@ -64,20 +63,18 @@ export function PipelineBoard({
           Open applications show up here, grouped by whether an interview is booked.
         </p>
       ) : (
-        // Columns stretch to fill the board (auto-fit drops empty tracks) and wrap onto new rows
-        // rather than scrolling sideways, so no column is hidden off-screen.
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-4">
+        <div className={columnsClasses}>
           {columns.map((column) => (
             <section
               key={column.id}
               aria-label={decorative ? undefined : column.label}
-              className="rounded-control bg-surface p-3"
+              className={columnClasses}
             >
-              <div className="mb-3 flex items-center justify-between">
+              <div className={columnHeaderClasses}>
                 <span className="text-xs font-medium uppercase tracking-[0.4px] text-body">{column.label}</span>
                 <span className="text-xs font-medium text-body">{column.applications.length}</span>
               </div>
-              <ul className="m-0 flex list-none flex-col gap-3 p-0">
+              <ul className={cardListClasses}>
                 {column.applications.map((job) => (
                   <Card key={job.id} job={job} onOpen={onOpen} controls={!decorative} />
                 ))}
@@ -89,6 +86,56 @@ export function PipelineBoard({
     </div>
   );
 }
+
+/**
+ * The Pipeline board while its Applications load: the real title, and three columns of two
+ * cards in skeleton shapes (sample Applications fill three columns on a first visit).
+ */
+export function PipelineBoardSkeleton({ title }: { title: string }) {
+  return (
+    <div className={boardClasses}>
+      <div className={boardHeaderClasses}>
+        <span className="text-base font-medium text-heading">{title}</span>
+        <span className={`${subtitleClasses} h-5`}>
+          <CalendarClock className="size-4" aria-hidden />
+          <Skeleton className="h-4 w-36" />
+        </span>
+      </div>
+      <div aria-hidden className={columnsClasses}>
+        {[0, 1, 2].map((column) => (
+          <div key={column} className={columnClasses}>
+            <div className={columnHeaderClasses}>
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-3" />
+            </div>
+            <ul className={cardListClasses}>
+              {[0, 1].map((card) => (
+                <li key={card} className={cardClasses}>
+                  <Skeleton className="my-0.5 h-4 w-28" />
+                  <Skeleton className="mt-1 h-3 w-36" />
+                  <Skeleton className="mt-2.5 h-8 w-full" />
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Shared by the board and its skeleton, so the two can't drift apart.
+// Card (24px radius, 16px padding) → nested surfaces use 24 - 16 = 8px radius.
+const boardClasses = "card p-4 text-left";
+const boardHeaderClasses = "mb-4 flex flex-wrap items-center justify-between gap-2 px-2 pt-1";
+const subtitleClasses = "flex items-center gap-1.5 text-sm text-body";
+// Columns stretch to fill the board (auto-fit drops empty tracks) and wrap onto new rows
+// rather than scrolling sideways, so no column is hidden off-screen.
+const columnsClasses = "grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-4";
+const columnClasses = "rounded-control bg-surface p-3";
+const columnHeaderClasses = "mb-3 flex items-center justify-between";
+const cardListClasses = "m-0 flex list-none flex-col gap-3 p-0";
+const cardClasses = "relative rounded-control border border-line bg-card-strong p-3 shadow-xs";
 
 // A ghost icon button (modal close button style) at 24px, the WCAG 2.2 minimum target size.
 // `relative z-10` lifts it above the card's stretched open button, so a click stays on it.
@@ -118,7 +165,7 @@ function Card({
 
   return (
     <li
-      className={`relative rounded-control border border-line bg-card-strong p-3 shadow-xs ${
+      className={`${cardClasses} ${
         onOpen ? "cursor-pointer transition-all duration-200 hover:border-line-medium hover:shadow-md" : ""
       }`}
     >
