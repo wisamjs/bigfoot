@@ -1,5 +1,7 @@
-import type { ReactNode } from "react";
-import { CalendarClock, NotebookPen } from "lucide-react";
+"use client";
+
+import { useId, useState, type ReactNode } from "react";
+import { CalendarClock, ChevronDown, ChevronUp, Eye, EyeOff, NotebookPen } from "lucide-react";
 import { Badge, SampleBadge } from "@/components/ui";
 import { ApplicationWhen, InterviewWhen } from "@/components/application-when";
 import {
@@ -77,7 +79,7 @@ export function PipelineBoard({
               </div>
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
                 {column.applications.map((job) => (
-                  <Card key={job.id} job={job} onOpen={onOpen} />
+                  <Card key={job.id} job={job} onOpen={onOpen} controls={!decorative} />
                 ))}
               </ul>
             </section>
@@ -88,7 +90,32 @@ export function PipelineBoard({
   );
 }
 
-function Card({ job, onOpen }: { job: Application; onOpen?: (app: Application) => void }) {
+// A ghost icon button (modal close button style) at 24px, the WCAG 2.2 minimum target size.
+// `relative z-10` lifts it above the card's stretched open button, so a click stays on it.
+const cardControlClasses =
+  "relative z-10 inline-grid size-6 cursor-pointer place-items-center rounded-control text-body transition-colors hover:bg-card hover:text-heading focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+
+/**
+ * One Application on the board. With `controls`, the job seeker can hide its completed
+ * Interviews and collapse it to its header; both choices last until the page reloads.
+ */
+function Card({
+  job,
+  onOpen,
+  controls,
+}: {
+  job: Application;
+  onOpen?: (app: Application) => void;
+  controls: boolean;
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+  const [hideCompleted, setHideCompleted] = useState(false);
+  const bodyId = useId();
+  const hasCompleted = job.interviews.some((interview) => interview.completed);
+  const interviews = hideCompleted ? job.interviews.filter((interview) => !interview.completed) : job.interviews;
+  // What collapsing hides; a card without any (a brand-new Waiting one) has no collapse button.
+  const collapsible = Boolean(job.outcome) || job.interviews.length > 0;
+
   return (
     <li
       className={`relative rounded-control border border-line bg-card-strong p-3 shadow-xs ${
@@ -112,20 +139,57 @@ function Card({ job, onOpen }: { job: Application; onOpen?: (app: Application) =
             job.company
           )}
         </p>
+        {controls && (
+          <div className="-mt-0.5 -mr-1 flex shrink-0 items-center gap-0.5">
+            {hasCompleted && (
+              // Toggle button: its name stays fixed and aria-pressed carries the state.
+              <button
+                type="button"
+                aria-pressed={hideCompleted}
+                aria-label={`Hide completed Interviews, ${job.company}`}
+                title={hideCompleted ? "Show completed Interviews" : "Hide completed Interviews"}
+                onClick={() => setHideCompleted(!hideCompleted)}
+                className={cardControlClasses}
+              >
+                {hideCompleted ? <Eye className="size-4" aria-hidden /> : <EyeOff className="size-4" aria-hidden />}
+              </button>
+            )}
+            {collapsible && (
+              <button
+                type="button"
+                aria-expanded={!collapsed}
+                aria-controls={bodyId}
+                aria-label={`${collapsed ? "Expand" : "Collapse"} card, ${job.company}`}
+                title={collapsed ? "Expand card" : "Collapse card"}
+                onClick={() => setCollapsed(!collapsed)}
+                className={cardControlClasses}
+              >
+                {collapsed ? <ChevronDown className="size-4" aria-hidden /> : <ChevronUp className="size-4" aria-hidden />}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="flex items-start justify-between gap-2">
+        <p className="m-0 min-w-0 text-xs leading-4 text-body">{job.title}</p>
         {job.is_sample && <SampleBadge />}
       </div>
-      <p className="m-0 mb-2 text-xs leading-4 text-body">{job.title}</p>
-      <div className="flex flex-col items-start gap-2 text-xs text-body">
-        {job.outcome && (
-          <Badge tone={OUTCOME_OPTIONS[job.outcome].tone}>{OUTCOME_OPTIONS[job.outcome].label}</Badge>
-        )}
-        {job.interviews.length > 0 && (
-          // Every Interview in date order (undated, then past, then upcoming), one row each.
-          <ul aria-label="Interviews" className="m-0 flex w-full list-none flex-col gap-1.5 p-0">
-            {job.interviews.map((interview) => (
-              <InterviewItem key={interview.id} interview={interview} />
-            ))}
-          </ul>
+      <div className={`flex flex-col items-start gap-2 text-xs text-body ${(collapsible && !collapsed) || job.is_waiting ? "mt-2" : ""}`}>
+        {collapsible && (
+          // Collapsing hides only this part; the header and "Waiting since" stay.
+          <div id={bodyId} hidden={collapsed} className="flex w-full flex-col items-start gap-2">
+            {job.outcome && (
+              <Badge tone={OUTCOME_OPTIONS[job.outcome].tone}>{OUTCOME_OPTIONS[job.outcome].label}</Badge>
+            )}
+            {interviews.length > 0 && (
+              // Every Interview in date order (undated, then past, then upcoming), one row each.
+              <ul aria-label="Interviews" className="m-0 flex w-full list-none flex-col gap-1.5 p-0">
+                {interviews.map((interview) => (
+                  <InterviewItem key={interview.id} interview={interview} />
+                ))}
+              </ul>
+            )}
+          </div>
         )}
         {job.is_waiting && <ApplicationWhen app={job} />}
       </div>
