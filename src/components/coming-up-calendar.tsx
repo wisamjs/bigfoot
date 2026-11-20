@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useIsClient } from "@/components/use-is-client";
 import { Badge, buttonClasses } from "@/components/ui";
 import { INTERVIEW_OPTIONS, type DatedInterview } from "@/lib/applications";
-import { dayKey, groupByDay, monthStart, monthWeeks, monthWindow, upcomingWindow, type CalendarDay } from "@/lib/calendar";
+import { dayKey, groupByDay, inWindow, monthStart, monthWeeks, monthWindow, upcomingWindow, type CalendarDay } from "@/lib/calendar";
 
 const monthFormat = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" });
 const weekdayFormat = new Intl.DateTimeFormat(undefined, { weekday: "short" });
@@ -51,10 +51,10 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
   const days = weeks.flat().filter((d) => d.inMonth);
   const selectedDay = days.find((d) => d.key === selected);
   const agendaWindow = offset === 0 ? upcomingWindow(interviews.map((d) => d.interview.at), now) : monthWindow(start);
-  // byDay's keys are already in date order.
-  const agendaKeys = selectedDay
-    ? [selectedDay.key].filter((key) => byDay.has(key))
-    : [...byDay.keys()].filter((key) => key >= agendaWindow.from && key <= agendaWindow.to);
+  // byDay is already in date and time order. A picked day lists all of its Interviews.
+  const agendaItems = selectedDay
+    ? (byDay.get(selectedDay.key) ?? [])
+    : [...byDay.values()].flat().filter((d) => inWindow(d.interview.at, agendaWindow));
 
   const goTo = (next: number) => {
     setOffset(next);
@@ -143,7 +143,7 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
             )}
           </div>
 
-          {agendaKeys.length === 0 ? (
+          {agendaItems.length === 0 ? (
             <p className="m-0 text-sm text-body">
               {interviews.length === 0
                 ? "Add a dated Interview to an Application and it shows up here."
@@ -157,7 +157,7 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
               className="min-h-0 flex-1 overflow-y-auto rounded-control focus-visible:outline-2 focus-visible:outline-offset-2"
             >
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                {agendaKeys.flatMap((key) => byDay.get(key) ?? []).map((d) => (
+                {agendaItems.map((d) => (
                   <AgendaItem key={d.interview.id} item={d} past={new Date(d.interview.at) < now} />
                 ))}
               </ul>
