@@ -2,13 +2,9 @@
 
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
-import { GoogleAuthButton } from "@/components/auth-button";
+import Link from "next/link";
 import { SignInNote } from "@/components/sign-in-note";
-import { Container, Wordmark } from "@/components/ui";
-
-const links = [
-  { href: "#features", label: "Features" },
-];
+import { buttonClasses, Container, Wordmark } from "@/components/ui";
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
@@ -20,26 +16,13 @@ export function Navbar() {
           <Wordmark />
         </a>
 
-        <nav aria-label="Primary" className="hidden md:block">
-          <ul className="m-0 flex list-none items-center gap-8 p-0">
-            {links.map((link) => (
-              <li key={link.href}>
-                <a
-                  href={link.href}
-                  className="rounded-control text-base font-medium text-heading transition-colors hover:text-body"
-                >
-                  {link.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
         <div className="hidden items-center gap-3 md:flex">
-          <GoogleAuthButton variant="tertiary" size="sm">
+          <Link href="/sign-in" className={buttonClasses("tertiary", "sm")}>
             Sign in
-          </GoogleAuthButton>
-          <GoogleAuthButton size="sm">Sign up</GoogleAuthButton>
+          </Link>
+          <Link href="/sign-up" className={buttonClasses("brand", "sm")}>
+            Find your Bigfoot
+          </Link>
         </div>
 
         <button
@@ -57,24 +40,13 @@ export function Navbar() {
       {open && (
         <div id="mobile-menu" className="border-t border-line bg-surface md:hidden">
           <Container className="py-6">
-            <ul className="m-0 flex list-none flex-col gap-4 p-0">
-              {links.map((link) => (
-                <li key={link.href}>
-                  <a
-                    href={link.href}
-                    onClick={() => setOpen(false)}
-                    className="block py-1 text-base font-medium text-heading hover:text-body"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-6 flex gap-3 border-t border-line pt-6">
-              <GoogleAuthButton variant="tertiary" className="flex-1">
+            <div className="flex gap-3">
+              <Link href="/sign-in" className={`${buttonClasses("tertiary")} flex-1`}>
                 Sign in
-              </GoogleAuthButton>
-              <GoogleAuthButton className="flex-1">Sign up</GoogleAuthButton>
+              </Link>
+              <Link href="/sign-up" className={`${buttonClasses("brand")} flex-1`}>
+                Sign up
+              </Link>
             </div>
             <SignInNote className="mt-4" />
           </Container>

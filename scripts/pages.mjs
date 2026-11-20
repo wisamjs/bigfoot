@@ -7,8 +7,12 @@
 //             `npm run capture -- --state <name>` captures one. Each step clicks the first element
 //             matching `click` whose text includes `text`; `expect` is text the state must show.
 export const PAGES = [
-  { path: "/", signedIn: false, expect: "Sign up" },
-  { path: "/", signedIn: true, expect: "Sign up" },
+  { path: "/", signedIn: false, expect: "Find your Bigfoot" },
+  { path: "/", signedIn: true, expect: "Find your Bigfoot" },
+  { path: "/sign-in", signedIn: false, expect: "Continue with Google" },
+  { path: "/sign-in", signedIn: true, redirect: true },
+  { path: "/sign-up", signedIn: false, expect: "Continue with Google" },
+  { path: "/sign-up", signedIn: true, redirect: true },
   { path: "/privacy", signedIn: false, expect: "Privacy Policy" },
   { path: "/privacy", signedIn: true, expect: "Privacy Policy" },
   { path: "/terms", signedIn: false, expect: "Terms of Service" },

@@ -26,7 +26,6 @@ export function Features() {
       <Container>
         <SectionHeader
           id="features-title"
-          eyebrow="Features"
           title="Your search in one place"
           lead="Add an Application, log its Interviews and see what’s next."
         />
