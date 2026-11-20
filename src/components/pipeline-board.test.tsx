@@ -58,10 +58,20 @@ describe("PipelineBoard", () => {
     expect(items[1]).toHaveTextContent("Technical");
   });
 
+  it("marks an Interview that has Interview notes, without showing them", () => {
+    const noted = { ...scheduled.interviews[0], notes: "Asked about caching." };
+    const app = { ...scheduled, interviews: [noted, scheduled.interviews[1]] };
+    render(<PipelineBoard title="Pipeline" subtitle="" applications={[app]} />);
+    const items = within(screen.getByRole("list", { name: "Interviews" })).getAllByRole("listitem");
+    expect(items[0]).toHaveTextContent("(has notes)");
+    expect(items[1]).not.toHaveTextContent("(has notes)");
+    expect(screen.queryByText(/Asked about caching/)).not.toBeInTheDocument();
+  });
+
   it("opens an Application from its card", async () => {
     const onOpen = vi.fn();
     render(<PipelineBoard title="Pipeline" subtitle="" applications={all} onOpen={onOpen} />);
-    await userEvent.click(screen.getByRole("button", { name: /^Edit Birch\b/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Open Birch\b/ }));
     expect(onOpen).toHaveBeenCalledWith(scheduled);
   });
 

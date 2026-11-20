@@ -35,15 +35,33 @@ Apply every new file in `supabase/migrations` to **dev first, then prod**, after
 
 ## Restoring from a backup
 
-Supabase takes a daily physical backup and keeps 7 days (dashboard → Database → Backups → Scheduled backups).
+Supabase takes a daily physical backup and keeps 7 days (dashboard → `bigfoot-prod` → Database → Backups → Scheduled backups). Each backup row has two buttons, and they do very different things:
 
-A restore **overwrites the whole database** with the backup, and everything written after it is lost. The project is unreachable while it runs (minutes for a small database), so the app shows errors until it finishes.
+| Button | What it does | Use it for |
+| --- | --- | --- |
+| **Restore to a new project** | Creates a new project from the backup. Prod is untouched. The new project is billed until you delete it. | Tests, and copying back a few rows without losing newer ones |
+| **Restore** | Overwrites `bigfoot-prod` with the backup. Everything written since is lost, and the app shows errors while it runs (a few minutes). | Only when prod itself is beyond repair |
 
-1. Decide which backup to use: the newest one taken *before* the problem.
-2. Note what will be lost: everything written since that backup.
-3. Dashboard → Database → Backups → Scheduled backups → **Restore** on that backup, and confirm.
-4. Wait for the dashboard's "restoration complete" notice.
-5. Check the data:
+**Default to Restore to a new project.** Only use **Restore** after going through "Before you restore in place".
+
+### Restore to a new project
+
+1. Pick the backup, click **Restore to a new project**, and confirm.
+2. When it's ready, copy the **new** project's ref from the address bar (`/dashboard/project/<ref>`). It must not be `bvgfhfuofzfmjmqyraee`: that is prod.
+3. Run the checks below against the new ref.
+4. Copy back what you need, then delete the new project (Project Settings → General → Delete project).
+
+### Before you restore in place
+
+1. Check the project name at the top of the dashboard says `bigfoot-prod`, and that this is what you mean to overwrite.
+2. Pick the newest backup taken *before* the problem. Note its time: every row and every migration applied after it will be lost.
+3. If any data since then matters, restore to a new project first and copy it from there afterwards.
+
+Then click **Restore** on that backup, confirm, and wait for the dashboard's "restoration complete" notice.
+
+### After any restore
+
+1. Check the data and the migrations:
 
    ```sql
    select count(*) from applications;
@@ -51,13 +69,11 @@ A restore **overwrites the whole database** with the backup, and everything writ
    select name from supabase_migrations.schema_migrations order by version;
    ```
 
-6. Re-apply any migration that merged after the backup was taken (see "Applying migrations").
-7. Load the dashboard signed in and check that Applications show.
-
-To restore into a separate project instead (e.g. to copy back a few rows without losing newer ones), use **Restore to a new project** on the same page. It creates and bills a new project; delete it when you're done.
+2. If you restored in place, re-apply every migration missing from that list (see "Applying migrations"), then run its checks: `npm run db:status` and the Security Advisor.
+3. Sign in to the dashboard and check that Applications show.
 
 ### Restore test log
 
 | Date | Backup used | Result |
 | --- | --- | --- |
-| _pending_ | first daily backup of `bigfoot-prod` | |
+| 2026-11-17 | A scheduled backup taken before 2026-11-16 18:50 UTC | Meant as a test into a new project, but the restore ran on prod in place (Postgres restarted at 03:27 UTC). Prod came back consistent with the backup in minutes: 3 migrations, no rows. Lost: the `create_account_deletions` and `give_applications_many_interviews` migrations (applied by hand after the backup) and every row, which was the developer's own test data (1 job seeker, 26 Applications, 74 Interviews). Recovered by re-applying both migrations; all 5 match the repo, RLS is on for all 4 tables, and the Security Advisor shows only `rls_enabled_no_policy`. Lesson: an in-place restore is easy to start by mistake, so this runbook now defaults to Restore to a new project and checks the ref first. |

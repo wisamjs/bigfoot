@@ -46,7 +46,8 @@ def test_routes_with_an_id_document_404(schema):
 
 def test_bodies_document_every_field(schema):
     models = schema["components"]["schemas"]
-    for model in ("ApplicationCreate", "ApplicationPatch", "Application", "InterviewCreate", "InterviewPatch"):
+    documented = ("ApplicationCreate", "ApplicationPatch", "Application", "InterviewCreate", "InterviewPatch")
+    for model in (*documented, "Interview"):
         for field, spec in models[model]["properties"].items():
             if field not in ("id", "created_at", "updated_at"):
                 assert spec.get("description"), f"{model}.{field}"
