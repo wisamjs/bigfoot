@@ -4,10 +4,13 @@
 // with `Closes BIG-n`, all with the same n. Run by .github/workflows/pr-naming.yml with
 // PR_BRANCH, PR_TITLE and PR_BODY set.
 
+/** A Linear branch name for a BIG ticket; group 1 is the ticket number. */
+export const LINEAR_BRANCH = /^wisamzaghal\/big-(\d+)-/;
+
 /** Problems with a PR's naming; empty when it is fine. */
 export function prNamingProblems({ branch = "", title = "", body = "" }) {
   const problems = [];
-  const fromBranch = branch.match(/^wisamzaghal\/big-(\d+)-/)?.[1];
+  const fromBranch = branch.match(LINEAR_BRANCH)?.[1];
   const fromTitle = title.trim().match(/\(BIG-(\d+)\)$/)?.[1];
   const fromBody = body.trimStart().match(/^Closes BIG-(\d+)\b/)?.[1];
   if (!fromBranch) problems.push(`branch "${branch}" is not a Linear branch name (wisamzaghal/big-n-…)`);

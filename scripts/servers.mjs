@@ -6,10 +6,25 @@
 // The API it starts reads the test schema (TEST_SCHEMA, default `bigfoot_test`), which
 // `npm run test:api` creates.
 import { execFileSync, spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { createServer } from "node:net";
 import { resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dirname, "..");
+
+/**
+ * What `root` lacks to run the servers: its own node_modules, and .env.local unless the environment
+ * carries the secrets (CI). A fresh git worktree has neither, and the dev server's own errors for
+ * that ("Could not find the Next.js package") read like a code problem.
+ * @param {string} root
+ * @param {Record<string, string | undefined>} env
+ */
+export function setupProblems(root, env = process.env) {
+  const problems = [];
+  if (!existsSync(resolve(root, "node_modules/next/package.json"))) problems.push("node_modules is not installed");
+  if (!existsSync(resolve(root, ".env.local")) && !env.AUTH_SECRET) problems.push(".env.local is missing");
+  return problems;
+}
 
 export async function reachable(url) {
   try {
@@ -109,6 +124,10 @@ async function plan(url, health, directory) {
  * checkout's API holds that port. Also sets API_URL, which scripts/dev-applications.mjs reads.
  */
 export async function ensureServers(base, apiBase) {
+  const problems = setupProblems(ROOT);
+  if (problems.length) {
+    throw new Error(`This checkout isn't set up: ${problems.join(" and ")}. Run \`npm run worktree:setup\`, then rerun.`);
+  }
   const api = await plan(apiBase, `${apiBase}/health`, resolve(ROOT, "api"));
   const app = await plan(base, base, ROOT);
   if (app.reuse && api.url !== apiBase) {
