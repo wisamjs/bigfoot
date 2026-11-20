@@ -35,7 +35,7 @@ async function Dashboard() {
   return (
     <>
       <AppHeader user={user} current="/dashboard" />
-      <main className="py-12">
+      <main id="main" className="py-12">
         <Container className="flex flex-col gap-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>

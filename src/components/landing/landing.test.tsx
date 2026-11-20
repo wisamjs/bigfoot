@@ -43,10 +43,10 @@ describe("landing sections", () => {
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Company"]);
   });
 
-  it("Footer links to the Privacy Policy and the Terms", () => {
+  it("Footer links to the Privacy Policy, the Terms and the accessibility statement", () => {
     render(<Footer />);
     const company = screen.getByRole("navigation", { name: "Company" });
-    expect(within(company).getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual(["/privacy", "/terms"]);
+    expect(within(company).getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual(["/privacy", "/terms", "/accessibility"]);
   });
 });
 

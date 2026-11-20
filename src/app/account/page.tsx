@@ -31,7 +31,7 @@ async function Account() {
   return (
     <>
       <AppHeader user={user} current="/account" />
-      <main className="py-12">
+      <main id="main" className="py-12">
         <Container>
           <div className="mx-auto flex max-w-[768px] flex-col gap-8">
           <h1 className="m-0 text-[32px] font-bold leading-[1.1] text-heading md:text-[40px]">Account</h1>

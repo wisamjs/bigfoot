@@ -345,11 +345,28 @@ body {
   }
 }
 
+/* Skip link (root layout): off-screen until Tab reaches it, then pinned top-left above the header. */
+.skip-link {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 100;
+  translate: 0 calc(-100% - 32px);
+}
+.skip-link:focus-visible {
+  translate: none;
+}
+
+/* Stop movement everywhere, including Tailwind's animate-pulse skeletons and every transition. */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
-  .btn {
-    transition: none;
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
