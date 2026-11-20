@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 
 export function StatCard({
@@ -8,8 +9,8 @@ export function StatCard({
 }: {
   icon: LucideIcon;
   label: string;
-  value: string | number;
-  note?: string;
+  value: ReactNode;
+  note?: ReactNode;
 }) {
   return (
     <li className="card flex items-center gap-4 p-6">

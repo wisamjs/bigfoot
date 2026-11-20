@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useIsClient } from "@/components/use-is-client";
-import { Badge, buttonClasses } from "@/components/ui";
+import { Badge, buttonClasses, Skeleton } from "@/components/ui";
 import { INTERVIEW_OPTIONS, type DatedInterview } from "@/lib/applications";
 import { dayKey, groupByDay, inWindow, monthStart, monthWeeks, monthWindow, upcomingWindow, type CalendarDay } from "@/lib/calendar";
 
@@ -24,7 +24,7 @@ function interviewCount(n: number) {
  * one day's Interviews once that day is picked; otherwise another month's Interviews, or for this
  * month the widest upcoming window that holds five (BIG-72).
  * Days and times are the job seeker's own, so the calendar renders only in the browser; the server
- * sends a placeholder of about the same size.
+ * sends ComingUpCalendarSkeleton, the same layout in skeleton shapes.
  */
 export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] }) {
   const isClient = useIsClient();
@@ -41,7 +41,7 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
     }
   }, [selected, offset]);
 
-  if (!isClient) return <div className="card h-[40rem] animate-pulse md:h-[25.5rem]" aria-hidden />;
+  if (!isClient) return <ComingUpCalendarSkeleton />;
 
   const now = new Date();
   const todayKey = dayKey(now);
@@ -70,9 +70,8 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
   };
 
   return (
-    <div className="card flex flex-col gap-6 p-4 sm:p-6 md:flex-row">
-      {/* As tall as a six-week month whatever the month, so five agenda items always fit (BIG-72). */}
-      <div className="md:min-h-[22.5rem] md:w-80 md:shrink-0">
+    <div className={calendarCardClasses}>
+      <div className={gridColumnClasses}>
         <div className="mb-3 flex items-center justify-between gap-3">
           <h3 id="calendar-month" aria-live="polite" className="m-0 text-base font-medium text-heading">
             {monthFormat.format(start)}
@@ -169,6 +168,62 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
   );
 }
 
+/**
+ * Coming up while it waits for data or for the browser: the month grid (five weeks, the usual
+ * month) and five agenda items, sized like the real ones.
+ */
+export function ComingUpCalendarSkeleton() {
+  return (
+    <div aria-hidden className={calendarCardClasses}>
+      <div className={gridColumnClasses}>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <Skeleton className="h-5 w-32" />
+          <div className="flex items-center gap-1">
+            <Skeleton className="h-10 w-11" />
+            <Skeleton className="h-10 w-[4.25rem]" />
+            <Skeleton className="h-10 w-11" />
+          </div>
+        </div>
+        <div className="grid grid-cols-7">
+          {Array.from({ length: 7 }, (_, i) => (
+            <div key={i} className="flex h-5 justify-center pb-1">
+              <Skeleton className="h-4 w-6" />
+            </div>
+          ))}
+          {Array.from({ length: 35 }, (_, i) => (
+            <div key={i} className="flex h-12 items-center justify-center">
+              <Skeleton className="size-7 rounded-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="mb-3 flex min-h-8 items-center">
+          <Skeleton className="h-5 w-48" />
+        </div>
+        <ul className="m-0 flex list-none flex-col gap-2 p-0">
+          {Array.from({ length: 5 }, (_, i) => (
+            <li key={i} className={agendaItemClasses}>
+              <span className="flex h-9 w-10 shrink-0 flex-col items-center justify-center gap-1">
+                <Skeleton className="h-3 w-6" />
+                <Skeleton className="h-4 w-5" />
+              </span>
+              <Skeleton className="h-4 max-w-40 flex-1" />
+              <Skeleton className="h-4 w-14 shrink-0" />
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+// Shared by the calendar and its skeleton, so the two can't drift apart.
+const calendarCardClasses = "card flex flex-col gap-6 p-4 sm:p-6 md:flex-row";
+// As tall as a six-week month whatever the month, so five agenda items always fit (BIG-72).
+const gridColumnClasses = "md:min-h-[22.5rem] md:w-80 md:shrink-0";
+const agendaItemClasses = "flex items-center gap-3 rounded-control bg-surface px-3 py-2 text-sm";
+
 function DayCell({
   day,
   count,
@@ -227,7 +282,7 @@ function AgendaItem({ item: { application, interview }, past }: { item: DatedInt
   const kind = INTERVIEW_OPTIONS[interview.kind];
   const tone = past ? "gray" : kind.tone;
   return (
-    <li className="flex items-center gap-3 rounded-control bg-surface px-3 py-2 text-sm">
+    <li className={agendaItemClasses}>
       <time dateTime={interview.at} className="flex w-10 shrink-0 flex-col items-center leading-tight">
         <span className="text-xs text-body">{weekdayFormat.format(at)}</span>
         <span className={`text-base font-medium ${past ? "text-body" : "text-heading"}`}>{at.getDate()}</span>
