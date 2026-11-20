@@ -23,7 +23,7 @@ function isLocalhost(url: string) {
 }
 
 /** Vercel's Production environment. Previews and a local `next start` may use a local API and its docs. */
-function inProduction(env: Env) {
+export function inProduction(env: Env) {
   return env.VERCEL_ENV === "production";
 }
 
@@ -41,6 +41,15 @@ export function envProblems(env: Env): string[] {
     }
   }
   return problems;
+}
+
+/**
+ * Whether this server or build must have a complete environment. Only Vercel's Production
+ * environment holds the secrets; Preview and Development deployments run without them. Off
+ * Vercel, a production server (`next start`) is checked.
+ */
+export function mustCheckEnv(env: Env): boolean {
+  return env.VERCEL ? inProduction(env) : env.NODE_ENV === "production";
 }
 
 /** Throws one error naming every problem with the environment. */
