@@ -48,7 +48,16 @@ export type AgendaWindow = {
   span: string;
   from: string;
   to: string;
+  /** For the narrowed windows, the ISO moment they start (BIG-93): earlier Interviews, completed ones, are left out. */
+  since?: string;
 };
+
+/** Whether an Interview at `at` is in `window`. */
+export function inWindow(at: string, window: AgendaWindow): boolean {
+  const key = dayKey(new Date(at));
+  if (key < window.from || key > window.to) return false;
+  return window.since === undefined || new Date(at) >= new Date(window.since);
+}
 
 const monthOnlyFormat = new Intl.DateTimeFormat(undefined, { month: "long" });
 
@@ -63,20 +72,21 @@ export function monthWindow(start: Date): AgendaWindow {
 
 /**
  * The widest window that holds no more than `limit` Interviews (BIG-72): this month (past ones
- * included), then the next 2 weeks, the next week and the next 2 days, each starting today. When
- * even the next 2 days hold more, it is still the next 2 days.
+ * included), then the next 2 weeks, the next week and the next 2 days, each starting now, so
+ * Interviews earlier today are left out (BIG-93). When even the next 2 days hold more, it is still
+ * the next 2 days.
  */
 export function upcomingWindow(times: string[], now: Date, limit = AGENDA_LIMIT): AgendaWindow {
-  const keys = times.map((at) => dayKey(new Date(at)));
   const today = dayKey(now);
   const through = (days: number) => dayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + days - 1));
+  const since = now.toISOString();
   const windows: AgendaWindow[] = [
     monthWindow(monthStart(now, 0)),
-    { span: "the next 2 weeks", from: today, to: through(14) },
-    { span: "the next week", from: today, to: through(7) },
-    { span: "the next 2 days", from: today, to: through(2) },
+    { span: "the next 2 weeks", from: today, to: through(14), since },
+    { span: "the next week", from: today, to: through(7), since },
+    { span: "the next 2 days", from: today, to: through(2), since },
   ];
-  const fits = (w: AgendaWindow) => keys.filter((k) => k >= w.from && k <= w.to).length <= limit;
+  const fits = (w: AgendaWindow) => times.filter((at) => inWindow(at, w)).length <= limit;
   return windows.find(fits) ?? windows[windows.length - 1];
 }
 
