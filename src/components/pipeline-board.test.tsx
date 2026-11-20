@@ -75,6 +75,56 @@ describe("PipelineBoard", () => {
     expect(onOpen).toHaveBeenCalledWith(scheduled);
   });
 
+  it("hides a card's completed Interviews and shows them again, leaving upcoming ones", async () => {
+    render(<PipelineBoard title="Pipeline" subtitle="" applications={[scheduled]} />);
+    const toggle = screen.getByRole("button", { name: "Hide completed Interviews, Birch" });
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    const items = within(screen.getByRole("list", { name: "Interviews" })).getAllByRole("listitem");
+    expect(items.map((li) => li.textContent)).toEqual([expect.stringContaining("Technical")]);
+
+    await userEvent.click(toggle);
+    expect(within(screen.getByRole("list", { name: "Interviews" })).getAllByRole("listitem")).toHaveLength(2);
+  });
+
+  it("offers only the buttons that would change a card", () => {
+    const upcomingOnly = { ...scheduled, id: "elm", company: "Elm", interviews: [scheduled.interviews[1]] };
+    render(<PipelineBoard title="Pipeline" subtitle="" applications={[waiting, upcomingOnly]} />);
+    expect(screen.queryByRole("button", { name: /Hide completed/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Collapse card, Elm" })).toBeInTheDocument();
+    // A brand-new Waiting card has nothing to collapse.
+    expect(screen.queryByRole("button", { name: /card, Acme/ })).not.toBeInTheDocument();
+  });
+
+  it("collapses a card to its header and expands it with the hide choice kept", async () => {
+    render(<PipelineBoard title="Pipeline" subtitle="" applications={[scheduled, offer]} />);
+    await userEvent.click(screen.getByRole("button", { name: "Hide completed Interviews, Birch" }));
+    const collapse = screen.getByRole("button", { name: "Collapse card, Birch" });
+    expect(collapse).toHaveAttribute("aria-expanded", "true");
+
+    await userEvent.click(collapse);
+    expect(collapse).toHaveAttribute("aria-expanded", "false");
+    expect(collapse).toHaveAccessibleName("Expand card, Birch");
+    expect(screen.queryByRole("list", { name: "Interviews" })).not.toBeInTheDocument();
+    expect(screen.getByText("Birch")).toBeVisible();
+    // Only Birch collapsed.
+    expect(screen.getByRole("button", { name: "Collapse card, Cedar" })).toHaveAttribute("aria-expanded", "true");
+
+    await userEvent.click(collapse);
+    const items = within(screen.getByRole("list", { name: "Interviews" })).getAllByRole("listitem");
+    expect(items).toHaveLength(1);
+  });
+
+  it("does not open the Application from a card's controls", async () => {
+    const onOpen = vi.fn();
+    render(<PipelineBoard title="Pipeline" subtitle="" applications={[scheduled]} onOpen={onOpen} />);
+    await userEvent.click(screen.getByRole("button", { name: "Hide completed Interviews, Birch" }));
+    await userEvent.click(screen.getByRole("button", { name: "Collapse card, Birch" }));
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
   it("is a single labelled picture when decorative", () => {
     render(<PipelineBoard title="Your pipeline" subtitle="" applications={all} decorative />);
     expect(
