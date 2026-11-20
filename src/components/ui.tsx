@@ -39,26 +39,21 @@ export function Container({ children, className = "" }: { children: ReactNode; c
   return <div className={`mx-auto w-full max-w-[1152px] px-6 ${className}`}>{children}</div>;
 }
 
-/** Section header: eyebrow, h2 (28/36/44), lead (20px), 48px below. */
+/** Section header: h2 (28/36/44), lead (20px), 48px below. */
 export function SectionHeader({
-  eyebrow,
   title,
   lead,
   id,
 }: {
-  eyebrow: string;
   title: string;
   lead: string;
   id: string;
 }) {
   return (
     <div className="mx-auto mb-12 max-w-[768px] text-center">
-      <Badge tone="brand" pill>
-        {eyebrow}
-      </Badge>
       <h2
         id={id}
-        className="mt-4 text-[28px] font-bold leading-[1.15] text-heading md:text-[36px] lg:text-[44px]"
+        className="text-[28px] font-bold leading-[1.15] text-heading md:text-[36px] lg:text-[44px]"
       >
         {title}
       </h2>

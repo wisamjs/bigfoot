@@ -18,29 +18,18 @@ function sectionNamedBy(level: number) {
 }
 
 describe("landing sections", () => {
-  it("Hero leads with the page's only h1 and both sign-in buttons", () => {
+  it("Hero leads with the page's only h1 and the sign-up button", () => {
     render(<Hero />);
     sectionNamedBy(1);
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    expect(screen.getByRole("button", { name: "Sign up with Google" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
-  });
-
-  it("Hero says signing in agrees to the Terms, with links to both legal pages", () => {
-    render(<Hero />);
-    expectSignInNote(document.body);
+    expect(screen.getByRole("link", { name: "Find your Bigfoot" })).toHaveAttribute("href", "/sign-up");
+    expect(screen.queryByRole("link", { name: "Sign in" })).not.toBeInTheDocument();
   });
 
   it("Features is a section named by its h2, with an h3 per feature", () => {
     render(<Features />);
     const section = sectionNamedBy(2);
     expect(within(section).getAllByRole("heading", { level: 3 })).toHaveLength(3);
-  });
-
-  it("Navbar links to the sections on the page", () => {
-    render(<Navbar />);
-    const nav = screen.getByRole("navigation", { name: "Primary" });
-    expect(within(nav).getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual(["#features"]);
   });
 
   it("Navbar's mobile menu shows the sign-in note with its buttons", async () => {
@@ -51,7 +40,7 @@ describe("landing sections", () => {
 
   it("Footer heads each link column", () => {
     render(<Footer />);
-    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Product", "Company"]);
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Company"]);
   });
 
   it("Footer links to the Privacy Policy and the Terms", () => {

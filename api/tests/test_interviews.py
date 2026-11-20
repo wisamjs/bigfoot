@@ -90,6 +90,68 @@ def test_patch_changes_the_kind_and_date(client, token):
     assert client.patch(url, json={"kind": None}, headers=token()).status_code == 422
 
 
+# Interview notes
+
+
+def notes_url(app, interview):
+    return f"/applications/{app['id']}/interviews/{interview['id']}"
+
+
+def test_notes_are_optional_and_can_be_added_changed_and_cleared(client, token):
+    app = create_application(client, token())
+    interview = add(client, token(), app, "technical", PAST)
+    assert interview["notes"] is None
+    url = notes_url(app, interview)
+
+    added = client.patch(url, json={"notes": "Asked about caching.\n\nDraw the diagram first."}, headers=token())
+    assert added.json()["notes"] == "Asked about caching.\n\nDraw the diagram first."
+    assert added.json()["kind"] == "technical" and added.json()["at"] == interview["at"]
+    assert reread(client, token(), app)["interviews"][0]["notes"] == added.json()["notes"]
+
+    assert client.patch(url, json={"notes": "Went well."}, headers=token()).json()["notes"] == "Went well."
+    # Changing another field leaves the notes alone.
+    assert client.patch(url, json={"kind": "leadership"}, headers=token()).json()["notes"] == "Went well."
+    assert client.patch(url, json={"notes": None}, headers=token()).json()["notes"] is None
+
+
+def test_notes_can_be_given_when_adding_an_interview(client, token):
+    app = create_application(client, token())
+    body = {"kind": "technical", "notes": "  Bring ID.\n"}
+    res = client.post(f"/applications/{app['id']}/interviews", json=body, headers=token())
+    assert res.status_code == 201 and res.json()["notes"] == "Bring ID."
+
+
+def test_blank_notes_are_stored_as_none(client, token):
+    app = create_application(client, token())
+    url = notes_url(app, add(client, token(), app))
+    client.patch(url, json={"notes": "Something"}, headers=token())
+    assert client.patch(url, json={"notes": " \n "}, headers=token()).json()["notes"] is None
+
+
+def test_notes_have_a_generous_limit(client, token):
+    app = create_application(client, token())
+    url = notes_url(app, add(client, token(), app))
+    assert client.patch(url, json={"notes": "é" * 20_000}, headers=token()).json()["notes"] == "é" * 20_000
+    assert client.patch(url, json={"notes": "x" * 20_001}, headers=token()).status_code == 422
+    assert reread(client, token(), app)["interviews"][0]["notes"] == "é" * 20_000
+
+
+def test_deleting_an_interview_deletes_its_notes(client, token, settings):
+    import psycopg
+
+    from tests.conftest import TEST_SCHEMA
+
+    app = create_application(client, token())
+    kept = add(client, token(), app, "recruiter_screen")
+    gone = add(client, token(), app, "technical")
+    client.patch(notes_url(app, kept), json={"notes": "Kept"}, headers=token())
+    client.patch(notes_url(app, gone), json={"notes": "Gone"}, headers=token())
+    assert client.delete(notes_url(app, gone), headers=token()).status_code == 204
+    with psycopg.connect(settings.database_url, prepare_threshold=None) as conn:
+        conn.execute(f'set search_path to "{TEST_SCHEMA}"')
+        assert conn.execute("select notes from interviews").fetchall() == [("Kept",)]
+
+
 def test_delete_cancels_an_interview(client, token):
     app = create_application(client, token())
     interview = add(client, token(), app, "technical", FUTURE)

@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Vitest's HTML coverage report.
     "coverage/**",
+    // Claude Code worktrees: other branches' checkouts, linted in their own sessions.
+    ".claude/worktrees/**",
   ]),
 ]);
 

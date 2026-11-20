@@ -67,6 +67,8 @@ export async function addTestApplications(jobSeekerId = TEST_JOB_SEEKER_ID) {
     const application = await call(jobSeekerId, "POST", "/applications", fields);
     for (const [kind, days, hour] of interviews) {
       const body = days === undefined ? { kind } : { kind, at: at(days, hour) };
+      // Every completed, dated Interview has Interview notes, so cards show the notes mark.
+      if (days < 0) body.notes = "Went well. Asked about past projects.\n\nNext time: have a question ready about the team.";
       await call(jobSeekerId, "POST", `/applications/${application.id}/interviews`, body);
     }
   }
