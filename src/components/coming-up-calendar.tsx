@@ -5,10 +5,9 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useIsClient } from "@/components/use-is-client";
 import { Badge, buttonClasses } from "@/components/ui";
 import { INTERVIEW_OPTIONS, type DatedInterview } from "@/lib/applications";
-import { dayKey, groupByDay, monthStart, monthWeeks, type CalendarDay } from "@/lib/calendar";
+import { dayKey, groupByDay, monthStart, monthWeeks, monthWindow, upcomingWindow, type CalendarDay } from "@/lib/calendar";
 
 const monthFormat = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" });
-const monthOnlyFormat = new Intl.DateTimeFormat(undefined, { month: "long" });
 const weekdayFormat = new Intl.DateTimeFormat(undefined, { weekday: "short" });
 const weekdayLongFormat = new Intl.DateTimeFormat(undefined, { weekday: "long" });
 const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" });
@@ -21,8 +20,9 @@ function interviewCount(n: number) {
 /**
  * Coming up as a small month grid beside an agenda (BIG-36): every dated Interview of an In
  * Progress Application, with past ones muted.
- * The grid marks days with a dot (muted when all of the day's Interviews are past); the agenda lists the shown month's Interviews, or one day's
- * once that day is picked.
+ * The grid marks days with a dot (muted when all of the day's Interviews are past). The agenda lists
+ * one day's Interviews once that day is picked; otherwise another month's Interviews, or for this
+ * month the widest upcoming window that holds five (BIG-72).
  * Days and times are the job seeker's own, so the calendar renders only in the browser; the server
  * sends a placeholder of about the same size.
  */
@@ -31,7 +31,7 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const agendaHeading = useRef<HTMLHeadingElement>(null);
-  // Set by the day buttons and "Show month", not by month navigation, so focus stays on the arrows.
+  // Set by the day buttons and "Show upcoming", not by month navigation, so focus stays on the arrows.
   const focusAgenda = useRef(false);
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
       focusAgenda.current = false;
       agendaHeading.current?.focus();
     }
-  }, [selected]);
+  }, [selected, offset]);
 
   if (!isClient) return <div className="card h-[40rem] animate-pulse md:h-[25.5rem]" aria-hidden />;
 
@@ -50,7 +50,11 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
   const byDay = groupByDay(interviews, (d) => d.interview.at);
   const days = weeks.flat().filter((d) => d.inMonth);
   const selectedDay = days.find((d) => d.key === selected);
-  const agendaDays = (selectedDay ? [selectedDay] : days).filter((d) => byDay.has(d.key));
+  const agendaWindow = offset === 0 ? upcomingWindow(interviews.map((d) => d.interview.at), now) : monthWindow(start);
+  // byDay's keys are already in date order.
+  const agendaKeys = selectedDay
+    ? [selectedDay.key].filter((key) => byDay.has(key))
+    : [...byDay.keys()].filter((key) => key >= agendaWindow.from && key <= agendaWindow.to);
 
   const goTo = (next: number) => {
     setOffset(next);
@@ -60,10 +64,15 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
     focusAgenda.current = true;
     setSelected(key);
   };
+  const showUpcoming = () => {
+    focusAgenda.current = true;
+    goTo(0);
+  };
 
   return (
     <div className="card flex flex-col gap-6 p-4 sm:p-6 md:flex-row">
-      <div className="md:w-80 md:shrink-0">
+      {/* As tall as a six-week month whatever the month, so five agenda items always fit (BIG-72). */}
+      <div className="md:min-h-[22.5rem] md:w-80 md:shrink-0">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h3 id="calendar-month" aria-live="polite" className="m-0 text-base font-medium text-heading">
             {monthFormat.format(start)}
@@ -125,20 +134,20 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
               tabIndex={-1}
               className="m-0 text-base font-medium text-heading focus-visible:outline-none"
             >
-              {selectedDay ? dayFormat.format(selectedDay.date) : `Interviews in ${monthOnlyFormat.format(start)}`}
+              {selectedDay ? dayFormat.format(selectedDay.date) : `Interviews in ${agendaWindow.span}`}
             </h3>
             {selectedDay && (
-              <button type="button" className={buttonClasses("tertiary", "sm")} onClick={() => showAgenda(null)}>
-                Show month
+              <button type="button" className={buttonClasses("tertiary", "sm")} onClick={showUpcoming}>
+                Show upcoming
               </button>
             )}
           </div>
 
-          {agendaDays.length === 0 ? (
+          {agendaKeys.length === 0 ? (
             <p className="m-0 text-sm text-body">
               {interviews.length === 0
                 ? "Add a dated Interview to an Application and it shows up here."
-                : `Nothing in ${monthOnlyFormat.format(start)} yet.`}
+                : `Nothing in ${agendaWindow.span} yet.`}
             </p>
           ) : (
             <div
@@ -148,7 +157,7 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
               className="min-h-0 flex-1 overflow-y-auto rounded-control focus-visible:outline-2 focus-visible:outline-offset-2"
             >
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                {agendaDays.flatMap((d) => byDay.get(d.key) ?? []).map((d) => (
+                {agendaKeys.flatMap((key) => byDay.get(key) ?? []).map((d) => (
                   <AgendaItem key={d.interview.id} item={d} past={new Date(d.interview.at) < now} />
                 ))}
               </ul>

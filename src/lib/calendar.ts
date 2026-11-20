@@ -39,6 +39,47 @@ export function monthWeeks(start: Date): CalendarDay[][] {
   return weeks;
 }
 
+/** The most Interviews the Coming up agenda lists before it narrows its window. */
+export const AGENDA_LIMIT = 5;
+
+/** The days the Coming up agenda lists: local YYYY-MM-DD keys, both ends included. */
+export type AgendaWindow = {
+  /** Completes "Interviews in …" and "Nothing in … yet.", e.g. "November" or "the next week". */
+  span: string;
+  from: string;
+  to: string;
+};
+
+const monthOnlyFormat = new Intl.DateTimeFormat(undefined, { month: "long" });
+
+/** The whole month that starts on `start`. */
+export function monthWindow(start: Date): AgendaWindow {
+  return {
+    span: monthOnlyFormat.format(start),
+    from: dayKey(start),
+    to: dayKey(new Date(start.getFullYear(), start.getMonth() + 1, 0)),
+  };
+}
+
+/**
+ * The widest window that holds no more than `limit` Interviews (BIG-72): this month (past ones
+ * included), then the next 2 weeks, the next week and the next 2 days, each starting today. When
+ * even the next 2 days hold more, it is still the next 2 days.
+ */
+export function upcomingWindow(times: string[], now: Date, limit = AGENDA_LIMIT): AgendaWindow {
+  const keys = times.map((at) => dayKey(new Date(at)));
+  const today = dayKey(now);
+  const through = (days: number) => dayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + days - 1));
+  const windows: AgendaWindow[] = [
+    monthWindow(monthStart(now, 0)),
+    { span: "the next 2 weeks", from: today, to: through(14) },
+    { span: "the next week", from: today, to: through(7) },
+    { span: "the next 2 days", from: today, to: through(2) },
+  ];
+  const fits = (w: AgendaWindow) => keys.filter((k) => k >= w.from && k <= w.to).length <= limit;
+  return windows.find(fits) ?? windows[windows.length - 1];
+}
+
 /** Items grouped by the local day of their timestamp (`at`), each day in time order. */
 export function groupByDay<T>(items: T[], at: (item: T) => string): Map<string, T[]> {
   const days = new Map<string, T[]>();

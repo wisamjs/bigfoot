@@ -35,7 +35,7 @@ All of a job seeker's Applications. The board shows the In Progress ones, groupe
 _Avoid_: board, funnel, tracker
 
 **Interview**:
-One conversation in a company's hiring process, belonging to one Application. It has a required, editable kind, an optional date and time and optional Interview notes, and no title. An Application can have many; kinds can repeat. Interviews are ordered by date, undated ones first, with no manual order and no per-company template. A cancelled Interview is deleted, and its Interview notes with it. Deleting the Application deletes its Interviews. The Coming up calendar shows every dated Interview of an In Progress Application, past ones muted.
+One conversation in a company's hiring process, belonging to one Application. It has a required, editable kind, an optional date and time and optional Interview notes, and no title. An Application can have many; kinds can repeat. Interviews are ordered by date, undated ones first, with no manual order and no per-company template. A cancelled Interview is deleted, and its Interview notes with it. Deleting the Application deletes its Interviews. The Coming up calendar shows every dated Interview of an In Progress Application, past ones muted. Its agenda lists this month's Interviews while there are five or fewer; past that, it narrows to the next 2 weeks, the next week or the next 2 days, whichever is widest with five or fewer, each starting today.
 _Avoid_: round, step, stage, meeting
 
 **Questions for them**:
