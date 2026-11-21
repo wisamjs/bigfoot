@@ -19,7 +19,7 @@ export default function LegalLayout({ children }: LayoutProps<"/">) {
           </Link>
         </Container>
       </header>
-      <main className="py-8 md:py-12 lg:py-16">
+      <main id="main" className="py-8 md:py-12 lg:py-16">
         <Container>
           <div className="mx-auto max-w-[768px]">{children}</div>
         </Container>

@@ -364,6 +364,18 @@ body {
   }
 }
 
+/* Skip link (root layout): off-screen until Tab reaches it, then pinned top-left above the header. */
+.skip-link {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 100;
+  translate: 0 calc(-100% - 32px);
+}
+.skip-link:focus-visible {
+  translate: none;
+}
+
 @keyframes skeleton-appear {
   from {
     opacity: 0;
@@ -376,12 +388,17 @@ body {
   }
 }
 
+/* Stop movement everywhere: every animation and transition, skeletons included. */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
-  .btn {
-    transition: none;
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
   /* Still held back for a moment, then shown without a fade or pulse. */
   .skeleton {

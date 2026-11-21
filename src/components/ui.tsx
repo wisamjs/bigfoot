@@ -24,12 +24,16 @@ export const dangerButtonClasses =
 export const inputClasses =
   "block w-full rounded-card border border-line-medium bg-surface-white px-3 py-2.5 text-sm text-heading shadow-xs transition-all duration-200 placeholder:text-body hover:border-line-brand-subtle focus:border-line-brand focus:outline-none focus:ring-1 focus:ring-brand";
 
-/** Text mark plus a footprint: job hunting is chasing Bigfoot. Matches src/app/icon.svg. */
-export function Wordmark() {
+/**
+ * Text mark plus a footprint: job hunting is chasing Bigfoot. Matches src/app/icon.svg.
+ * `compact` keeps only the footprint on phones, where a busy header has no room for the name;
+ * the link around it must then carry an aria-label.
+ */
+export function Wordmark({ compact = false }: { compact?: boolean }) {
   return (
     <span className="inline-flex items-center gap-2 text-xl font-bold text-heading">
       <Footprints className="size-5 text-fg-brand" aria-hidden />
-      Bigfoot
+      <span className={compact ? "max-sm:sr-only" : undefined}>Bigfoot</span>
     </span>
   );
 }

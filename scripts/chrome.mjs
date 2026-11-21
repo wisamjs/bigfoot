@@ -149,6 +149,34 @@ export async function dialogKeyboardProblems(chrome) {
   return problems;
 }
 
+/**
+ * The skip link on a freshly loaded page: the first Tab lands on it, and its target is the page's
+ * one <main>. Pressing Enter on it scrolls there; Tab after that continues inside <main>.
+ * Returns one line per problem.
+ */
+export async function skipLinkProblems(chrome) {
+  await press(chrome, "Tab", 9);
+  const { result } = await chrome.send("Runtime.evaluate", {
+    returnByValue: true,
+    expression: `(() => {
+      const el = document.activeElement;
+      const mains = document.querySelectorAll("main");
+      const problems = [];
+      if (el.getAttribute("href") !== "#main") problems.push(\`the first Tab lands on <\${el.tagName.toLowerCase()}> "\${el.textContent.trim().slice(0, 40)}", not the skip link\`);
+      if (mains.length !== 1 || mains[0].id !== "main") problems.push(\`the skip link needs exactly one <main id="main">; found \${mains.length} <main>\`);
+      return problems;
+    })()`,
+  });
+  if (result.value.length) return result.value;
+  await press(chrome, "Enter", 13);
+  await press(chrome, "Tab", 9);
+  const { result: after } = await chrome.send("Runtime.evaluate", {
+    returnByValue: true,
+    expression: `document.querySelector("main").contains(document.activeElement) || !document.querySelector("main").querySelector("a, button, input, select, textarea, summary, [tabindex]")`,
+  });
+  return after.value ? [] : ["after the skip link, Tab doesn't continue inside <main>"];
+}
+
 /** Starts headless Chrome and returns a DevTools client for its first tab. */
 export async function launchChrome() {
   const profile = mkdtempSync(join(tmpdir(), "bigfoot-chrome-"));
