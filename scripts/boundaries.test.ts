@@ -3,7 +3,7 @@
 // checks whether boundaries/dependencies reports it. Without this, a config typo could quietly
 // allow everything.
 import { ESLint } from "eslint";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 const eslint = new ESLint();
 
@@ -27,6 +27,12 @@ async function blocked(from: string, source: string) {
 }
 
 describe("import boundaries", () => {
+  // The first lint starts the TypeScript project service, which takes over 10s on a cold CI
+  // runner; after that each case takes about 100ms.
+  beforeAll(async () => {
+    await eslint.lintText("", { filePath: IN.ui });
+  }, 60_000);
+
   it.each([
     [IN.ui, "@/lib/applications"],
     [IN.ui, "@/features/auth/auth-card"],
