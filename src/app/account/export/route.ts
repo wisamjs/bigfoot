@@ -1,4 +1,4 @@
-import { getJobSeeker, listApplications } from "@/lib/api";
+import { getJobSeeker, listAccessTokens, listApplications } from "@/lib/api";
 import { findCurrentUser } from "@/lib/dal";
 import {
   applicationsCsv,
@@ -17,15 +17,21 @@ export async function GET(request: Request) {
   if (!user) return Response.redirect(new URL("/", request.url), 303);
 
   const format = new URL(request.url).searchParams.get("format");
-  if (!isExportFormat(format)) return new Response("format must be csv or json", { status: 400 });
+  if (!isExportFormat(format))
+    return new Response("format must be csv or json", { status: 400 });
 
   const now = new Date();
-  // JSON also needs the job seeker's record: fetch it alongside the Applications, not after.
-  const [applications, record] = await Promise.all([
+  // JSON also needs the job seeker's record and Access tokens: fetch them alongside the
+  // Applications, not after.
+  const [applications, record, accessTokens] = await Promise.all([
     listApplications(user.id),
     format === "json" ? getJobSeeker(user.id) : null,
+    format === "json" ? listAccessTokens(user.id) : [],
   ]);
-  const body = format === "csv" ? applicationsCsv(applications) : dataExportJson(user, record, applications, now);
+  const body =
+    format === "csv"
+      ? applicationsCsv(applications)
+      : dataExportJson(user, record, applications, accessTokens, now);
 
   return new Response(body, {
     headers: {

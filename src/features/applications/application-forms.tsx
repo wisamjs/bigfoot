@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Eye, LoaderCircle, Plus, Trash2 } from "lucide-react";
+import { Eye, ExternalLink as ExternalLinkIcon, LoaderCircle, Plus, Trash2 } from "lucide-react";
 import { useId, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   createApplicationAction,
@@ -8,9 +8,11 @@ import {
   deleteInterviewAction,
   updateApplicationAction,
   updateInterviewAction,
+  type ActionResult,
 } from "@/app/dashboard/actions";
 import { inputClasses } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ExternalLink } from "@/components/ui/external-link";
 import { SaveStatus } from "@/components/ui/save-status";
 import { useSaveStatus, type SaveTracker } from "@/hooks/use-save-status";
 import {
@@ -28,6 +30,7 @@ import {
   type Outcome,
   type Status,
 } from "@/lib/applications";
+import { applicationErrors, interviewErrors, isValid, summarize, type FieldErrors } from "@/lib/validation";
 
 /** An ISO timestamp as the viewer's local date and time, for a datetime-local input. */
 function toLocalInput(iso: string | null) {
@@ -36,13 +39,33 @@ function toLocalInput(iso: string | null) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 }
 
-/** A datetime-local value (the viewer's local time) as an ISO timestamp; blank is no date. */
+/**
+ * A datetime-local value (the viewer's local time) as an ISO timestamp; blank is no date. A value
+ * that isn't a date is passed through as typed, for interviewErrors to refuse.
+ */
 function fromLocalInput(value: string) {
-  return value ? new Date(value).toISOString() : null;
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toISOString();
 }
 
 function todayLocal() {
   return toLocalInput(new Date().toISOString()).slice(0, 10);
+}
+
+/** A field's own error, under it; the field names it with aria-describedby. */
+function FieldError({ id, error }: { id: string; error: string | undefined }) {
+  if (!error) return null;
+  return (
+    <p id={id} className="m-0 mt-1 text-sm text-fg-danger">
+      {error}
+    </p>
+  );
+}
+
+/** Props that tie a field to its FieldError, so screen readers read the error with the label. */
+function invalidProps(errorId: string, error: string | undefined) {
+  return error ? { "aria-invalid": true, "aria-describedby": errorId } : {};
 }
 
 /**
@@ -228,6 +251,9 @@ function DetailsForm({
     posting_url: app?.posting_url ?? "",
   }));
   const [values, setValues] = useState(saved);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  // What's wrong before anything is sent; errors from the save itself show in SaveStatus.
+  const [invalid, setInvalid] = useState<string | null>(null);
   // Only after Reveal is pressed: a form remounted by a save must not pull focus to the salary.
   const [focusSalary, setFocusSalary] = useState(false);
   const changed = DETAIL_FIELDS.filter((name) => values[name].trim() !== saved[name]);
@@ -236,10 +262,18 @@ function DetailsForm({
     return {
       id: `${id}-${name}`,
       value: values[name],
-      onChange: (e: ChangeEvent<HTMLInputElement>) => setValues((prev) => ({ ...prev, [name]: e.target.value })),
+      onChange: (e: ChangeEvent<HTMLInputElement>) => {
+        setValues((prev) => ({ ...prev, [name]: e.target.value }));
+        setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+      },
       maxLength: name === "applied_on" ? undefined : APPLICATION_MAX_LENGTHS[name],
       className: inputClasses,
+      ...invalidProps(`${id}-${name}-error`, fieldErrors[name]),
     };
+  }
+
+  function fieldError(name: DetailField) {
+    return <FieldError id={`${id}-${name}-error`} error={fieldErrors[name]} />;
   }
 
   function submit(e: FormEvent<HTMLFormElement>) {
@@ -247,17 +281,30 @@ function DetailsForm({
     // The submit button is only aria-disabled while saving, so it keeps focus; refuse a second submit here.
     if (tracker.saving) return;
     const fields = Object.fromEntries((app ? changed : DETAIL_FIELDS).map((name) => [name, values[name].trim() || null]));
+    const errors = applicationErrors(fields, { creating: !app });
+    setFieldErrors(errors);
+    if (!isValid(errors)) {
+      // Each error beside its field, the first announced, and focus on that field.
+      setInvalid(summarize(errors));
+      const first = DETAIL_FIELDS.find((name) => errors[name]);
+      if (first) document.getElementById(`${id}-${first}`)?.focus();
+      return;
+    }
+    setInvalid(null);
     void tracker
       .run(() => (app ? updateApplicationAction(app.id, fields) : createApplicationAction(fields)))
-      .then((result) => {
-        if (result.ok && !app) onDone?.();
+      .then((result: ActionResult) => {
+        if (!result.ok) setFieldErrors(result.fieldErrors ?? {});
+        else if (!app) onDone?.();
       });
   }
 
   const labelClasses = "mb-2 block text-sm font-medium text-heading";
 
   return (
-    <form onSubmit={submit} aria-labelledby={`${id}-heading`} className="flex flex-col gap-4">
+    // noValidate: the browser's own bubbles would stop the submit before these checks, which
+    // show every problem at once, beside its field, in Bigfoot's words.
+    <form onSubmit={submit} noValidate aria-labelledby={`${id}-heading`} className="flex flex-col gap-4">
       <h3 id={`${id}-heading`} className="m-0 text-base font-bold leading-[1.25] text-heading">
         Details
       </h3>
@@ -268,24 +315,28 @@ function DetailsForm({
           </label>
           {/* eslint-disable-next-line jsx-a11y/no-autofocus -- the Add panel is a dialog; focus starts on its first field. */}
           <input type="text" required autoFocus={!app} {...field("company")} />
+          {fieldError("company")}
         </div>
         <div>
           <label htmlFor={`${id}-title`} className={labelClasses}>
             Title
           </label>
           <input type="text" required {...field("title")} />
+          {fieldError("title")}
         </div>
         <div>
           <label htmlFor={`${id}-applied_on`} className={labelClasses}>
             Applied
           </label>
           <input type="date" required {...field("applied_on")} />
+          {fieldError("applied_on")}
         </div>
         <div>
           <label htmlFor={`${id}-location`} className={labelClasses}>
             Location (optional)
           </label>
           <input type="text" placeholder="Remote" {...field("location")} />
+          {fieldError("location")}
         </div>
         {salaryHidden ? (
           <fieldset aria-labelledby={`${id}-salary-label`} className="m-0 min-w-0 border-0 p-0">
@@ -313,6 +364,7 @@ function DetailsForm({
             </label>
             {/* eslint-disable-next-line jsx-a11y/no-autofocus -- "Add salary" swaps its button for this field, so focus follows it. */}
             <input type="text" placeholder="$150k–$180k" autoFocus={focusSalary} {...field("salary")} />
+            {fieldError("salary")}
           </div>
         )}
         <div>
@@ -321,20 +373,24 @@ function DetailsForm({
           </label>
           <div className="flex items-center gap-1">
             <input type="url" placeholder="https://" {...field("posting_url")} />
-            {app?.posting_url && (
-              <a
+            {app && (
+              <ExternalLink
                 href={app.posting_url}
-                target="_blank"
-                rel="noopener noreferrer"
                 aria-label={`Open the ${app.company} job posting in a new tab`}
                 className="shrink-0 rounded-control p-2.5 text-body transition-colors hover:bg-card hover:text-heading"
               >
-                <ExternalLink className="size-4" aria-hidden />
-              </a>
+                <ExternalLinkIcon className="size-4" aria-hidden />
+              </ExternalLink>
             )}
           </div>
+          {fieldError("posting_url")}
         </div>
       </div>
+      {invalid && (
+        <p role="alert" className="m-0 text-sm text-fg-danger">
+          {invalid}
+        </p>
+      )}
       {app ? (
         <div className="flex flex-wrap items-center justify-end gap-3">
           <SaveStatus status={tracker.status} label="Details" onRetry={tracker.retry} />
@@ -382,10 +438,20 @@ function InterviewRow({
   const atSave = useSaveStatus();
   const notesSave = useSaveStatus();
   const deleteSave = useSaveStatus();
+  // The kind's and date's errors, found before sending, beside their fields.
+  const [errors, setErrors] = useState<FieldErrors>({});
   const saved = toLocalInput(interview.at);
   const label = `Interview ${position}`;
   const kindLabel = INTERVIEW_OPTIONS[interview.kind].label;
   const fieldLabelClasses = "mb-1 flex min-h-4 flex-wrap items-center justify-between gap-x-2 text-xs font-medium text-body";
+
+  /** Checks one change with the API's rules, then saves it, or shows why not beside its field. */
+  function saveChange(tracker: SaveTracker, changes: { kind: InterviewKind } | { at: string | null }) {
+    const [name] = Object.keys(changes) as ("kind" | "at")[];
+    const problem = interviewErrors(changes)[name];
+    setErrors((prev) => ({ ...prev, [name]: problem }));
+    if (!problem) void tracker.run(() => updateInterviewAction(app.id, interview.id, changes));
+  }
 
   return (
     <li className="flex flex-wrap items-end gap-3 rounded-card border border-line bg-surface p-3">
@@ -404,11 +470,9 @@ function InterviewRow({
           id={`kind-${interview.id}`}
           defaultValue={interview.kind}
           disabled={kindSave.saving}
-          onChange={(e) => {
-            const kind = e.target.value as InterviewKind;
-            void kindSave.run(() => updateInterviewAction(app.id, interview.id, { kind }));
-          }}
+          onChange={(e) => saveChange(kindSave, { kind: e.target.value as InterviewKind })}
           className={inputClasses}
+          {...invalidProps(`kind-${interview.id}-error`, errors.kind)}
         >
           {INTERVIEW_KINDS.map((kind) => (
             <option key={kind} value={kind}>
@@ -416,6 +480,7 @@ function InterviewRow({
             </option>
           ))}
         </select>
+        <FieldError id={`kind-${interview.id}-error`} error={errors.kind} />
       </div>
       <div className="min-w-52 flex-1">
         <div className={fieldLabelClasses}>
@@ -432,11 +497,12 @@ function InterviewRow({
           disabled={atSave.saving}
           onBlur={(e) => {
             if (e.currentTarget.value === saved) return;
-            const at = fromLocalInput(e.currentTarget.value);
-            void atSave.run(() => updateInterviewAction(app.id, interview.id, { at }));
+            saveChange(atSave, { at: fromLocalInput(e.currentTarget.value) });
           }}
           className={inputClasses}
+          {...invalidProps(`at-${interview.id}-error`, errors.at)}
         />
+        <FieldError id={`at-${interview.id}-error`} error={errors.at} />
       </div>
       <button
         type="button"
@@ -486,13 +552,17 @@ function InterviewNotesForm({
   tracker: SaveTracker;
 }) {
   const [draft, setDraft] = useState(interview.notes ?? "");
+  const [error, setError] = useState<string | undefined>();
+  const errorId = `notes-${interview.id}-error`;
   // As the API stores them: ends trimmed, blank is none.
   const notes = draft.trim() || null;
   const nearLimit = draft.length >= INTERVIEW_NOTES_MAX_LENGTH * 0.9;
 
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    void tracker.run(() => updateInterviewAction(app.id, interview.id, { notes }));
+    const problem = interviewErrors({ notes }).notes;
+    setError(problem);
+    if (!problem) void tracker.run(() => updateInterviewAction(app.id, interview.id, { notes }));
   }
 
   return (
@@ -508,10 +578,15 @@ function InterviewNotesForm({
           maxLength={INTERVIEW_NOTES_MAX_LENGTH}
           readOnly={tracker.saving}
           placeholder="How it went, what you were asked, what you’d do differently"
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            setError(undefined);
+          }}
+          {...invalidProps(errorId, error)}
           // Grows with the notes where the browser supports it; otherwise it scrolls and resizes.
           className={`${inputClasses} field-sizing-content max-h-96 min-h-20 resize-y`}
         />
+        <FieldError id={errorId} error={error} />
       </div>
       <div className="flex flex-wrap items-center justify-end gap-3">
         {nearLimit && (

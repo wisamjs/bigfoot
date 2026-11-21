@@ -80,18 +80,28 @@ export async function removeTestApplications(jobSeekerId = TEST_JOB_SEEKER_ID) {
   return existing.length;
 }
 
+/** Revokes every Access token `jobSeekerId` has, including any a page state created. */
+async function removeTestAccessTokens(jobSeekerId) {
+  const existing = await call(jobSeekerId, "GET", "/me/access-tokens");
+  for (const t of existing) await call(jobSeekerId, "DELETE", `/me/access-tokens/${t.id}`);
+}
+
 /**
- * Runs `fn` with `jobSeekerId` holding exactly these Applications, emptied again afterwards.
+ * Runs `fn` with `jobSeekerId` holding exactly these Applications and one Access token (so the
+ * Account page has one to list and revoke), emptied again afterwards.
  * Filled before their first dashboard visit, so onboarding never adds Sample Applications.
  */
 export async function withTestApplications(jobSeekerId, fn) {
   // Clear anything a crashed run left.
   await removeTestApplications(jobSeekerId);
+  await removeTestAccessTokens(jobSeekerId);
   await addTestApplications(jobSeekerId);
+  await call(jobSeekerId, "POST", "/me/access-tokens", { name: "Calendar cron job" });
   try {
     return await fn();
   } finally {
     await removeTestApplications(jobSeekerId);
+    await removeTestAccessTokens(jobSeekerId);
   }
 }
 

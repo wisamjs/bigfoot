@@ -5,7 +5,7 @@
 //             (src/proxy.ts); true allows the redirect a page streams while it renders
 //   states    what a click or typing opens or reveals (a dialog, a toggled column, an error); a11y
 //             checks each one, signed in as a user holding scripts/dev-applications.mjs's
-//             Applications, and `npm run capture -- --state <name>` captures one. Each step clicks
+//             Applications and Access token, and `npm run capture -- --state <name>` captures one. Each step clicks
 //             the first element matching `click` whose text includes `text`, or types `value` into
 //             the first element matching `fill`; `expect` is text the state must show.
 //             `applications: "none"` signs in as a job seeker with no Applications instead, for
@@ -62,8 +62,8 @@ export const PAGES = [
       },
       { name: "add-panel", steps: [{ click: "button", text: "Add application" }], expect: "Job posting URL" },
       {
-        // The API's error shown in the panel: a company of only spaces passes the browser's
-        // `required` but is blank once trimmed.
+        // A company of only spaces passes the browser's `required` but is blank once trimmed: the
+        // form names the error beside the field and announces it, before anything is sent (BIG-89).
         name: "add-error",
         steps: [
           { click: "button", text: "Add application" },
@@ -71,13 +71,32 @@ export const PAGES = [
           { fill: '[role=dialog][data-state=open] input[id$="-title"]', value: "Frontend Engineer" },
           { click: '[role=dialog][data-state=open] button[type="submit"]', text: "Add application" },
         ],
-        expect: "should be a valid string",
+        expect: "Enter the company.",
       },
       { name: "nothing-coming-up", applications: "none", steps: [], expect: "All quiet in the woods" },
     ],
   },
   { path: "/account", signedIn: false, redirect: true },
-  // Text only the loaded page shows: the skeleton has the headings, so waiting for one can catch
-  // the page mid-stream, with the skeleton and the loaded page both in the DOM.
-  { path: "/account", signedIn: true, expect: "to confirm" },
+  {
+    path: "/account",
+    signedIn: true,
+    // Text only the loaded page shows: the skeleton has the headings, so waiting for one can catch
+    // the page mid-stream, with the skeleton and the loaded page both in the DOM.
+    expect: "to confirm",
+    states: [
+      {
+        name: "token-created",
+        steps: [
+          { fill: 'input[name="name"]', value: "Laptop script" },
+          { click: "button", text: "Create Access token" },
+        ],
+        expect: "Copy your Access token now",
+      },
+      {
+        name: "revoke-confirmation",
+        steps: [{ click: "button", text: "Revoke" }],
+        expect: "will stop working straight away",
+      },
+    ],
+  },
 ];

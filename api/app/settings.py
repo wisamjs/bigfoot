@@ -15,8 +15,7 @@ class Settings:
     database_url: str
     api_secret: str
     db_schema: str
-    # Serve /docs, /redoc and /openapi.json. Off unless API_DOCS=true: they are for developers,
-    # since the browser never calls the API (docs/adr/0001).
+    # Serve /docs, /redoc and /openapi.json. Off unless API_DOCS=true: they are for developers.
     api_docs: bool = False
     # Where error reports go (BIG-14). Unset in tests and most local runs: nothing is sent.
     sentry_dsn: str | None = None

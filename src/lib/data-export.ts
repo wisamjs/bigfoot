@@ -8,7 +8,7 @@ import {
   type Application,
   type Interview,
 } from "@/lib/applications";
-import type { JobSeekerRecord } from "@/lib/api";
+import type { AccessToken, JobSeekerRecord } from "@/lib/api";
 import type { CurrentUser } from "@/lib/dal";
 
 export const EXPORT_FORMATS = ["csv", "json"] as const;
@@ -91,13 +91,15 @@ export function applicationsCsv(applications: Application[]) {
 }
 
 /**
- * Everything Bigfoot holds about the job seeker: their profile and every Application field,
- * each Interview's notes included.
+ * Everything Bigfoot holds about the job seeker: their profile, every Application field (each
+ * Interview's notes included), and their Access tokens' names and dates. Never a token's secret:
+ * Bigfoot stores only a hash of it.
  */
 export function dataExportJson(
   user: CurrentUser,
   record: JobSeekerRecord | null,
   applications: Application[],
+  accessTokens: AccessToken[],
   now: Date,
 ) {
   const data = {
@@ -112,6 +114,7 @@ export function dataExportJson(
       last_seen_at: record?.last_seen_at ?? null,
     },
     applications,
+    access_tokens: accessTokens.map(({ name, created_at, expires_at }) => ({ name, created_at, expires_at })),
   };
   return `${JSON.stringify(data, null, 2)}\n`;
 }
