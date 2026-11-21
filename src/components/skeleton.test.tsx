@@ -1,3 +1,6 @@
+/* eslint-disable testing-library/no-node-access, testing-library/no-container --
+   Skeleton shapes are aria-hidden, with no role or text, so queries by role or text cannot
+   reach them; these tests check the DOM structure itself. */
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { AppHeader } from "./app-header";
