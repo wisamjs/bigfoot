@@ -27,6 +27,12 @@ function columns() {
   ]);
 }
 
+/** Matches a card's next-Interview row by its kind. */
+function nextInterview(kind: string) {
+  return (_: string, element: Element | null) =>
+    element?.tagName === "P" && (element.textContent ?? "").startsWith(`Next Interview: ${kind}`);
+}
+
 describe("PipelineBoard", () => {
   it("groups Applications into Waiting, Interview scheduled and Offer, leaving other Done ones off", () => {
     render(<PipelineBoard title="Pipeline" subtitle="4 open" applications={all} />);
@@ -48,24 +54,48 @@ describe("PipelineBoard", () => {
     expect(screen.getByText(/Open applications show up here/)).toBeInTheDocument();
   });
 
-  it("lists a card's Interviews, marking completed ones as past", () => {
+  it("shows a card's next Interview and how many are completed, not every Interview", () => {
     render(<PipelineBoard title="Pipeline" subtitle="" applications={[scheduled]} />);
-    const items = within(screen.getByRole("list", { name: "Interviews" })).getAllByRole("listitem");
-    expect(items.map((li) => li.textContent)).toEqual([
-      expect.stringMatching(/^Recruiter Screen.*\(past\)$/),
-      expect.not.stringContaining("(past)"),
-    ]);
-    expect(items[1]).toHaveTextContent("Technical");
+    const card = screen.getByRole("listitem");
+    expect(within(card).getByText(nextInterview("Technical"))).toBeInTheDocument();
+    expect(within(card).queryByText("Recruiter Screen")).not.toBeInTheDocument();
+    expect(within(card).getByText("1 completed Interview")).toBeInTheDocument();
+    expect(within(card).queryByText(/more upcoming/)).not.toBeInTheDocument();
   });
 
-  it("marks an Interview that has Interview notes, without showing them", () => {
-    const noted = { ...scheduled.interviews[0], notes: "Asked about caching." };
-    const app = { ...scheduled, interviews: [noted, scheduled.interviews[1]] };
+  it("shows the soonest of two upcoming Interviews on the same day, plus how many more", () => {
+    const app = application("Birch", {
+      is_waiting: false,
+      interviews: [
+        interview("am", { at: "2027-01-05T15:00:00Z", completed: false, kind: "hiring_manager" }),
+        interview("pm", { at: "2027-01-05T19:00:00Z", completed: false, kind: "technical" }),
+      ],
+    });
     render(<PipelineBoard title="Pipeline" subtitle="" applications={[app]} />);
-    const items = within(screen.getByRole("list", { name: "Interviews" })).getAllByRole("listitem");
-    expect(items[0]).toHaveTextContent("(has notes)");
-    expect(items[1]).not.toHaveTextContent("(has notes)");
+    expect(screen.getByText(nextInterview("Hiring Manager"))).toBeInTheDocument();
+    expect(screen.queryByText("Technical")).not.toBeInTheDocument();
+    expect(screen.getByText("+1 more upcoming")).toBeInTheDocument();
+    expect(screen.queryByText(/completed/)).not.toBeInTheDocument();
+  });
+
+  it("says how many completed Interviews have Interview notes, without showing them", () => {
+    const app = application("Birch", {
+      is_waiting: true,
+      interviews: [
+        interview("a", { at: "2026-10-01T15:00:00Z", completed: true, notes: "Asked about caching." }),
+        interview("b", { at: "2026-10-08T15:00:00Z", completed: true, notes: "Pairing exercise." }),
+        interview("c", { at: "2026-10-15T15:00:00Z", completed: true }),
+      ],
+    });
+    render(<PipelineBoard title="Pipeline" subtitle="" applications={[app]} />);
+    expect(screen.getByText("3 completed Interviews, 2 with notes")).toBeInTheDocument();
     expect(screen.queryByText(/Asked about caching/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Next Interview:")).not.toBeInTheDocument();
+  });
+
+  it("shows a Done card's Outcome", () => {
+    render(<PipelineBoard title="Pipeline" subtitle="" applications={[offer]} />);
+    expect(within(screen.getByRole("listitem")).getByText("Offer")).toBeInTheDocument();
   });
 
   it("opens an Application from its card", async () => {
@@ -75,54 +105,13 @@ describe("PipelineBoard", () => {
     expect(onOpen).toHaveBeenCalledWith(scheduled);
   });
 
-  it("hides a card's completed Interviews and shows them again, leaving upcoming ones", async () => {
-    render(<PipelineBoard title="Pipeline" subtitle="" applications={[scheduled]} />);
-    const toggle = screen.getByRole("button", { name: "Hide completed Interviews, Birch" });
-    expect(toggle).toHaveAttribute("aria-pressed", "false");
-
-    await userEvent.click(toggle);
-    expect(toggle).toHaveAttribute("aria-pressed", "true");
-    const items = within(screen.getByRole("list", { name: "Interviews" })).getAllByRole("listitem");
-    expect(items.map((li) => li.textContent)).toEqual([expect.stringContaining("Technical")]);
-
-    await userEvent.click(toggle);
-    expect(within(screen.getByRole("list", { name: "Interviews" })).getAllByRole("listitem")).toHaveLength(2);
-  });
-
-  it("offers only the buttons that would change a card", () => {
-    const upcomingOnly = { ...scheduled, id: "elm", company: "Elm", interviews: [scheduled.interviews[1]] };
-    render(<PipelineBoard title="Pipeline" subtitle="" applications={[waiting, upcomingOnly]} />);
-    expect(screen.queryByRole("button", { name: /Hide completed/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Collapse card, Elm" })).toBeInTheDocument();
-    // A brand-new Waiting card has nothing to collapse.
-    expect(screen.queryByRole("button", { name: /card, Acme/ })).not.toBeInTheDocument();
-  });
-
-  it("collapses a card to its header and expands it with the hide choice kept", async () => {
-    render(<PipelineBoard title="Pipeline" subtitle="" applications={[scheduled, offer]} />);
-    await userEvent.click(screen.getByRole("button", { name: "Hide completed Interviews, Birch" }));
-    const collapse = screen.getByRole("button", { name: "Collapse card, Birch" });
-    expect(collapse).toHaveAttribute("aria-expanded", "true");
-
-    await userEvent.click(collapse);
-    expect(collapse).toHaveAttribute("aria-expanded", "false");
-    expect(collapse).toHaveAccessibleName("Expand card, Birch");
-    expect(screen.queryByRole("list", { name: "Interviews" })).not.toBeInTheDocument();
-    expect(screen.getByText("Birch")).toBeVisible();
-    // Only Birch collapsed.
-    expect(screen.getByRole("button", { name: "Collapse card, Cedar" })).toHaveAttribute("aria-expanded", "true");
-
-    await userEvent.click(collapse);
-    const items = within(screen.getByRole("list", { name: "Interviews" })).getAllByRole("listitem");
-    expect(items).toHaveLength(1);
-  });
-
-  it("does not open the Application from a card's controls", async () => {
-    const onOpen = vi.fn();
-    render(<PipelineBoard title="Pipeline" subtitle="" applications={[scheduled]} onOpen={onOpen} />);
-    await userEvent.click(screen.getByRole("button", { name: "Hide completed Interviews, Birch" }));
-    await userEvent.click(screen.getByRole("button", { name: "Collapse card, Birch" }));
-    expect(onOpen).not.toHaveBeenCalled();
+  it("has no controls on a card besides opening it", () => {
+    render(<PipelineBoard title="Pipeline" subtitle="" applications={all} onOpen={vi.fn()} />);
+    expect(screen.getAllByRole("button").map((button) => button.textContent)).toEqual([
+      expect.stringMatching(/^Open Acme/),
+      expect.stringMatching(/^Open Birch/),
+      expect.stringMatching(/^Open Cedar/),
+    ]);
   });
 
   it("is a single labelled picture when decorative", () => {

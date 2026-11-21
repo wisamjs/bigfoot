@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, cardClasses } from "@/features/applications/pipeline-card";
 import { getBoardColumns, type Application } from "@/lib/applications";
 
-// Also draws the landing page's decorative board (src/components/landing/hero.tsx): after a
+// Also draws the landing page's decorative board (src/features/landing/hero.tsx): after a
 // layout change, check docs/screenshots/landing.png too.
 
 type Props = {
@@ -70,7 +70,7 @@ export function PipelineBoard({
               </div>
               <ul className={cardListClasses}>
                 {column.applications.map((job) => (
-                  <Card key={job.id} job={job} onOpen={onOpen} controls={!decorative} />
+                  <Card key={job.id} job={job} onOpen={onOpen} />
                 ))}
               </ul>
             </section>
