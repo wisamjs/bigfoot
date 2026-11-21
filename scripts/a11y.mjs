@@ -5,13 +5,14 @@
 // 400% zoom), each page must not scroll sideways, and its first Tab must reach the skip link.
 // Last, runs axe on each page's `states` (dialogs, toggles), and uses each open dialog by keyboard
 // (focus stays inside, Escape closes it, focus returns to its opener), signed in as its own job
-// seeker holding the Applications from scripts/dev-applications.mjs, emptied again afterwards.
+// seeker holding the Applications from scripts/dev-applications.mjs, emptied again afterwards
+// (or, for states with `applications: "none"`, as one holding none).
 // Uses this checkout's dev server (A11Y_URL, default http://localhost:3300) and API
 // (API_URL, default http://localhost:8000) like smoke does. CHROME_PATH picks Chrome.
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dialogKeyboardProblems, enterState, launchChrome, openPage, skipLinkProblems } from "./chrome.mjs";
-import { withTestApplications } from "./dev-applications.mjs";
+import { withNoApplications, withTestApplications } from "./dev-applications.mjs";
 import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
 import { PAGES } from "./pages.mjs";
 import { ensureServers } from "./servers.mjs";
@@ -26,6 +27,7 @@ const DESKTOP = { width: 1440, height: 990 };
 const REFLOW_WIDTH = 320;
 // Not the dev-session test user, so whatever that user has stays as it was.
 const STATES_JOB_SEEKER_ID = "a11y-user";
+const EMPTY_JOB_SEEKER_ID = "a11y-empty-user";
 const SCHEMES = ["light", "dark"];
 
 // Every page that renders (not redirects), signed out and signed in.
@@ -113,22 +115,33 @@ try {
   await setWidth(chrome, DESKTOP);
 
   const withStates = pages.filter((page) => page.states?.length);
-  if (withStates.length) {
-    await withTestApplications(STATES_JOB_SEEKER_ID, async () => {
-      for (const scheme of SCHEMES) {
-        await setScheme(chrome, scheme);
-        for (const page of withStates) {
-          await signIn(chrome, page.signedIn ? STATES_JOB_SEEKER_ID : null);
-          for (const state of page.states) {
-            await openPage(chrome, `${base}${page.path}`, page.expect);
-            await enterState(chrome, state);
-            report(`${page.path} ${state.name} (${scheme})`, await violations(chrome, `${page.path} ${state.name}`));
-            // Keyboard behaviour doesn't depend on the colour scheme, so check it once. Last: it closes the dialog.
-            if (scheme === SCHEMES[0]) report(`${page.path} ${state.name} keyboard`, await dialogKeyboardProblems(chrome));
-          }
+  const empty = (state) => state.applications === "none";
+
+  /** Runs axe on each state `pick` keeps, signed in as `jobSeekerId`, and uses any open dialog by keyboard. */
+  async function checkStates(jobSeekerId, pick) {
+    for (const scheme of SCHEMES) {
+      await setScheme(chrome, scheme);
+      for (const page of withStates) {
+        const states = page.states.filter(pick);
+        if (!states.length) continue;
+        await signIn(chrome, page.signedIn ? jobSeekerId : null);
+        for (const state of states) {
+          await openPage(chrome, `${base}${page.path}`, page.expect);
+          await enterState(chrome, state);
+          report(`${page.path} ${state.name} (${scheme})`, await violations(chrome, `${page.path} ${state.name}`));
+          // Keyboard behaviour doesn't depend on the colour scheme, so check it once. Last: it closes the dialog.
+          if (scheme === SCHEMES[0]) report(`${page.path} ${state.name} keyboard`, await dialogKeyboardProblems(chrome));
         }
       }
-    });
+    }
+  }
+
+  const states = withStates.flatMap((page) => page.states);
+  if (states.some((s) => !empty(s))) {
+    await withTestApplications(STATES_JOB_SEEKER_ID, () => checkStates(STATES_JOB_SEEKER_ID, (s) => !empty(s)));
+  }
+  if (states.some(empty)) {
+    await withNoApplications(EMPTY_JOB_SEEKER_ID, () => checkStates(EMPTY_JOB_SEEKER_ID, empty));
   }
 } finally {
   await chrome.close();
