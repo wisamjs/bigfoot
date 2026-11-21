@@ -3,7 +3,8 @@
 import { ChevronRight, Plus } from "lucide-react";
 import { useState } from "react";
 import { DeleteConfirmation } from "@/features/applications/application-dialogs";
-import { ApplicationEditor, NewApplicationForm } from "@/features/applications/application-forms";
+import { ApplicationEditor } from "@/features/applications/application-editor";
+import { NewApplicationForm } from "@/features/applications/new-application-form";
 import { Modal, SidePanel } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { SampleBadge } from "@/features/applications/sample-badge";
