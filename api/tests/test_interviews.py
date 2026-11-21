@@ -2,7 +2,11 @@
 
 from datetime import UTC, datetime, timedelta
 
+import psycopg
 import pytest
+from psycopg import sql
+
+from tests.conftest import TEST_SCHEMA
 
 PAST = (datetime.now(UTC) - timedelta(days=3)).replace(microsecond=0)
 LONG_PAST = PAST - timedelta(days=4)
@@ -259,3 +263,21 @@ def test_nothing_is_written_on_read(client, token, settings):
     before = stored()
     client.get("/applications", headers=token())
     assert stored() == before
+
+
+def test_an_application_can_have_at_most_50_interviews(settings, client, token):
+    application = create_application(client, token())
+    with psycopg.connect(settings.database_url, prepare_threshold=None, autocommit=True) as conn:
+        conn.execute(sql.SQL("set search_path to {}").format(sql.Identifier(TEST_SCHEMA)))
+        conn.execute(
+            "insert into interviews (application_id, kind) select %s, 'technical' from generate_series(1, 49)",
+            (application["id"],),
+        )
+    add(client, token(), application)
+
+    res = client.post(f"/applications/{application['id']}/interviews", json={"kind": "technical"}, headers=token())
+
+    assert res.status_code == 409
+    assert "50 Interviews" in res.json()["detail"]
+    other = create_application(client, token())
+    add(client, token(), other)

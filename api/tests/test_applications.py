@@ -1,9 +1,19 @@
 import time
 from datetime import UTC, datetime
 
+import psycopg
 import pytest
+from psycopg import sql
+
+from tests.conftest import TEST_SCHEMA
 
 NEW = {"company": "Ramp", "title": "Staff Engineer"}
+
+
+def connect(settings):
+    conn = psycopg.connect(settings.database_url, prepare_threshold=None, autocommit=True)
+    conn.execute(sql.SQL("set search_path to {}").format(sql.Identifier(TEST_SCHEMA)))
+    return conn
 
 
 def create(client, headers, **fields):
@@ -79,6 +89,55 @@ def test_create_trims_text_and_blanks_become_null(client, token):
 def test_create_rejects_invalid_fields(client, token, fields):
     res = client.post("/applications", json={**NEW, **fields}, headers=token())
     assert res.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"company": "x" * 201},
+        {"title": "x" * 201},
+        {"location": "x" * 201},
+        {"salary": "x" * 101},
+        {"posting_url": "https://example.com/" + "x" * 2029},
+    ],
+)
+def test_create_and_patch_reject_text_that_is_too_long(client, token, fields):
+    assert client.post("/applications", json={**NEW, **fields}, headers=token()).status_code == 422
+    app = create(client, token())
+    assert client.patch(f"/applications/{app['id']}", json=fields, headers=token()).status_code == 422
+
+
+def test_create_accepts_text_at_the_maximum_length(client, token):
+    app = create(
+        client,
+        token(),
+        company="c" * 200,
+        title="t" * 200,
+        location="l" * 200,
+        salary="s" * 100,
+        posting_url="https://example.com/" + "x" * 2028,
+    )
+    assert len(app["company"]) == 200 and len(app["posting_url"]) == 2048
+
+
+def test_the_database_rejects_text_that_is_too_long(settings):
+    with connect(settings) as conn, pytest.raises(psycopg.errors.CheckViolation):
+        conn.execute("insert into applications (job_seeker_id, company, title) values ('alice', %s, 'x')", ("x" * 201,))
+
+
+def test_a_job_seeker_can_have_at_most_1000_applications(settings, client, token):
+    with connect(settings) as conn:
+        conn.execute(
+            "insert into applications (job_seeker_id, company, title)"
+            " select 'alice', 'c', 't' from generate_series(1, 999)"
+        )
+    create(client, token())
+
+    res = client.post("/applications", json=NEW, headers=token())
+
+    assert res.status_code == 409
+    assert "1,000 Applications" in res.json()["detail"]
+    assert client.post("/applications", json=NEW, headers=token("bob")).status_code == 201
 
 
 def test_create_accepts_every_field(client, token):
