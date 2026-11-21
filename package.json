@@ -23,7 +23,8 @@
     "prepare": "git config core.hooksPath .githooks || true",
     "openapi": "cd api && uv run python ../scripts/openapi.py",
     "dev:api": "cd api && uv run uvicorn --factory app.main:create_app --port 8000 --reload",
-    "test:api": "cd api && uv run pytest",
+    "test:api": "node scripts/test-schema.mjs pytest",
+    "db:drop-test-schema": "node scripts/test-schema.mjs drop",
     "db:status": "cd api && uv run python ../scripts/db-status.py"
   },
   "dependencies": {
@@ -56,6 +57,7 @@
     "eslint-plugin-jest-dom": "^5.11.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-testing-library": "^7.16.2",
+    "eslint-plugin-unicorn": "^65.0.1",
     "happy-dom": "^21.0.4",
     "tailwindcss": "4.3.3",
     "typescript": "^5",

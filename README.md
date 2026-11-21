@@ -114,7 +114,7 @@ Where the skill and the Next.js docs in `node_modules/next/dist/docs/` disagree,
 | `npm run check` | Types, lint, that the staged `api/openapi.json` matches the API (if not, it rewrites the file for you to `git add`), that components use design tokens instead of raw colours and corner radii, Canadian spelling (cspell), and `npm test`. The pre-commit hook runs it |
 | `npm test` | Vitest unit and component tests (React Testing Library in happy-dom), failing if coverage drops below the floor in `vitest.config.mts`. `npm run test:watch` reruns them on save |
 | `npm run openapi` | Rewrites [`api/openapi.json`](api/openapi.json) from the API code; browse it at [`/docs`](http://localhost:8000/docs) with the API running ([Try the API](#try-the-api)) |
-| `npm run test:api` | API tests (pytest) against the real database, in a throwaway `bigfoot_test` schema (one per run in CI) rebuilt for every test |
+| `npm run test:api` | API tests (pytest) against the real database, in a throwaway test schema rebuilt for every test: `bigfoot_test_big<n>` on a BIG ticket branch, `bigfoot_test` elsewhere, one per run in CI. `npm run db:drop-test-schema` drops it |
 | `npm run smoke` | Loads every route signed in and signed out against the running dev server and API (starting either if needed), and fails on any server error |
 | `npm run a11y` | axe-core WCAG 2.2 AA on the same pages and their open dialogs, light and dark, and uses each dialog by keyboard: focus stays inside, Escape closes it, focus returns |
 | `npm run build` | Production build (stop `next dev` first: they share `.next/`) |
