@@ -2,6 +2,7 @@
 and the Access tokens that let their scripts do the same."""
 
 import hashlib
+import os
 import re
 import unicodedata
 from contextlib import asynccontextmanager
@@ -15,6 +16,7 @@ from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 
+from app import monitoring
 from app.auth import ACCESS_TOKEN_PREFIX, JobSeekerId, SignedInJobSeekerId, access_token_hash, new_access_token
 from app.domain import (
     APPLICATIONS_MAX,
@@ -392,6 +394,8 @@ TAGS = [
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
+    # Before the app exists, so Sentry's FastAPI integration instruments it.
+    monitoring.init(settings.sentry_dsn, os.environ)
 
     def configure(conn: Any) -> None:
         # Supabase's session pooler rejects server-side prepared statements across clients.

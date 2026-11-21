@@ -15,6 +15,8 @@ import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.monitoring import tag_job_seeker
+
 AUDIENCE = "bigfoot-api"
 ISSUER = "bigfoot-web"
 
@@ -79,6 +81,7 @@ def _from_web_token(request: Request, token: str) -> str:
         )
     except jwt.PyJWTError as exc:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token") from exc
+    tag_job_seeker(claims["sub"])
     return claims["sub"]
 
 
@@ -93,6 +96,7 @@ def _from_access_token(request: Request, token: str) -> str:
         ).fetchone()
     if row is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token")
+    tag_job_seeker(row["job_seeker_id"])
     return row["job_seeker_id"]
 
 

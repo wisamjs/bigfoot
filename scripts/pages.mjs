@@ -51,6 +51,15 @@ export const PAGES = [
         ],
         expect: "This can’t be undone",
       },
+      {
+        // A save's status beside its button (BIG-118), checked while "Added" shows.
+        name: "interview-added",
+        steps: [
+          { click: 'section[aria-label="Interview scheduled"] li button' },
+          { click: "[role=dialog][data-state=open] button", text: "Add Interview" },
+        ],
+        expect: "Added",
+      },
       { name: "add-panel", steps: [{ click: "button", text: "Add application" }], expect: "Job posting URL" },
       {
         // The API's error shown in the panel: a company of only spaces passes the browser's

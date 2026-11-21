@@ -17,11 +17,16 @@ class Settings:
     db_schema: str
     # Serve /docs, /redoc and /openapi.json. Off unless API_DOCS=true: they are for developers.
     api_docs: bool = False
+    # Where error reports go (BIG-14). Unset in tests and most local runs: nothing is sent.
+    sentry_dsn: str | None = None
 
 
 # Variables the API can't run without. Must match .env.example (tests/test_settings.py); the
 # Next.js app keeps its own list in src/lib/env.ts.
 REQUIRED_ENV = ("DATABASE_URL", "API_SECRET")
+
+# Variables the API checks but doesn't need. SENTRY_DSN is required in production only.
+OPTIONAL_ENV = ("SENTRY_DSN",)
 
 
 def env_problems(env: Mapping[str, str]) -> list[str]:
@@ -33,6 +38,8 @@ def env_problems(env: Mapping[str, str]) -> list[str]:
     # Vercel's Production environment. Previews and local runs may serve the docs.
     if env.get("VERCEL_ENV") == "production" and _api_docs(env):
         problems.append("API_DOCS must not be true in production")
+    if env.get("VERCEL_ENV") == "production" and not env.get("SENTRY_DSN", "").strip():
+        problems.append("Missing in production: SENTRY_DSN (see .env.example)")
     schema = env.get("DB_SCHEMA", "public")
     if not re.fullmatch(r"[a-z_][a-z0-9_]*", schema):
         problems.append(f"Invalid DB_SCHEMA: {schema!r}")
@@ -54,4 +61,5 @@ def get_settings(env: Mapping[str, str] | None = None) -> Settings:
         api_secret=env["API_SECRET"],
         db_schema=env.get("DB_SCHEMA", "public"),
         api_docs=_api_docs(env),
+        sentry_dsn=env.get("SENTRY_DSN", "").strip() or None,
     )

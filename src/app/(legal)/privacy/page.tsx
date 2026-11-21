@@ -11,6 +11,7 @@ import {
 } from "@/features/legal/legal";
 import {
   BACKUP_DAYS,
+  ERROR_REPORT_RETENTION_DAYS,
   PRIVACY_CHANGES,
   PRIVACY_CONTACT_EMAIL,
   PRIVACY_EFFECTIVE_DATE,
@@ -113,6 +114,12 @@ export default function PrivacyPage() {
         <p>
           Like most websites, our servers keep short-lived logs of requests, such as your IP
           address, browser type, the pages you open and the time.
+        </p>
+        <p>
+          When something breaks, the website or the API sends an error report to Sentry: what failed
+          and where in our code, the page or API address, your browser type, and a one-way hash of
+          your Google account id. Reports leave out your Applications, your email address, your IP
+          address and your cookies.
         </p>
         <p>
           We do not use analytics or advertising tools. If we ever add analytics, we will update this
@@ -242,6 +249,9 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Server logs:</strong> up to {SERVER_LOG_RETENTION}.
+          </li>
+          <li>
+            <strong>Error reports:</strong> up to {ERROR_REPORT_RETENTION_DAYS} days, at Sentry.
           </li>
           <li>
             <strong>Account deletions:</strong> when you delete your account, we record that an
