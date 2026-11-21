@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
 import { AppFooter } from "@/features/shell/app-footer";
 import { AppHeader, Avatar } from "@/features/shell/app-header";
+import { AccessTokens } from "@/features/account/access-tokens";
 import { DeleteAccountForm } from "@/features/account/delete-account-form";
 import { Download } from "lucide-react";
 import { buttonClasses } from "@/components/ui/button-classes";
 import { Container } from "@/components/ui/container";
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton";
-import { GOOGLE_PERMISSIONS_URL } from "@/lib/account";
-import { listApplications } from "@/lib/api";
+import { ACCESS_TOKEN_LIFETIME, GOOGLE_PERMISSIONS_URL } from "@/lib/account";
+import { API_URL, listAccessTokens, listApplications, type AccessToken } from "@/lib/api";
 import { getCurrentUser, type CurrentUser } from "@/lib/dal";
 import { EXPORT_CONTENT_TYPES, type ExportFormat } from "@/lib/data-export";
 import { BACKUP_DAYS, SERVER_LOG_RETENTION } from "@/lib/legal/privacy";
@@ -27,14 +28,14 @@ export default function AccountPage() {
 
 async function Account() {
   const user = await getCurrentUser();
-  const applications = await listApplications(user.id);
-  return <AccountLayout user={user} count={applications.length} />;
+  const [applications, accessTokens] = await Promise.all([listApplications(user.id), listAccessTokens(user.id)]);
+  return <AccountLayout user={user} count={applications.length} accessTokens={accessTokens} />;
 }
 
 /**
  * The account page with skeleton shapes wherever the job seeker's data goes (BIG-73): who is
- * signed in, how many Applications deleting removes, and the delete form, which mustn't take
- * typing that the loaded page would throw away.
+ * signed in, their Access tokens, how many Applications deleting removes, and the forms, which
+ * mustn't take typing that the loaded page would throw away.
  */
 function AccountSkeleton() {
   return (
@@ -45,7 +46,15 @@ function AccountSkeleton() {
 }
 
 /** The account page, or its skeleton when there is no user yet. */
-function AccountLayout({ user, count }: { user?: CurrentUser; count?: number }) {
+function AccountLayout({
+  user,
+  count,
+  accessTokens,
+}: {
+  user?: CurrentUser;
+  count?: number;
+  accessTokens?: AccessToken[];
+}) {
   return (
     <>
       <AppHeader user={user} current="/account" />
@@ -104,6 +113,19 @@ function AccountLayout({ user, count }: { user?: CurrentUser; count?: number }) 
               </ul>
             </section>
 
+            <section aria-labelledby="tokens-title" className="card flex flex-col gap-4 p-6">
+              <h2 id="tokens-title" className="m-0 text-xl font-bold leading-[1.25] text-heading">
+                Access tokens
+              </h2>
+              <p className="m-0 text-base leading-[1.7] text-body">
+                An Access token lets a script, such as a cron job, read and change your Applications
+                and Interviews without a browser. Anyone who has one can do the same, so treat it like
+                a password. A token can’t delete your account or create other tokens. Each one stops
+                working {ACCESS_TOKEN_LIFETIME} after you create it, or as soon as you revoke it.
+              </p>
+              {accessTokens ? <AccessTokens tokens={accessTokens} apiUrl={API_URL} /> : <Skeleton className="h-40 w-full" />}
+            </section>
+
             <section
               aria-labelledby="delete-title"
               className="card flex flex-col gap-4 border-line-danger-subtle p-6 text-base leading-[1.7] text-body"
@@ -121,9 +143,10 @@ function AccountLayout({ user, count }: { user?: CurrentUser; count?: number }) 
                   ) : (
                     `all ${count} of your Applications`
                   )}
-                  , sample Applications included; and
+                  , sample Applications included;
                 </li>
-                <li>your job seeker record: your Google account id and when you joined Bigfoot.</li>
+                <li>your job seeker record: your Google account id and when you joined Bigfoot; and</li>
+                <li>your Access tokens, which stop working.</li>
               </ul>
               <p className="m-0">
                 You’ll be signed out. If you sign in again later, you start over as a new job seeker,
@@ -175,7 +198,8 @@ const DOWNLOADS: { format: ExportFormat; label: string; type: string; descriptio
     format: "json",
     label: "JSON",
     type: EXPORT_CONTENT_TYPES.json,
-    description: "Everything, for moving to another tool: your profile and every field of every Application.",
+    description:
+      "Everything, for moving to another tool: your profile, every field of every Application, and your Access tokens’ names and dates (never their secrets).",
   },
 ];
 

@@ -14,7 +14,7 @@ export const PRIVACY_CHANGES: readonly { date: string; summary: string }[] = [
   {
     date: "2026-11-16",
     summary:
-      "You can write Interview notes on each Interview. We store what you write there, include it in your data download, and delete it with the Interview or your account.",
+      "You can create Access tokens on your Account page, so your own scripts can read your Applications. We store each token’s name and dates and a one-way hash of its secret, never the secret itself. You can also write Interview notes on each Interview. We store what you write there, include it in your data download, and delete it with the Interview or your account.",
   },
   {
     date: "2026-11-14",

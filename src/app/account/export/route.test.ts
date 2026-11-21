@@ -2,13 +2,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Application } from "@/lib/applications";
 import type { CurrentUser } from "@/lib/dal";
 
-// A fake API holding two job seekers' Applications, scoped the way FastAPI scopes them.
+// A fake API holding two job seekers' Applications and Access tokens, scoped the way FastAPI scopes them.
 const store: Record<string, Application[]> = {};
+const tokens: Record<string, { id: string; name: string }[]> = {
+  alice: [{ id: "t1", name: "Alice's cron job" }],
+  bob: [{ id: "t2", name: "Bob's laptop" }],
+};
 let signedIn: CurrentUser | null = null;
 
 vi.mock("@/lib/dal", () => ({ findCurrentUser: async () => signedIn }));
 vi.mock("@/lib/api", () => ({
   listApplications: async (jobSeekerId: string) => store[jobSeekerId] ?? [],
+  listAccessTokens: async (jobSeekerId: string) =>
+    (tokens[jobSeekerId] ?? []).map((token) => ({
+      ...token,
+      created_at: "2026-11-12T12:00:00Z",
+      expires_at: "2027-11-12T12:00:00Z",
+      expired: false,
+    })),
   getJobSeeker: async (jobSeekerId: string) => ({
     job_seeker_id: jobSeekerId,
     created_at: "2026-11-10T12:00:00Z",
@@ -74,7 +85,18 @@ describe("GET /account/export", () => {
     const data = await res.json();
     expect(data.applications.map((a: Application) => a.id)).toEqual(["a1"]);
     expect(data.profile.google_account_id).toBe("alice");
-    expect(JSON.stringify(data)).not.toContain("bob");
+    expect(JSON.stringify(data).toLowerCase()).not.toContain("bob");
+  });
+
+  it("lists the job seeker's own Access tokens in the JSON, by name and dates only", async () => {
+    const data = await (await get("json")).json();
+    expect(data.access_tokens).toEqual([
+      {
+        name: "Alice's cron job",
+        created_at: "2026-11-12T12:00:00Z",
+        expires_at: "2027-11-12T12:00:00Z",
+      },
+    ]);
   });
 
   it("downloads as a dated file that is never cached", async () => {
