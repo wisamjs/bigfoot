@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { SleepingBigfoot } from "@/components/illustrations";
 import { useIsClient } from "@/components/use-is-client";
 import { Badge, buttonClasses, Skeleton } from "@/components/ui";
 import { INTERVIEW_OPTIONS, type DatedInterview } from "@/lib/applications";
@@ -144,7 +145,9 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
             )}
           </div>
 
-          {agendaItems.length === 0 ? (
+          {agendaItems.length === 0 && offset === 0 ? (
+            <NothingComingUp />
+          ) : agendaItems.length === 0 ? (
             <p className="m-0 text-sm text-body">
               {interviews.length === 0
                 ? "Add a dated Interview to an Application and it shows up here."
@@ -226,6 +229,24 @@ const calendarCardClasses = "card flex flex-col gap-6 p-4 sm:p-6 md:flex-row";
 // As tall as a six-week month whatever the month, so five agenda items always fit (BIG-72).
 const gridColumnClasses = "md:min-h-[22.5rem] md:w-80 md:shrink-0";
 const agendaItemClasses = "flex items-center gap-3 rounded-control bg-surface px-3 py-2 text-sm";
+
+/**
+ * The agenda for this month or the upcoming window when it has nothing to list (BIG-97). A picked
+ * day always has Interviews, and other months keep their one line of text.
+ */
+function NothingComingUp() {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-center">
+      <SleepingBigfoot className="w-full max-w-44 min-h-0 shrink" />
+      <div>
+        <h4 className="m-0 mb-1 text-base font-semibold text-heading">All quiet in the woods</h4>
+        <p className="m-0 max-w-xs text-sm leading-[1.6] text-body">
+          No upcoming Interviews, so Bigfoot’s catching some sleep. Rest up too. Once one’s booked, it shows up here.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function DayCell({
   day,
