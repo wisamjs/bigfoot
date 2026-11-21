@@ -41,6 +41,15 @@ export type InterviewKind = (typeof INTERVIEW_KINDS)[number];
 /** The longest Interview notes the API stores, in characters. */
 export const INTERVIEW_NOTES_MAX_LENGTH = 20_000;
 
+/** The longest text each Application field stores, in characters; the API and database enforce them too. */
+export const APPLICATION_MAX_LENGTHS = {
+  company: 200,
+  title: 200,
+  location: 200,
+  salary: 100,
+  posting_url: 2_048,
+} as const;
+
 export type Interview = {
   id: string;
   application_id: string;

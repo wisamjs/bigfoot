@@ -12,6 +12,7 @@ import {
 } from "@/app/dashboard/actions";
 import { buttonClasses, dangerButtonClasses, inputClasses } from "@/components/ui";
 import {
+  APPLICATION_MAX_LENGTHS,
   INTERVIEW_KINDS,
   INTERVIEW_NOTES_MAX_LENGTH,
   INTERVIEW_OPTIONS,
@@ -259,6 +260,7 @@ function DetailsForm({
       id: `${id}-${name}`,
       value: values[name],
       onChange: (e: ChangeEvent<HTMLInputElement>) => setValues((prev) => ({ ...prev, [name]: e.target.value })),
+      maxLength: name === "applied_on" ? undefined : APPLICATION_MAX_LENGTHS[name],
       className: inputClasses,
     };
   }

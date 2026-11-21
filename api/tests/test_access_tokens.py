@@ -6,7 +6,7 @@ import psycopg
 import pytest
 from psycopg import sql
 
-from app.auth import ACCESS_TOKEN_PREFIX
+from app.auth import ACCESS_TOKEN_PATTERN, ACCESS_TOKEN_PREFIX, new_access_token
 from tests.conftest import TEST_SCHEMA
 
 
@@ -69,10 +69,25 @@ def test_expires_a_year_after_it_is_created(settings, client, token):
 
 
 @pytest.mark.parametrize(
-    "body", [{}, {"name": ""}, {"name": "   "}, {"name": "x" * 101}, {"name": "x", "scope": "read"}]
+    "body",
+    [
+        {},
+        {"name": ""},
+        {"name": "   "},
+        {"name": "x" * 101},
+        {"name": "x", "scope": "read"},
+        {"name": "Laptop \u202e cron job"},  # a right-to-left override shows the name reversed
+        {"name": "Lap\u2066top"},
+        {"name": "Lap\x00top"},
+        {"name": "Lap\ntop"},
+    ],
 )
 def test_rejects_an_invalid_name_or_extra_fields(client, token, body):
     assert client.post("/me/access-tokens", json=body, headers=token()).status_code == 422
+
+
+def test_accepts_emoji_with_joiners_in_the_name(client, token):
+    assert create(client, token(), "Laptop \U0001f468\u200d\U0001f4bb")["name"] == "Laptop \U0001f468\u200d\U0001f4bb"
 
 
 def test_trims_the_name(client, token):
@@ -138,8 +153,21 @@ def test_using_a_token_updates_last_used(client, token):
     assert first is not None
     assert first >= created["created_at"]
 
+    # Within a minute, a use isn't written again: parallel requests don't queue on the row.
     client.get("/applications", headers=bearer(created["token"]))
-    assert listed(client, token())[0]["last_used_at"] > first
+    assert listed(client, token())[0]["last_used_at"] == first
+
+
+def test_last_used_updates_again_after_a_minute(settings, client, token):
+    created = create(client, token())
+    client.get("/applications", headers=bearer(created["token"]))
+    query(settings, "update access_tokens set last_used_at = now() - interval '61 seconds'")
+    [(stale,)] = query(settings, "select last_used_at from access_tokens")
+
+    assert client.get("/applications", headers=bearer(created["token"])).status_code == 200
+
+    [(fresh,)] = query(settings, "select last_used_at from access_tokens")
+    assert fresh > stale
 
 
 def test_a_revoked_token_gets_401(client, token):
@@ -173,11 +201,37 @@ def test_an_expired_token_gets_401_and_stays_listed_until_revoked(settings, clie
         ACCESS_TOKEN_PREFIX,
         f"{ACCESS_TOKEN_PREFIX}never-issued",
         f"{ACCESS_TOKEN_PREFIX}' or '1'='1",
+        f"{ACCESS_TOKEN_PREFIX}{'a' * 43}",
     ],
 )
 def test_an_unknown_token_gets_401(client, token, secret):
     create(client, token())
     assert client.get("/applications", headers=bearer(secret)).status_code == 401
+
+
+def test_every_new_token_has_the_accepted_shape():
+    assert all(ACCESS_TOKEN_PATTERN.fullmatch(new_access_token()) for _ in range(200))
+
+
+@pytest.mark.parametrize(
+    "secret",
+    [
+        ACCESS_TOKEN_PREFIX,
+        f"{ACCESS_TOKEN_PREFIX}never-issued",
+        f"{ACCESS_TOKEN_PREFIX}{'a' * 42}",
+        f"{ACCESS_TOKEN_PREFIX}{'a' * 44}",
+        f"{ACCESS_TOKEN_PREFIX}{'a' * 42}=",
+        f"{ACCESS_TOKEN_PREFIX}{'a' * 10_000}",
+    ],
+)
+def test_a_malformed_token_is_refused_without_a_database_query(client, monkeypatch, secret):
+    def no_connection():
+        raise AssertionError("a malformed token reached the database")
+
+    monkeypatch.setattr(client.app.state.pool, "connection", no_connection)
+    res = client.get("/applications", headers=bearer(secret))
+    assert res.status_code == 401
+    assert res.json() == {"detail": "Invalid token"}
 
 
 def test_the_stored_hash_is_not_a_token(settings, client, token):

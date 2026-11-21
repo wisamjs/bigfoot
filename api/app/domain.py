@@ -37,3 +37,16 @@ InterviewKind = Literal[
 
 # Interview notes are plain text; generous enough that nobody writing by hand reaches it.
 INTERVIEW_NOTES_MAX_LENGTH = 20_000
+
+# The longest text each Application field stores, in characters. Generous for anything typed or
+# pasted by hand; they stop a script from storing megabytes per row (docs/adr/0003).
+COMPANY_MAX_LENGTH = 200
+TITLE_MAX_LENGTH = 200
+LOCATION_MAX_LENGTH = 200
+SALARY_MAX_LENGTH = 100
+POSTING_URL_MAX_LENGTH = 2_048
+
+# The most a job seeker can have, so one account can't fill the database: far more than a job
+# search needs.
+APPLICATIONS_MAX = 1_000
+INTERVIEWS_PER_APPLICATION_MAX = 50

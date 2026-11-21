@@ -7,6 +7,7 @@ Both resolve to the same job seeker id, so routes scope their queries the same w
 """
 
 import hashlib
+import re
 import secrets
 from typing import Annotated
 
@@ -17,8 +18,15 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 AUDIENCE = "bigfoot-api"
 ISSUER = "bigfoot-web"
 
-# Marks a bearer token as an Access token, for this module and for secret scanners.
+# Marks a bearer token as an Access token, so this module can tell the two kinds apart, and so a
+# secret scanner given this pattern can find a leaked one.
 ACCESS_TOKEN_PREFIX = "bigfoot_"
+# Every Access token new_access_token makes: the prefix, then 32 random bytes in URL-safe base64.
+# Anything else is refused before it reaches the database.
+ACCESS_TOKEN_PATTERN = re.compile(rf"^{ACCESS_TOKEN_PREFIX}[A-Za-z0-9_-]{{43}}$")
+# How stale last_used_at may get. Writing it on every request would make a script's parallel
+# requests wait on the token's row lock, and turn every read into a write.
+LAST_USED_RESOLUTION = "1 minute"
 
 # Declared so OpenAPI lists both schemes and Swagger UI shows them in its Authorize dialog.
 # auto_error is off so a missing or non-bearer header gets this module's 401, not FastAPI's.
@@ -78,11 +86,24 @@ def _from_web_token(request: Request, token: str) -> str:
 
 
 def _from_access_token(request: Request, token: str) -> str:
-    """One statement both checks the token and records its use. A revoked token has no row."""
+    """One statement both checks the token and records its use, at most once per
+    LAST_USED_RESOLUTION. A revoked token has no row."""
+    if not ACCESS_TOKEN_PATTERN.fullmatch(token):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token")
     with request.app.state.pool.connection() as conn:
         row = conn.execute(
-            "update access_tokens set last_used_at = now() where token_hash = %s and expires_at > now()"
-            " returning job_seeker_id",
+            f"""
+            with found as (
+                select id, job_seeker_id, last_used_at from access_tokens
+                where token_hash = %s and expires_at > now()
+            ), touched as (
+                update access_tokens set last_used_at = now() from found
+                where access_tokens.id = found.id
+                    and (found.last_used_at is null
+                         or found.last_used_at < now() - interval '{LAST_USED_RESOLUTION}')
+            )
+            select job_seeker_id from found
+            """,
             (access_token_hash(token),),
         ).fetchone()
     if row is None:
