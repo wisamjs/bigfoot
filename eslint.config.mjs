@@ -89,7 +89,8 @@ const eslintConfig = defineConfig([
   },
 
   // Architecture: who may import whom (CODING_STANDARDS.md, "Where code goes"). Anything not
-  // allowed below is an error, so a new link between features is a decision made here.
+  // allowed below is an error, so a new link between features is a decision made here. Every
+  // file in src belongs to an element (no-unknown-files), so a new folder can't slip past.
   {
     files: typeScriptFiles,
     plugins: { boundaries },
@@ -103,6 +104,8 @@ const eslintConfig = defineConfig([
         { type: "test", pattern: "src/test", partialMatch: false },
       ],
       "boundaries/files": [
+        // Next.js's root files: auth.ts, proxy.ts, instrumentation.ts and their tests.
+        { category: "server", pattern: "src/*.ts" },
         { category: "test", pattern: "src/**/*.test.{ts,tsx}" },
         { category: "action", pattern: "src/app/**/actions.ts" },
       ],
@@ -112,12 +115,16 @@ const eslintConfig = defineConfig([
         "error",
         {
           default: "disallow",
+          // An import of a local file outside every element is reported too, not skipped.
+          checkUnknownLocals: true,
           policies: [
             // The design system: anything that would make sense in a different app.
             { from: { element: { type: "ui" } }, allow: { to: { element: { types: { anyOf: ["ui", "hooks"] } } } } },
             { from: { element: { type: "hooks" } }, allow: { to: { element: { type: "hooks" } } } },
-            // Domain and server code, used by routes and components alike.
-            { from: { element: { type: "lib" } }, allow: { to: { element: { type: "lib" } } } },
+            // Domain and server code, used by routes and components alike; lib/dal.ts reads the
+            // session from auth.ts.
+            { from: { element: { type: "lib" } }, allow: [{ to: { element: { type: "lib" } } }, { to: { file: { categories: "server" } } }] },
+            { from: { file: { categories: "server" } }, allow: [{ to: { element: { type: "lib" } } }, { to: { file: { categories: "server" } } }] },
             // A feature builds on the design system, the domain, and the server actions it calls.
             {
               from: { element: { type: "feature" } },
@@ -136,13 +143,25 @@ const eslintConfig = defineConfig([
               allow: { to: { element: { type: "feature", captured: { feature: to } } } },
             })),
             // Routes put it all together.
-            { from: { element: { type: "app" } }, allow: { to: { element: { types: { anyOf: ["ui", "hooks", "feature", "lib", "app"] } } } } },
+            {
+              from: { element: { type: "app" } },
+              allow: [
+                { to: { element: { types: { anyOf: ["ui", "hooks", "feature", "lib", "app"] } } } },
+                { to: { file: { categories: "server" } } },
+              ],
+            },
             // Tests and their shared fixtures may reach anything.
-            { from: { file: { categories: "test" } }, allow: { to: { element: { types: { anyOf: ["ui", "hooks", "feature", "lib", "app", "test"] } } } } },
-            { from: { element: { type: "test" } }, allow: { to: { element: { types: { anyOf: ["ui", "hooks", "feature", "lib", "app", "test"] } } } } },
+            ...[{ file: { categories: "test" } }, { element: { type: "test" } }].map((from) => ({
+              from,
+              allow: [
+                { to: { element: { types: { anyOf: ["ui", "hooks", "feature", "lib", "app", "test"] } } } },
+                { to: { file: { categories: "server" } } },
+              ],
+            })),
           ],
         },
       ],
+      "boundaries/no-unknown-files": "error",
     },
   },
 

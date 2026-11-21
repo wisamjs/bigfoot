@@ -31,22 +31,20 @@ needs GitHub Pro), so the review is the only gate.
 
 ## Where code goes
 
-| Folder | Holds | May import |
-| --- | --- | --- |
-| `src/components/ui/` | The design system: anything that would make sense in a different app. shadcn/ui primitives (`npx shadcn add` writes here) and components built on them, one per file, no barrel. | `ui`, `hooks` |
-| `src/hooks/` | Hooks that know nothing about Bigfoot. | `hooks` |
-| `src/features/<feature>/` | Everything else in the UI, one folder per feature: `applications`, `dashboard`, `auth`, `account`, `legal`, `landing`, and `shell` (header, footer, wordmark, illustrations). Presentational and stateful components share the folder. | `ui`, `hooks`, `lib`, server actions (`src/app/**/actions.ts`), and the features listed below |
-| `src/lib/` | Domain and server code: types, allowed values and their labels, data access. No colours or components. | `lib` |
-| `src/app/` | Routes: thin files that put features together. | anything |
-
-The only links between features are `dashboard` → `applications`, `shell`; `landing` →
-`applications`, `auth`, `shell`; and `shell` → `auth`. A new one is a design decision: add it to
-`eslint.config.mjs` and this list in the same PR, or move the shared piece down into `ui/`.
+| Folder | Holds |
+| --- | --- |
+| `src/components/ui/` | The design system: anything that would make sense in a different app. shadcn/ui primitives (`npx shadcn add` writes here) and components built on them, one per file, no barrel. |
+| `src/hooks/` | Hooks that know nothing about Bigfoot. |
+| `src/features/<feature>/` | Everything else in the UI, one folder per feature: `applications`, `dashboard`, `auth`, `account`, `legal`, `landing`, and `shell` (header, footer, wordmark, illustrations). Presentational and stateful components share the folder. |
+| `src/lib/` | Domain and server code: types, allowed values and their labels, data access. No colours or components. |
+| `src/app/` | Routes: thin files that put features together. |
+| `src/*.ts` | Next.js's root files: `auth.ts`, `proxy.ts`, `instrumentation.ts`. |
 
 A "dumb" component is one in `ui/`: it can't reach the domain, a server action or a feature, so
-it can be reused anywhere. Within a feature, no folder split between presentational and stateful
-components. eslint-plugin-boundaries enforces the table, and `scripts/boundaries.test.ts` checks
-that it still does.
+it can be reused anywhere. Who may import whom, including the few links between features, lives
+in `eslint.config.mjs` ("Architecture"); `scripts/boundaries.test.ts` checks it still bites. A
+new link between features is a design decision for review: the alternative is moving the shared
+piece down into `ui/`.
 
 ## Lint rule groups
 
@@ -62,7 +60,7 @@ change to this table, so the table must say the same.
 | ESLint React `recommended-type-checked` | `src/**/*.{ts,tsx}` | React misuse: leaked `0` or `""` from `&&`, impure renders, setState in an effect, components defined inside components, unstable keys, refs not named `…Ref`, misused DOM props. Its two `disable-conflict-…` presets turn off the `eslint-plugin-react` and `react-hooks` rules it copies, so nothing is reported twice; `react-hooks` keeps `rules-of-hooks` and `exhaustive-deps`. |
 | Performance (ESLint React, core, `eslint-plugin-unicorn`) | `src/**/*.{ts,tsx}` | The `vercel-react-best-practices` rules a linter can check: default props and context values rebuilt on every render (`rerender-memo-with-default-value`), `await` in a loop (`async-parallel`), `export *` barrels (`bundle-barrel-imports`), `.sort()` mutating in place (`js-tosorted-immutable`), `.filter()` where `.find()` or `.some()` stops early (`js-early-exit`), `.map().flat()` (`js-flatmap-filter`), and `Array#includes` on a fixed list (`js-set-map-lookups`). The rest of the skill is for review. |
 | `jsx-a11y` `strict`, plus every live rule it leaves off | `**/*.{jsx,tsx}` | Semantic HTML and ARIA mistakes: a `role` where a native element exists (`prefer-tag-over-role`: `<fieldset>`, `<section>`, `<output>`), controls with no label, focusable elements hidden with `aria-hidden`, vague link text, missing labels and alt text, invalid roles, click handlers on non-interactive elements, `autoFocus`, `tabIndex` on non-interactive elements. Heading order and landmarks are runtime checks in `npm run a11y`. |
-| `eslint-plugin-boundaries` (`boundaries/dependencies`) | `src/**/*.{ts,tsx}` | Imports that cross the layers in "Where code goes": the design system reaching into a feature, the domain or a server action; `lib` importing UI; a feature importing another feature it isn't listed as using, or a route; production code importing test fixtures. Anything not allowed is an error. |
+| `eslint-plugin-boundaries` (`dependencies`, `no-unknown-files`) | `src/**/*.{ts,tsx}` | Imports that cross the layers in "Where code goes": the design system reaching into a feature, the domain, `auth.ts` or a server action; `lib` importing UI; a feature importing a feature the config doesn't link it to, or a route; production code importing test fixtures. Anything not allowed is an error, and a file in a folder no rule covers is an error too. |
 | Testing Library (React) and jest-dom | `**/*.test.tsx` | Tests that reach into the DOM instead of querying as a user would, misnamed render results, and assertions with a clearer jest-dom matcher. |
 
 An inline `eslint-disable` names its rule and gives a reason after `--`. Today's exceptions:

@@ -18,6 +18,7 @@ const IN = {
   landing: "src/features/landing/hero.tsx",
   shell: "src/features/shell/app-footer.tsx",
   authTest: "src/features/auth/auth-card.test.tsx",
+  server: "src/proxy.ts",
 };
 
 async function blocked(from: string, source: string) {
@@ -42,6 +43,8 @@ describe("import boundaries", () => {
     [IN.applications, "@/features/dashboard/coming-up-calendar"],
     [IN.auth, "@/app/page"],
     [IN.auth, "@/test/applications"],
+    [IN.ui, "@/auth"],
+    [IN.auth, "@/auth"],
   ])("stop %s importing %s", async (from, source) => {
     expect(await blocked(from, source)).toBe(true);
   });
@@ -56,7 +59,19 @@ describe("import boundaries", () => {
     [IN.shell, "@/features/auth/auth-button"],
     [IN.app, "@/features/dashboard/dashboard-pipeline"],
     [IN.authTest, "@/test/applications"],
+    [IN.lib, "@/auth"],
+    [IN.app, "@/auth"],
+    [IN.server, "@/lib/session"],
   ])("let %s import %s", async (from, source) => {
     expect(await blocked(from, source)).toBe(false);
+  });
+
+  it("flag a file in src that belongs to no element, such as a new top-level folder", async () => {
+    // The file doesn't exist, so the TypeScript project service can't parse it; this rule needs
+    // no types, so lint it without them.
+    const untyped = new ESLint({ overrideConfig: { languageOptions: { parserOptions: { projectService: false } } } });
+    const [result] = await untyped.lintText("export const x = 1;\n", { filePath: "src/utils/probe.ts" });
+    expect(result.messages.filter((message) => message.fatal)).toEqual([]);
+    expect(result.messages.map((message) => message.ruleId)).toContain("boundaries/no-unknown-files");
   });
 });
