@@ -90,6 +90,29 @@ const eslintConfig = defineConfig([
   // ARIA: jsx-a11y's strict config. eslint-config-next registers the plugin, so only the rules
   // are added here.
   { files: ["**/*.{jsx,tsx}"], rules: asErrors(jsxA11y.flatConfigs.strict).rules },
+  // Semantic HTML: every live jsx-a11y rule that strict leaves off. The rest it leaves off
+  // (accessible-emoji, label-has-for, no-onchange) are deprecated.
+  {
+    files: ["**/*.{jsx,tsx}"],
+    rules: {
+      "jsx-a11y/prefer-tag-over-role": "error",
+      "jsx-a11y/no-aria-hidden-on-focusable": "error",
+      "jsx-a11y/anchor-ambiguous-text": "error",
+      "jsx-a11y/lang": "error",
+      // strict's own options, plus td: a table cell is not a control, and any control inside one
+      // is checked on its own.
+      "jsx-a11y/control-has-associated-label": [
+        "error",
+        {
+          ...jsxA11y.flatConfigs.strict.rules["jsx-a11y/control-has-associated-label"][1],
+          ignoreElements: [
+            ...jsxA11y.flatConfigs.strict.rules["jsx-a11y/control-has-associated-label"][1].ignoreElements,
+            "td",
+          ],
+        },
+      ],
+    },
+  },
 
   // Testing Library and jest-dom, in component tests only.
   { ...asErrors(testingLibrary.configs["flat/react"]), files: componentTestFiles },
