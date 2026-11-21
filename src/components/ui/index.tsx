@@ -140,9 +140,7 @@ export function Skeleton({ className = "" }: { className?: string }) {
 export function LoadingRegion({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div aria-busy="true">
-      <p role="status" className="sr-only">
-        {label}
-      </p>
+      <output className="sr-only">{label}</output>
       {children}
     </div>
   );

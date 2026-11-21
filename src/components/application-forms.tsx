@@ -111,11 +111,12 @@ export function ApplicationEditor({
           <p className="m-0 text-sm text-body">No Interviews yet. Add one when you have a conversation lined up.</p>
         ) : (
           <ul className="m-0 flex list-none flex-col gap-3 p-0">
-            {app.interviews.map((interview) => (
+            {app.interviews.map((interview, index) => (
               <InterviewRow
                 key={interview.id}
                 app={app}
                 interview={interview}
+                position={index + 1}
                 disabled={isPending}
                 save={save}
               />
@@ -257,7 +258,7 @@ function DetailsForm({
     return {
       id: `${id}-${name}`,
       value: values[name],
-      onChange: (e: ChangeEvent<HTMLInputElement>) => setValues({ ...values, [name]: e.target.value }),
+      onChange: (e: ChangeEvent<HTMLInputElement>) => setValues((prev) => ({ ...prev, [name]: e.target.value })),
       className: inputClasses,
     };
   }
@@ -307,7 +308,7 @@ function DetailsForm({
           <input type="text" placeholder="Remote" {...field("location")} />
         </div>
         {salaryHidden ? (
-          <div role="group" aria-labelledby={`${id}-salary-label`}>
+          <fieldset aria-labelledby={`${id}-salary-label`} className="m-0 min-w-0 border-0 p-0">
             <span id={`${id}-salary-label`} className={labelClasses}>
               Salary (optional)
             </span>
@@ -324,7 +325,7 @@ function DetailsForm({
                 Reveal
               </Button>
             </div>
-          </div>
+          </fieldset>
         ) : (
           <div>
             <label htmlFor={`${id}-salary`} className={labelClasses}>
@@ -381,16 +382,18 @@ function DetailsForm({
 function InterviewRow({
   app,
   interview,
+  position,
   disabled,
   save,
 }: {
   app: Application;
   interview: Interview;
+  /** 1 for the Application's first Interview. */
+  position: number;
   disabled: boolean;
   save: (run: () => Promise<ActionResult>) => void;
 }) {
   const saved = toLocalInput(interview.at);
-  const position = app.interviews.indexOf(interview) + 1;
   const label = `Interview ${position}`;
 
   return (

@@ -195,7 +195,7 @@ function Card({
                 aria-pressed={hideCompleted}
                 aria-label={`Hide completed Interviews, ${job.company}`}
                 title={hideCompleted ? "Show completed Interviews" : "Hide completed Interviews"}
-                onClick={() => setHideCompleted(!hideCompleted)}
+                onClick={() => setHideCompleted((hide) => !hide)}
                 className={cardControlClasses}
               >
                 {hideCompleted ? <Eye className="size-4" aria-hidden /> : <EyeOff className="size-4" aria-hidden />}
@@ -208,7 +208,7 @@ function Card({
                 aria-controls={bodyId}
                 aria-label={`${collapsed ? "Expand" : "Collapse"} card, ${job.company}`}
                 title={collapsed ? "Expand card" : "Collapse card"}
-                onClick={() => setCollapsed(!collapsed)}
+                onClick={() => setCollapsed((c) => !c)}
                 className={cardControlClasses}
               >
                 {collapsed ? <ChevronDown className="size-4" aria-hidden /> : <ChevronUp className="size-4" aria-hidden />}

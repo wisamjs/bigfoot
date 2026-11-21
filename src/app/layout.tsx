@@ -3,14 +3,17 @@ import localFont from "next/font/local";
 import { buttonClasses } from "@/components/ui";
 import "./globals.css";
 
-// Ubuntu, latin subset, shipped in the repo (licence: fonts/UFL.txt) so dev, smoke and
-// build never need to reach Google Fonts.
-const ubuntu = localFont({
-  variable: "--font-ubuntu",
+// Allo (allo-font, SIL OFL 1.1), self-hosted from the npm package so dev, smoke and build
+// never reach a font CDN. The full variable font, so globals.css can set its roundness axis;
+// one file covers every weight from 100 to 900.
+const allo = localFont({
+  variable: "--font-allo",
   src: [
-    { path: "./fonts/ubuntu-latin-400.woff2", weight: "400", style: "normal" },
-    { path: "./fonts/ubuntu-latin-500.woff2", weight: "500", style: "normal" },
-    { path: "./fonts/ubuntu-latin-700.woff2", weight: "700", style: "normal" },
+    {
+      path: "../../node_modules/allo-font/fonts/webfonts/AlloVariable.woff2",
+      weight: "100 900",
+      style: "normal",
+    },
   ],
 });
 
@@ -22,7 +25,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${ubuntu.variable} antialiased`}>
+    <html lang="en" className={`${allo.variable} antialiased`}>
       <body className="min-h-dvh font-sans">
         {/* First stop for Tab on every page. Each page's <main> has id="main". */}
         <a href="#main" className={`skip-link ${buttonClasses("brand")}`}>

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Captures a page from scripts/pages.mjs at any width, in light and dark, to see a UI change the
 // way job seekers do: narrow columns, wrapping labels, dark-mode contrast. Signed in, it uses its
-// own job seeker holding the Applications from scripts/dev-applications.mjs, emptied afterwards.
+// own job seeker holding the Applications from scripts/dev-applications.mjs, emptied afterwards
+// (none, for a state with `applications: "none"`).
 //   npm run capture -- /dashboard --width 1000 --selector 'section[aria-labelledby="pipeline-title"]'
 //   npm run capture -- /dashboard --state application-panel --selector '[role=dialog][data-state=open]' --theme dark
 // Options:
@@ -16,7 +17,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { enterState, launchChrome, openPage } from "./chrome.mjs";
-import { withTestApplications } from "./dev-applications.mjs";
+import { withNoApplications, withTestApplications } from "./dev-applications.mjs";
 import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
 import { PAGES } from "./pages.mjs";
 import { ensureServers } from "./servers.mjs";
@@ -59,6 +60,7 @@ const { base } = await ensureServers(
 );
 // Not the dev-session test user, so whatever that user has stays as it was.
 const CAPTURE_JOB_SEEKER_ID = "capture-user";
+const CAPTURE_EMPTY_JOB_SEEKER_ID = "capture-empty-user";
 const slug = [path.replaceAll("/", "-").replace(/^-/, "") || "home", state?.name, width].filter(Boolean).join("-");
 mkdirSync(options.out, { recursive: true });
 
@@ -98,10 +100,14 @@ try {
   await chrome.send("Page.enable");
   await chrome.send("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 2, mobile: false });
   if (signedIn) {
-    await withTestApplications(CAPTURE_JOB_SEEKER_ID, async () => {
+    const [jobSeekerId, holding] =
+      state?.applications === "none"
+        ? [CAPTURE_EMPTY_JOB_SEEKER_ID, withNoApplications]
+        : [CAPTURE_JOB_SEEKER_ID, withTestApplications];
+    await holding(jobSeekerId, async () => {
       await chrome.send("Network.setCookie", {
         name: SESSION_COOKIE,
-        value: await createTestSession(CAPTURE_JOB_SEEKER_ID),
+        value: await createTestSession(jobSeekerId),
         url: base,
       });
       await captureAll(chrome);
