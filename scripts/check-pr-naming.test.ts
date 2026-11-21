@@ -34,6 +34,21 @@ describe("prNamingProblems", () => {
     expect(prNamingProblems({ ...ok, body: "Closes BIG-3" })).toHaveLength(1);
   });
 
+  it("accepts a Dependabot PR, which has no ticket", () => {
+    expect(
+      prNamingProblems({
+        author: "dependabot[bot]",
+        branch: "dependabot/npm_and_yarn/multi-f0fdbaf0b1",
+        title: "Bump minimatch and typescript-eslint",
+        body: "Bumps [minimatch]…",
+      }),
+    ).toEqual([]);
+  });
+
+  it("still checks a person's PR on a dependabot/ branch", () => {
+    expect(prNamingProblems({ author: "wisamjs", branch: "dependabot/npm_and_yarn/x", title: "Bump x", body: "" })).toHaveLength(3);
+  });
+
   it("reports everything when nothing is set", () => {
     expect(prNamingProblems({})).toHaveLength(3);
   });
