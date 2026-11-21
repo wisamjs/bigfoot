@@ -1,14 +1,6 @@
-import { Suspense } from "react";
-import { redirect } from "next/navigation";
 import { GoogleAuthButton } from "@/components/auth-button";
+import { RedirectIfSignedIn } from "@/components/redirect-if-signed-in";
 import { SignInNote } from "@/components/sign-in-note";
-import { findCurrentUser } from "@/lib/dal";
-
-/** Signed-in job seekers have nothing to do here. Reads the session, so it needs a Suspense boundary. */
-async function RedirectIfSignedIn() {
-  if (await findCurrentUser()) redirect("/dashboard");
-  return null;
-}
 
 /**
  * The body of /sign-in and /sign-up. Both pages render it unchanged: signing up and signing in
@@ -17,9 +9,7 @@ async function RedirectIfSignedIn() {
 export function AuthCard() {
   return (
     <>
-      <Suspense>
-        <RedirectIfSignedIn />
-      </Suspense>
+      <RedirectIfSignedIn />
       <div className="card mx-auto max-w-[480px] p-8 text-center">
         <h1 className="m-0 mb-2 text-[28px] font-bold leading-[1.15] text-heading md:text-[32px]">
           Welcome to Bigfoot

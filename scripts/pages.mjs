@@ -10,7 +10,7 @@
 //             empty states.
 export const PAGES = [
   { path: "/", signedIn: false, expect: "Find your Bigfoot" },
-  { path: "/", signedIn: true, expect: "Find your Bigfoot" },
+  { path: "/", signedIn: true, redirect: true },
   { path: "/sign-in", signedIn: false, expect: "Continue with Google" },
   { path: "/sign-in", signedIn: true, redirect: true },
   { path: "/sign-up", signedIn: false, expect: "Continue with Google" },
