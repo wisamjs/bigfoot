@@ -307,7 +307,7 @@ function DetailsForm({
           <input type="text" placeholder="Remote" {...field("location")} />
         </div>
         {salaryHidden ? (
-          <div role="group" aria-labelledby={`${id}-salary-label`}>
+          <fieldset aria-labelledby={`${id}-salary-label`} className="m-0 min-w-0 border-0 p-0">
             <span id={`${id}-salary-label`} className={labelClasses}>
               Salary (optional)
             </span>
@@ -325,7 +325,7 @@ function DetailsForm({
                 Reveal
               </button>
             </div>
-          </div>
+          </fieldset>
         ) : (
           <div>
             <label htmlFor={`${id}-salary`} className={labelClasses}>
