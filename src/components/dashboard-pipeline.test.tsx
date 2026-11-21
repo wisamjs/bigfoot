@@ -5,7 +5,7 @@ import * as actions from "@/app/dashboard/actions";
 import { application, interview } from "@/test/applications";
 import { DashboardPipeline } from "./dashboard-pipeline";
 
-// Server Actions are mocked at their module: what the dialogs send, not how it reaches the API.
+// Server Actions are mocked at their module: what the panel sends, not how it reaches the API.
 vi.mock("@/app/dashboard/actions", () => ({
   createApplicationAction: vi.fn(),
   updateApplicationAction: vi.fn(),
@@ -27,28 +27,29 @@ const technical = interview("i1", { application_id: "birch", kind: "technical", 
 const birch = application("birch", { company: "Birch", location: "Remote", interviews: [technical] });
 const rejected = application("umbrella", { company: "Umbrella", status: "done", outcome: "rejected", is_waiting: false });
 
-function renderDashboard() {
+function setUpDashboard() {
   const user = userEvent.setup();
   render(<DashboardPipeline applications={[birch, rejected]} subtitle="1 open" />);
   return user;
 }
 
 async function openBirch() {
-  const user = renderDashboard();
-  await user.click(screen.getByRole("button", { name: /^Edit Birch\b/ }));
-  return { user, dialog: screen.getByRole("dialog", { name: "Edit application" }) };
+  const user = setUpDashboard();
+  await user.click(screen.getByRole("button", { name: /^Open Birch\b/ }));
+  return { user, dialog: screen.getByRole("dialog", { name: "Birch" }) };
 }
 
 describe("Dashboard Pipeline", () => {
   it("shows Done Applications only after Show done", async () => {
-    const user = renderDashboard();
+    const user = setUpDashboard();
     expect(screen.queryByRole("region", { name: "Done" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("checkbox", { name: "Show done (1)" }));
     expect(within(screen.getByRole("region", { name: "Done" })).getByText("Umbrella")).toBeInTheDocument();
   });
 
-  it("opens a card's Application for editing", async () => {
+  it("opens a card's Application in the side panel", async () => {
     const { dialog } = await openBirch();
+    expect(dialog).toHaveTextContent("Engineer");
     expect(within(dialog).getByLabelText("Company")).toHaveValue("Birch");
   });
 });
@@ -117,7 +118,7 @@ describe("deleting an Application", () => {
   it("asks for confirmation first, and Cancel keeps the Application", async () => {
     const { user, confirm } = await askToDelete();
     expect(confirm).toHaveTextContent("Birch, Engineer will be deleted");
-    expect(screen.queryByRole("dialog", { name: "Edit application" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Birch" })).not.toBeInTheDocument();
 
     await user.click(within(confirm).getByRole("button", { name: "Cancel" }));
     expect(actions.deleteApplicationAction).not.toHaveBeenCalled();

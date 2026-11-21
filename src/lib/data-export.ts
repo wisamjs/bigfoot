@@ -1,7 +1,13 @@
 // A job seeker's copy of their data (BIG-12): a CSV of their Applications for spreadsheets, and
 // JSON with everything Bigfoot holds about them. Served by src/app/account/export/route.ts.
 
-import { INTERVIEW_OPTIONS, OUTCOME_OPTIONS, STATUS_OPTIONS, type Application } from "@/lib/applications";
+import {
+  INTERVIEW_OPTIONS,
+  OUTCOME_OPTIONS,
+  STATUS_OPTIONS,
+  type Application,
+  type Interview,
+} from "@/lib/applications";
 import type { AccessToken, JobSeekerRecord } from "@/lib/api";
 import type { CurrentUser } from "@/lib/dal";
 
@@ -49,15 +55,26 @@ const CSV_COLUMNS: { header: string; value: (app: Application) => string | null 
   { header: "Outcome", value: (a) => (a.outcome ? OUTCOME_OPTIONS[a.outcome].label : null) },
   {
     header: "Interviews",
+    value: (a) => a.interviews.map(interviewName).join("; "),
+  },
+  {
+    // One paragraph per Interview that has notes, named as in the Interviews column.
+    header: "Interview notes",
     value: (a) =>
       a.interviews
-        .map((i) => `${INTERVIEW_OPTIONS[i.kind].label} (${i.at ? isoUtc(i.at) : "no date"})`)
-        .join("; "),
+        .filter((i) => i.notes)
+        .map((i) => `${interviewName(i)}: ${i.notes}`)
+        .join("\n\n"),
   },
   { header: "Sample Application", value: (a) => (a.is_sample ? "Yes" : "No") },
   { header: "Created", value: (a) => isoUtc(a.created_at) },
   { header: "Updated", value: (a) => isoUtc(a.updated_at) },
 ];
+
+/** `Technical (2026-11-11T15:30:00Z)`, or `Technical (no date)`. */
+function interviewName(interview: Interview) {
+  return `${INTERVIEW_OPTIONS[interview.kind].label} (${interview.at ? isoUtc(interview.at) : "no date"})`;
+}
 
 /** `2026-11-11T15:30:00Z`: ISO 8601 in UTC, to the second, which spreadsheets read as a date. */
 function isoUtc(timestamp: string) {
@@ -74,8 +91,9 @@ export function applicationsCsv(applications: Application[]) {
 }
 
 /**
- * Everything Bigfoot holds about the job seeker: their profile, every Application field, and their
- * Access tokens' names and dates. Never a token's secret: Bigfoot stores only a hash of it.
+ * Everything Bigfoot holds about the job seeker: their profile, every Application field (each
+ * Interview's notes included), and their Access tokens' names and dates. Never a token's secret:
+ * Bigfoot stores only a hash of it.
  */
 export function dataExportJson(
   user: CurrentUser,

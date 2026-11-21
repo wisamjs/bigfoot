@@ -8,8 +8,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [Google],
   session: { maxAge: SESSION_MAX_AGE_DAYS * 24 * 60 * 60 },
   pages: {
-    // Send sign-in prompts and auth errors back to the landing page.
-    signIn: "/",
+    // Send sign-in prompts to the sign-in page and auth errors back to the landing page.
+    signIn: "/sign-in",
     error: "/",
   },
   callbacks: {

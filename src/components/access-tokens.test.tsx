@@ -43,6 +43,12 @@ describe("AccessTokens", () => {
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
   });
 
+  /** The value a token's list item gives for `label` (its <dd> beside that <dt>). */
+  function fact(item: HTMLElement, label: string) {
+    const terms = within(item).getAllByRole("term");
+    return within(item).getAllByRole("definition")[terms.findIndex((term) => term.textContent === label)];
+  }
+
   it("lists each token's name, created date, last use and expiry, and never a secret", () => {
     render(
       <AccessTokens
@@ -52,10 +58,10 @@ describe("AccessTokens", () => {
     );
     const [first, second] = screen.getAllByRole("listitem");
     expect(within(first).getByText("Calendar cron job")).toBeVisible();
-    expect(within(first).getByText("Created").nextSibling).toHaveTextContent("2026");
-    expect(within(first).getByText("Last used").nextSibling).toHaveTextContent("Never");
-    expect(within(first).getByText("Expires").nextSibling).toHaveTextContent("2027");
-    expect(within(second).getByText("Last used").nextSibling).toHaveTextContent("2026");
+    expect(fact(first, "Created")).toHaveTextContent("2026");
+    expect(fact(first, "Last used")).toHaveTextContent("Never");
+    expect(fact(first, "Expires")).toHaveTextContent("2027");
+    expect(fact(second, "Last used")).toHaveTextContent("2026");
     expect(document.body).not.toHaveTextContent("bigfoot_");
   });
 

@@ -700,7 +700,7 @@
           "Interviews"
         ],
         "summary": "Add an Interview",
-        "description": "Add an Interview to an Application. Kinds can repeat; the date is optional.",
+        "description": "Add an Interview to an Application. Kinds can repeat; the date and Interview notes are optional.",
         "operationId": "create_interview_applications__application_id__interviews_post",
         "security": [
           {
@@ -784,7 +784,7 @@
           "Interviews"
         ],
         "summary": "Edit an Interview",
-        "description": "Change an Interview's kind or date. Only the fields sent change; send null for `at` to clear the date.",
+        "description": "Change an Interview's kind, date or Interview notes.\n\nOnly the fields sent change; send null for `at` to clear the date, or for `notes` to clear them.",
         "operationId": "update_interview_applications__application_id__interviews__interview_id__patch",
         "security": [
           {
@@ -878,7 +878,7 @@
           "Interviews"
         ],
         "summary": "Delete an Interview",
-        "description": "Delete an Interview, for example a cancelled one.",
+        "description": "Delete an Interview, for example a cancelled one, and its Interview notes with it.",
         "operationId": "delete_interview_applications__application_id__interviews__interview_id__delete",
         "security": [
           {
@@ -1574,6 +1574,21 @@
               "2026-11-20T17:00:00Z"
             ]
           },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Interview notes (GLOSSARY.md): what the job seeker wrote about this Interview, as plain text of at most 20,000 characters. Null when there are none.",
+            "examples": [
+              "Asked about caching trade-offs. Next time, draw the diagram first."
+            ]
+          },
           "completed": {
             "type": "boolean",
             "title": "Completed",
@@ -1599,6 +1614,7 @@
           "application_id",
           "kind",
           "at",
+          "notes",
           "completed",
           "created_at",
           "updated_at"
@@ -1647,6 +1663,22 @@
             "description": "When the Interview happens, with a time zone. Null when it has no date yet.",
             "examples": [
               "2026-11-20T17:00:00Z"
+            ]
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Interview notes (GLOSSARY.md): what the job seeker wrote about this Interview, as plain text of at most 20,000 characters. Null when there are none. Blank is stored as null.",
+            "examples": [
+              null
             ]
           }
         },
@@ -1707,12 +1739,28 @@
             "examples": [
               "2026-11-27T15:30:00Z"
             ]
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Interview notes (GLOSSARY.md): what the job seeker wrote about this Interview, as plain text of at most 20,000 characters. Null when there are none. Blank is stored as null.",
+            "examples": [
+              "Asked about caching trade-offs. Next time, draw the diagram first."
+            ]
           }
         },
         "additionalProperties": false,
         "type": "object",
         "title": "InterviewPatch",
-        "description": "Only the fields sent are changed; send null for `at` to clear the date."
+        "description": "Only the fields sent are changed; send null for `at` to clear the date, or for `notes` to clear them."
       },
       "JobSeeker": {
         "properties": {

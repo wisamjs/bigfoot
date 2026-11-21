@@ -28,3 +28,21 @@ screen, in the same PR. A definition that names a removed view, column or contro
 Approve only when the PR's latest `CI` and `PR naming` runs succeeded. A cancelled or skipped
 run is not a pass: rerun it. GitHub can't enforce this on this private repo (branch protection
 needs GitHub Pro), so the review is the only gate.
+
+## Lint rule groups
+
+`npm run lint` (`eslint.config.mjs`) fails on any warning. It runs in pre-commit (inside
+`npm run check`) and as its own `lint` job in CI. Every shared config below is raised to errors.
+
+| Group | Files | Guards against |
+| --- | --- | --- |
+| `eslint-config-next` (core-web-vitals, TypeScript) | all | Next.js pitfalls (`<img>`, `<a>` for routes, sync scripts) and TypeScript mistakes. |
+| `react-hooks` | all | Hooks called conditionally, and effects missing a dependency (`exhaustive-deps` is an error). |
+| ESLint React `recommended-type-checked` | `src/**/*.{ts,tsx}` | React misuse: leaked `0` or `""` from `&&`, impure renders, unstable keys and context values, refs not named `…Ref`, misused DOM props. Its `disable-conflict-eslint-plugin-react` preset turns off the overlapping `eslint-plugin-react` rules so nothing is reported twice. |
+| `jsx-a11y` `strict` | `**/*.{jsx,tsx}` | ARIA and HTML mistakes: missing labels and alt text, invalid roles, click handlers on non-interactive elements, `autoFocus`, `tabIndex` on non-interactive elements. Runtime checks stay with `npm run a11y`. |
+| Testing Library (React) and jest-dom | `**/*.test.tsx` | Tests that reach into the DOM instead of querying as a user would, misnamed render results, and assertions with a clearer jest-dom matcher. |
+
+An inline `eslint-disable` names its rule and gives a reason after `--`. Today's exceptions:
+`autoFocus` where a dialog moves focus on purpose, a focusable scrolling region, the calendar
+reading today's date while it renders, and the skeleton tests, which check `aria-hidden` shapes
+that have no role or text to query by.

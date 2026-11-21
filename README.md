@@ -100,6 +100,8 @@ You need Node.js 24, [uv](https://docs.astral.sh/uv/getting-started/installation
 
 With `API_DOCS="true"` in `.env.local` (as in `.env.example`), the API serves interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs) (Swagger UI), [`/redoc`](http://localhost:8000/redoc) and [`/openapi.json`](http://localhost:8000/openapi.json). They are off unless `API_DOCS` is `true`, so never set it in production.
 
+A production server checks its environment variables when it starts, and a Vercel build checks them before deploying: both fail with one message naming every missing variable. In Vercel's Production environment, `API_URL` must also not be a `localhost` address and `API_DOCS` must not be `true`. The lists are in [`src/lib/env.ts`](src/lib/env.ts) (Next.js) and [`api/app/settings.py`](api/app/settings.py) (API), and a test keeps them matching `.env.example`.
+
 To send requests from the docs, click **Authorize** and paste an Access token from your local Account page. Or, to act as the test job seeker (and to reach the Account routes, which Access tokens can't), print a web token (valid for an hour, signed with `API_SECRET`):
 
 ```bash

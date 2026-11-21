@@ -51,7 +51,8 @@ function applications() {
     { company: "Ramp", title: "Staff Engineer", status: "done", outcome: "offer", interviews: [["onsite_loop", -6, 10]] },
     { company: "Vercel", title: "Frontend Engineer", status: "done", outcome: "rejected", interviews: [["technical", -8, 10]] },
     { company: "Plaid", title: "Software Engineer", status: "done", outcome: "withdrawn", interviews: [["recruiter_screen"]] },
-  ].map((a) => ({ applied_on, ...a }));
+      // Each has a salary, so the panel's hidden salary and its Reveal button are captured and checked.
+  ].map((a) => ({ applied_on, salary: "$150k–$180k", ...a }));
 }
 
 export async function addTestApplications(jobSeekerId = TEST_JOB_SEEKER_ID) {
@@ -66,6 +67,8 @@ export async function addTestApplications(jobSeekerId = TEST_JOB_SEEKER_ID) {
     const application = await call(jobSeekerId, "POST", "/applications", fields);
     for (const [kind, days, hour] of interviews) {
       const body = days === undefined ? { kind } : { kind, at: at(days, hour) };
+      // Every completed, dated Interview has Interview notes, so cards show the notes mark.
+      if (days < 0) body.notes = "Went well. Asked about past projects.\n\nNext time: have a question ready about the team.";
       await call(jobSeekerId, "POST", `/applications/${application.id}/interviews`, body);
     }
   }

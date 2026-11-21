@@ -8,8 +8,12 @@
 //             element matching `click` whose text includes `text`, or types `value` into the first
 //             element matching `fill`; `expect` is text the state must show.
 export const PAGES = [
-  { path: "/", signedIn: false, expect: "Sign up" },
-  { path: "/", signedIn: true, expect: "Sign up" },
+  { path: "/", signedIn: false, expect: "Find your Bigfoot" },
+  { path: "/", signedIn: true, expect: "Find your Bigfoot" },
+  { path: "/sign-in", signedIn: false, expect: "Continue with Google" },
+  { path: "/sign-in", signedIn: true, redirect: true },
+  { path: "/sign-up", signedIn: false, expect: "Continue with Google" },
+  { path: "/sign-up", signedIn: true, redirect: true },
   { path: "/privacy", signedIn: false, expect: "Privacy Policy" },
   { path: "/privacy", signedIn: true, expect: "Privacy Policy" },
   { path: "/terms", signedIn: false, expect: "Terms of Service" },
@@ -22,8 +26,16 @@ export const PAGES = [
     states: [
       { name: "show-done", steps: [{ click: "label", text: "Show done" }], expect: "Rejected" },
       {
-        name: "edit-dialog",
+        name: "application-panel",
         steps: [{ click: 'section[aria-label="Interview scheduled"] li button' }],
+        expect: "Save details",
+      },
+      {
+        name: "salary-revealed",
+        steps: [
+          { click: 'section[aria-label="Interview scheduled"] li button' },
+          { click: "dialog[open] button", text: "Reveal" },
+        ],
         expect: "Save details",
       },
       {
@@ -34,14 +46,16 @@ export const PAGES = [
         ],
         expect: "This can’t be undone",
       },
-      { name: "add-dialog", steps: [{ click: "button", text: "Add application" }], expect: "Job posting URL" },
+      { name: "add-panel", steps: [{ click: "button", text: "Add application" }], expect: "Job posting URL" },
     ],
   },
   { path: "/account", signedIn: false, redirect: true },
   {
     path: "/account",
     signedIn: true,
-    expect: "Delete account",
+    // Text only the loaded page shows: the skeleton has the headings, so waiting for one can catch
+    // the page mid-stream, with the skeleton and the loaded page both in the DOM.
+    expect: "to confirm",
     states: [
       {
         name: "token-created",

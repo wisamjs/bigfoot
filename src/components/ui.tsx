@@ -39,26 +39,21 @@ export function Container({ children, className = "" }: { children: ReactNode; c
   return <div className={`mx-auto w-full max-w-[1152px] px-6 ${className}`}>{children}</div>;
 }
 
-/** Section header: eyebrow, h2 (28/36/44), lead (20px), 48px below. */
+/** Section header: h2 (28/36/44), lead (20px), 48px below. */
 export function SectionHeader({
-  eyebrow,
   title,
   lead,
   id,
 }: {
-  eyebrow: string;
   title: string;
   lead: string;
   id: string;
 }) {
   return (
     <div className="mx-auto mb-12 max-w-[768px] text-center">
-      <Badge tone="brand" pill>
-        {eyebrow}
-      </Badge>
       <h2
         id={id}
-        className="mt-4 text-[28px] font-bold leading-[1.15] text-heading md:text-[36px] lg:text-[44px]"
+        className="text-[28px] font-bold leading-[1.15] text-heading md:text-[36px] lg:text-[44px]"
       >
         {title}
       </h2>
@@ -131,5 +126,29 @@ export function SampleBadge() {
         Sample
       </Badge>
     </span>
+  );
+}
+
+/**
+ * A grey shape standing in for content that is still loading (globals.css `.skeleton`). Size it
+ * with the classes of the content it replaces. Hidden from assistive tech: the surrounding
+ * LoadingRegion says what is loading.
+ */
+export function Skeleton({ className = "" }: { className?: string }) {
+  return <span aria-hidden className={`skeleton ${className}`} />;
+}
+
+/**
+ * Wraps a loading state: one busy region that tells screen readers what is loading. Text that
+ * doesn't wait on data (headings, nav) stays real inside it; only data gets Skeleton shapes.
+ */
+export function LoadingRegion({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div aria-busy="true">
+      <p role="status" className="sr-only">
+        {label}
+      </p>
+      {children}
+    </div>
   );
 }

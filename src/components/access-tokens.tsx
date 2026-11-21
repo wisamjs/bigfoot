@@ -210,6 +210,7 @@ function RevokeConfirmation({
         </p>
       )}
       <div className="mt-2 flex justify-end gap-3 border-t border-line pt-4">
+        {/* eslint-disable-next-line jsx-a11y/no-autofocus -- the revoke dialog moves focus to its safe choice, Cancel, on purpose. */}
         <button type="button" onClick={onCancel} autoFocus className={buttonClasses("secondary", "md")}>
           Cancel
         </button>

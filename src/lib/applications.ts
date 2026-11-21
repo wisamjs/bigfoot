@@ -38,12 +38,17 @@ export const INTERVIEW_KINDS = [
 ] as const;
 export type InterviewKind = (typeof INTERVIEW_KINDS)[number];
 
+/** The longest Interview notes the API stores, in characters. */
+export const INTERVIEW_NOTES_MAX_LENGTH = 20_000;
+
 export type Interview = {
   id: string;
   application_id: string;
   kind: InterviewKind;
   /** ISO timestamp; null when the Interview has no date, which counts as completed. */
   at: string | null;
+  /** Interview notes: plain text the job seeker wrote about this Interview; null when there are none. */
+  notes: string | null;
   /** Derived by the API: the date is in the past, or there is no date. */
   completed: boolean;
   created_at: string;
@@ -80,7 +85,7 @@ export type ApplicationFields = Omit<
   "id" | "interviews" | "is_waiting" | "waiting_since" | "is_sample" | "created_at" | "updated_at"
 >;
 
-export type InterviewFields = Pick<Interview, "kind" | "at">;
+export type InterviewFields = Pick<Interview, "kind" | "at" | "notes">;
 
 type Option = { label: string; tone: Tone };
 
