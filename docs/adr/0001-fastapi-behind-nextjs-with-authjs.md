@@ -1,3 +1,5 @@
 # FastAPI sits behind Next.js and trusts Auth.js, not Supabase Auth
 
 Application data lives in Supabase Postgres and is served by a FastAPI service. Sign-in stays on Auth.js (Google). The browser never calls FastAPI or Supabase directly. Instead, the Next.js server calls FastAPI with a short-lived JWT signed with a shared secret and carrying the job seeker's id. FastAPI connects to Postgres directly and scopes every query to that job seeker. RLS is enabled with no policies, so Supabase's public API exposes nothing. We kept Auth.js because sign-in already worked and Supabase Auth would have replaced it. The cost is that each job seeker's access to their own rows is enforced in FastAPI code, not by RLS.
+
+Amended by [ADR 0003](0003-access-tokens-open-fastapi-to-scripts.md): a job seeker's scripts can also call FastAPI, with an Access token.

@@ -165,6 +165,19 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // Script injection: nothing a job seeker types may run as code (BIG-89). ESLint React's preset
+  // above already bans dangerouslySetInnerHTML and javascript: URLs in JSX; these close the
+  // other ways to turn a string into code.
+  {
+    files: typeScriptFiles,
+    rules: {
+      "no-eval": "error",
+      "no-new-func": "error",
+      "no-script-url": "error",
+      "@typescript-eslint/no-implied-eval": "error",
+    },
+  },
+
   // ARIA: jsx-a11y's strict config. eslint-config-next registers the plugin, so only the rules
   // are added here.
   { files: ["**/*.{jsx,tsx}"], rules: asErrors(jsxA11y.flatConfigs.strict).rules },
