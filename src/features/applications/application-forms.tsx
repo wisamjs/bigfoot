@@ -1,17 +1,18 @@
 "use client";
 
-import { ExternalLink, Eye, Plus, Trash2 } from "lucide-react";
-import { useId, useState, useTransition, type ChangeEvent, type FormEvent } from "react";
+import { ExternalLink, Eye, LoaderCircle, Plus, Trash2 } from "lucide-react";
+import { useId, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   createApplicationAction,
   createInterviewAction,
   deleteInterviewAction,
   updateApplicationAction,
   updateInterviewAction,
-  type ActionResult,
 } from "@/app/dashboard/actions";
 import { inputClasses } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { SaveStatus } from "@/components/ui/save-status";
+import { useSaveStatus, type SaveTracker } from "@/hooks/use-save-status";
 import {
   INTERVIEW_KINDS,
   INTERVIEW_NOTES_MAX_LENGTH,
@@ -43,19 +44,11 @@ function todayLocal() {
   return toLocalInput(new Date().toISOString()).slice(0, 10);
 }
 
-function ErrorMessage({ error }: { error: string | null }) {
-  if (!error) return null;
-  return (
-    <p role="alert" className="m-0 text-sm text-fg-danger">
-      {error}
-    </p>
-  );
-}
-
 /**
  * The whole Application, editable: Status and Outcome, the details, then the Interview list.
- * Interviews save one row at a time through the nested API routes, each one's Interview notes
+ * Interviews save one field at a time through the nested API routes, each one's Interview notes
  * with their own button; Status and Outcome save together, because Done needs an Outcome.
+ * Each save shows its own status beside what started it, and disables only that control (BIG-118).
  */
 export function ApplicationEditor({
   app,
@@ -65,67 +58,62 @@ export function ApplicationEditor({
   /** Asks to delete the Application; the caller confirms first. */
   onDelete: () => void;
 }) {
-  const [error, setError] = useState<string | null>(null);
   // Lives here, not in DetailsForm, so saving the details doesn't hide the salary again. This
   // component mounts each time the panel opens the Application, which does.
   const [salaryRevealed, setSalaryRevealed] = useState(false);
-  const [isPending, startTransition] = useTransition();
-
-  /** Runs a save and shows its error. */
-  function save(run: () => Promise<ActionResult>) {
-    setError(null);
-    startTransition(async () => {
-      const result = await run();
-      if (!result.ok) setError(result.error);
-    });
-  }
+  // Here too, not in the forms: a form keyed by its saved values remounts when its save lands,
+  // and "Saved" must outlast that.
+  const statusSave = useSaveStatus();
+  const detailsSave = useSaveStatus();
+  const addInterview = useSaveStatus();
 
   return (
     <div className="flex flex-col gap-6">
-      <StatusForm key={`${app.updated_at}-${app.status}-${app.outcome}`} app={app} onError={setError} />
+      <StatusForm key={`${app.status}-${app.outcome}`} app={app} tracker={statusSave} />
 
       <DetailsForm
         key={`${app.company}-${app.title}-${app.applied_on}-${app.location}-${app.salary}-${app.posting_url}`}
         app={app}
         salaryHidden={Boolean(app.salary) && !salaryRevealed}
         onRevealSalary={() => setSalaryRevealed(true)}
-        onError={setError}
+        tracker={detailsSave}
       />
 
       <section aria-labelledby="interviews-title" className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <h3 id="interviews-title" className="m-0 text-base font-bold leading-[1.25] text-heading">
             Interviews
           </h3>
-          <Button
-            disabled={isPending}
-            onClick={() => save(() => createInterviewAction(app.id, { kind: "informal_chat" }))}
-            variant="secondary"
-            size="sm"
-          >
-            <Plus className="size-4" aria-hidden />
-            Add Interview
-          </Button>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <SaveStatus
+              status={addInterview.status}
+              label="New Interview"
+              savingText="Adding…"
+              savedText="Added"
+              onRetry={addInterview.retry}
+            />
+            <Button
+              disabled={addInterview.saving}
+              onClick={() => void addInterview.run(() => createInterviewAction(app.id, { kind: "informal_chat" }))}
+              variant="secondary"
+              size="sm"
+            >
+              <Plus className="size-4" aria-hidden />
+              Add Interview
+            </Button>
+          </div>
         </div>
         {app.interviews.length === 0 ? (
           <p className="m-0 text-sm text-body">No Interviews yet. Add one when you have a conversation lined up.</p>
         ) : (
           <ul className="m-0 flex list-none flex-col gap-3 p-0">
             {app.interviews.map((interview, index) => (
-              <InterviewRow
-                key={interview.id}
-                app={app}
-                interview={interview}
-                position={index + 1}
-                disabled={isPending}
-                save={save}
-              />
+              <InterviewRow key={interview.id} app={app} interview={interview} position={index + 1} />
             ))}
           </ul>
         )}
       </section>
 
-      <ErrorMessage error={error} />
       <div className="flex border-t border-line pt-4">
         <Button onClick={onDelete} variant="danger">
           <Trash2 className="size-4" aria-hidden />
@@ -138,27 +126,19 @@ export function ApplicationEditor({
 
 /** The details of an Application that doesn't exist yet; adding it creates the Application. */
 export function NewApplicationForm({ onDone }: { onDone: () => void }) {
-  const [error, setError] = useState<string | null>(null);
-  return <DetailsForm error={error} onError={setError} onDone={onDone} />;
+  return <DetailsForm tracker={useSaveStatus()} onDone={onDone} />;
 }
 
-function StatusForm({ app, onError }: { app: Application; onError: (message: string | null) => void }) {
+function StatusForm({ app, tracker }: { app: Application; tracker: SaveTracker }) {
   const id = useId();
   const [status, setStatus] = useState<Status>(app.status);
   const [outcome, setOutcome] = useState<Outcome | "">(app.outcome ?? "");
-  const [isPending, startTransition] = useTransition();
   const dirty = status !== app.status || (status === "done" && outcome !== (app.outcome ?? ""));
 
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    onError(null);
-    startTransition(async () => {
-      const result = await updateApplicationAction(
-        app.id,
-        status === "done" ? { status, outcome: outcome || null } : { status, outcome: null },
-      );
-      if (!result.ok) onError(result.error);
-    });
+    const fields = status === "done" ? { status, outcome: outcome || null } : { status, outcome: null };
+    void tracker.run(() => updateApplicationAction(app.id, fields));
   }
 
   return (
@@ -203,12 +183,12 @@ function StatusForm({ app, onError }: { app: Application; onError: (message: str
           </select>
         </div>
       )}
-      <Button
-        type="submit"
-        disabled={!dirty || isPending}
-      >
-        {isPending ? "Saving…" : "Save status"}
-      </Button>
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <SaveStatus status={tracker.status} label="Status" onRetry={tracker.retry} />
+        <Button type="submit" disabled={!dirty || tracker.saving}>
+          Save status
+        </Button>
+      </div>
     </form>
   );
 }
@@ -225,17 +205,15 @@ function DetailsForm({
   app,
   salaryHidden = false,
   onRevealSalary,
-  error,
-  onError,
+  tracker,
   onDone,
 }: {
   app?: Application;
   /** Shows a Reveal button in place of the salary, against someone looking at the screen. */
   salaryHidden?: boolean;
   onRevealSalary?: () => void;
-  /** Shown above the buttons; the editor shows its own below all of its forms instead. */
-  error?: string | null;
-  onError: (message: string | null) => void;
+  /** Tracks the save; owned by the caller, so its status outlives this form remounting. */
+  tracker: SaveTracker;
   /** Called after the Application is created, and by Cancel. */
   onDone?: () => void;
 }) {
@@ -251,7 +229,6 @@ function DetailsForm({
   const [values, setValues] = useState(saved);
   // Only after Reveal is pressed: a form remounted by a save must not pull focus to the salary.
   const [focusSalary, setFocusSalary] = useState(false);
-  const [isPending, startTransition] = useTransition();
   const changed = DETAIL_FIELDS.filter((name) => values[name].trim() !== saved[name]);
 
   function field(name: DetailField) {
@@ -265,13 +242,12 @@ function DetailsForm({
 
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    onError(null);
     const fields = Object.fromEntries((app ? changed : DETAIL_FIELDS).map((name) => [name, values[name].trim() || null]));
-    startTransition(async () => {
-      const result = await (app ? updateApplicationAction(app.id, fields) : createApplicationAction(fields));
-      if (!result.ok) onError(result.error);
-      else if (!app) onDone?.();
-    });
+    void tracker
+      .run(() => (app ? updateApplicationAction(app.id, fields) : createApplicationAction(fields)))
+      .then((result) => {
+        if (result.ok && !app) onDone?.();
+      });
   }
 
   const labelClasses = "mb-2 block text-sm font-medium text-heading";
@@ -355,23 +331,27 @@ function DetailsForm({
           </div>
         </div>
       </div>
-      <ErrorMessage error={error ?? null} />
       {app ? (
-        <div className="flex justify-end">
-          <Button
-            type="submit"
-            disabled={changed.length === 0 || isPending}
-          >
-            {isPending ? "Saving…" : "Save details"}
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <SaveStatus status={tracker.status} label="Details" onRetry={tracker.retry} />
+          <Button type="submit" disabled={changed.length === 0 || tracker.saving}>
+            Save details
           </Button>
         </div>
       ) : (
-        <div className="mt-2 flex justify-end gap-3 border-t border-line pt-4">
+        <div className="mt-2 flex flex-wrap items-center justify-end gap-3 border-t border-line pt-4">
+          {/* No "Saved": the panel closes once the Application is added. */}
+          <SaveStatus
+            status={tracker.status.phase === "saved" ? { phase: "idle" } : tracker.status}
+            label="New Application"
+            savingText="Adding…"
+            onRetry={tracker.retry}
+          />
           <Button onClick={onDone} variant="secondary">
             Cancel
           </Button>
-          <Button type="submit" disabled={isPending}>
-            {isPending ? "Adding…" : "Add application"}
+          <Button type="submit" disabled={tracker.saving}>
+            Add application
           </Button>
         </div>
       )}
@@ -379,39 +359,51 @@ function DetailsForm({
   );
 }
 
+/**
+ * One Interview: its kind (saved on change), date and time (saved on leaving the field), Delete,
+ * and its Interview notes. Each has its own save status, kept here because the fields are keyed
+ * by their saved values and remount when a save lands; this row is keyed by the Interview.
+ */
 function InterviewRow({
   app,
   interview,
   position,
-  disabled,
-  save,
 }: {
   app: Application;
   interview: Interview;
   /** 1 for the Application's first Interview. */
   position: number;
-  disabled: boolean;
-  save: (run: () => Promise<ActionResult>) => void;
 }) {
+  const kindSave = useSaveStatus();
+  const atSave = useSaveStatus();
+  const notesSave = useSaveStatus();
+  const deleteSave = useSaveStatus();
   const saved = toLocalInput(interview.at);
   const label = `Interview ${position}`;
+  const kindLabel = INTERVIEW_OPTIONS[interview.kind].label;
+  const fieldLabelClasses = "mb-1 flex min-h-4 flex-wrap items-center justify-between gap-x-2 text-xs font-medium text-body";
 
   return (
     <li className="flex flex-wrap items-end gap-3 rounded-card border border-line bg-surface p-3">
       <div className="min-w-44 flex-1">
-        <label htmlFor={`kind-${interview.id}`} className="mb-1 block text-xs font-medium text-body">
-          Kind<span className="sr-only">, {label}</span>
-        </label>
+        <div className={fieldLabelClasses}>
+          <label htmlFor={`kind-${interview.id}`}>
+            Kind<span className="sr-only">, {label}</span>
+          </label>
+          <SaveStatus status={kindSave.status} label={`${label} kind`} onRetry={kindSave.retry} />
+        </div>
         <select
           // Keyed by the saved value, like the other fields: a save resets only the field it changed,
-          // so notes being written survive a change of kind or date.
+          // so notes being written survive a change of kind or date. A failed save changes no key,
+          // so the field keeps what was picked.
           key={interview.kind}
           id={`kind-${interview.id}`}
           defaultValue={interview.kind}
-          disabled={disabled}
-          onChange={(e) =>
-            save(() => updateInterviewAction(app.id, interview.id, { kind: e.target.value as InterviewKind }))
-          }
+          disabled={kindSave.saving}
+          onChange={(e) => {
+            const kind = e.target.value as InterviewKind;
+            void kindSave.run(() => updateInterviewAction(app.id, interview.id, { kind }));
+          }}
           className={inputClasses}
         >
           {INTERVIEW_KINDS.map((kind) => (
@@ -422,61 +414,72 @@ function InterviewRow({
         </select>
       </div>
       <div className="min-w-52 flex-1">
-        <label htmlFor={`at-${interview.id}`} className="mb-1 block text-xs font-medium text-body">
-          Date and time (optional)<span className="sr-only">, {label}</span>
-        </label>
+        <div className={fieldLabelClasses}>
+          <label htmlFor={`at-${interview.id}`}>
+            Date and time (optional)<span className="sr-only">, {label}</span>
+          </label>
+          <SaveStatus status={atSave.status} label={`${label} date and time`} onRetry={atSave.retry} />
+        </div>
         <input
           key={saved}
           id={`at-${interview.id}`}
           type="datetime-local"
           defaultValue={saved}
-          disabled={disabled}
+          disabled={atSave.saving}
           onBlur={(e) => {
             if (e.currentTarget.value === saved) return;
             const at = fromLocalInput(e.currentTarget.value);
-            save(() => updateInterviewAction(app.id, interview.id, { at }));
+            void atSave.run(() => updateInterviewAction(app.id, interview.id, { at }));
           }}
           className={inputClasses}
         />
       </div>
       <button
         type="button"
-        disabled={disabled}
-        onClick={() => save(() => deleteInterviewAction(app.id, interview.id))}
-        aria-label={`Delete ${INTERVIEW_OPTIONS[interview.kind].label} Interview, ${label}`}
-        className="rounded-control p-2.5 text-body transition-colors hover:bg-danger-soft hover:text-fg-danger disabled:opacity-60"
+        disabled={deleteSave.saving}
+        onClick={() => void deleteSave.run(() => deleteInterviewAction(app.id, interview.id))}
+        aria-label={`Delete ${kindLabel} Interview, ${label}`}
+        className="rounded-control p-2.5 text-body transition-colors hover:bg-danger-soft hover:text-fg-danger disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <Trash2 className="size-4" aria-hidden />
+        {deleteSave.saving ? (
+          <LoaderCircle className="size-4 animate-spin" aria-hidden />
+        ) : (
+          <Trash2 className="size-4" aria-hidden />
+        )}
       </button>
-      <InterviewNotesForm
-        key={interview.notes ?? ""}
-        app={app}
-        interview={interview}
-        label={label}
-        disabled={disabled}
-        save={save}
-      />
+      {/* Only while deleting or when it failed: once it works, the row is gone. Rendered only
+          then, so an empty status doesn't add a line to every row. */}
+      {(deleteSave.status.phase === "saving" || deleteSave.status.phase === "failed") && (
+        <SaveStatus
+          status={deleteSave.status}
+          label={`Deleting ${label}`}
+          savingText="Deleting…"
+          onRetry={deleteSave.retry}
+          className="w-full justify-end"
+        />
+      )}
+      <InterviewNotesForm key={interview.notes ?? ""} app={app} interview={interview} label={label} tracker={notesSave} />
     </li>
   );
 }
 
 /**
  * An Interview's notes: written, read and cleared here, under their Interview. They save with
- * their own button, not on blur, so a long note is never sent half-written.
+ * their own button, not on blur, so a long note is never sent half-written. While they save, the
+ * notes are read-only: the form remounts with the saved notes when the save lands.
  */
 function InterviewNotesForm({
   app,
   interview,
   label,
-  disabled,
-  save,
+  tracker,
 }: {
   app: Application;
   interview: Interview;
   /** "Interview 2": tells the rows apart for screen readers. */
   label: string;
-  disabled: boolean;
-  save: (run: () => Promise<ActionResult>) => void;
+  /** Owned by the row, so "Saved" outlasts this form remounting with the saved notes. */
+  tracker: SaveTracker;
 }) {
   const [draft, setDraft] = useState(interview.notes ?? "");
   // As the API stores them: ends trimmed, blank is none.
@@ -485,7 +488,7 @@ function InterviewNotesForm({
 
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    save(() => updateInterviewAction(app.id, interview.id, { notes }));
+    void tracker.run(() => updateInterviewAction(app.id, interview.id, { notes }));
   }
 
   return (
@@ -499,21 +502,23 @@ function InterviewNotesForm({
           value={draft}
           rows={3}
           maxLength={INTERVIEW_NOTES_MAX_LENGTH}
+          readOnly={tracker.saving}
           placeholder="How it went, what you were asked, what you’d do differently"
           onChange={(e) => setDraft(e.target.value)}
           // Grows with the notes where the browser supports it; otherwise it scrolls and resizes.
           className={`${inputClasses} field-sizing-content max-h-96 min-h-20 resize-y`}
         />
       </div>
-      <div className="flex items-center justify-end gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-3">
         {nearLimit && (
           <span className="text-xs text-body">
             {draft.length.toLocaleString("en-CA")} of {INTERVIEW_NOTES_MAX_LENGTH.toLocaleString("en-CA")} characters
           </span>
         )}
+        <SaveStatus status={tracker.status} label={`${label} notes`} onRetry={tracker.retry} />
         <Button
           type="submit"
-          disabled={disabled || notes === interview.notes}
+          disabled={tracker.saving || notes === interview.notes}
           aria-label={`Save notes, ${label}`}
           variant="secondary"
           size="sm"

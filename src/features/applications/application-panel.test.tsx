@@ -286,3 +286,139 @@ describe("Interview notes", () => {
     expect(panel).toHaveTextContent("18,000 of 20,000 characters");
   });
 });
+
+describe("save status beside each field (BIG-118)", () => {
+  const view: PanelView = { kind: "application", id: "oak" };
+  const first = interview("i1", { application_id: "oak", kind: "recruiter_screen" });
+  const second = interview("i2", { application_id: "oak", kind: "technical" });
+  const oak = application("oak", { company: "Oak", interviews: [first, second] });
+
+  async function openOak() {
+    const opened = await openPanel(view, [oak]);
+    const panel = screen.getByRole("dialog", { name: "Oak" });
+    return {
+      ...opened,
+      panel,
+      kind: (n: number) => within(panel).getByLabelText(`Kind, Interview ${n}`),
+      at: (n: number) => within(panel).getByLabelText(`Date and time (optional), Interview ${n}`),
+      /** Every status the panel shows, as screen readers hear them. */
+      statuses: () =>
+        within(panel)
+          .getAllByRole("status")
+          .map((s) => s.textContent)
+          .filter(Boolean),
+    };
+  }
+
+  /** An action that stays in flight until the test settles it. */
+  function inFlight() {
+    let settle!: (result: actions.ActionResult) => void;
+    const promise = new Promise<actions.ActionResult>((resolve) => (settle = resolve));
+    return { promise, settle };
+  }
+
+  it("shows Saving… then Saved beside the kind that changed, and nowhere else", async () => {
+    const save = inFlight();
+    vi.mocked(actions.updateInterviewAction).mockReturnValue(save.promise);
+    const { user, kind, statuses } = await openOak();
+    await user.selectOptions(kind(2), "leadership");
+    expect(statuses()).toEqual(["Interview 2 kind: Saving…"]);
+
+    save.settle({ ok: true });
+    expect(await screen.findByText("Saved")).toBeInTheDocument();
+    expect(statuses()).toEqual(["Interview 2 kind: Saved"]);
+  });
+
+  it("disables only the field that is saving", async () => {
+    vi.mocked(actions.updateInterviewAction).mockReturnValue(inFlight().promise);
+    const { user, panel, kind, at } = await openOak();
+    await user.selectOptions(kind(1), "leadership");
+
+    expect(kind(1)).toBeDisabled();
+    expect(kind(2)).toBeEnabled();
+    expect(at(1)).toBeEnabled();
+    expect(within(panel).getByRole("button", { name: "Add Interview" })).toBeEnabled();
+    expect(within(panel).getByLabelText("Interview notes (optional), Interview 1")).not.toHaveAttribute("readonly");
+    expect(within(panel).getByRole("button", { name: /^Delete .* Interview, Interview 1$/ })).toBeEnabled();
+  });
+
+  it("saves the date and time on leaving the field, and shows nothing when it didn't change", async () => {
+    const { user, at, statuses } = await openOak();
+    await user.click(at(1));
+    await user.tab();
+    expect(actions.updateInterviewAction).not.toHaveBeenCalled();
+    expect(statuses()).toEqual([]);
+
+    await user.type(at(1), "2026-12-01T10:30");
+    await user.tab();
+    expect(actions.updateInterviewAction).toHaveBeenCalledWith("oak", "i1", { at: expect.any(String) });
+    expect(await screen.findByText("Saved")).toBeInTheDocument();
+    expect(statuses()).toEqual(["Interview 1 date and time: Saved"]);
+  });
+
+  it("shows a failed save beside its field, keeps the pick, and Retry sends it again", async () => {
+    vi.mocked(actions.updateInterviewAction).mockResolvedValueOnce({ ok: false, error: "Interview kind is invalid" });
+    const { user, panel, kind } = await openOak();
+    await user.selectOptions(kind(1), "leadership");
+
+    expect(await within(panel).findByRole("alert")).toHaveTextContent("Interview 1 kind: Interview kind is invalid");
+    expect(kind(1)).toHaveValue("leadership");
+
+    await user.click(within(panel).getByRole("button", { name: "Retry, Interview 1 kind" }));
+    expect(actions.updateInterviewAction).toHaveBeenCalledTimes(2);
+    expect(actions.updateInterviewAction).toHaveBeenLastCalledWith("oak", "i1", { kind: "leadership" });
+    expect(within(panel).queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("shows Interview notes saving by their own Save button, read-only until they land", async () => {
+    const save = inFlight();
+    vi.mocked(actions.updateInterviewAction).mockReturnValue(save.promise);
+    const { user, panel, statuses } = await openOak();
+    const notes = within(panel).getByLabelText("Interview notes (optional), Interview 2");
+    await user.type(notes, "Went well");
+    await user.click(within(panel).getByRole("button", { name: "Save notes, Interview 2" }));
+
+    expect(notes).toHaveAttribute("readonly");
+    expect(statuses()).toEqual(["Interview 2 notes: Saving…"]);
+    save.settle({ ok: true });
+    expect(await screen.findByText("Saved")).toBeInTheDocument();
+    expect(statuses()).toEqual(["Interview 2 notes: Saved"]);
+  });
+
+  it("shows Status and details saving by their own buttons", async () => {
+    const { user, panel, statuses } = await openOak();
+    await user.selectOptions(within(panel).getByLabelText("Status"), "done");
+    await user.selectOptions(within(panel).getByLabelText("Outcome"), "rejected");
+    await user.click(within(panel).getByRole("button", { name: "Save status" }));
+    expect(await screen.findByText("Saved")).toBeInTheDocument();
+    expect(statuses()).toEqual(["Status: Saved"]);
+
+    await user.type(within(panel).getByLabelText("Location (optional)"), "Remote");
+    await user.click(within(panel).getByRole("button", { name: "Save details" }));
+    expect(statuses()).toContain("Details: Saved");
+  });
+
+  it("shows adding an Interview by its button, and why it failed", async () => {
+    vi.mocked(actions.createInterviewAction).mockResolvedValueOnce({ ok: false, error: "Too many Interviews" });
+    const { user, panel, statuses } = await openOak();
+    await user.click(within(panel).getByRole("button", { name: "Add Interview" }));
+    expect(await within(panel).findByRole("alert")).toHaveTextContent("New Interview: Too many Interviews");
+
+    await user.click(within(panel).getByRole("button", { name: "Retry, New Interview" }));
+    expect(statuses()).toEqual(["New Interview: Added"]);
+  });
+
+  it("shows deleting an Interview by its row, and why it failed", async () => {
+    const save = inFlight();
+    vi.mocked(actions.deleteInterviewAction).mockReturnValue(save.promise);
+    const { user, panel, statuses } = await openOak();
+    const remove = within(panel).getByRole("button", { name: "Delete Technical Interview, Interview 2" });
+    await user.click(remove);
+
+    expect(remove).toBeDisabled();
+    expect(statuses()).toEqual(["Deleting Interview 2: Deleting…"]);
+    save.settle({ ok: false, error: "Interview not found" });
+    expect(await within(panel).findByRole("alert")).toHaveTextContent("Deleting Interview 2: Interview not found");
+    expect(remove).toBeEnabled();
+  });
+});
