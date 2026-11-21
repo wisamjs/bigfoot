@@ -185,7 +185,7 @@
           "Applications"
         ],
         "summary": "Add an Application",
-        "description": "Add an Application for the job seeker. It starts In Progress with no Interviews unless the body\nsays otherwise; a Done Application needs an Outcome.",
+        "description": "Add an Application for the job seeker. It starts In Progress with no Interviews unless the body\nsays otherwise; a Done Application needs an Outcome. The number of Applications is capped (409).",
         "operationId": "create_application_applications_post",
         "requestBody": {
           "content": {
@@ -210,6 +210,16 @@
           },
           "401": {
             "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The job seeker already has 1,000 Applications, the most Bigfoot keeps.",
             "content": {
               "application/json": {
                 "schema": {
@@ -465,7 +475,7 @@
           "Interviews"
         ],
         "summary": "Add an Interview",
-        "description": "Add an Interview to an Application. Kinds can repeat; the date and Interview notes are optional.",
+        "description": "Add an Interview to an Application. Kinds can repeat; the date and Interview notes are optional.\nThe number of Interviews per Application is capped (409).",
         "operationId": "create_interview_applications__application_id__interviews_post",
         "security": [
           {
@@ -519,6 +529,16 @@
           },
           "404": {
             "description": "No Application with this id belongs to the job seeker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The Application already has 50 Interviews, the most it can have.",
             "content": {
               "application/json": {
                 "schema": {
@@ -890,6 +910,7 @@
         "properties": {
           "company": {
             "type": "string",
+            "maxLength": 200,
             "title": "Company",
             "description": "The company the job seeker applied to.",
             "examples": [
@@ -898,6 +919,7 @@
           },
           "title": {
             "type": "string",
+            "maxLength": 200,
             "title": "Title",
             "description": "The role's job title.",
             "examples": [
@@ -907,7 +929,8 @@
           "posting_url": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 2048
               },
               {
                 "type": "null"
@@ -922,7 +945,8 @@
           "location": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 200
               },
               {
                 "type": "null"
@@ -937,7 +961,8 @@
           "salary": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 100
               },
               {
                 "type": "null"
@@ -1010,7 +1035,8 @@
           "company": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 200
               },
               {
                 "type": "null"
@@ -1025,7 +1051,8 @@
           "title": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 200
               },
               {
                 "type": "null"
@@ -1040,7 +1067,8 @@
           "posting_url": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 2048
               },
               {
                 "type": "null"
@@ -1055,7 +1083,8 @@
           "location": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 200
               },
               {
                 "type": "null"
@@ -1070,7 +1099,8 @@
           "salary": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 100
               },
               {
                 "type": "null"

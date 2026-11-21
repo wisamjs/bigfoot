@@ -14,7 +14,19 @@ from psycopg_pool import ConnectionPool
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 
 from app.auth import JobSeekerId
-from app.domain import INTERVIEW_NOTES_MAX_LENGTH, InterviewKind, Outcome, Status
+from app.domain import (
+    APPLICATIONS_MAX,
+    COMPANY_MAX_LENGTH,
+    INTERVIEW_NOTES_MAX_LENGTH,
+    INTERVIEWS_PER_APPLICATION_MAX,
+    LOCATION_MAX_LENGTH,
+    POSTING_URL_MAX_LENGTH,
+    SALARY_MAX_LENGTH,
+    TITLE_MAX_LENGTH,
+    InterviewKind,
+    Outcome,
+    Status,
+)
 from app.samples import sample_applications
 from app.settings import Settings, get_settings
 
@@ -40,10 +52,12 @@ def _posting_url(value: str | None) -> str | None:
     return value
 
 
-RequiredText = Annotated[str, AfterValidator(_required_text)]
-OptionalText = Annotated[str | None, AfterValidator(_optional_text)]
-PostingUrl = Annotated[str | None, AfterValidator(_posting_url)]
-# The length is checked as sent, before the ends are trimmed.
+# Lengths are checked as sent, before the ends are trimmed. The database checks them too.
+Company = Annotated[str, Field(max_length=COMPANY_MAX_LENGTH), AfterValidator(_required_text)]
+Title = Annotated[str, Field(max_length=TITLE_MAX_LENGTH), AfterValidator(_required_text)]
+Location = Annotated[str | None, Field(max_length=LOCATION_MAX_LENGTH), AfterValidator(_optional_text)]
+Salary = Annotated[str | None, Field(max_length=SALARY_MAX_LENGTH), AfterValidator(_optional_text)]
+PostingUrl = Annotated[str | None, Field(max_length=POSTING_URL_MAX_LENGTH), AfterValidator(_posting_url)]
 InterviewNotes = Annotated[str | None, Field(max_length=INTERVIEW_NOTES_MAX_LENGTH), AfterValidator(_optional_text)]
 
 
@@ -81,11 +95,11 @@ class ApplicationCreate(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    company: RequiredText = COMPANY
-    title: RequiredText = TITLE
+    company: Company = COMPANY
+    title: Title = TITLE
     posting_url: PostingUrl = POSTING_URL
-    location: OptionalText = LOCATION
-    salary: OptionalText = SALARY
+    location: Location = LOCATION
+    salary: Salary = SALARY
     applied_on: date | None = Field(
         default=None, description="When the job seeker applied. Defaults to today.", examples=["2026-11-02"]
     )
@@ -106,11 +120,11 @@ class ApplicationPatch(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    company: RequiredText | None = Field(default=None, description=COMPANY.description, examples=COMPANY.examples)
-    title: RequiredText | None = Field(default=None, description=TITLE.description, examples=TITLE.examples)
+    company: Company | None = Field(default=None, description=COMPANY.description, examples=COMPANY.examples)
+    title: Title | None = Field(default=None, description=TITLE.description, examples=TITLE.examples)
     posting_url: PostingUrl = POSTING_URL
-    location: OptionalText = LOCATION
-    salary: OptionalText = SALARY
+    location: Location = LOCATION
+    salary: Salary = SALARY
     applied_on: date | None = Field(
         default=None, description="When the job seeker applied. Cannot be cleared.", examples=["2026-11-02"]
     )
@@ -430,10 +444,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "insert into account_deletions (job_seeker_hash) values (%s)", (job_seeker_hash(job_seeker),)
                 )
 
-    def owned(conn: Any, job_seeker: str, application_id: UUID) -> None:
-        """404 unless the Application is the job seeker's."""
+    def owned(conn: Any, job_seeker: str, application_id: UUID, *, lock: bool = False) -> None:
+        """404 unless the Application is the job seeker's. `lock` holds its row until the transaction
+        ends, so concurrent Interview inserts on it take turns."""
         found = conn.execute(
-            "select 1 from applications where id = %s and job_seeker_id = %s", (application_id, job_seeker)
+            sql.SQL("select 1 from applications where id = %s and job_seeker_id = %s {}").format(
+                sql.SQL("for update" if lock else "")
+            ),
+            (application_id, job_seeker),
         ).fetchone()
         if found is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Application not found")
@@ -448,10 +466,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             ).fetchall()
             return _applications(conn, rows)
 
-    @applications.post("", status_code=status.HTTP_201_CREATED, summary="Add an Application")
+    @applications.post(
+        "",
+        status_code=status.HTTP_201_CREATED,
+        summary="Add an Application",
+        responses={
+            409: {
+                "model": ErrorMessage,
+                "description": f"The job seeker already has {APPLICATIONS_MAX:,} Applications, the most Bigfoot keeps.",
+            }
+        },
+    )
     def create_application(request: Request, job_seeker: JobSeekerId, body: ApplicationCreate) -> Application:
         """Add an Application for the job seeker. It starts In Progress with no Interviews unless the body
-        says otherwise; a Done Application needs an Outcome."""
+        says otherwise; a Done Application needs an Outcome. The number of Applications is capped (409)."""
         values = body.model_dump(exclude_none=True)
         values["job_seeker_id"] = job_seeker
         query = sql.SQL("insert into applications ({}) values ({}) returning {}").format(
@@ -460,6 +488,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             COLUMNS,
         )
         with pool(request).connection() as conn, conn.transaction():
+            # Serializes this job seeker's inserts, so concurrent requests can't pass the count together.
+            conn.execute("select pg_advisory_xact_lock(hashtext(%s))", (job_seeker,))
+            count = conn.execute(
+                "select count(*) from applications where job_seeker_id = %s", (job_seeker,)
+            ).fetchone()["count"]
+            if count >= APPLICATIONS_MAX:
+                raise HTTPException(
+                    status.HTTP_409_CONFLICT,
+                    f"You have {APPLICATIONS_MAX:,} Applications, the most Bigfoot keeps. Delete one to add another.",
+                )
             row = conn.execute(query, list(values.values())).fetchone()
             return _applications(conn, [row])[0]
 
@@ -555,14 +593,32 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         "",
         status_code=status.HTTP_201_CREATED,
         summary="Add an Interview",
-        responses={404: {"model": ErrorMessage, "description": APPLICATION_NOT_FOUND[404]["description"]}},
+        responses={
+            404: {"model": ErrorMessage, "description": APPLICATION_NOT_FOUND[404]["description"]},
+            409: {
+                "model": ErrorMessage,
+                "description": (
+                    f"The Application already has {INTERVIEWS_PER_APPLICATION_MAX} Interviews, the most it can have."
+                ),
+            },
+        },
     )
     def create_interview(
         request: Request, job_seeker: JobSeekerId, application_id: ApplicationId, body: InterviewCreate
     ) -> Interview:
-        """Add an Interview to an Application. Kinds can repeat; the date and Interview notes are optional."""
+        """Add an Interview to an Application. Kinds can repeat; the date and Interview notes are optional.
+        The number of Interviews per Application is capped (409)."""
         with pool(request).connection() as conn, conn.transaction():
-            owned(conn, job_seeker, application_id)
+            owned(conn, job_seeker, application_id, lock=True)
+            count = conn.execute(
+                "select count(*) from interviews where application_id = %s", (application_id,)
+            ).fetchone()["count"]
+            if count >= INTERVIEWS_PER_APPLICATION_MAX:
+                raise HTTPException(
+                    status.HTTP_409_CONFLICT,
+                    f"This Application has {INTERVIEWS_PER_APPLICATION_MAX} Interviews, the most it can have. "
+                    "Delete one to add another.",
+                )
             row = conn.execute(
                 sql.SQL(
                     "insert into interviews (application_id, kind, at, notes) values (%s, %s, %s, %s) returning {}"
