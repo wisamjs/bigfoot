@@ -43,19 +43,24 @@ jobs:
           working-directory: api
       - run: npm ci
       - run: npm run check
+      # GitHub gives Dependabot's runs no Actions secrets, so its PRs skip every step that needs
+      # DATABASE_URL: test:api, smoke, a11y and dropping the schema. They still run check and build.
       # On this run's TEST_SCHEMA, which smoke and a11y rebuild again for the API they start.
       - run: npm run test:api
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
       # Smoke runs before build: dev and build share .next/.
       - run: npm run smoke
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
         timeout-minutes: 2
       # axe-core in the runner's preinstalled Chrome, light and dark.
       - run: npm run a11y
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
         timeout-minutes: 3
         env:
           CHROME_PATH: /usr/bin/google-chrome
       - run: npm run build
       - name: Drop this run's test schema
-        if: always()
+        if: always() && github.event.pull_request.user.login != 'dependabot[bot]'
         run: npm run db:drop-test-schema
 
   # Applies merged migrations to the dev database (applying before merge would break main),
