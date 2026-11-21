@@ -20,7 +20,7 @@ export function StatCard({
       <div className="min-w-0">
         <p className="m-0 text-sm leading-[1.6] text-body">{label}</p>
         <p className="m-0 truncate text-[30px] font-bold leading-[1.25] text-heading">{value}</p>
-        {note && <p className="m-0 text-xs leading-4 text-body">{note}</p>}
+        {note ? <p className="m-0 text-xs leading-4 text-body">{note}</p> : null}
       </div>
     </li>
   );

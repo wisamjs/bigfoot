@@ -30,19 +30,20 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
   const isClient = useIsClient();
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
-  const agendaHeading = useRef<HTMLHeadingElement>(null);
+  const agendaHeadingRef = useRef<HTMLHeadingElement>(null);
   // Set by the day buttons and "Show upcoming", not by month navigation, so focus stays on the arrows.
-  const focusAgenda = useRef(false);
+  const focusAgendaRef = useRef(false);
 
   useEffect(() => {
-    if (focusAgenda.current) {
-      focusAgenda.current = false;
-      agendaHeading.current?.focus();
+    if (focusAgendaRef.current) {
+      focusAgendaRef.current = false;
+      agendaHeadingRef.current?.focus();
     }
   }, [selected, offset]);
 
   if (!isClient) return <ComingUpCalendarSkeleton />;
 
+  // eslint-disable-next-line @eslint-react/purity -- today is read on each render on purpose: the calendar renders only in the browser (isClient above), and a stored date would go stale past midnight.
   const now = new Date();
   const todayKey = dayKey(now);
   const start = monthStart(now, offset);
@@ -61,11 +62,11 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
     setSelected(null);
   };
   const showAgenda = (key: string | null) => {
-    focusAgenda.current = true;
+    focusAgendaRef.current = true;
     setSelected(key);
   };
   const showUpcoming = () => {
-    focusAgenda.current = true;
+    focusAgendaRef.current = true;
     goTo(0);
   };
 
@@ -129,7 +130,7 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
           <div className="mb-3 flex min-h-8 items-center justify-between gap-3">
             <h3
               id="calendar-agenda"
-              ref={agendaHeading}
+              ref={agendaHeadingRef}
               tabIndex={-1}
               className="m-0 text-base font-medium text-heading focus-visible:outline-none"
             >
@@ -150,6 +151,7 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
             </p>
           ) : (
             <div
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrolling region must be focusable to scroll by keyboard (axe: scrollable-region-focusable).
               tabIndex={0}
               role="region"
               aria-labelledby="calendar-agenda"
