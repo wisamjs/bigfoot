@@ -6,6 +6,8 @@
 //             signed in as a user holding scripts/dev-applications.mjs's Applications, and
 //             `npm run capture -- --state <name>` captures one. Each step clicks the first element
 //             matching `click` whose text includes `text`; `expect` is text the state must show.
+//             `applications: "none"` signs in as a job seeker with no Applications instead, for
+//             empty states.
 export const PAGES = [
   { path: "/", signedIn: false, expect: "Find your Bigfoot" },
   { path: "/", signedIn: true, expect: "Find your Bigfoot" },
@@ -48,6 +50,7 @@ export const PAGES = [
         expect: "This can’t be undone",
       },
       { name: "add-panel", steps: [{ click: "button", text: "Add application" }], expect: "Job posting URL" },
+      { name: "nothing-coming-up", applications: "none", steps: [], expect: "All quiet in the woods" },
     ],
   },
   { path: "/account", signedIn: false, redirect: true },

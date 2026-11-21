@@ -90,11 +90,24 @@ describe("ComingUpCalendar", () => {
     ]);
   });
 
-  it("says nothing is next when every Interview in a narrowed window is completed", () => {
+  it("shows Bigfoot asleep when every Interview in a narrowed window is completed (BIG-97)", () => {
     const interviews = [...interviewsOn(2, 3, 4, 5, 6), ...interviewsToday(9)];
     render(<ComingUpCalendar interviews={interviews} />);
     expect(screen.getByRole("heading", { name: "Interviews in the next 2 weeks" })).toBeInTheDocument();
-    expect(screen.getByText("Nothing in the next 2 weeks yet.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "All quiet in the woods" })).toBeInTheDocument();
+    expect(screen.getByText(/No upcoming Interviews, so Bigfoot’s catching some sleep/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Log an Interview" })).not.toBeInTheDocument();
+  });
+
+  it("shows Bigfoot asleep with no dated Interviews, and keeps other months to one line (BIG-97)", async () => {
+    const user = userEvent.setup();
+    render(<ComingUpCalendar interviews={[]} />);
+    expect(screen.getByRole("heading", { name: "All quiet in the woods" })).toBeInTheDocument();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Next month" }));
+    expect(screen.queryByRole("heading", { name: "All quiet in the woods" })).not.toBeInTheDocument();
+    expect(screen.getByText("Add a dated Interview to an Application and it shows up here.")).toBeInTheDocument();
   });
 
   it("still lists today's completed Interviews, muted, in the month and on the picked day", async () => {
