@@ -244,6 +244,8 @@ function DetailsForm({
 
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // The submit button is only aria-disabled while saving, so it keeps focus; refuse a second submit here.
+    if (tracker.saving) return;
     const fields = Object.fromEntries((app ? changed : DETAIL_FIELDS).map((name) => [name, values[name].trim() || null]));
     void tracker
       .run(() => (app ? updateApplicationAction(app.id, fields) : createApplicationAction(fields)))
@@ -336,7 +338,7 @@ function DetailsForm({
       {app ? (
         <div className="flex flex-wrap items-center justify-end gap-3">
           <SaveStatus status={tracker.status} label="Details" onRetry={tracker.retry} />
-          <Button type="submit" disabled={changed.length === 0 || tracker.saving}>
+          <Button type="submit" disabled={changed.length === 0} aria-disabled={tracker.saving || undefined}>
             Save details
           </Button>
         </div>
@@ -352,7 +354,7 @@ function DetailsForm({
           <Button onClick={onDone} variant="secondary">
             Cancel
           </Button>
-          <Button type="submit" disabled={tracker.saving}>
+          <Button type="submit" aria-disabled={tracker.saving || undefined}>
             Add application
           </Button>
         </div>

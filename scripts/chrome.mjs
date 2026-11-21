@@ -62,23 +62,31 @@ async function expectText(chrome, expect, where, timeoutMs = 0) {
 }
 
 /**
- * Runs a page state's steps (scripts/pages.mjs): each focuses and clicks the first element matching
- * `click` whose text includes `text`, as a pointer click in Chrome does, so a dialog it opens knows
- * where to return focus. Then waits for the page to show the state's `expect`, failing if it never does.
+ * Runs a page state's steps (scripts/pages.mjs). A `click` step focuses and clicks the first element
+ * matching it whose text includes `text`, as a pointer click in Chrome does, so a dialog it opens
+ * knows where to return focus. A `fill` step types `value` into the first element matching it. Then
+ * waits for the page to show the state's `expect`, failing if it never does.
  */
 export async function enterState(chrome, state) {
   for (const step of state.steps) {
-    const { result } = await chrome.send("Runtime.evaluate", {
-      returnByValue: true,
-      expression: `(() => {
+    const expression = step.fill
+      ? `(() => {
+        const el = document.querySelector(${JSON.stringify(step.fill)});
+        if (!el) return false;
+        // Through the prototype's setter, so React sees the change on a controlled input.
+        Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), "value").set.call(el, ${JSON.stringify(step.value)});
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        return true;
+      })()`
+      : `(() => {
         const el = [...document.querySelectorAll(${JSON.stringify(step.click)})]
           .find((e) => e.textContent.includes(${JSON.stringify(step.text ?? "")}));
         el?.focus();
         el?.click();
         (window.__clicked ??= []).push(el);
         return Boolean(el);
-      })()`,
-    });
+      })()`;
+    const { result } = await chrome.send("Runtime.evaluate", { returnByValue: true, expression });
     if (!result.value) throw new Error(`State "${state.name}": nothing matches ${JSON.stringify(step)}`);
     await sleep(400);
   }
