@@ -154,10 +154,9 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
                 : `Nothing in ${agendaWindow.span} yet.`}
             </p>
           ) : (
-            <div
+            <section
               // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrolling region must be focusable to scroll by keyboard (axe: scrollable-region-focusable).
               tabIndex={0}
-              role="region"
               aria-labelledby="calendar-agenda"
               className="min-h-0 flex-1 overflow-y-auto rounded-control focus-visible:outline-2 focus-visible:outline-offset-2"
             >
@@ -166,7 +165,7 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
                   <AgendaItem key={d.interview.id} item={d} past={new Date(d.interview.at) < now} />
                 ))}
               </ul>
-            </div>
+            </section>
           )}
         </div>
       </div>

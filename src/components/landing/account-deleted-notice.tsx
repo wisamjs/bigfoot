@@ -11,6 +11,7 @@ export async function AccountDeletedNotice({ searchParams }: { searchParams: Pro
   return (
     <Container className="pt-8">
       {/* alerts.md success variant */}
+      {/* eslint-disable-next-line jsx-a11y/prefer-tag-over-role -- <output> allows only phrasing content, and this notice holds paragraphs. */}
       <div
         role="status"
         className="flex items-start gap-3 rounded-card border border-line-success-subtle bg-success-soft p-4 text-sm leading-[1.6] text-fg-success-strong"

@@ -39,7 +39,7 @@ needs GitHub Pro), so the review is the only gate.
 | `eslint-config-next` (core-web-vitals, TypeScript) | all | Next.js pitfalls (`<img>`, `<a>` for routes, sync scripts) and TypeScript mistakes. |
 | `react-hooks` | all | Hooks called conditionally, and effects missing a dependency (`exhaustive-deps` is an error). |
 | ESLint React `recommended-type-checked` | `src/**/*.{ts,tsx}` | React misuse: leaked `0` or `""` from `&&`, impure renders, unstable keys and context values, refs not named `…Ref`, misused DOM props. Its `disable-conflict-eslint-plugin-react` preset turns off the overlapping `eslint-plugin-react` rules so nothing is reported twice. |
-| `jsx-a11y` `strict` | `**/*.{jsx,tsx}` | ARIA and HTML mistakes: missing labels and alt text, invalid roles, click handlers on non-interactive elements, `autoFocus`, `tabIndex` on non-interactive elements. Runtime checks stay with `npm run a11y`. |
+| `jsx-a11y` `strict`, plus every live rule it leaves off | `**/*.{jsx,tsx}` | Semantic HTML and ARIA mistakes: a `role` where a native element exists (`prefer-tag-over-role`: `<fieldset>`, `<section>`, `<output>`), controls with no label, focusable elements hidden with `aria-hidden`, vague link text, missing labels and alt text, invalid roles, click handlers on non-interactive elements, `autoFocus`, `tabIndex` on non-interactive elements. Heading order and landmarks are runtime checks in `npm run a11y`. |
 | Testing Library (React) and jest-dom | `**/*.test.tsx` | Tests that reach into the DOM instead of querying as a user would, misnamed render results, and assertions with a clearer jest-dom matcher. |
 
 An inline `eslint-disable` names its rule and gives a reason after `--`. Today's exceptions:
