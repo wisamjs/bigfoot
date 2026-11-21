@@ -93,9 +93,11 @@ export function upcomingWindow(times: string[], now: Date, limit = AGENDA_LIMIT)
 /** Items grouped by the local day of their timestamp (`at`), each day in time order. */
 export function groupByDay<T>(items: T[], at: (item: T) => string): Map<string, T[]> {
   const days = new Map<string, T[]>();
-  for (const item of [...items].sort((a, b) => at(a).localeCompare(at(b)))) {
+  for (const item of items.toSorted((a, b) => at(a).localeCompare(at(b)))) {
     const key = dayKey(new Date(at(item)));
-    days.set(key, [...(days.get(key) ?? []), item]);
+    const day = days.get(key);
+    if (day) day.push(item);
+    else days.set(key, [item]);
   }
   return days;
 }

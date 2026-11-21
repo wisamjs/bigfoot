@@ -14,7 +14,7 @@ describe("Privacy Policy versioning", () => {
       expect(date).toMatch(ISO_DATE);
       expect(new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10)).toBe(date);
     }
-    expect(dates).toEqual([...new Set(dates)].sort().reverse());
+    expect(dates).toEqual([...new Set(dates)].toSorted().toReversed());
   });
 
   it("formats dates without shifting them by time zone", () => {

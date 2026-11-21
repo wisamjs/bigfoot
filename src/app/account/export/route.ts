@@ -20,11 +20,12 @@ export async function GET(request: Request) {
   if (!isExportFormat(format)) return new Response("format must be csv or json", { status: 400 });
 
   const now = new Date();
-  const applications = await listApplications(user.id);
-  const body =
-    format === "csv"
-      ? applicationsCsv(applications)
-      : dataExportJson(user, await getJobSeeker(user.id), applications, now);
+  // JSON also needs the job seeker's record: fetch it alongside the Applications, not after.
+  const [applications, record] = await Promise.all([
+    listApplications(user.id),
+    format === "json" ? getJobSeeker(user.id) : null,
+  ]);
+  const body = format === "csv" ? applicationsCsv(applications) : dataExportJson(user, record, applications, now);
 
   return new Response(body, {
     headers: {
