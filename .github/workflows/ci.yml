@@ -43,7 +43,7 @@ jobs:
           working-directory: api
       - run: npm ci
       - run: npm run check
-      # Builds this run's test schema, which smoke and a11y then read.
+      # On this run's TEST_SCHEMA, which smoke and a11y rebuild again for the API they start.
       - run: npm run test:api
       # Smoke runs before build: dev and build share .next/.
       - run: npm run smoke
@@ -56,8 +56,7 @@ jobs:
       - run: npm run build
       - name: Drop this run's test schema
         if: always()
-        working-directory: api
-        run: uv run python ../scripts/drop-test-schema.py
+        run: npm run db:drop-test-schema
 
   # Applies merged migrations to the dev database (applying before merge would break main),
   # then fails if any is still missing. One at a time, so two quick merges never race.

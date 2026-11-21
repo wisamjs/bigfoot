@@ -33,6 +33,8 @@ needs GitHub Pro), so the review is the only gate.
 
 `npm run lint` (`eslint.config.mjs`) fails on any warning. It runs in pre-commit (inside
 `npm run check`) and as its own `lint` job in CI. Every shared config below is raised to errors.
+`scripts/lint-rules.test.ts` snapshots the rules that are on: a change to its snapshot is a
+change to this table, so the table must say the same.
 
 | Group | Files | Guards against |
 | --- | --- | --- |

@@ -3,12 +3,13 @@
 // reused. A server on the usual port from another checkout (say the main checkout while you work
 // in a worktree) is left alone, and this checkout's own start on free ports instead, so a check
 // never passes against someone else's code. Servers this run starts stop when it exits.
-// The API it starts reads the test schema (TEST_SCHEMA, default `bigfoot_test`), which
-// `npm run test:api` creates.
+// The API it starts reads this checkout's test schema (scripts/test-schema.mjs), rebuilt from
+// supabase/migrations just before.
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { createServer } from "node:net";
 import { resolve } from "node:path";
+import { rebuildTestSchema, testSchema } from "./test-schema.mjs";
 
 const ROOT = resolve(import.meta.dirname, "..");
 
@@ -77,9 +78,10 @@ function startServer(base, apiBase) {
 
 function startApi(apiBase) {
   const port = new URL(apiBase).port || "8000";
+  rebuildTestSchema();
   return start(`${apiBase}/health`, "uv", ["run", "uvicorn", "--factory", "app.main:create_app", "--port", port], {
     cwd: resolve(ROOT, "api"),
-    env: { ...process.env, DB_SCHEMA: process.env.TEST_SCHEMA ?? "bigfoot_test" },
+    env: { ...process.env, DB_SCHEMA: testSchema() },
   });
 }
 
