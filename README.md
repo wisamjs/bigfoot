@@ -71,6 +71,8 @@ You need Node.js 24, [uv](https://docs.astral.sh/uv/getting-started/installation
 
 With `API_DOCS="true"` in `.env.local` (as in `.env.example`), the API serves interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs) (Swagger UI), [`/redoc`](http://localhost:8000/redoc) and [`/openapi.json`](http://localhost:8000/openapi.json). They are off unless `API_DOCS` is `true`, so never set it in production.
 
+A production server checks its environment variables when it starts, and a Vercel build checks them before deploying: both fail with one message naming every missing variable. In Vercel's Production environment, `API_URL` must also not be a `localhost` address and `API_DOCS` must not be `true`. The lists are in [`src/lib/env.ts`](src/lib/env.ts) (Next.js) and [`api/app/settings.py`](api/app/settings.py) (API), and a test keeps them matching `.env.example`.
+
 To send requests from the docs as the test job seeker, print a token (valid for an hour, signed with `API_SECRET`):
 
 ```bash
@@ -95,6 +97,16 @@ Like any new job seeker, the test user receives Sample Applications the first ti
 
 With the dev server and API running, `npm run screenshots` retakes the two screenshots in this README.
 
+### Coding agents (optional)
+
+If you use a coding agent such as Claude Code, install Vercel's React and Next.js performance rules for your user, not the repo:
+
+```bash
+npx skills add vercel-labs/agent-skills -s vercel-react-best-practices -g
+```
+
+Where the skill and the Next.js docs in `node_modules/next/dist/docs/` disagree, follow the docs. Skip the skill's SWR, `better-all` and LRU cache rules: this app uses neither SWR nor `better-all`, and caches with `"use cache"`.
+
 ## Quality checks
 
 | Command | What it checks |
@@ -102,7 +114,7 @@ With the dev server and API running, `npm run screenshots` retakes the two scree
 | `npm run check` | Types, lint, that the staged `api/openapi.json` matches the API (if not, it rewrites the file for you to `git add`), that components use design tokens instead of raw colours and corner radii, Canadian spelling (cspell), and `npm test`. The pre-commit hook runs it |
 | `npm test` | Vitest unit and component tests (React Testing Library in happy-dom), failing if coverage drops below the floor in `vitest.config.mts`. `npm run test:watch` reruns them on save |
 | `npm run openapi` | Rewrites [`api/openapi.json`](api/openapi.json) from the API code; browse it at [`/docs`](http://localhost:8000/docs) with the API running ([Try the API](#try-the-api)) |
-| `npm run test:api` | API tests (pytest) against the real database, in a throwaway `bigfoot_test` schema (one per run in CI) rebuilt for every test |
+| `npm run test:api` | API tests (pytest) against the real database, in a throwaway test schema rebuilt for every test: `bigfoot_test_big<n>` on a BIG ticket branch, `bigfoot_test` elsewhere, one per run in CI. `npm run db:drop-test-schema` drops it |
 | `npm run smoke` | Loads every route signed in and signed out against the running dev server and API (starting either if needed), and fails on any server error |
 | `npm run a11y` | axe-core WCAG 2.2 AA on the same pages and their open dialogs, light and dark, and uses each dialog by keyboard: focus stays inside, Escape closes it, focus returns |
 | `npm run build` | Production build (stop `next dev` first: they share `.next/`) |

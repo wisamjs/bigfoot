@@ -24,12 +24,16 @@ export const dangerButtonClasses =
 export const inputClasses =
   "block w-full rounded-card border border-line-medium bg-surface-white px-3 py-2.5 text-sm text-heading shadow-xs transition-all duration-200 placeholder:text-body hover:border-line-brand-subtle focus:border-line-brand focus:outline-none focus:ring-1 focus:ring-brand";
 
-/** Text mark plus a footprint: job hunting is chasing Bigfoot. Matches src/app/icon.svg. */
-export function Wordmark() {
+/**
+ * Text mark plus a footprint: job hunting is chasing Bigfoot. Matches src/app/icon.svg.
+ * `compact` keeps only the footprint on phones, where a busy header has no room for the name;
+ * the link around it must then carry an aria-label.
+ */
+export function Wordmark({ compact = false }: { compact?: boolean }) {
   return (
     <span className="inline-flex items-center gap-2 text-xl font-bold text-heading">
       <Footprints className="size-5 text-fg-brand" aria-hidden />
-      Bigfoot
+      <span className={compact ? "max-sm:sr-only" : undefined}>Bigfoot</span>
     </span>
   );
 }
@@ -39,26 +43,21 @@ export function Container({ children, className = "" }: { children: ReactNode; c
   return <div className={`mx-auto w-full max-w-[1152px] px-6 ${className}`}>{children}</div>;
 }
 
-/** Section header: eyebrow, h2 (28/36/44), lead (20px), 48px below. */
+/** Section header: h2 (28/36/44), lead (20px), 48px below. */
 export function SectionHeader({
-  eyebrow,
   title,
   lead,
   id,
 }: {
-  eyebrow: string;
   title: string;
   lead: string;
   id: string;
 }) {
   return (
     <div className="mx-auto mb-12 max-w-[768px] text-center">
-      <Badge tone="brand" pill>
-        {eyebrow}
-      </Badge>
       <h2
         id={id}
-        className="mt-4 text-[28px] font-bold leading-[1.15] text-heading md:text-[36px] lg:text-[44px]"
+        className="text-[28px] font-bold leading-[1.15] text-heading md:text-[36px] lg:text-[44px]"
       >
         {title}
       </h2>
@@ -131,5 +130,27 @@ export function SampleBadge() {
         Sample
       </Badge>
     </span>
+  );
+}
+
+/**
+ * A grey shape standing in for content that is still loading (globals.css `.skeleton`). Size it
+ * with the classes of the content it replaces. Hidden from assistive tech: the surrounding
+ * LoadingRegion says what is loading.
+ */
+export function Skeleton({ className = "" }: { className?: string }) {
+  return <span aria-hidden className={`skeleton ${className}`} />;
+}
+
+/**
+ * Wraps a loading state: one busy region that tells screen readers what is loading. Text that
+ * doesn't wait on data (headings, nav) stays real inside it; only data gets Skeleton shapes.
+ */
+export function LoadingRegion({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div aria-busy="true">
+      <output className="sr-only">{label}</output>
+      {children}
+    </div>
   );
 }

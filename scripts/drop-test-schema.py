@@ -1,6 +1,6 @@
 """Drops the test schema named by TEST_SCHEMA. CI runs it after every run, pass or fail, so
-each run's bigfoot_test_<run id> schema doesn't outlive it. Run from api/:
-`uv run python ../scripts/drop-test-schema.py`."""
+each run's bigfoot_test_<run id> schema doesn't outlive it. Run it as `npm run db:drop-test-schema`,
+which names this checkout's schema (scripts/test-schema.mjs)."""
 
 import os
 import re

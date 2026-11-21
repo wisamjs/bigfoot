@@ -13,6 +13,7 @@ import {
 import { buttonClasses, dangerButtonClasses, inputClasses } from "@/components/ui";
 import {
   INTERVIEW_KINDS,
+  INTERVIEW_NOTES_MAX_LENGTH,
   INTERVIEW_OPTIONS,
   OUTCOME_OPTIONS,
   OUTCOMES,
@@ -52,8 +53,8 @@ function ErrorMessage({ error }: { error: string | null }) {
 
 /**
  * The whole Application, editable: Status and Outcome, the details, then the Interview list.
- * Interviews save one row at a time through the nested API routes; Status and Outcome save
- * together, because Done needs an Outcome.
+ * Interviews save one row at a time through the nested API routes, each one's Interview notes
+ * with their own button; Status and Outcome save together, because Done needs an Outcome.
  */
 export function ApplicationEditor({
   app,
@@ -109,11 +110,12 @@ export function ApplicationEditor({
           <p className="m-0 text-sm text-body">No Interviews yet. Add one when you have a conversation lined up.</p>
         ) : (
           <ul className="m-0 flex list-none flex-col gap-3 p-0">
-            {app.interviews.map((interview) => (
+            {app.interviews.map((interview, index) => (
               <InterviewRow
-                key={`${interview.id}-${interview.updated_at}`}
+                key={interview.id}
                 app={app}
                 interview={interview}
+                position={index + 1}
                 disabled={isPending}
                 save={save}
               />
@@ -256,7 +258,7 @@ function DetailsForm({
     return {
       id: `${id}-${name}`,
       value: values[name],
-      onChange: (e: ChangeEvent<HTMLInputElement>) => setValues({ ...values, [name]: e.target.value }),
+      onChange: (e: ChangeEvent<HTMLInputElement>) => setValues((prev) => ({ ...prev, [name]: e.target.value })),
       className: inputClasses,
     };
   }
@@ -284,6 +286,7 @@ function DetailsForm({
           <label htmlFor={`${id}-company`} className={labelClasses}>
             Company
           </label>
+          {/* eslint-disable-next-line jsx-a11y/no-autofocus -- the Add panel is a dialog; focus starts on its first field. */}
           <input type="text" required autoFocus={!app} {...field("company")} />
         </div>
         <div>
@@ -305,7 +308,7 @@ function DetailsForm({
           <input type="text" placeholder="Remote" {...field("location")} />
         </div>
         {salaryHidden ? (
-          <div role="group" aria-labelledby={`${id}-salary-label`}>
+          <fieldset aria-labelledby={`${id}-salary-label`} className="m-0 min-w-0 border-0 p-0">
             <span id={`${id}-salary-label`} className={labelClasses}>
               Salary (optional)
             </span>
@@ -323,12 +326,13 @@ function DetailsForm({
                 Reveal
               </button>
             </div>
-          </div>
+          </fieldset>
         ) : (
           <div>
             <label htmlFor={`${id}-salary`} className={labelClasses}>
               Salary (optional)
             </label>
+            {/* eslint-disable-next-line jsx-a11y/no-autofocus -- "Add salary" swaps its button for this field, so focus follows it. */}
             <input type="text" placeholder="$150k–$180k" autoFocus={focusSalary} {...field("salary")} />
           </div>
         )}
@@ -380,16 +384,18 @@ function DetailsForm({
 function InterviewRow({
   app,
   interview,
+  position,
   disabled,
   save,
 }: {
   app: Application;
   interview: Interview;
+  /** 1 for the Application's first Interview. */
+  position: number;
   disabled: boolean;
   save: (run: () => Promise<ActionResult>) => void;
 }) {
   const saved = toLocalInput(interview.at);
-  const position = app.interviews.indexOf(interview) + 1;
   const label = `Interview ${position}`;
 
   return (
@@ -399,6 +405,9 @@ function InterviewRow({
           Kind<span className="sr-only">, {label}</span>
         </label>
         <select
+          // Keyed by the saved value, like the other fields: a save resets only the field it changed,
+          // so notes being written survive a change of kind or date.
+          key={interview.kind}
           id={`kind-${interview.id}`}
           defaultValue={interview.kind}
           disabled={disabled}
@@ -419,6 +428,7 @@ function InterviewRow({
           Date and time (optional)<span className="sr-only">, {label}</span>
         </label>
         <input
+          key={saved}
           id={`at-${interview.id}`}
           type="datetime-local"
           defaultValue={saved}
@@ -440,6 +450,78 @@ function InterviewRow({
       >
         <Trash2 className="size-4" aria-hidden />
       </button>
+      <InterviewNotesForm
+        key={interview.notes ?? ""}
+        app={app}
+        interview={interview}
+        label={label}
+        disabled={disabled}
+        save={save}
+      />
     </li>
+  );
+}
+
+/**
+ * An Interview's notes: written, read and cleared here, under their Interview. They save with
+ * their own button, not on blur, so a long note is never sent half-written.
+ */
+function InterviewNotesForm({
+  app,
+  interview,
+  label,
+  disabled,
+  save,
+}: {
+  app: Application;
+  interview: Interview;
+  /** "Interview 2": tells the rows apart for screen readers. */
+  label: string;
+  disabled: boolean;
+  save: (run: () => Promise<ActionResult>) => void;
+}) {
+  const [draft, setDraft] = useState(interview.notes ?? "");
+  // As the API stores them: ends trimmed, blank is none.
+  const notes = draft.trim() || null;
+  const nearLimit = draft.length >= INTERVIEW_NOTES_MAX_LENGTH * 0.9;
+
+  function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    save(() => updateInterviewAction(app.id, interview.id, { notes }));
+  }
+
+  return (
+    <form onSubmit={submit} className="flex w-full flex-col gap-2">
+      <div>
+        <label htmlFor={`notes-${interview.id}`} className="mb-1 block text-xs font-medium text-body">
+          Interview notes (optional)<span className="sr-only">, {label}</span>
+        </label>
+        <textarea
+          id={`notes-${interview.id}`}
+          value={draft}
+          rows={3}
+          maxLength={INTERVIEW_NOTES_MAX_LENGTH}
+          placeholder="How it went, what you were asked, what you’d do differently"
+          onChange={(e) => setDraft(e.target.value)}
+          // Grows with the notes where the browser supports it; otherwise it scrolls and resizes.
+          className={`${inputClasses} field-sizing-content max-h-96 min-h-20 resize-y`}
+        />
+      </div>
+      <div className="flex items-center justify-end gap-3">
+        {nearLimit && (
+          <span className="text-xs text-body">
+            {draft.length.toLocaleString("en-CA")} of {INTERVIEW_NOTES_MAX_LENGTH.toLocaleString("en-CA")} characters
+          </span>
+        )}
+        <button
+          type="submit"
+          disabled={disabled || notes === interview.notes}
+          aria-label={`Save notes, ${label}`}
+          className={`${buttonClasses("secondary", "sm")} disabled:opacity-60`}
+        >
+          Save notes
+        </button>
+      </div>
+    </form>
   );
 }

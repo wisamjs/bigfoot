@@ -67,6 +67,8 @@ export async function addTestApplications(jobSeekerId = TEST_JOB_SEEKER_ID) {
     const application = await call(jobSeekerId, "POST", "/applications", fields);
     for (const [kind, days, hour] of interviews) {
       const body = days === undefined ? { kind } : { kind, at: at(days, hour) };
+      // Every completed, dated Interview has Interview notes, so cards show the notes mark.
+      if (days < 0) body.notes = "Went well. Asked about past projects.\n\nNext time: have a question ready about the team.";
       await call(jobSeekerId, "POST", `/applications/${application.id}/interviews`, body);
     }
   }
@@ -91,6 +93,16 @@ export async function withTestApplications(jobSeekerId, fn) {
   } finally {
     await removeTestApplications(jobSeekerId);
   }
+}
+
+/**
+ * Runs `fn` with `jobSeekerId` holding no Applications, so the dashboard shows its empty states.
+ * Onboarded first, or their first dashboard visit would add Sample Applications.
+ */
+export async function withNoApplications(jobSeekerId, fn) {
+  await call(jobSeekerId, "POST", "/me/onboard");
+  await removeTestApplications(jobSeekerId);
+  return fn();
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

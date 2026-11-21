@@ -4,11 +4,11 @@ import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/dashboard/actions";
 import type { Application } from "@/lib/applications";
-import { application } from "@/test/applications";
+import { application, interview } from "@/test/applications";
 import { AddApplicationButton, ApplicationPanel, type PanelView } from "./application-panel";
 
 // Server Actions are mocked at their module: what the panel sends, not how it reaches the API.
-// Editing Status, details and Interviews in the panel is covered in dashboard-pipeline.test.tsx.
+// Editing Status, details and an Interview's kind and date is covered in dashboard-pipeline.test.tsx.
 vi.mock("@/app/dashboard/actions", () => ({
   createApplicationAction: vi.fn(),
   updateApplicationAction: vi.fn(),
@@ -27,9 +27,10 @@ beforeEach(() => {
 const birch = application("birch", { company: "Birch", salary: "$150k" });
 const cedar = application("cedar", { company: "Cedar", title: "Designer", status: "done", outcome: "rejected" });
 const maple = application("maple", { company: "Maple" });
+const ALL = [birch, cedar, maple];
 
 /** A caller that opens the panel on `view`, as the Pipeline does for a card. */
-function Caller({ view, applications = [birch, cedar, maple] }: { view: PanelView; applications?: Application[] }) {
+function Caller({ view, applications = ALL }: { view: PanelView; applications?: Application[] }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -43,9 +44,9 @@ function Caller({ view, applications = [birch, cedar, maple] }: { view: PanelVie
 
 async function openPanel(view: PanelView, applications?: Application[]) {
   const user = userEvent.setup();
-  const rendered = render(<Caller view={view} applications={applications} />);
+  const utils = render(<Caller view={view} applications={applications} />);
   await user.click(screen.getByRole("button", { name: "Open panel" }));
-  return { user, ...rendered };
+  return { user, ...utils };
 }
 
 describe("adding an Application", () => {
@@ -192,5 +193,96 @@ describe("an Application deleted while the panel shows it", () => {
     const { rerender } = await openPanel(view);
     rerender(<Caller view={view} applications={[cedar]} />);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
+describe("Interview notes", () => {
+  const view: PanelView = { kind: "application", id: "oak" };
+  const screenCall = interview("i1", { application_id: "oak", kind: "recruiter_screen" });
+  const technical = interview("i2", { application_id: "oak", kind: "technical", notes: "Asked about caching." });
+  const oak = application("oak", { company: "Oak", interviews: [screenCall, technical] });
+
+  async function openOak() {
+    const opened = await openPanel(view, [oak]);
+    const panel = screen.getByRole("dialog", { name: "Oak" });
+    return {
+      ...opened,
+      panel,
+      notes: (n: number) => within(panel).getByLabelText(`Interview notes (optional), Interview ${n}`),
+      saveButton: (n: number) => within(panel).getByRole("button", { name: `Save notes, Interview ${n}` }),
+    };
+  }
+
+  it("shows each Interview's notes under it, empty when there are none", async () => {
+    const { notes, saveButton } = await openOak();
+    expect(notes(1)).toHaveValue("");
+    expect(notes(2)).toHaveValue("Asked about caching.");
+    expect(saveButton(1)).toBeDisabled();
+    expect(saveButton(2)).toBeDisabled();
+  });
+
+  it("adds notes when Save notes is pressed, trimmed, keeping line breaks", async () => {
+    const { user, notes, saveButton } = await openOak();
+    await user.type(notes(1), " Friendly.{Enter}{Enter}Ask about the team. ");
+    expect(actions.updateInterviewAction).not.toHaveBeenCalled();
+    await user.click(saveButton(1));
+    expect(actions.updateInterviewAction).toHaveBeenCalledWith("oak", "i1", {
+      notes: "Friendly.\n\nAsk about the team.",
+    });
+  });
+
+  it("changes notes, and shows them as saved", async () => {
+    const { user, notes, saveButton, rerender } = await openOak();
+    await user.type(notes(2), " Draw the diagram first.");
+    await user.click(saveButton(2));
+    const saved = "Asked about caching. Draw the diagram first.";
+    expect(actions.updateInterviewAction).toHaveBeenCalledWith("oak", "i2", { notes: saved });
+
+    rerender(<Caller view={view} applications={[{ ...oak, interviews: [screenCall, { ...technical, notes: saved }] }]} />);
+    expect(notes(2)).toHaveValue(saved);
+    expect(saveButton(2)).toBeDisabled();
+  });
+
+  it("clears notes when they are emptied, and has nothing to save when only spaces are typed", async () => {
+    const { user, notes, saveButton } = await openOak();
+    await user.clear(notes(2));
+    await user.type(notes(2), "  ");
+    await user.click(saveButton(2));
+    expect(actions.updateInterviewAction).toHaveBeenCalledWith("oak", "i2", { notes: null });
+
+    await user.type(notes(1), "   ");
+    expect(saveButton(1)).toBeDisabled();
+  });
+
+  it("keeps notes being written when the Interview's kind is saved", async () => {
+    const { user, notes, rerender } = await openOak();
+    await user.type(notes(1), "Half-written");
+    await user.selectOptions(within(screen.getByRole("dialog")).getAllByLabelText(/^Kind/)[0], "leadership");
+    rerender(
+      <Caller
+        view={view}
+        applications={[{ ...oak, interviews: [{ ...screenCall, kind: "leadership", updated_at: "later" }, technical] }]}
+      />,
+    );
+    expect(notes(1)).toHaveValue("Half-written");
+    expect(within(screen.getByRole("dialog")).getAllByLabelText(/^Kind/)[0]).toHaveValue("leadership");
+  });
+
+  it("keeps what was written and shows why saving failed", async () => {
+    vi.mocked(actions.updateInterviewAction).mockResolvedValue({ ok: false, error: "Interview notes are too long" });
+    const { user, panel, notes, saveButton } = await openOak();
+    await user.type(notes(1), "Kept");
+    await user.click(saveButton(1));
+    expect(await within(panel).findByRole("alert")).toHaveTextContent("Interview notes are too long");
+    expect(notes(1)).toHaveValue("Kept");
+  });
+
+  it("counts characters only near the limit, and stops at it", async () => {
+    const { user, panel, notes } = await openOak();
+    expect(notes(1)).toHaveAttribute("maxlength", "20000");
+    expect(panel).not.toHaveTextContent("of 20,000 characters");
+    await user.click(notes(1));
+    await user.paste("x".repeat(18_000));
+    expect(panel).toHaveTextContent("18,000 of 20,000 characters");
   });
 });

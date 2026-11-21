@@ -98,7 +98,8 @@ export default function PrivacyPage() {
         <h3 className={h3}>What you enter</h3>
         <p>
           Your Applications: the company, job title, posting link, location, salary, the date you
-          applied, its Status and Outcome, and each Interview: its kind and, if you give one, its date.
+          applied, its Status and Outcome, and each Interview: its kind and, if you give them, its
+          date and your Interview notes, which hold whatever you write there.
         </p>
         <h3 className={h3}>Technical information</h3>
         <p>

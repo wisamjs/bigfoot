@@ -3,16 +3,11 @@ import { Container, Wordmark } from "@/components/ui";
 
 const columns = [
   {
-    title: "Product",
-    links: [
-      { label: "Features", href: "/#features" },
-    ],
-  },
-  {
     title: "Company",
     links: [
       { label: "Privacy", href: "/privacy" },
       { label: "Terms", href: "/terms" },
+      { label: "Accessibility", href: "/accessibility" },
     ],
   },
 ];
@@ -21,7 +16,7 @@ export function Footer() {
   return (
     <footer className="border-t border-line bg-surface">
       <Container>
-        <div className="grid grid-cols-1 gap-12 pt-16 pb-12 md:grid-cols-[2fr_repeat(2,1fr)]">
+        <div className="grid grid-cols-1 gap-12 pt-16 pb-12 md:grid-cols-[2fr_1fr]">
           <div className="max-w-sm">
             <Link href="/#top" aria-label="Bigfoot home" className="mb-4 inline-block rounded-control">
               <Wordmark />

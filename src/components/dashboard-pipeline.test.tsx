@@ -27,21 +27,21 @@ const technical = interview("i1", { application_id: "birch", kind: "technical", 
 const birch = application("birch", { company: "Birch", location: "Remote", interviews: [technical] });
 const rejected = application("umbrella", { company: "Umbrella", status: "done", outcome: "rejected", is_waiting: false });
 
-function renderDashboard() {
+function setUpDashboard() {
   const user = userEvent.setup();
   render(<DashboardPipeline applications={[birch, rejected]} subtitle="1 open" />);
   return user;
 }
 
 async function openBirch() {
-  const user = renderDashboard();
+  const user = setUpDashboard();
   await user.click(screen.getByRole("button", { name: /^Open Birch\b/ }));
   return { user, dialog: screen.getByRole("dialog", { name: "Birch" }) };
 }
 
 describe("Dashboard Pipeline", () => {
   it("shows Done Applications only after Show done", async () => {
-    const user = renderDashboard();
+    const user = setUpDashboard();
     expect(screen.queryByRole("region", { name: "Done" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("checkbox", { name: "Show done (1)" }));
     expect(within(screen.getByRole("region", { name: "Done" })).getByText("Umbrella")).toBeInTheDocument();

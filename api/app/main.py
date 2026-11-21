@@ -14,7 +14,7 @@ from psycopg_pool import ConnectionPool
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 
 from app.auth import JobSeekerId
-from app.domain import InterviewKind, Outcome, Status
+from app.domain import INTERVIEW_NOTES_MAX_LENGTH, InterviewKind, Outcome, Status
 from app.samples import sample_applications
 from app.settings import Settings, get_settings
 
@@ -43,6 +43,8 @@ def _posting_url(value: str | None) -> str | None:
 RequiredText = Annotated[str, AfterValidator(_required_text)]
 OptionalText = Annotated[str | None, AfterValidator(_optional_text)]
 PostingUrl = Annotated[str | None, AfterValidator(_posting_url)]
+# The length is checked as sent, before the ends are trimmed.
+InterviewNotes = Annotated[str | None, Field(max_length=INTERVIEW_NOTES_MAX_LENGTH), AfterValidator(_optional_text)]
 
 
 # Example values shared by the request and response schemas.
@@ -59,6 +61,11 @@ STATUS = "Whether the Application is still going (GLOSSARY.md, Status)."
 OUTCOME = "How a Done Application ended. Required when the status is `done`, and only then."
 KIND = "What sort of conversation the Interview is (GLOSSARY.md, Interview kind)."
 AT = "When the Interview happens, with a time zone. Null when it has no date yet."
+NOTES = (
+    "Interview notes (GLOSSARY.md): what the job seeker wrote about this Interview, as plain text of at most "
+    f"{INTERVIEW_NOTES_MAX_LENGTH:,} characters. Null when there are none."
+)
+EXAMPLE_NOTES = "Asked about caching trade-offs. Next time, draw the diagram first."
 
 
 ApplicationId = Annotated[UUID, Path(description="The Application's id.")]
@@ -132,15 +139,19 @@ class InterviewCreate(BaseModel):
 
     kind: InterviewKind = Field(description=KIND, examples=["technical"])
     at: datetime | None = Field(default=None, description=AT, examples=["2026-11-20T17:00:00Z"])
+    notes: InterviewNotes = Field(default=None, description=f"{NOTES} Blank is stored as null.", examples=[None])
 
 
 class InterviewPatch(BaseModel):
-    """Only the fields sent are changed; send null for `at` to clear the date."""
+    """Only the fields sent are changed; send null for `at` to clear the date, or for `notes` to clear them."""
 
     model_config = ConfigDict(extra="forbid")
 
     kind: InterviewKind | None = Field(default=None, description=f"{KIND} Cannot be cleared.", examples=["onsite_loop"])
     at: datetime | None = Field(default=None, description=AT, examples=["2026-11-27T15:30:00Z"])
+    notes: InterviewNotes = Field(
+        default=None, description=f"{NOTES} Blank is stored as null.", examples=[EXAMPLE_NOTES]
+    )
 
     @model_validator(mode="after")
     def _kind_not_cleared(self) -> "InterviewPatch":
@@ -156,6 +167,7 @@ class Interview(BaseModel):
     application_id: UUID = Field(description="The Application this Interview belongs to.")
     kind: InterviewKind = Field(description=KIND, examples=["technical"])
     at: datetime | None = Field(description=AT, examples=["2026-11-20T17:00:00Z"])
+    notes: str | None = Field(description=NOTES, examples=[EXAMPLE_NOTES])
     completed: bool = Field(
         description="Derived, never stored: the date is in the past, or there is no date.", examples=[False]
     )
@@ -216,7 +228,7 @@ APPLICATION_COLUMNS = (
     "id, company, title, posting_url, location, salary, applied_on, status, outcome, is_sample, created_at, updated_at"
 )
 COLUMNS = sql.SQL(APPLICATION_COLUMNS)
-INTERVIEW_COLUMNS = sql.SQL("id, application_id, kind, at, created_at, updated_at")
+INTERVIEW_COLUMNS = sql.SQL("id, application_id, kind, at, notes, created_at, updated_at")
 # Undated Interviews sort first (GLOSSARY.md, Interview).
 INTERVIEW_ORDER = sql.SQL("order by at nulls first, created_at, id")
 
@@ -548,14 +560,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def create_interview(
         request: Request, job_seeker: JobSeekerId, application_id: ApplicationId, body: InterviewCreate
     ) -> Interview:
-        """Add an Interview to an Application. Kinds can repeat; the date is optional."""
+        """Add an Interview to an Application. Kinds can repeat; the date and Interview notes are optional."""
         with pool(request).connection() as conn, conn.transaction():
             owned(conn, job_seeker, application_id)
             row = conn.execute(
-                sql.SQL("insert into interviews (application_id, kind, at) values (%s, %s, %s) returning {}").format(
-                    INTERVIEW_COLUMNS
-                ),
-                (application_id, body.kind, body.at),
+                sql.SQL(
+                    "insert into interviews (application_id, kind, at, notes) values (%s, %s, %s, %s) returning {}"
+                ).format(INTERVIEW_COLUMNS),
+                (application_id, body.kind, body.at, body.notes),
             ).fetchone()
         return _interview(row, datetime.now(UTC))
 
@@ -567,7 +579,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         interview_id: InterviewId,
         body: InterviewPatch,
     ) -> Interview:
-        """Change an Interview's kind or date. Only the fields sent change; send null for `at` to clear the date."""
+        """Change an Interview's kind, date or Interview notes.
+
+        Only the fields sent change; send null for `at` to clear the date, or for `notes` to clear them.
+        """
         changes = body.model_dump(exclude_unset=True)
         assignments = [sql.SQL("{} = %s").format(sql.Identifier(name)) for name in changes]
         assignments.append(sql.SQL("updated_at = now()"))
@@ -587,7 +602,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def delete_interview(
         request: Request, job_seeker: JobSeekerId, application_id: ApplicationId, interview_id: InterviewId
     ) -> None:
-        """Delete an Interview, for example a cancelled one."""
+        """Delete an Interview, for example a cancelled one, and its Interview notes with it."""
         with pool(request).connection() as conn, conn.transaction():
             owned(conn, job_seeker, application_id)
             deleted = conn.execute(

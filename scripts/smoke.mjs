@@ -8,7 +8,7 @@
 // Uses this checkout's dev server and API via scripts/servers.mjs: SMOKE_URL
 // (default http://localhost:3300) and API_URL (default http://localhost:8000) when they serve this
 // checkout, otherwise its own on free ports. A started API reads the test schema
-// (TEST_SCHEMA, default `bigfoot_test`, created by `npm run test:api`).
+// (scripts/test-schema.mjs), rebuilt as it starts.
 // Server errors are read from .next/dev/logs/next-development.log, which every dev server writes.
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
@@ -26,9 +26,12 @@ const REQUEST_TIMEOUT_MS = 20_000;
 const checks = [
   ...PAGES.map((page) => ({
     ...page,
-    expect: page.redirect
-      ? (r) => r.body.includes("NEXT_REDIRECT")
-      : (r) => r.status === 200 && r.body.includes(page.expect),
+    expect:
+      typeof page.redirect === "string"
+        ? (r) => r.status >= 300 && r.status < 400 && new URL(r.location ?? "", base).pathname === page.redirect
+        : page.redirect
+          ? (r) => r.body.includes("NEXT_REDIRECT")
+          : (r) => r.status === 200 && r.body.includes(page.expect),
   })),
   { path: "/api/auth/providers", signedIn: false, expect: (r) => r.status === 200 && r.body.includes('"google"') },
   // The API rejects requests without a token from the Next.js server.
@@ -66,7 +69,7 @@ for (const check of checks) {
       redirect: "manual",
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-    result = { status: res.status, body: await res.text() };
+    result = { status: res.status, location: res.headers.get("location"), body: await res.text() };
   } catch (error) {
     console.error(`✗ ${label}: ${error.name === "TimeoutError" ? `no response in ${REQUEST_TIMEOUT_MS / 1000}s` : error.message}`);
     failed++;

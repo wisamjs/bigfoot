@@ -35,6 +35,9 @@
   --line-brand-subtle: #e3aec9;
   --line-brand: #4f1135;
 
+  /* Loading shapes (.skeleton): a step away from every surface they sit on */
+  --skeleton: #e3c6d7;
+
   /* Status */
   --success-soft: #ecfdf5;
   --fg-success-strong: #065f46;
@@ -76,6 +79,12 @@
   --line-danger-subtle: #f5c2c2;
   --line-danger: #c53030;
 
+  /* Google's "G" logo: brand colours, the same in light and dark */
+  --google-red: #ea4335;
+  --google-blue: #4285f4;
+  --google-yellow: #fbbc05;
+  --google-green: #34a853;
+
   /* Button glint */
   --color-1-400: rgba(255, 255, 255, 0.3);
   --color-1-700: rgba(79, 17, 53, 0.18);
@@ -85,6 +94,15 @@
   --shadow-md: 0 4px 6px -1px rgba(79, 17, 53, 0.1), 0 2px 4px -2px rgba(79, 17, 53, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(79, 17, 53, 0.1), 0 4px 6px -4px rgba(79, 17, 53, 0.1);
   --shadow-2xl: 0 25px 50px -12px rgba(79, 17, 53, 0.25);
+
+  /* Spot illustrations (src/components/illustrations.tsx) */
+  --art-halo: #efc9dc;
+  --art-outline: #3c0d28;
+  --art-fur: #b5538c;
+  --art-face: #fbeaf2;
+  --art-accent: #d98ab3;
+  --art-paper: #ffffff;
+  --art-cell: #f2d2e2;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -114,6 +132,8 @@
     --line-medium: #4a1632;
     --line-brand-subtle: #4f1135;
     --line-brand: #e59cc4;
+
+    --skeleton: #5c1f40;
 
     --success-soft: #002c22;
     --fg-success-strong: #10b981;
@@ -155,11 +175,19 @@
 
     --color-1-400: rgba(255, 255, 255, 0.14);
     --color-1-700: rgba(0, 0, 0, 0.3);
+
+    --art-halo: #4a1632;
+    --art-outline: #1f0714;
+    --art-fur: #b5538c;
+    --art-face: #f2d2e2;
+    --art-accent: #e59cc4;
+    --art-paper: #faebf1;
+    --art-cell: #e3c6d7;
   }
 }
 
 @theme inline {
-  --font-sans: var(--font-ubuntu), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-allo), ui-sans-serif, system-ui, sans-serif;
 
   --color-surface: var(--surface);
   --color-surface-white: var(--surface-white);
@@ -244,6 +272,8 @@ body {
   color: var(--body);
   font-size: 16px;
   line-height: 1.7;
+  /* Allo's roundness axis: 0 sharp, 50 its default, 100 round. */
+  font-variation-settings: "ROND" 100;
 }
 
 :where(a, button, summary, [tabindex]):focus-visible {
@@ -330,6 +360,20 @@ body {
     color: var(--fg-brand-strong);
   }
 
+  /*
+   * Skeleton shape (BIG-73): stands in for content that is still loading. It fades in after a
+   * short delay, so a fast load never flashes it, then pulses. Its colour reads on the section
+   * surface, on cards and on the cards nested in them, in light and dark.
+   */
+  .skeleton {
+    display: block;
+    background: var(--skeleton);
+    border-radius: var(--radius-control);
+    animation:
+      skeleton-appear 200ms ease-out 300ms both,
+      skeleton-pulse 2s ease-in-out 500ms infinite;
+  }
+
   /* Hero atmosphere (layout.md: layered backgrounds, not flat fills). */
   .hero-atmosphere {
     background:
@@ -339,11 +383,44 @@ body {
   }
 }
 
+/* Skip link (root layout): off-screen until Tab reaches it, then pinned top-left above the header. */
+.skip-link {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 100;
+  translate: 0 calc(-100% - 32px);
+}
+.skip-link:focus-visible {
+  translate: none;
+}
+
+@keyframes skeleton-appear {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Stop movement everywhere: every animation and transition, skeletons included. */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
-  .btn {
-    transition: none;
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  /* Still held back for a moment, then shown without a fade or pulse. */
+  .skeleton {
+    animation: skeleton-appear 0s 300ms both;
   }
 }

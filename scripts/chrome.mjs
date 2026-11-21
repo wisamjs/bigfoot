@@ -22,30 +22,49 @@ function devToolsPort(profile) {
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Long enough for `next dev` to compile a page on first request, which a cold server (CI) does.
+const PAGE_TEXT_TIMEOUT_MS = 15_000;
+
 /**
- * Loads `url`, waits for fonts and client components to settle, and fails unless the page shows
- * `expect` (so an error page is never checked or captured). Removes the Next.js dev tools badge.
+ * Loads `url`, waits until the page shows `expect` (so an error page is never checked or
+ * captured) and its fonts have loaded. Removes the Next.js dev tools badge.
  */
 export async function openPage(chrome, url, expect) {
   const loaded = chrome.nextEvent("Page.loadEventFired");
   await chrome.send("Page.navigate", { url });
   await loaded;
-  await sleep(2000);
-  await expectText(chrome, expect, url);
+  await expectText(chrome, expect, url, PAGE_TEXT_TIMEOUT_MS);
+  await chrome.send("Runtime.evaluate", { expression: "document.fonts.ready.then(() => true)", awaitPromise: true });
   await chrome.send("Runtime.evaluate", { expression: `document.querySelectorAll("nextjs-portal").forEach((e) => e.remove())` });
 }
 
-async function expectText(chrome, expect, where) {
-  const { result } = await chrome.send("Runtime.evaluate", { expression: "document.body.innerText" });
-  if (!result.value?.includes(expect)) {
-    throw new Error(`${where} did not show "${expect}"; see .next/dev/logs/next-development.log`);
+/** How a failed wait quotes the page: enough of its text to tell what it was showing. */
+export function seenText(text) {
+  const seen = (text ?? "").replace(/\s+/g, " ").trim();
+  if (!seen) return "nothing";
+  return seen.length > 300 ? `"${seen.slice(0, 300)}…"` : `"${seen}"`;
+}
+
+/** Polls the page's text until it includes `expect`; after `timeoutMs`, fails with the last text seen. */
+async function expectText(chrome, expect, where, timeoutMs = 0) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const { result } = await chrome.send("Runtime.evaluate", { expression: "document.body?.innerText" });
+    if (result.value?.includes(expect)) return;
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `${where} did not show "${expect}"${timeoutMs ? ` within ${timeoutMs / 1000}s` : ""}; ` +
+          `it showed ${seenText(result.value)}. See .next/dev/logs/next-development.log`,
+      );
+    }
+    await sleep(250);
   }
 }
 
 /**
  * Runs a page state's steps (scripts/pages.mjs): each focuses and clicks the first element matching
  * `click` whose text includes `text`, as a pointer click in Chrome does, so a dialog it opens knows
- * where to return focus. Then fails unless the page shows the state's `expect`.
+ * where to return focus. Then waits for the page to show the state's `expect`, failing if it never does.
  */
 export async function enterState(chrome, state) {
   for (const step of state.steps) {
@@ -63,7 +82,9 @@ export async function enterState(chrome, state) {
     if (!result.value) throw new Error(`State "${state.name}": nothing matches ${JSON.stringify(step)}`);
     await sleep(400);
   }
-  await expectText(chrome, state.expect, `State "${state.name}"`);
+  // Waits, not just checks: some states show text only once client components render, which a cold
+  // server (CI) is slow to do.
+  await expectText(chrome, state.expect, `State "${state.name}"`, PAGE_TEXT_TIMEOUT_MS);
 }
 
 async function press(chrome, key, keyCode) {
@@ -122,6 +143,34 @@ export async function dialogKeyboardProblems(chrome) {
   if (after.dialogOpen) problems.push("Escape leaves the dialog open");
   else if (!after.onOpener) problems.push(`after Escape, focus is on ${after.name}, not the control that opened the dialog`);
   return problems;
+}
+
+/**
+ * The skip link on a freshly loaded page: the first Tab lands on it, and its target is the page's
+ * one <main>. Pressing Enter on it scrolls there; Tab after that continues inside <main>.
+ * Returns one line per problem.
+ */
+export async function skipLinkProblems(chrome) {
+  await press(chrome, "Tab", 9);
+  const { result } = await chrome.send("Runtime.evaluate", {
+    returnByValue: true,
+    expression: `(() => {
+      const el = document.activeElement;
+      const mains = document.querySelectorAll("main");
+      const problems = [];
+      if (el.getAttribute("href") !== "#main") problems.push(\`the first Tab lands on <\${el.tagName.toLowerCase()}> "\${el.textContent.trim().slice(0, 40)}", not the skip link\`);
+      if (mains.length !== 1 || mains[0].id !== "main") problems.push(\`the skip link needs exactly one <main id="main">; found \${mains.length} <main>\`);
+      return problems;
+    })()`,
+  });
+  if (result.value.length) return result.value;
+  await press(chrome, "Enter", 13);
+  await press(chrome, "Tab", 9);
+  const { result: after } = await chrome.send("Runtime.evaluate", {
+    returnByValue: true,
+    expression: `document.querySelector("main").contains(document.activeElement) || !document.querySelector("main").querySelector("a, button, input, select, textarea, summary, [tabindex]")`,
+  });
+  return after.value ? [] : ["after the skip link, Tab doesn't continue inside <main>"];
 }
 
 /** Starts headless Chrome and returns a DevTools client for its first tab. */

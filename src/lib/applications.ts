@@ -38,12 +38,17 @@ export const INTERVIEW_KINDS = [
 ] as const;
 export type InterviewKind = (typeof INTERVIEW_KINDS)[number];
 
+/** The longest Interview notes the API stores, in characters. */
+export const INTERVIEW_NOTES_MAX_LENGTH = 20_000;
+
 export type Interview = {
   id: string;
   application_id: string;
   kind: InterviewKind;
   /** ISO timestamp; null when the Interview has no date, which counts as completed. */
   at: string | null;
+  /** Interview notes: plain text the job seeker wrote about this Interview; null when there are none. */
+  notes: string | null;
   /** Derived by the API: the date is in the past, or there is no date. */
   completed: boolean;
   created_at: string;
@@ -80,7 +85,7 @@ export type ApplicationFields = Omit<
   "id" | "interviews" | "is_waiting" | "waiting_since" | "is_sample" | "created_at" | "updated_at"
 >;
 
-export type InterviewFields = Pick<Interview, "kind" | "at">;
+export type InterviewFields = Pick<Interview, "kind" | "at" | "notes">;
 
 type Option = { label: string; tone: Tone };
 
@@ -134,7 +139,7 @@ export function nextInterview(app: Application): Interview | null {
 
 /** The latest completed Interview, by date (undated ones come first, so they lose to dated ones). */
 export function lastCompletedInterview(app: Application): Interview | null {
-  return app.interviews.filter((i) => i.completed).at(-1) ?? null;
+  return app.interviews.findLast((i) => i.completed) ?? null;
 }
 
 /** The dashboard's three numbers: Open, Active, and the Next Interview across In Progress Applications. */
@@ -158,7 +163,7 @@ export function getUpcoming(apps: Application[]): DatedInterview[] {
   return apps
     .filter((a) => !isDone(a))
     .flatMap((a) => dated(a, upcomingInterviews(a)))
-    .sort((a, b) => a.interview.at.localeCompare(b.interview.at));
+    .toSorted((a, b) => a.interview.at.localeCompare(b.interview.at));
 }
 
 /** Every dated Interview of open Applications, past and upcoming, by date. Done Applications drop off. */
@@ -166,7 +171,7 @@ export function getCalendarInterviews(apps: Application[]): DatedInterview[] {
   return apps
     .filter((a) => !isDone(a))
     .flatMap((a) => dated(a, a.interviews.filter((i) => i.at !== null)))
-    .sort((a, b) => a.interview.at.localeCompare(b.interview.at));
+    .toSorted((a, b) => a.interview.at.localeCompare(b.interview.at));
 }
 
 export type BoardColumn = {

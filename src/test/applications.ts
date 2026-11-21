@@ -9,6 +9,7 @@ export function interview(id: string, overrides: Partial<Interview> = {}): Inter
     application_id: "a",
     kind: "technical",
     at: null,
+    notes: null,
     completed: true,
     created_at: "",
     updated_at: "",
