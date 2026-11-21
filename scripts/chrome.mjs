@@ -65,7 +65,7 @@ async function expectText(chrome, expect, where, timeoutMs = 0) {
  * Runs a page state's steps (scripts/pages.mjs). A `click` step focuses and clicks the first element
  * matching it whose text includes `text`, as a pointer click in Chrome does, so a dialog it opens
  * knows where to return focus. A `fill` step types `value` into the first element matching it. Then
- * fails unless the page shows the state's `expect`, waiting a few seconds for a Server Action.
+ * waits for the page to show the state's `expect`, failing if it never does.
  */
 export async function enterState(chrome, state) {
   for (const step of state.steps) {
@@ -88,7 +88,9 @@ export async function enterState(chrome, state) {
     if (!result.value) throw new Error(`State "${state.name}": nothing matches ${JSON.stringify(step)}`);
     await sleep(400);
   }
-  await expectText(chrome, state.expect, `State "${state.name}"`, 5000);
+  // Waits, not just checks: some states show text only once client components render, which a cold
+  // server (CI) is slow to do.
+  await expectText(chrome, state.expect, `State "${state.name}"`, PAGE_TEXT_TIMEOUT_MS);
 }
 
 async function press(chrome, key, keyCode) {

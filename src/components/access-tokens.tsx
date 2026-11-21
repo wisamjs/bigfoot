@@ -35,6 +35,7 @@ export function AccessTokens({ tokens, apiUrl }: { tokens: AccessToken[]; apiUrl
   return (
     <div className="flex flex-col gap-6">
       {/* Always mounted, so screen readers announce the new token when it appears. */}
+      {/* eslint-disable-next-line jsx-a11y/prefer-tag-over-role -- <output> allows only phrasing content, and the new token holds a heading and paragraphs. */}
       <div role="status">{created && <NewToken token={created} apiUrl={apiUrl} onDone={() => setHidden(created.id)} />}</div>
 
       {tokens.length === 0 ? (

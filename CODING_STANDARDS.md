@@ -33,13 +33,16 @@ needs GitHub Pro), so the review is the only gate.
 
 `npm run lint` (`eslint.config.mjs`) fails on any warning. It runs in pre-commit (inside
 `npm run check`) and as its own `lint` job in CI. Every shared config below is raised to errors.
+`scripts/lint-rules.test.ts` snapshots the rules that are on: a change to its snapshot is a
+change to this table, so the table must say the same.
 
 | Group | Files | Guards against |
 | --- | --- | --- |
 | `eslint-config-next` (core-web-vitals, TypeScript) | all | Next.js pitfalls (`<img>`, `<a>` for routes, sync scripts) and TypeScript mistakes. |
 | `react-hooks` | all | Hooks called conditionally, and effects missing a dependency (`exhaustive-deps` is an error). |
-| ESLint React `recommended-type-checked` | `src/**/*.{ts,tsx}` | React misuse: leaked `0` or `""` from `&&`, impure renders, unstable keys and context values, refs not named `…Ref`, misused DOM props. Its `disable-conflict-eslint-plugin-react` preset turns off the overlapping `eslint-plugin-react` rules so nothing is reported twice. |
-| `jsx-a11y` `strict` | `**/*.{jsx,tsx}` | ARIA and HTML mistakes: missing labels and alt text, invalid roles, click handlers on non-interactive elements, `autoFocus`, `tabIndex` on non-interactive elements. Runtime checks stay with `npm run a11y`. |
+| ESLint React `recommended-type-checked` | `src/**/*.{ts,tsx}` | React misuse: leaked `0` or `""` from `&&`, impure renders, setState in an effect, components defined inside components, unstable keys, refs not named `…Ref`, misused DOM props. Its two `disable-conflict-…` presets turn off the `eslint-plugin-react` and `react-hooks` rules it copies, so nothing is reported twice; `react-hooks` keeps `rules-of-hooks` and `exhaustive-deps`. |
+| Performance (ESLint React, core, `eslint-plugin-unicorn`) | `src/**/*.{ts,tsx}` | The `vercel-react-best-practices` rules a linter can check: default props and context values rebuilt on every render (`rerender-memo-with-default-value`), `await` in a loop (`async-parallel`), `export *` barrels (`bundle-barrel-imports`), `.sort()` mutating in place (`js-tosorted-immutable`), `.filter()` where `.find()` or `.some()` stops early (`js-early-exit`), `.map().flat()` (`js-flatmap-filter`), and `Array#includes` on a fixed list (`js-set-map-lookups`). The rest of the skill is for review. |
+| `jsx-a11y` `strict`, plus every live rule it leaves off | `**/*.{jsx,tsx}` | Semantic HTML and ARIA mistakes: a `role` where a native element exists (`prefer-tag-over-role`: `<fieldset>`, `<section>`, `<output>`), controls with no label, focusable elements hidden with `aria-hidden`, vague link text, missing labels and alt text, invalid roles, click handlers on non-interactive elements, `autoFocus`, `tabIndex` on non-interactive elements. Heading order and landmarks are runtime checks in `npm run a11y`. |
 | Testing Library (React) and jest-dom | `**/*.test.tsx` | Tests that reach into the DOM instead of querying as a user would, misnamed render results, and assertions with a clearer jest-dom matcher. |
 
 An inline `eslint-disable` names its rule and gives a reason after `--`. Today's exceptions:

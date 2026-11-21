@@ -105,6 +105,16 @@ export async function withTestApplications(jobSeekerId, fn) {
   }
 }
 
+/**
+ * Runs `fn` with `jobSeekerId` holding no Applications, so the dashboard shows its empty states.
+ * Onboarded first, or their first dashboard visit would add Sample Applications.
+ */
+export async function withNoApplications(jobSeekerId, fn) {
+  await call(jobSeekerId, "POST", "/me/onboard");
+  await removeTestApplications(jobSeekerId);
+  return fn();
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const command = process.argv[2];
   if (command === "add") {

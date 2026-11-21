@@ -1,28 +1,23 @@
 """Tests run against the real Supabase Postgres, in a throwaway schema (`bigfoot_test`, or
 TEST_SCHEMA) rebuilt from supabase/migrations before each test."""
 
-import os
-import re
 import time
 from collections.abc import Iterator
 from dataclasses import replace
-from pathlib import Path
 
 import jwt
-import psycopg
 import pytest
 from fastapi.testclient import TestClient
-from psycopg import sql
 
 from app.auth import AUDIENCE, ISSUER
 from app.main import create_app
 from app.settings import Settings, get_settings
+from tests.schema import MIGRATIONS, rebuild, schema_name
 
-# CI gives each run its own schema (bigfoot_test_<run id>), so runs never share one.
-TEST_SCHEMA = os.environ.get("TEST_SCHEMA", "bigfoot_test")
-if not re.fullmatch(r"bigfoot_test[a-z0-9_]*", TEST_SCHEMA):
-    raise RuntimeError(f"TEST_SCHEMA must start with bigfoot_test, got {TEST_SCHEMA!r}")
-MIGRATIONS = Path(__file__).resolve().parents[2] / "supabase" / "migrations"
+# `npm run test:api` (scripts/test-schema.mjs) sets one per BIG ticket branch, and CI one per
+# run, so runs side by side never share one.
+TEST_SCHEMA = schema_name()
+__all__ = ["MIGRATIONS", "TEST_SCHEMA"]
 
 
 @pytest.fixture(scope="session")
@@ -32,13 +27,7 @@ def settings() -> Settings:
 
 @pytest.fixture(autouse=True)
 def fresh_schema(settings: Settings) -> None:
-    schema = sql.Identifier(TEST_SCHEMA)
-    with psycopg.connect(settings.database_url, prepare_threshold=None, autocommit=True) as conn:
-        conn.execute(sql.SQL("drop schema if exists {} cascade").format(schema))
-        conn.execute(sql.SQL("create schema {}").format(schema))
-        conn.execute(sql.SQL("set search_path to {}").format(schema))
-        for migration in sorted(MIGRATIONS.glob("*.sql")):
-            conn.execute(migration.read_text())
+    rebuild(settings.database_url, TEST_SCHEMA)
 
 
 @pytest.fixture

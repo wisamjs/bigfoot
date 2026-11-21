@@ -17,14 +17,21 @@ export async function GET(request: Request) {
   if (!user) return Response.redirect(new URL("/", request.url), 303);
 
   const format = new URL(request.url).searchParams.get("format");
-  if (!isExportFormat(format)) return new Response("format must be csv or json", { status: 400 });
+  if (!isExportFormat(format))
+    return new Response("format must be csv or json", { status: 400 });
 
   const now = new Date();
-  const applications = await listApplications(user.id);
+  // JSON also needs the job seeker's record and Access tokens: fetch them alongside the
+  // Applications, not after.
+  const [applications, record, accessTokens] = await Promise.all([
+    listApplications(user.id),
+    format === "json" ? getJobSeeker(user.id) : null,
+    format === "json" ? listAccessTokens(user.id) : [],
+  ]);
   const body =
     format === "csv"
       ? applicationsCsv(applications)
-      : dataExportJson(user, await getJobSeeker(user.id), applications, await listAccessTokens(user.id), now);
+      : dataExportJson(user, record, applications, accessTokens, now);
 
   return new Response(body, {
     headers: {

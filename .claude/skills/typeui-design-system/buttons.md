@@ -10,7 +10,7 @@
 - **Glint effect:** Every button except ghost and disabled gets a combined box-shadow that layers the base shadow with an inset top-edge highlight and a subtle outer color glow:
   - `var(--shadow-xs), inset var(--color-1-400) 0 6px 0px -5px, var(--color-1-700) 0 4px 10px -5px`
 - **Font weight:** 500 (medium)
-- **Font:** Ubuntu
+- **Font:** Allo
 - **Text shadow:** subtle wine-toned text shadow for filled gradient buttons — `1px 1px 1px rgba(42,10,29,0.25)` (use a tone from the brand palette, never pure black)
 - **Box sizing:** border-box
 - **Transition:** all properties, 0.3s

@@ -27,9 +27,10 @@ beforeEach(() => {
 const birch = application("birch", { company: "Birch", salary: "$150k" });
 const cedar = application("cedar", { company: "Cedar", title: "Designer", status: "done", outcome: "rejected" });
 const maple = application("maple", { company: "Maple" });
+const ALL = [birch, cedar, maple];
 
 /** A caller that opens the panel on `view`, as the Pipeline does for a card. */
-function Caller({ view, applications = [birch, cedar, maple] }: { view: PanelView; applications?: Application[] }) {
+function Caller({ view, applications = ALL }: { view: PanelView; applications?: Application[] }) {
   const [open, setOpen] = useState(false);
   return (
     <>

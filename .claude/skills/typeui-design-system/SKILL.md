@@ -36,7 +36,7 @@ A playful candy-shop interface built on a deep wine + bubblegum-pink palette —
 - **Symmetric section spacing.** Sections must have the same spacing on top and bottom between them — the vertical space above a section equals the vertical space below it, keeping a consistent rhythm down the whole page.
 - **Dark mode is automatic.** The CSS custom properties resolve differently in light/dark via `@media (prefers-color-scheme: dark)`. Never manually swap colors.
 - **Every interactive element needs hover, focus, and disabled states** — defined in the relevant module.
-- **Use semantic HTML:** proper heading hierarchy (`h1`→`h6`), `<button>` for actions, `<a>` for navigation, ARIA attributes where needed.
+- **Heading hierarchy:** `h1`→`h6` in order. `npm run lint` (jsx-a11y) enforces native elements over roles.
 
 ## Module Index
 
