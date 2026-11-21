@@ -39,6 +39,57 @@ export function monthWeeks(start: Date): CalendarDay[][] {
   return weeks;
 }
 
+/** The most Interviews the Coming up agenda lists before it narrows its window. */
+export const AGENDA_LIMIT = 5;
+
+/** The days the Coming up agenda lists: local YYYY-MM-DD keys, both ends included. */
+export type AgendaWindow = {
+  /** Completes "Interviews in …" and "Nothing in … yet.", e.g. "November" or "the next week". */
+  span: string;
+  from: string;
+  to: string;
+  /** For the narrowed windows, the ISO moment they start (BIG-93): earlier Interviews, completed ones, are left out. */
+  since?: string;
+};
+
+/** Whether an Interview at `at` is in `window`. */
+export function inWindow(at: string, window: AgendaWindow): boolean {
+  const key = dayKey(new Date(at));
+  if (key < window.from || key > window.to) return false;
+  return window.since === undefined || new Date(at) >= new Date(window.since);
+}
+
+const monthOnlyFormat = new Intl.DateTimeFormat(undefined, { month: "long" });
+
+/** The whole month that starts on `start`. */
+export function monthWindow(start: Date): AgendaWindow {
+  return {
+    span: monthOnlyFormat.format(start),
+    from: dayKey(start),
+    to: dayKey(new Date(start.getFullYear(), start.getMonth() + 1, 0)),
+  };
+}
+
+/**
+ * The widest window that holds no more than `limit` Interviews (BIG-72): this month (past ones
+ * included), then the next 2 weeks, the next week and the next 2 days, each starting now, so
+ * Interviews earlier today are left out (BIG-93). When even the next 2 days hold more, it is still
+ * the next 2 days.
+ */
+export function upcomingWindow(times: string[], now: Date, limit = AGENDA_LIMIT): AgendaWindow {
+  const today = dayKey(now);
+  const through = (days: number) => dayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + days - 1));
+  const since = now.toISOString();
+  const windows: AgendaWindow[] = [
+    monthWindow(monthStart(now, 0)),
+    { span: "the next 2 weeks", from: today, to: through(14), since },
+    { span: "the next week", from: today, to: through(7), since },
+    { span: "the next 2 days", from: today, to: through(2), since },
+  ];
+  const fits = (w: AgendaWindow) => times.filter((at) => inWindow(at, w)).length <= limit;
+  return windows.find(fits) ?? windows[windows.length - 1];
+}
+
 /** Items grouped by the local day of their timestamp (`at`), each day in time order. */
 export function groupByDay<T>(items: T[], at: (item: T) => string): Map<string, T[]> {
   const days = new Map<string, T[]>();

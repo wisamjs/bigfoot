@@ -118,6 +118,7 @@ function ApplicationList({
                 {/* Stretched button, as on the Pipeline's cards: the whole row opens the Application. */}
                 <button
                   type="button"
+                  // eslint-disable-next-line jsx-a11y/no-autofocus -- on Back to list, focus returns to the row that was opened.
                   autoFocus={app.id === focusId}
                   onClick={() => onOpen(app.id)}
                   className="cursor-pointer text-left after:absolute after:inset-0 after:rounded-control focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-brand"

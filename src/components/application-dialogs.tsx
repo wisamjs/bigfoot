@@ -32,7 +32,13 @@ export function DeleteConfirmation({ app, onDone }: { app: Application; onDone: 
         </p>
       )}
       <div className="mt-2 flex justify-end gap-3 border-t border-line pt-4">
-        <button type="button" onClick={onDone} autoFocus className={buttonClasses("secondary", "md")}>
+        <button
+          type="button"
+          onClick={onDone}
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- opening a delete dialog moves focus to its safe choice (WAI-ARIA dialog pattern).
+          autoFocus
+          className={buttonClasses("secondary", "md")}
+        >
           Cancel
         </button>
         <button
