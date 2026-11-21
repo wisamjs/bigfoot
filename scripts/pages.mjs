@@ -51,5 +51,7 @@ export const PAGES = [
     ],
   },
   { path: "/account", signedIn: false, redirect: true },
-  { path: "/account", signedIn: true, expect: "Delete account" },
+  // Text only the loaded page shows: the skeleton has the headings, so waiting for one can catch
+  // the page mid-stream, with the skeleton and the loaded page both in the DOM.
+  { path: "/account", signedIn: true, expect: "to confirm" },
 ];
