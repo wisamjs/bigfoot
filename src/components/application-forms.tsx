@@ -285,6 +285,7 @@ function DetailsForm({
           <label htmlFor={`${id}-company`} className={labelClasses}>
             Company
           </label>
+          {/* eslint-disable-next-line jsx-a11y/no-autofocus -- the Add panel is a dialog; focus starts on its first field. */}
           <input type="text" required autoFocus={!app} {...field("company")} />
         </div>
         <div>
@@ -330,6 +331,7 @@ function DetailsForm({
             <label htmlFor={`${id}-salary`} className={labelClasses}>
               Salary (optional)
             </label>
+            {/* eslint-disable-next-line jsx-a11y/no-autofocus -- "Add salary" swaps its button for this field, so focus follows it. */}
             <input type="text" placeholder="$150k–$180k" autoFocus={focusSalary} {...field("salary")} />
           </div>
         )}

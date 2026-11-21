@@ -43,9 +43,9 @@ function Caller({ view, applications = [birch, cedar, maple] }: { view: PanelVie
 
 async function openPanel(view: PanelView, applications?: Application[]) {
   const user = userEvent.setup();
-  const rendered = render(<Caller view={view} applications={applications} />);
+  const utils = render(<Caller view={view} applications={applications} />);
   await user.click(screen.getByRole("button", { name: "Open panel" }));
-  return { user, ...rendered };
+  return { user, ...utils };
 }
 
 describe("adding an Application", () => {

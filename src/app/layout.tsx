@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { buttonClasses } from "@/components/ui";
 import "./globals.css";
 
 // Allo (allo-font, SIL OFL 1.1), self-hosted from the npm package so dev, smoke and build
@@ -25,7 +26,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${allo.variable} antialiased`}>
-      <body className="min-h-dvh font-sans">{children}</body>
+      <body className="min-h-dvh font-sans">
+        {/* First stop for Tab on every page. Each page's <main> has id="main". */}
+        <a href="#main" className={`skip-link ${buttonClasses("brand")}`}>
+          Skip to main content
+        </a>
+        {children}
+      </body>
     </html>
   );
 }

@@ -96,6 +96,7 @@ export function SidePanel({
                 type="button"
                 onClick={onBack}
                 // The list item that was clicked is gone, so focus moves here, not to the page.
+                // eslint-disable-next-line jsx-a11y/no-autofocus -- replaces focus lost inside the open dialog.
                 autoFocus
                 className="mb-2 flex items-center gap-1.5 rounded-control text-sm font-medium text-fg-brand hover:underline"
               >

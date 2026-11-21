@@ -13,7 +13,7 @@ vi.mock("@/app/actions", () => ({ signInWithGoogle: vi.fn(), signOutAction: vi.f
 /** The section a heading names, checking the heading labels it. */
 function sectionNamedBy(level: number) {
   const heading = screen.getByRole("heading", { level });
-  expect(heading.textContent).not.toBe("");
+  expect(heading).not.toBeEmptyDOMElement();
   return screen.getByRole("region", { name: heading.textContent! });
 }
 
@@ -35,6 +35,7 @@ describe("landing sections", () => {
   it("Navbar's mobile menu shows the sign-in note with its buttons", async () => {
     render(<Navbar />);
     await userEvent.click(screen.getByRole("button", { name: "Open menu" }));
+    // eslint-disable-next-line testing-library/no-node-access -- the menu has no role; the toggle names it only by id (aria-controls).
     expectSignInNote(document.getElementById("mobile-menu")!);
   });
 
@@ -43,10 +44,10 @@ describe("landing sections", () => {
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Company"]);
   });
 
-  it("Footer links to the Privacy Policy and the Terms", () => {
+  it("Footer links to the Privacy Policy, the Terms and the accessibility statement", () => {
     render(<Footer />);
     const company = screen.getByRole("navigation", { name: "Company" });
-    expect(within(company).getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual(["/privacy", "/terms"]);
+    expect(within(company).getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual(["/privacy", "/terms", "/accessibility"]);
   });
 });
 
