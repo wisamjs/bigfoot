@@ -43,10 +43,22 @@ def test_several_missing_variables_are_named_in_one_message():
 
 def test_api_docs_must_be_off_in_production():
     docs_on = {**COMPLETE, "API_DOCS": "true"}
-    assert env_problems({**docs_on, "VERCEL_ENV": "production"}) == ["API_DOCS must not be true in production"]
+    production = {**docs_on, "VERCEL_ENV": "production", "SENTRY_DSN": "https://key@sentry.example/1"}
+    assert env_problems(production) == ["API_DOCS must not be true in production"]
     assert env_problems({**docs_on, "VERCEL_ENV": "preview"}) == []
     assert env_problems(docs_on) == []
     assert get_settings(docs_on).api_docs is True
+
+
+def test_sentry_dsn_is_required_in_production_only():
+    assert env_problems({**COMPLETE, "VERCEL_ENV": "production"}) == [
+        "Missing in production: SENTRY_DSN (see .env.example)"
+    ]
+    assert env_problems({**COMPLETE, "VERCEL_ENV": "preview"}) == []
+    assert get_settings(COMPLETE).sentry_dsn is None
+    assert get_settings({**COMPLETE, "SENTRY_DSN": " https://key@sentry.example/1 "}).sentry_dsn == (
+        "https://key@sentry.example/1"
+    )
 
 
 def test_every_problem_is_reported_together():
