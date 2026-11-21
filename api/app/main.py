@@ -252,6 +252,10 @@ class AccessToken(BaseModel):
     id: UUID
     name: str = Field(description="What the job seeker called the token.", examples=["Calendar cron job"])
     created_at: datetime
+    last_used_at: datetime | None = Field(
+        description="When a request last used the token, to within a minute; null until one does.",
+        examples=["2026-11-20T17:00:00Z"],
+    )
     expires_at: datetime = Field(
         description="When the token stops working: a year after it was created.", examples=["2027-11-16T17:00:00Z"]
     )
@@ -295,7 +299,7 @@ APPLICATION_COLUMNS = (
 )
 COLUMNS = sql.SQL(APPLICATION_COLUMNS)
 # `expired` is derived on every read, never stored, like an Interview's `completed`.
-ACCESS_TOKEN_COLUMNS = sql.SQL("id, name, created_at, expires_at, expires_at <= now() as expired")
+ACCESS_TOKEN_COLUMNS = sql.SQL("id, name, created_at, last_used_at, expires_at, expires_at <= now() as expired")
 INTERVIEW_COLUMNS = sql.SQL("id, application_id, kind, at, notes, created_at, updated_at")
 # Undated Interviews sort first (GLOSSARY.md, Interview).
 INTERVIEW_ORDER = sql.SQL("order by at nulls first, created_at, id")

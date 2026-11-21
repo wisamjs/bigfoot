@@ -22,6 +22,7 @@ const created = {
   id: "t1",
   name: "Calendar cron job",
   created_at: "2026-11-16T12:00:00Z",
+  last_used_at: null,
   expires_at: "2027-11-16T12:00:00Z",
   expired: false,
   token: "bigfoot_secret",

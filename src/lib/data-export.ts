@@ -114,7 +114,12 @@ export function dataExportJson(
       last_seen_at: record?.last_seen_at ?? null,
     },
     applications,
-    access_tokens: accessTokens.map(({ name, created_at, expires_at }) => ({ name, created_at, expires_at })),
+    access_tokens: accessTokens.map(({ name, created_at, last_used_at, expires_at }) => ({
+      name,
+      created_at,
+      last_used_at,
+      expires_at,
+    })),
   };
   return `${JSON.stringify(data, null, 2)}\n`;
 }
