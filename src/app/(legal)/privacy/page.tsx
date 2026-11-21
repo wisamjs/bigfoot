@@ -105,7 +105,7 @@ export default function PrivacyPage() {
         <h3 className={h3}>Access tokens, if you create any</h3>
         <p>
           An Access token lets a script of yours use Bigfoot as you. For each one, we store the name
-          you give it, when you created it and when it expires. We store a
+          you give it, when you created it, when it was last used and when it expires. We store a
           one-way hash of the token’s secret, not the secret itself, so we cannot show it to you
           again or use it ourselves.
         </p>

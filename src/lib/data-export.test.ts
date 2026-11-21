@@ -134,6 +134,7 @@ describe("dataExportJson", () => {
     id: "t1",
     name: "Calendar cron job",
     created_at: "2026-11-12T12:00:00Z",
+    last_used_at: "2026-11-13T08:00:00Z",
     expires_at: "2027-11-12T12:00:00Z",
     expired: false,
   };
@@ -164,6 +165,7 @@ describe("dataExportJson", () => {
         {
           name: "Calendar cron job",
           created_at: "2026-11-12T12:00:00Z",
+          last_used_at: "2026-11-13T08:00:00Z",
           expires_at: "2027-11-12T12:00:00Z",
         },
       ],

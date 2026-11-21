@@ -17,6 +17,7 @@ vi.mock("@/lib/api", () => ({
     (tokens[jobSeekerId] ?? []).map((token) => ({
       ...token,
       created_at: "2026-11-12T12:00:00Z",
+      last_used_at: null,
       expires_at: "2027-11-12T12:00:00Z",
       expired: false,
     })),
@@ -94,6 +95,7 @@ describe("GET /account/export", () => {
       {
         name: "Alice's cron job",
         created_at: "2026-11-12T12:00:00Z",
+        last_used_at: null,
         expires_at: "2027-11-12T12:00:00Z",
       },
     ]);
