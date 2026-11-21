@@ -6,9 +6,11 @@ import { cn } from "cn";
 /**
  * buttons.md: the look comes from Candy's .btn classes in globals.css (radius, rim, glint); the
  * size table and the danger variant are utilities. Disabled buttons fade and say so on hover.
+ * `aria-disabled` looks the same but keeps focus: use it on a submit button while its form is
+ * pending, so focus stays in place for the error or result that follows.
  */
 const buttonVariants = cva(
-  "btn disabled:cursor-not-allowed disabled:opacity-60 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "btn disabled:cursor-not-allowed disabled:opacity-60 aria-disabled:cursor-not-allowed aria-disabled:opacity-60 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
