@@ -33,7 +33,7 @@ export default defineConfig({
       exclude: ["src/**/*.test.{ts,tsx}", "src/test/**"],
       reporter: ["text-summary", "html"],
       // Current coverage minus 2 points. Raise these as tests are added; never lower them.
-      thresholds: { statements: 47, branches: 46, functions: 50, lines: 48 },
+      thresholds: { statements: 56, branches: 56, functions: 57, lines: 56 },
     },
   },
 });

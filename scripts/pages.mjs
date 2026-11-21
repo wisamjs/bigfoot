@@ -5,7 +5,7 @@
 //             (src/proxy.ts); true allows the redirect a page streams while it renders
 //   states    what a click or typing opens or reveals (a dialog, a toggled column, an error); a11y
 //             checks each one, signed in as a user holding scripts/dev-applications.mjs's
-//             Applications, and `npm run capture -- --state <name>` captures one. Each step clicks
+//             Applications and Access token, and `npm run capture -- --state <name>` captures one. Each step clicks
 //             the first element matching `click` whose text includes `text`, or types `value` into
 //             the first element matching `fill`; `expect` is text the state must show.
 //             `applications: "none"` signs in as a job seeker with no Applications instead, for
@@ -77,7 +77,26 @@ export const PAGES = [
     ],
   },
   { path: "/account", signedIn: false, redirect: true },
-  // Text only the loaded page shows: the skeleton has the headings, so waiting for one can catch
-  // the page mid-stream, with the skeleton and the loaded page both in the DOM.
-  { path: "/account", signedIn: true, expect: "to confirm" },
+  {
+    path: "/account",
+    signedIn: true,
+    // Text only the loaded page shows: the skeleton has the headings, so waiting for one can catch
+    // the page mid-stream, with the skeleton and the loaded page both in the DOM.
+    expect: "to confirm",
+    states: [
+      {
+        name: "token-created",
+        steps: [
+          { fill: 'input[name="name"]', value: "Laptop script" },
+          { click: "button", text: "Create Access token" },
+        ],
+        expect: "Copy your Access token now",
+      },
+      {
+        name: "revoke-confirmation",
+        steps: [{ click: "button", text: "Revoke" }],
+        expect: "will stop working straight away",
+      },
+    ],
+  },
 ];

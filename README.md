@@ -10,12 +10,34 @@ Bigfoot is an early proof of concept, built as a side project. Sign in with Goog
 
 ![Bigfoot dashboard](docs/screenshots/dashboard.png)
 
+## Use the API from a terminal
+
+A script can read your Applications and Interviews without a browser, for example to report on your job search. Access tokens can only read for now.
+
+1. Sign in, open the **Account** page and create an **Access token**. Copy the secret straight away: Bigfoot shows it once and stores only a hash.
+2. Send it as a bearer token. The production API is at `https://bigfoot-api.vercel.app` (locally, `http://localhost:8000`):
+
+   ```bash
+   export BIGFOOT_TOKEN="bigfoot_…"
+   export BIGFOOT_API="https://bigfoot-api.vercel.app"
+
+   # List your Applications, each with its Interviews
+   curl -H "Authorization: Bearer $BIGFOOT_TOKEN" "$BIGFOOT_API/applications"
+
+   # List one Application's Interviews, using an "id" from the list
+   curl -H "Authorization: Bearer $BIGFOOT_TOKEN" "$BIGFOOT_API/applications/<application id>/interviews"
+   ```
+
+Every route, field and Interview kind is in [`api/openapi.json`](api/openapi.json), and you can browse them locally ([Try the API](#try-the-api)).
+
+A token can read all your Applications and Interviews, so treat it like a password. It can't change them, delete your account or manage tokens (any of those gets `403`). It expires a year after you create it; revoke it on the Account page at any time. A revoked, expired or mistyped token gets `401`.
+
 ## Tech stack
 
 - [Next.js 16](https://nextjs.org) (App Router, Cache Components) and React 19
 - [Auth.js](https://authjs.dev) with Google sign-in and encrypted cookie sessions
 - [Tailwind CSS 4](https://tailwindcss.com), with every design token defined in [`src/app/globals.css`](src/app/globals.css)
-- [FastAPI](https://fastapi.tiangolo.com) (Python, in [`api/`](api)) serving Applications from [Supabase](https://supabase.com) Postgres. The browser never calls it: the Next.js server does, with a short-lived token naming the signed-in user ([ADR 0001](docs/adr/0001-fastapi-behind-nextjs-with-authjs.md))
+- [FastAPI](https://fastapi.tiangolo.com) (Python, in [`api/`](api)) serving Applications from [Supabase](https://supabase.com) Postgres. The browser never calls it: the Next.js server does, with a short-lived token naming the signed-in user ([ADR 0001](docs/adr/0001-fastapi-behind-nextjs-with-authjs.md)). A job seeker's own scripts can call it too, with an Access token ([ADR 0003](docs/adr/0003-access-tokens-open-fastapi-to-scripts.md))
 - TypeScript and Python
 
 ## Run it locally
@@ -73,13 +95,13 @@ With `API_DOCS="true"` in `.env.local` (as in `.env.example`), the API serves in
 
 A production server checks its environment variables when it starts, and a Vercel build checks them before deploying: both fail with one message naming every missing variable. In Vercel's Production environment, `API_URL` must also not be a `localhost` address and `API_DOCS` must not be `true`. The lists are in [`src/lib/env.ts`](src/lib/env.ts) (Next.js) and [`api/app/settings.py`](api/app/settings.py) (API), and a test keeps them matching `.env.example`.
 
-To send requests from the docs as the test job seeker, print a token (valid for an hour, signed with `API_SECRET`):
+To send requests from the docs, click **Authorize** and paste an Access token from your local Account page. Or, to act as the test job seeker (and to reach the Account routes, which Access tokens can't), print a web token (valid for an hour, signed with `API_SECRET`):
 
 ```bash
 node scripts/dev-api-token.mjs
 ```
 
-Click **Authorize**, paste the token, then **Try it out** on any route. The schema is committed as [`api/openapi.json`](api/openapi.json): after changing the API, run `npm run openapi` and commit the result. If you forget, the pre-commit hook rewrites it and stops the commit until you `git add` it.
+Paste it into **Authorize**, then **Try it out** on any route. The schema is committed as [`api/openapi.json`](api/openapi.json): after changing the API, run `npm run openapi` and commit the result. If you forget, the pre-commit hook rewrites it and stops the commit until you `git add` it.
 
 ### Skip Google sign-in
 
@@ -134,7 +156,7 @@ Two Supabase projects, both in `us-east-1`:
 
 Bigfoot was built with AI coding agents working from the project rules in [`AGENTS.md`](AGENTS.md).
 
-[`GLOSSARY.md`](GLOSSARY.md) defines the product's terms (Application, Status, Outcome, Interview, Pipeline).
+[`GLOSSARY.md`](GLOSSARY.md) defines the product's terms (Application, Status, Outcome, Interview, Pipeline, Access token).
 
 ## License
 

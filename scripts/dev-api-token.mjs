@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Prints an API bearer token for the dev-session test user, signed with API_SECRET, to paste into
+// Prints a web token (docs/adr/0003: not an Access token) for the dev-session test user, signed with API_SECRET, to paste into
 // Authorize on the API docs (http://localhost:8000/docs, with API_DOCS=true):
 //   node scripts/dev-api-token.mjs          # valid for an hour
 //   curl -H "authorization: Bearer $(node scripts/dev-api-token.mjs)" http://localhost:8000/applications
