@@ -5,7 +5,8 @@ import { useState } from "react";
 import { DeleteConfirmation } from "@/components/application-dialogs";
 import { ApplicationEditor, NewApplicationForm } from "@/components/application-forms";
 import { Modal, SidePanel } from "@/components/modal";
-import { Badge, buttonClasses, SampleBadge } from "@/components/ui";
+import { Badge, SampleBadge } from "@/components/ui";
+import { Button } from "@/components/ui/button";
 import { OUTCOME_OPTIONS, STATUS_OPTIONS, type Application } from "@/lib/applications";
 
 /** What the panel shows: an empty Application to add, one Application, or a list to pick from. */
@@ -145,10 +146,10 @@ export function AddApplicationButton() {
   const [adding, setAdding] = useState(false);
   return (
     <>
-      <button type="button" onClick={() => setAdding(true)} className={buttonClasses("brand", "md")}>
+      <Button onClick={() => setAdding(true)}>
         <Plus className="size-4" aria-hidden />
         Add application
-      </button>
+      </Button>
       <ApplicationPanel view={adding ? { kind: "add" } : null} applications={[]} onClose={() => setAdding(false)} />
     </>
   );

@@ -1,28 +1,14 @@
 "use client";
 
-import { ArrowLeft, X } from "lucide-react";
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { ArrowLeft } from "lucide-react";
+import type { ReactNode } from "react";
+import { Dialog, DialogCloseButton, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetCloseButton, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 
 /**
- * Keeps a native <dialog> open as a modal while `open` is true. showModal() provides the
- * backdrop, focus trap, Escape to close, inert background and focus returning to the opener.
+ * modals.md: a centred dialog, for short confirmations. Escape, the Close button and a click on
+ * the backdrop all ask to close.
  */
-function useModalDialog(open: boolean) {
-  const ref = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
-  }, [open]);
-
-  return ref;
-}
-
-const closeButtonClasses = "rounded-control p-1.5 text-body transition-colors hover:bg-card hover:text-heading";
-
-/** modals.md: a centred dialog, for short confirmations. */
 export function Modal({
   open,
   onClose,
@@ -34,33 +20,23 @@ export function Modal({
   title: string;
   children: ReactNode;
 }) {
-  const ref = useModalDialog(open);
-  const titleId = useId();
-
   return (
-    <dialog
-      ref={ref}
-      aria-labelledby={titleId}
-      onClose={onClose}
-      className="m-auto w-[calc(100%-32px)] max-w-md rounded-card border border-line bg-surface-white p-5 text-body shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
-    >
-      <div className="flex items-center justify-between gap-4 border-b border-line pb-4">
-        <h2 id={titleId} className="m-0 text-xl font-bold leading-[1.25] text-heading">
-          {title}
-        </h2>
-        <button type="button" onClick={onClose} aria-label="Close" className={closeButtonClasses}>
-          <X className="size-5" aria-hidden />
-        </button>
-      </div>
-      {open && children}
-    </dialog>
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      {/* No description: the title names the dialog and its content explains itself. */}
+      <DialogContent showCloseButton={false} aria-describedby={undefined}>
+        <div className="flex items-center justify-between gap-4 border-b border-line pb-4">
+          <DialogTitle>{title}</DialogTitle>
+          <DialogCloseButton />
+        </div>
+        {children}
+      </DialogContent>
+    </Dialog>
   );
 }
 
 /**
- * A modal dialog docked to the right edge at full height, so the page stays visible beside it;
- * at phone width it covers the screen. Its backdrop is lighter than Modal's and not blurred, so
- * the page behind can still be read.
+ * A side panel for reading and editing: a Sheet docked to the right edge. Escape and the Close
+ * button ask to close; a click on the page behind does not, so a stray click can't lose edits.
  */
 export function SidePanel({
   open,
@@ -78,17 +54,12 @@ export function SidePanel({
   onBack?: () => void;
   children: ReactNode;
 }) {
-  const ref = useModalDialog(open);
-  const titleId = useId();
-
   return (
-    <dialog
-      ref={ref}
-      aria-labelledby={titleId}
-      onClose={onClose}
-      className="fixed inset-y-0 left-auto right-0 m-0 h-dvh max-h-none w-full max-w-none border-line bg-surface-white p-0 text-body shadow-2xl backdrop:bg-black/30 sm:w-[36rem] sm:rounded-l-card sm:border-l"
-    >
-      <div className="flex h-full flex-col">
+    <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
+      <SheetContent
+        onInteractOutside={(event) => event.preventDefault()}
+        {...(subtitle ? {} : { "aria-describedby": undefined })}
+      >
         <div className="flex items-start justify-between gap-4 border-b border-line p-5">
           <div className="min-w-0">
             {onBack && (
@@ -104,17 +75,13 @@ export function SidePanel({
                 Back to list
               </button>
             )}
-            <h2 id={titleId} className="m-0 text-xl font-bold leading-[1.25] text-heading">
-              {title}
-            </h2>
-            {subtitle && <p className="m-0 mt-1 text-sm leading-5 text-body">{subtitle}</p>}
+            <SheetTitle>{title}</SheetTitle>
+            {subtitle && <SheetDescription className="mt-1">{subtitle}</SheetDescription>}
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className={closeButtonClasses}>
-            <X className="size-5" aria-hidden />
-          </button>
+          <SheetCloseButton />
         </div>
-        <div className="flex-1 overflow-y-auto p-5">{open && children}</div>
-      </div>
-    </dialog>
+        <div className="flex-1 overflow-y-auto p-5">{children}</div>
+      </SheetContent>
+    </Sheet>
   );
 }

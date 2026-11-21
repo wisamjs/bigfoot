@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { SleepingBigfoot } from "@/components/illustrations";
 import { useIsClient } from "@/components/use-is-client";
-import { Badge, buttonClasses, Skeleton } from "@/components/ui";
+import { Badge, Skeleton } from "@/components/ui";
+import { Button } from "@/components/ui/button";
 import { INTERVIEW_OPTIONS, type DatedInterview } from "@/lib/applications";
 import { dayKey, groupByDay, inWindow, monthStart, monthWeeks, monthWindow, upcomingWindow, type CalendarDay } from "@/lib/calendar";
 
@@ -79,17 +80,17 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
             {monthFormat.format(start)}
           </h3>
           <div className="flex items-center gap-1">
-            <button type="button" className={buttonClasses("tertiary", "sm")} onClick={() => goTo(offset - 1)}>
+            <Button variant="tertiary" size="sm" onClick={() => goTo(offset - 1)}>
               <ChevronLeft className="size-4" aria-hidden />
               <span className="sr-only">Previous month</span>
-            </button>
-            <button type="button" className={buttonClasses("tertiary", "sm")} onClick={() => goTo(0)}>
+            </Button>
+            <Button variant="tertiary" size="sm" onClick={() => goTo(0)}>
               Today
-            </button>
-            <button type="button" className={buttonClasses("tertiary", "sm")} onClick={() => goTo(offset + 1)}>
+            </Button>
+            <Button variant="tertiary" size="sm" onClick={() => goTo(offset + 1)}>
               <ChevronRight className="size-4" aria-hidden />
               <span className="sr-only">Next month</span>
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -139,9 +140,9 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
               {selectedDay ? dayFormat.format(selectedDay.date) : `Interviews in ${agendaWindow.span}`}
             </h3>
             {selectedDay && (
-              <button type="button" className={buttonClasses("tertiary", "sm")} onClick={showUpcoming}>
+              <Button variant="tertiary" size="sm" onClick={showUpcoming}>
                 Show upcoming
-              </button>
+              </Button>
             )}
           </div>
 

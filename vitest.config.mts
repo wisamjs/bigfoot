@@ -2,9 +2,9 @@ import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-// Unit tests (*.test.ts) run in Node; component tests (*.test.tsx) in happy-dom, which unlike
-// jsdom has HTMLDialogElement.showModal(). Neither moves focus or handles Escape the way a
-// browser does for a modal <dialog>, so `npm run a11y` checks that in Chrome.
+// Unit tests (*.test.ts) run in Node; component tests (*.test.tsx) in happy-dom, whose focus
+// model is too thin to prove a dialog's focus trap or where focus returns, so `npm run a11y`
+// checks those in Chrome.
 // Async Server Components aren't supported by Vitest: smoke and a11y cover those pages.
 
 const resolve = { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } };
