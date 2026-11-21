@@ -1,6 +1,8 @@
 import "server-only";
+import * as Sentry from "@sentry/nextjs";
 import { SignJWT } from "jose";
 import type { Application, ApplicationFields, Interview, InterviewFields } from "@/lib/applications";
+import { jobSeekerTag } from "@/lib/sentry";
 
 // Client for the FastAPI service (api/). Every request carries a short-lived token naming the
 // job seeker; FastAPI scopes all reads and writes to that job seeker (docs/adr/0001).
@@ -30,6 +32,9 @@ async function token(jobSeekerId: string) {
 }
 
 async function request<T>(jobSeekerId: string, path: string, init: { method?: string; body?: unknown } = {}) {
+  // Errors in this request name the job seeker by a hash only. Sentry's fetch instrumentation
+  // adds the sentry-trace and baggage headers, so the API's spans join this trace.
+  Sentry.setUser({ id: await jobSeekerTag(jobSeekerId) });
   const res = await fetch(`${API_URL}${path}`, {
     method: init.method ?? "GET",
     headers: {
