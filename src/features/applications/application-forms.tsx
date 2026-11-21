@@ -267,6 +267,8 @@ function DetailsForm({
 
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // The submit button is only aria-disabled while pending, so it keeps focus; refuse a second submit here.
+    if (isPending) return;
     onError(null);
     const fields = Object.fromEntries((app ? changed : DETAIL_FIELDS).map((name) => [name, values[name].trim() || null]));
     startTransition(async () => {
@@ -362,7 +364,8 @@ function DetailsForm({
         <div className="flex justify-end">
           <Button
             type="submit"
-            disabled={changed.length === 0 || isPending}
+            disabled={changed.length === 0}
+            aria-disabled={isPending || undefined}
           >
             {isPending ? "Saving…" : "Save details"}
           </Button>
@@ -372,7 +375,7 @@ function DetailsForm({
           <Button onClick={onDone} variant="secondary">
             Cancel
           </Button>
-          <Button type="submit" disabled={isPending}>
+          <Button type="submit" aria-disabled={isPending || undefined}>
             {isPending ? "Adding…" : "Add application"}
           </Button>
         </div>

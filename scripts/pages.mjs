@@ -3,10 +3,11 @@
 //   expect    text the page must show
 //   redirect  the page must redirect instead (a11y skips it): a path means an HTTP redirect there
 //             (src/proxy.ts); true allows the redirect a page streams while it renders
-//   states    what a click opens or reveals (a dialog, a toggled column); a11y checks each one,
-//             signed in as a user holding scripts/dev-applications.mjs's Applications, and
-//             `npm run capture -- --state <name>` captures one. Each step clicks the first element
-//             matching `click` whose text includes `text`; `expect` is text the state must show.
+//   states    what a click or typing opens or reveals (a dialog, a toggled column, an error); a11y
+//             checks each one, signed in as a user holding scripts/dev-applications.mjs's
+//             Applications, and `npm run capture -- --state <name>` captures one. Each step clicks
+//             the first element matching `click` whose text includes `text`, or types `value` into
+//             the first element matching `fill`; `expect` is text the state must show.
 //             `applications: "none"` signs in as a job seeker with no Applications instead, for
 //             empty states.
 export const PAGES = [
@@ -51,6 +52,18 @@ export const PAGES = [
         expect: "This can’t be undone",
       },
       { name: "add-panel", steps: [{ click: "button", text: "Add application" }], expect: "Job posting URL" },
+      {
+        // The API's error shown in the panel: a company of only spaces passes the browser's
+        // `required` but is blank once trimmed.
+        name: "add-error",
+        steps: [
+          { click: "button", text: "Add application" },
+          { fill: '[role=dialog][data-state=open] input[id$="-company"]', value: "   " },
+          { fill: '[role=dialog][data-state=open] input[id$="-title"]', value: "Frontend Engineer" },
+          { click: '[role=dialog][data-state=open] button[type="submit"]', text: "Add application" },
+        ],
+        expect: "should be a valid string",
+      },
       { name: "nothing-coming-up", applications: "none", steps: [], expect: "All quiet in the woods" },
     ],
   },
