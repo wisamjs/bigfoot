@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Bigfoot
 
-- **Tickets**: before starting a Linear `BIG-n` ticket, fetch it with its relations; every "blocked by" ticket must be Done, otherwise stop and name the blockers. Branch, commit titles and PR name the ticket as `scripts/check-pr-naming.mjs` requires (CI runs it). A finished ticket ends with a pushed branch and a PR; share the PR URL.
+- **Tickets**: before starting a Linear `BIG-n` ticket, fetch it with its relations; every "blocked by" ticket must be Done, otherwise stop and name the blockers. Branch, commit titles and PR name the ticket as `scripts/check-pr-naming.mjs` requires (CI runs it). A finished ticket ends with a pushed PR whose body maps every acceptance criterion to the change that meets it, here or in a PR this one is stacked on; name any step left for the user to do by hand. Share the PR URL.
 - **Review**: `CODING_STANDARDS.md`.
 - **Domain language**: `GLOSSARY.md`. Use its terms in code, UI copy and tickets.
 - **Spelling**: Canadian English everywhere, tickets included; cspell in `npm run check` enforces it in the repo. Words and quoted US-spelled terms go in `cspell.json`.
