@@ -4,7 +4,7 @@
 
 ## Core Rules
 
-- **Font:** Ubuntu, sans-serif — configured at app level, never override
+- **Font:** Allo, sans-serif, at roundness 100 — configured at app level, never override
 - **Headings:** bold weight (700), heading text color
 - **Body copy:** body text color, never use brand color for paragraphs longer than one sentence
 - **Semantic HTML:** Use `h1`–`h6` in order, never skip levels
