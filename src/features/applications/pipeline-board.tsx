@@ -1,20 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { CalendarClock, NotebookPen } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { SampleBadge } from "@/features/applications/sample-badge";
+import { CalendarClock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ApplicationWhen, InterviewWhen } from "@/features/applications/application-when";
-import { INTERVIEW_TONE, OUTCOME_TONE } from "@/features/applications/status-tone";
-import {
-  getBoardColumns,
-  INTERVIEW_OPTIONS,
-  OUTCOME_OPTIONS,
-  upcomingInterviews,
-  type Application,
-  type Interview,
-} from "@/lib/applications";
+import { Card, cardClasses } from "@/features/applications/pipeline-card";
+import { getBoardColumns, type Application } from "@/lib/applications";
 
 // Also draws the landing page's decorative board (src/features/landing/hero.tsx): after a
 // layout change, check docs/screenshots/landing.png too.
@@ -139,89 +129,3 @@ const columnsClasses = "grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-
 const columnClasses = "rounded-control bg-surface p-3";
 const columnHeaderClasses = "mb-3 flex items-center justify-between";
 const cardListClasses = "m-0 flex list-none flex-col gap-3 p-0";
-const cardClasses = "relative rounded-control border border-line bg-card-strong p-3 shadow-xs";
-
-/**
- * One Application on the board, answering "what's next here?": its next Interview (or how long
- * it has been waiting), how many Interviews are completed, and its Outcome once Done. Every
- * Interview, with its Interview notes, is in the side panel.
- */
-function Card({ job, onOpen }: { job: Application; onOpen?: (app: Application) => void }) {
-  const upcoming = upcomingInterviews(job);
-  const next = upcoming[0];
-  const completed = job.interviews.filter((interview) => interview.completed);
-  const withNotes = completed.filter((interview) => interview.notes).length;
-  const hasBody = Boolean(job.outcome || next || job.is_waiting || completed.length > 0);
-
-  return (
-    <li
-      className={`${cardClasses} ${
-        onOpen ? "cursor-pointer transition-all duration-200 hover:border-line-medium hover:shadow-md" : ""
-      }`}
-    >
-      <p className="m-0 min-w-0 text-sm font-medium leading-5 text-heading">
-        {onOpen ? (
-          // Stretched button: its ::after covers the card, so the whole card opens the Application.
-          <button
-            type="button"
-            onClick={() => onOpen(job)}
-            className="cursor-pointer text-left after:absolute after:inset-0 after:rounded-control focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-brand"
-          >
-            <span className="sr-only">Open </span>
-            {job.company}
-            <span className="sr-only">, {job.title}</span>
-          </button>
-        ) : (
-          job.company
-        )}
-      </p>
-      <div className="flex items-start justify-between gap-2">
-        <p className="m-0 min-w-0 text-xs leading-4 text-body">{job.title}</p>
-        {job.is_sample && <SampleBadge />}
-      </div>
-      {hasBody && (
-        <div className="mt-2 flex flex-col items-start gap-2 text-xs text-body">
-          {job.outcome && <Badge tone={OUTCOME_TONE[job.outcome]}>{OUTCOME_OPTIONS[job.outcome].label}</Badge>}
-          {next && <NextInterview interview={next} more={upcoming.length - 1} />}
-          {job.is_waiting && <ApplicationWhen app={job} />}
-          {completed.length > 0 && <CompletedCount count={completed.length} withNotes={withNotes} />}
-        </div>
-      )}
-    </li>
-  );
-}
-
-/**
- * The soonest upcoming Interview: its kind badge on the left and its date on the right, then how
- * many more are upcoming. A long kind wraps inside its badge, so the date keeps its place.
- */
-function NextInterview({ interview, more }: { interview: Interview; more: number }) {
-  return (
-    <div className="flex w-full flex-col gap-1">
-      <p className="m-0 flex w-full items-center gap-3 rounded-control border border-line bg-surface px-2 py-1.5 text-heading">
-        <span className="sr-only">Next Interview: </span>
-        <span className="min-w-0">
-          <Badge tone={INTERVIEW_TONE[interview.kind]}>{INTERVIEW_OPTIONS[interview.kind].label}</Badge>
-        </span>
-        <span className="ml-auto shrink-0">
-          <InterviewWhen at={interview.at} />
-        </span>
-      </p>
-      {more > 0 && <p className="m-0">+{more} more upcoming</p>}
-    </div>
-  );
-}
-
-/** "3 completed", with a mark when any of them have Interview notes (read in the side panel). */
-function CompletedCount({ count, withNotes }: { count: number; withNotes: number }) {
-  return (
-    <p className="m-0 inline-flex items-center gap-1.5">
-      <span aria-hidden>{count} completed</span>
-      {withNotes > 0 && <NotebookPen className="size-3.5" aria-hidden />}
-      <span className="sr-only">
-        {count} completed {count === 1 ? "Interview" : "Interviews"}
-        {withNotes > 0 && `, ${withNotes} with notes`}
-      </span>
-    </p>
-  );
-}
