@@ -5,6 +5,7 @@ import eslintReact from "@eslint-react/eslint-plugin";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import testingLibrary from "eslint-plugin-testing-library";
 import jestDom from "eslint-plugin-jest-dom";
+import unicorn from "eslint-plugin-unicorn";
 
 // Rule groups and what each guards are listed in CODING_STANDARDS.md ("Lint rule groups").
 
@@ -35,14 +36,54 @@ const eslintConfig = defineConfig([
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },
   },
-  // Turns off eslint-plugin-react rules (from eslint-config-next) that ESLint React also
-  // reports, so no problem is reported twice. react-hooks stays on.
+  // Turns off the eslint-plugin-react and react-hooks rules (from eslint-config-next) that
+  // ESLint React also reports, such as set-state-in-effect, static-components and purity, so no
+  // problem is reported twice.
   { ...eslintReact.configs["disable-conflict-eslint-plugin-react"], files: typeScriptFiles },
+  { ...eslintReact.configs["disable-conflict-eslint-plugin-react-hooks"], files: typeScriptFiles },
+  // Except the two classic hooks rules: react-hooks keeps them, and ESLint React's copies go.
   {
     files: typeScriptFiles,
     rules: {
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "error",
+      "@eslint-react/rules-of-hooks": "off",
+      "@eslint-react/exhaustive-deps": "off",
+      // static-components reports the same nested component.
+      "@eslint-react/no-nested-component-definitions": "off",
+    },
+  },
+
+  // Performance: the vercel-react-best-practices rules a linter can check (CODING_STANDARDS.md,
+  // "Performance rules"). The rest of that skill is checked in review.
+  {
+    files: typeScriptFiles,
+    plugins: { unicorn },
+    rules: {
+      // rerender-memo-with-default-value, and a context value rebuilt on every render.
+      "@eslint-react/no-unstable-default-props": "error",
+      "@eslint-react/no-unstable-context-value": "error",
+      // async-parallel: independent awaits in a loop run one after another.
+      "no-await-in-loop": "error",
+      // bundle-barrel-imports: no `export *` barrels for modules to import through.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ExportAllDeclaration",
+          message: "No barrel files: export each name from its own module, and import it from there.",
+        },
+      ],
+      // js-tosorted-immutable: .sort() mutates, so it can change props or state in place.
+      "unicorn/no-array-sort": "error",
+      // js-set-map-lookups: Set#has over Array#includes for a fixed list checked repeatedly.
+      "unicorn/prefer-set-has": "error",
+      // js-flatmap-filter and js-combine-iterations: one pass instead of .map().flat().
+      "unicorn/prefer-array-flat-map": "error",
+      // js-early-exit: stop at the first match instead of filtering the whole array.
+      "unicorn/prefer-array-find": "error",
+      "unicorn/prefer-array-some": "error",
+      // RegExp#test over String#match when only a yes or no is needed.
+      "unicorn/prefer-regexp-test": "error",
     },
   },
 

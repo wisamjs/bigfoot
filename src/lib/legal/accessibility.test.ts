@@ -12,6 +12,6 @@ describe("accessibility statement versioning", () => {
       expect(date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10)).toBe(date);
     }
-    expect(dates).toEqual([...new Set(dates)].sort().reverse());
+    expect(dates).toEqual([...new Set(dates)].toSorted().toReversed());
   });
 });

@@ -83,6 +83,6 @@ describe(".env.example", () => {
 
   it("documents exactly the variables the two services declare", () => {
     const declared = new Set([...REQUIRED_ENV, ...OPTIONAL_ENV, ...apiRequired]);
-    expect([...documented].sort()).toEqual([...declared].sort());
+    expect([...documented].toSorted()).toEqual([...declared].toSorted());
   });
 });

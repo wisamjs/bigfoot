@@ -139,7 +139,7 @@ export function nextInterview(app: Application): Interview | null {
 
 /** The latest completed Interview, by date (undated ones come first, so they lose to dated ones). */
 export function lastCompletedInterview(app: Application): Interview | null {
-  return app.interviews.filter((i) => i.completed).at(-1) ?? null;
+  return app.interviews.findLast((i) => i.completed) ?? null;
 }
 
 /** The dashboard's three numbers: Open, Active, and the Next Interview across In Progress Applications. */
@@ -163,7 +163,7 @@ export function getUpcoming(apps: Application[]): DatedInterview[] {
   return apps
     .filter((a) => !isDone(a))
     .flatMap((a) => dated(a, upcomingInterviews(a)))
-    .sort((a, b) => a.interview.at.localeCompare(b.interview.at));
+    .toSorted((a, b) => a.interview.at.localeCompare(b.interview.at));
 }
 
 /** Every dated Interview of open Applications, past and upcoming, by date. Done Applications drop off. */
@@ -171,7 +171,7 @@ export function getCalendarInterviews(apps: Application[]): DatedInterview[] {
   return apps
     .filter((a) => !isDone(a))
     .flatMap((a) => dated(a, a.interviews.filter((i) => i.at !== null)))
-    .sort((a, b) => a.interview.at.localeCompare(b.interview.at));
+    .toSorted((a, b) => a.interview.at.localeCompare(b.interview.at));
 }
 
 export type BoardColumn = {
