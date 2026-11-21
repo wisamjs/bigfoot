@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DatedInterview } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
-import { ComingUpCalendar } from "./coming-up-calendar";
+import { ComingUpCalendar, ComingUpCalendarSkeleton } from "./coming-up-calendar";
 
 const monthName = (month: number) => new Intl.DateTimeFormat(undefined, { month: "long" }).format(new Date(2026, month, 1));
 
@@ -121,5 +121,18 @@ describe("ComingUpCalendar", () => {
 
     await user.click(screen.getByRole("button", { name: /, 2 Interviews$/ }));
     expect(agendaItems()).toHaveLength(2);
+  });
+});
+
+describe("ComingUpCalendarSkeleton", () => {
+  it("draws a five-week month and five agenda items, hidden from assistive tech", () => {
+    // Skeleton shapes are aria-hidden, with no role or text, so this checks the DOM itself.
+    // eslint-disable-next-line testing-library/no-node-access -- see above
+    const card = render(<ComingUpCalendarSkeleton />).container.firstElementChild!;
+    expect(card).toHaveAttribute("aria-hidden", "true");
+    // eslint-disable-next-line testing-library/no-node-access -- see above
+    expect(card.querySelectorAll(".rounded-full.skeleton")).toHaveLength(35);
+    // eslint-disable-next-line testing-library/no-node-access -- see above
+    expect(card.querySelectorAll("li")).toHaveLength(5);
   });
 });

@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { application, interview } from "@/test/applications";
-import { PipelineBoard } from "./pipeline-board";
+import { PipelineBoard, PipelineBoardSkeleton } from "./pipeline-board";
 
 const waiting = application("Acme");
 const scheduled = application("Birch", {
@@ -132,5 +132,17 @@ describe("PipelineBoard", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("region")).not.toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+});
+
+describe("PipelineBoardSkeleton", () => {
+  it("shows the real title and hides its column shapes", () => {
+    // Skeleton shapes are aria-hidden, with no role or text, so this checks the DOM itself.
+    // eslint-disable-next-line testing-library/no-node-access -- see above
+    const columns = render(<PipelineBoardSkeleton title="Pipeline" />).container.querySelector("[aria-hidden='true'].grid")!;
+    expect(screen.getByText("Pipeline")).toBeInTheDocument();
+    // eslint-disable-next-line testing-library/no-node-access -- see above
+    expect(columns.children).toHaveLength(3);
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
   });
 });

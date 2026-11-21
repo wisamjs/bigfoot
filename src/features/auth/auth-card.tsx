@@ -1,5 +1,5 @@
-import { GoogleAuthButton } from "@/components/auth-button";
-import { SignInNote } from "@/components/sign-in-note";
+import { GoogleAuthButton } from "@/features/auth/auth-button";
+import { SignInNote } from "@/features/auth/sign-in-note";
 
 /**
  * The body of /sign-in and /sign-up. Both pages render it unchanged: signing up and signing in

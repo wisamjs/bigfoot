@@ -8,7 +8,7 @@ import {
   LegalSection,
   legalH3 as h3,
   legalList as list,
-} from "@/components/legal";
+} from "@/features/legal/legal";
 import {
   BACKUP_DAYS,
   PRIVACY_CHANGES,

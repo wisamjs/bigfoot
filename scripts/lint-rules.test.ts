@@ -18,7 +18,7 @@ async function rulesOn(file: string) {
     .toSorted();
 }
 
-const FILES = ["src/components/modal.tsx", "src/components/modal.test.tsx"];
+const FILES = ["src/components/ui/modal.tsx", "src/components/ui/modal.test.tsx"];
 
 describe.each(FILES)("lint rules on for %s", (file) => {
   it("match the snapshot", async () => {

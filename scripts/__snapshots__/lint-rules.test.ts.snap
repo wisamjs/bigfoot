@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`lint rules on for src/components/modal.test.tsx > match the snapshot 1`] = `
+exports[`lint rules on for src/components/ui/modal.test.tsx > match the snapshot 1`] = `
 [
   "@eslint-react/dom-no-dangerously-set-innerhtml",
   "@eslint-react/dom-no-dangerously-set-innerhtml-with-children",
@@ -109,6 +109,7 @@ exports[`lint rules on for src/components/modal.test.tsx > match the snapshot 1`
   "@typescript-eslint/prefer-as-const",
   "@typescript-eslint/prefer-namespace-keyword",
   "@typescript-eslint/triple-slash-reference",
+  "boundaries/dependencies",
   "import/no-anonymous-default-export",
   "jest-dom/prefer-checked",
   "jest-dom/prefer-empty",
@@ -207,7 +208,7 @@ exports[`lint rules on for src/components/modal.test.tsx > match the snapshot 1`
 ]
 `;
 
-exports[`lint rules on for src/components/modal.tsx > match the snapshot 1`] = `
+exports[`lint rules on for src/components/ui/modal.tsx > match the snapshot 1`] = `
 [
   "@eslint-react/dom-no-dangerously-set-innerhtml",
   "@eslint-react/dom-no-dangerously-set-innerhtml-with-children",
@@ -316,6 +317,7 @@ exports[`lint rules on for src/components/modal.tsx > match the snapshot 1`] = `
   "@typescript-eslint/prefer-as-const",
   "@typescript-eslint/prefer-namespace-keyword",
   "@typescript-eslint/triple-slash-reference",
+  "boundaries/dependencies",
   "import/no-anonymous-default-export",
   "jsx-a11y/alt-text",
   "jsx-a11y/anchor-ambiguous-text",

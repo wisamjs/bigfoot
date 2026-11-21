@@ -10,7 +10,7 @@ import {
   updateInterviewAction,
   type ActionResult,
 } from "@/app/dashboard/actions";
-import { inputClasses } from "@/components/ui";
+import { inputClasses } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   INTERVIEW_KINDS,

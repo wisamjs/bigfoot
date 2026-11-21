@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ApplicationPanel } from "@/components/application-panel";
-import { PipelineBoard } from "@/components/pipeline-board";
+import { ApplicationPanel } from "@/features/applications/application-panel";
+import { PipelineBoard } from "@/features/applications/pipeline-board";
 import { doneWithoutOffer, type Application } from "@/lib/applications";
 
 /**

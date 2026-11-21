@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Footer } from "@/components/landing/footer";
-import { Container, Wordmark } from "@/components/ui";
+import { Footer } from "@/features/landing/footer";
+import { Container } from "@/components/ui/container";
+import { Wordmark } from "@/features/shell/wordmark";
 
 /** Legal pages (Privacy Policy, Terms): a plain header, a reading column and the site footer. */
 export default function LegalLayout({ children }: LayoutProps<"/">) {

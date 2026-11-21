@@ -1,5 +1,5 @@
 import { CircleCheck } from "lucide-react";
-import { Container } from "@/components/ui";
+import { Container } from "@/components/ui/container";
 
 /**
  * Shown on the landing page after a job seeker deletes their account (ACCOUNT_DELETED_PATH).

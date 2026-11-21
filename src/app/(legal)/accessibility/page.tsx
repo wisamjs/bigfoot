@@ -7,7 +7,7 @@ import {
   LegalLink as A,
   LegalSection,
   legalList as list,
-} from "@/components/legal";
+} from "@/features/legal/legal";
 import {
   ACCESSIBILITY_CHANGES,
   ACCESSIBILITY_EFFECTIVE_DATE,

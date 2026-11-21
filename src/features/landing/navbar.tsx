@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
-import { SignInNote } from "@/components/sign-in-note";
-import { buttonClasses, Container, Wordmark } from "@/components/ui";
+import { SignInNote } from "@/features/auth/sign-in-note";
+import { buttonClasses } from "@/components/ui/button-classes";
+import { Container } from "@/components/ui/container";
+import { Wordmark } from "@/features/shell/wordmark";
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
