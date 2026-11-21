@@ -32,8 +32,8 @@ access_token_bearer = HTTPBearer(
     scheme_name="AccessToken",
     description=(
         f"An Access token: a secret starting with `{ACCESS_TOKEN_PREFIX}` that a job seeker creates on their "
-        "Account page and gives a script. It reads that job seeker's Applications and Interviews, expires a "
-        "year after it is created, and stops working when revoked. It can't change data or reach the Account routes."
+        "Account page and gives a script. It reads and writes that job seeker's Applications and Interviews, "
+        "expires a year after it is created, and stops working when revoked. It can't reach the Account routes."
     ),
 )
 web_token_bearer = HTTPBearer(
@@ -110,17 +110,15 @@ def job_seeker_id(
 
 
 def signed_in_job_seeker_id(request: Request, web_token: Annotated[Credentials, Depends(web_token_bearer)]) -> str:
-    """The job seeker's id, from a web token only: for the Account routes, and for every route that
-    changes data, which a script can't use yet (write access is BIG-110).
+    """The job seeker's id, from a web token only: for the Account routes, which a script can't use.
 
-    A leaked Access token then can only read: it can't change or delete data, delete the account, or
-    create tokens that outlive its revocation.
+    A leaked Access token then can't delete the account or create tokens that outlive its revocation.
     """
     token = _token(web_token)
     if token.startswith(ACCESS_TOKEN_PREFIX):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
-            "An Access token can only read Applications and Interviews. Sign in to Bigfoot to change them.",
+            "An Access token can't use Account routes. Sign in to Bigfoot and use the Account page.",
         )
     return _from_web_token(request, token)
 

@@ -12,7 +12,7 @@ Bigfoot is an early proof of concept, built as a side project. Sign in with Goog
 
 ## Use the API from a terminal
 
-A script can read your Applications and Interviews without a browser, for example to report on your job search. Access tokens can only read for now.
+A script can read and change your Applications and Interviews without a browser, for example a cron job that adds an Interview when one appears in your calendar.
 
 1. Sign in, open the **Account** page and create an **Access token**. Copy the secret straight away: Bigfoot shows it once and stores only a hash.
 2. Send it as a bearer token. The production API is at `https://bigfoot-api.vercel.app` (locally, `http://localhost:8000`):
@@ -24,13 +24,20 @@ A script can read your Applications and Interviews without a browser, for exampl
    # List your Applications, each with its Interviews
    curl -H "Authorization: Bearer $BIGFOOT_TOKEN" "$BIGFOOT_API/applications"
 
-   # List one Application's Interviews, using an "id" from the list
-   curl -H "Authorization: Bearer $BIGFOOT_TOKEN" "$BIGFOOT_API/applications/<application id>/interviews"
+   # Add an Application
+   curl -X POST "$BIGFOOT_API/applications" \
+     -H "Authorization: Bearer $BIGFOOT_TOKEN" -H "Content-Type: application/json" \
+     -d '{"company": "Northwind Robotics", "title": "Frontend Engineer"}'
+
+   # Add an Interview to it, using the "id" from the response above
+   curl -X POST "$BIGFOOT_API/applications/<application id>/interviews" \
+     -H "Authorization: Bearer $BIGFOOT_TOKEN" -H "Content-Type: application/json" \
+     -d '{"kind": "technical", "at": "2026-11-20T17:00:00Z"}'
    ```
 
-Every route, field and Interview kind is in [`api/openapi.json`](api/openapi.json), and you can browse them locally ([Try the API](#try-the-api)).
+Bigfoot doesn't match calendar events to Applications: a script finds the Application itself (for example by `company` in the list) and adds the Interview to it. Every route, field and Interview kind is in [`api/openapi.json`](api/openapi.json), and you can browse them locally ([Try the API](#try-the-api)).
 
-A token can read all your Applications and Interviews, so treat it like a password. It can't change them, delete your account or manage tokens (any of those gets `403`). It expires a year after you create it; revoke it on the Account page at any time. A revoked, expired or mistyped token gets `401`.
+A token can do anything to your Applications and Interviews, so treat it like a password. It can't delete your account or manage tokens. It expires a year after you create it; revoke it on the Account page at any time. A revoked, expired or mistyped token gets `401`.
 
 ## Tech stack
 
