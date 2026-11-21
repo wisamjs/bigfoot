@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { deleteApplicationAction } from "@/app/dashboard/actions";
-import { buttonClasses, dangerButtonClasses } from "@/components/ui";
+import { Button } from "@/components/ui/button";
 import type { Application } from "@/lib/applications";
 
 /** The body of the Delete application? dialog: deletes only once confirmed. */
@@ -32,23 +32,21 @@ export function DeleteConfirmation({ app, onDone }: { app: Application; onDone: 
         </p>
       )}
       <div className="mt-2 flex justify-end gap-3 border-t border-line pt-4">
-        <button
-          type="button"
+        <Button
           onClick={onDone}
           // eslint-disable-next-line jsx-a11y/no-autofocus -- opening a delete dialog moves focus to its safe choice (WAI-ARIA dialog pattern).
           autoFocus
-          className={buttonClasses("secondary", "md")}
+          variant="secondary"
         >
           Cancel
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
           onClick={remove}
           disabled={isPending}
-          className={dangerButtonClasses}
+          variant="danger"
         >
           {isPending ? "Deleting…" : "Delete"}
-        </button>
+        </Button>
       </div>
     </div>
   );

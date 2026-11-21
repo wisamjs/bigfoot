@@ -1,24 +1,15 @@
+import type { VariantProps } from "class-variance-authority";
 import type { ReactNode } from "react";
 import { Footprints, Sparkles } from "lucide-react";
+import { buttonVariants } from "./button";
 
-type Variant = "brand" | "secondary" | "tertiary";
-type Size = "sm" | "md" | "lg" | "xl";
-
-// buttons.md size table
-const sizes: Record<Size, string> = {
-  sm: "px-3 py-2 text-sm",
-  md: "px-4 py-2.5 text-sm",
-  lg: "px-5 py-3 text-base",
-  xl: "px-6 py-3.5 text-base",
-};
-
-export function buttonClasses(variant: Variant = "brand", size: Size = "md") {
-  return `btn btn-${variant} ${sizes[size]}`;
+/** Button classes for an element that can't be a <Button>, such as a <Link> or the skip link. */
+export function buttonClasses(
+  variant: VariantProps<typeof buttonVariants>["variant"] = "brand",
+  size: VariantProps<typeof buttonVariants>["size"] = "md",
+) {
+  return buttonVariants({ variant, size });
 }
-
-/** buttons.md danger variant, base size: for actions that delete something for good. */
-export const dangerButtonClasses =
-  "btn border-line-danger bg-danger-soft px-4 py-2.5 text-sm text-fg-danger hover:bg-line-danger-subtle disabled:cursor-not-allowed disabled:opacity-60";
 
 /** inputs.md: full width, contrasting background, brand focus ring. */
 export const inputClasses =

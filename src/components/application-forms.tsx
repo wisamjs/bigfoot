@@ -10,7 +10,8 @@ import {
   updateInterviewAction,
   type ActionResult,
 } from "@/app/dashboard/actions";
-import { buttonClasses, dangerButtonClasses, inputClasses } from "@/components/ui";
+import { inputClasses } from "@/components/ui";
+import { Button } from "@/components/ui/button";
 import {
   INTERVIEW_KINDS,
   INTERVIEW_NOTES_MAX_LENGTH,
@@ -96,15 +97,15 @@ export function ApplicationEditor({
           <h3 id="interviews-title" className="m-0 text-base font-bold leading-[1.25] text-heading">
             Interviews
           </h3>
-          <button
-            type="button"
+          <Button
             disabled={isPending}
             onClick={() => save(() => createInterviewAction(app.id, { kind: "informal_chat" }))}
-            className={`${buttonClasses("secondary", "sm")} disabled:opacity-60`}
+            variant="secondary"
+            size="sm"
           >
             <Plus className="size-4" aria-hidden />
             Add Interview
-          </button>
+          </Button>
         </div>
         {app.interviews.length === 0 ? (
           <p className="m-0 text-sm text-body">No Interviews yet. Add one when you have a conversation lined up.</p>
@@ -125,10 +126,10 @@ export function ApplicationEditor({
 
       <ErrorMessage error={error} />
       <div className="flex border-t border-line pt-4">
-        <button type="button" onClick={onDelete} className={dangerButtonClasses}>
+        <Button onClick={onDelete} variant="danger">
           <Trash2 className="size-4" aria-hidden />
           Delete application
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -201,13 +202,12 @@ function StatusForm({ app, onError }: { app: Application; onError: (message: str
           </select>
         </div>
       )}
-      <button
+      <Button
         type="submit"
         disabled={!dirty || isPending}
-        className={`${buttonClasses("brand", "md")} disabled:opacity-60`}
       >
         {isPending ? "Saving…" : "Save status"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -313,17 +313,16 @@ function DetailsForm({
             </span>
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm text-body">Hidden</span>
-              <button
-                type="button"
+              <Button
                 onClick={() => {
                   setFocusSalary(true);
                   onRevealSalary?.();
                 }}
-                className={buttonClasses("secondary", "md")}
+                variant="secondary"
               >
                 <Eye className="size-4" aria-hidden />
                 Reveal
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
@@ -358,22 +357,21 @@ function DetailsForm({
       <ErrorMessage error={error ?? null} />
       {app ? (
         <div className="flex justify-end">
-          <button
+          <Button
             type="submit"
             disabled={changed.length === 0 || isPending}
-            className={`${buttonClasses("brand", "md")} disabled:opacity-60`}
           >
             {isPending ? "Saving…" : "Save details"}
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="mt-2 flex justify-end gap-3 border-t border-line pt-4">
-          <button type="button" onClick={onDone} className={buttonClasses("secondary", "md")}>
+          <Button onClick={onDone} variant="secondary">
             Cancel
-          </button>
-          <button type="submit" disabled={isPending} className={`${buttonClasses("brand", "md")} disabled:opacity-60`}>
+          </Button>
+          <Button type="submit" disabled={isPending}>
             {isPending ? "Adding…" : "Add application"}
-          </button>
+          </Button>
         </div>
       )}
     </form>
@@ -510,14 +508,15 @@ function InterviewNotesForm({
             {draft.length.toLocaleString("en-CA")} of {INTERVIEW_NOTES_MAX_LENGTH.toLocaleString("en-CA")} characters
           </span>
         )}
-        <button
+        <Button
           type="submit"
           disabled={disabled || notes === interview.notes}
           aria-label={`Save notes, ${label}`}
-          className={`${buttonClasses("secondary", "sm")} disabled:opacity-60`}
+          variant="secondary"
+          size="sm"
         >
           Save notes
-        </button>
+        </Button>
       </div>
     </form>
   );

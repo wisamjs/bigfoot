@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { signInWithGoogle, signOutAction } from "@/app/actions";
-import { buttonClasses } from "@/components/ui";
+import { Button } from "@/components/ui/button";
 
 type Props = {
   children: ReactNode;
@@ -42,10 +42,10 @@ function GoogleLogo() {
 export function GoogleAuthButton({ children, variant = "brand", size = "md", className = "" }: Props) {
   return (
     <form action={signInWithGoogle} className={className}>
-      <button type="submit" className={`${buttonClasses(variant, size)} w-full`}>
+      <Button type="submit" variant={variant} size={size} className="w-full">
         <GoogleLogo />
         {children}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -53,9 +53,9 @@ export function GoogleAuthButton({ children, variant = "brand", size = "md", cla
 export function SignOutButton() {
   return (
     <form action={signOutAction}>
-      <button type="submit" className={buttonClasses("tertiary", "sm")}>
+      <Button type="submit" variant="tertiary" size="sm">
         Sign out
-      </button>
+      </Button>
     </form>
   );
 }

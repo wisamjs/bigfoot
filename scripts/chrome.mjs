@@ -101,7 +101,7 @@ async function focus(chrome) {
     returnByValue: true,
     expression: `(() => {
       const el = document.activeElement;
-      const dialog = document.querySelector("dialog[open]");
+      const dialog = document.querySelector("[role=dialog][data-state=open]");
       const opener = (window.__clicked ?? []).findLast((c) => c.isConnected);
       const label = (el.getAttribute("aria-label") ?? el.textContent).trim().slice(0, 40);
       return {
@@ -116,7 +116,7 @@ async function focus(chrome) {
 }
 
 /**
- * Keyboard use of an open modal <dialog>, which unit tests can't check (their DOM has no focus
+ * Keyboard use of an open modal dialog, which unit tests can't check (their DOM has no focus
  * model): focus starts inside it, Tab never reaches the page behind it, Escape closes it, and focus
  * returns to the control that opened it. Returns one line per problem; none when no dialog is open.
  */

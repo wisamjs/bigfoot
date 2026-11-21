@@ -35,7 +35,7 @@ export const PAGES = [
         name: "salary-revealed",
         steps: [
           { click: 'section[aria-label="Interview scheduled"] li button' },
-          { click: "dialog[open] button", text: "Reveal" },
+          { click: "[role=dialog][data-state=open] button", text: "Reveal" },
         ],
         expect: "Save details",
       },
@@ -43,7 +43,7 @@ export const PAGES = [
         name: "delete-confirmation",
         steps: [
           { click: 'section[aria-label="Interview scheduled"] li button' },
-          { click: "dialog[open] button", text: "Delete application" },
+          { click: "[role=dialog][data-state=open] button", text: "Delete application" },
         ],
         expect: "This can’t be undone",
       },

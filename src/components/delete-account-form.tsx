@@ -2,7 +2,8 @@
 
 import { useActionState, useId, useState } from "react";
 import { deleteAccountAction } from "@/app/account/actions";
-import { dangerButtonClasses, inputClasses } from "@/components/ui";
+import { inputClasses } from "@/components/ui";
+import { Button } from "@/components/ui/button";
 import { DELETE_CONFIRMATION } from "@/lib/account";
 
 /** Type DELETE, then delete: the button stays disabled until the word matches. */
@@ -40,9 +41,9 @@ export function DeleteAccountForm() {
         </p>
       )}
       <div>
-        <button type="submit" disabled={!confirmed || isPending} className={dangerButtonClasses}>
+        <Button type="submit" disabled={!confirmed || isPending} variant="danger">
           {isPending ? "Deleting your account…" : "Delete my account"}
-        </button>
+        </Button>
       </div>
     </form>
   );
