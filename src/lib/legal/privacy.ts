@@ -2,10 +2,15 @@
 // reused (e.g. a dashboard notice when the policy changes).
 
 /** The date the current version of the policy takes effect (ISO yyyy-mm-dd). */
-export const PRIVACY_EFFECTIVE_DATE = "2026-11-16";
+export const PRIVACY_EFFECTIVE_DATE = "2026-11-21";
 
 /** Newest first. The first entry's date must equal PRIVACY_EFFECTIVE_DATE. */
 export const PRIVACY_CHANGES: readonly { date: string; summary: string }[] = [
+  {
+    date: "2026-11-21",
+    summary:
+      "We send reports of errors in Bigfoot to Sentry, so we can fix them. A report names you only by a one-way hash of your Google account id, and leaves out your Applications, email address, IP address and cookies. Sentry keeps reports for up to 90 days.",
+  },
   {
     date: "2026-11-16",
     summary:
@@ -45,6 +50,12 @@ export const SERVER_LOG_RETENTION = LOG_RETENTION[HOSTING_PLANS.vercel];
 
 /** How many days each daily database backup is kept. */
 export const BACKUP_DAYS = BACKUP_RETENTION_DAYS[HOSTING_PLANS.supabase];
+
+/**
+ * The longest Sentry keeps error reports on any plan: 30 days on Developer (free), 90 on Team and
+ * Business, and so during a trial too (https://docs.sentry.io/security-legal-pii/security/data-retention-periods/).
+ */
+export const ERROR_REPORT_RETENTION_DAYS = 90;
 
 /** Where job seekers send privacy questions and requests. */
 export const PRIVACY_CONTACT_EMAIL = "wisamzaghal@gmail.com";

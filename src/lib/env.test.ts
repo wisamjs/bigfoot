@@ -10,6 +10,9 @@ const COMPLETE = {
   API_URL: "https://api.example.com",
 };
 
+// Production also needs Sentry.
+const SENTRY = { NEXT_PUBLIC_SENTRY_DSN: "https://key@sentry.example/1", SENTRY_AUTH_TOKEN: "sentry-token" };
+
 function without(...names: (keyof typeof COMPLETE)[]) {
   return Object.fromEntries(Object.entries(COMPLETE).filter(([name]) => !names.includes(name as keyof typeof COMPLETE)));
 }
@@ -37,7 +40,7 @@ describe("envProblems", () => {
   it.each(["http://localhost:8000", "http://127.0.0.1:8000", "http://[::1]:8000", "http://api.localhost"])(
     "rejects the localhost API_URL %s in production only",
     (API_URL) => {
-      expect(envProblems({ ...COMPLETE, API_URL, VERCEL_ENV: "production" })).toEqual([
+      expect(envProblems({ ...COMPLETE, ...SENTRY, API_URL, VERCEL_ENV: "production" })).toEqual([
         `API_URL must not be a localhost address in production (it is ${API_URL})`,
       ]);
       expect(envProblems({ ...COMPLETE, API_URL, VERCEL_ENV: "preview" })).toEqual([]);
@@ -46,15 +49,23 @@ describe("envProblems", () => {
   );
 
   it("rejects API_DOCS=true in production only", () => {
-    expect(envProblems({ ...COMPLETE, API_DOCS: "True", VERCEL_ENV: "production" })).toEqual([
+    expect(envProblems({ ...COMPLETE, ...SENTRY, API_DOCS: "True", VERCEL_ENV: "production" })).toEqual([
       "API_DOCS must not be true in production",
     ]);
-    expect(envProblems({ ...COMPLETE, API_DOCS: "false", VERCEL_ENV: "production" })).toEqual([]);
+    expect(envProblems({ ...COMPLETE, ...SENTRY, API_DOCS: "false", VERCEL_ENV: "production" })).toEqual([]);
     expect(envProblems({ ...COMPLETE, API_DOCS: "true" })).toEqual([]);
   });
 
+  it("requires the Sentry variables in production only", () => {
+    expect(envProblems({ ...COMPLETE, VERCEL_ENV: "production" })).toEqual([
+      "Missing in production: NEXT_PUBLIC_SENTRY_DSN, SENTRY_AUTH_TOKEN (see .env.example)",
+    ]);
+    expect(envProblems({ ...COMPLETE, ...SENTRY, VERCEL_ENV: "production" })).toEqual([]);
+    expect(envProblems({ ...COMPLETE, VERCEL_ENV: "preview" })).toEqual([]);
+  });
+
   it("reports missing variables and production rules together", () => {
-    const env = { ...without("AUTH_SECRET"), API_URL: "http://localhost:8000", API_DOCS: "true", VERCEL_ENV: "production" };
+    const env = { ...without("AUTH_SECRET"), ...SENTRY, API_URL: "http://localhost:8000", API_DOCS: "true", VERCEL_ENV: "production" };
     expect(() => assertEnv(env)).toThrow(
       [
         "Invalid environment variables:",
@@ -77,12 +88,17 @@ describe(".env.example", () => {
     (match) => match[1],
   );
 
+  const apiOptional = [...(settings.match(/^OPTIONAL_ENV = \((.*)\)$/m)?.[1] ?? "").matchAll(/"([A-Z0-9_]+)"/g)].map(
+    (match) => match[1],
+  );
+
   it("reads the API's required variables", () => {
     expect(apiRequired).toContain("DATABASE_URL");
+    expect(apiOptional).toContain("SENTRY_DSN");
   });
 
   it("documents exactly the variables the two services declare", () => {
-    const declared = new Set([...REQUIRED_ENV, ...OPTIONAL_ENV, ...apiRequired]);
+    const declared = new Set([...REQUIRED_ENV, ...OPTIONAL_ENV, ...apiRequired, ...apiOptional]);
     expect([...documented].toSorted()).toEqual([...declared].toSorted());
   });
 });

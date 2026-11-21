@@ -7,7 +7,10 @@
 export const REQUIRED_ENV = ["AUTH_SECRET", "AUTH_GOOGLE_ID", "AUTH_GOOGLE_SECRET", "API_SECRET", "API_URL"] as const;
 
 /** Variables the Next.js app checks but doesn't need. */
-export const OPTIONAL_ENV = ["API_DOCS"] as const;
+export const OPTIONAL_ENV = ["API_DOCS", "NEXT_PUBLIC_SENTRY_DSN", "SENTRY_AUTH_TOKEN"] as const;
+
+/** Sentry variables a production deployment must have: errors must reach Sentry, with readable stack traces. */
+export const PRODUCTION_ENV = ["NEXT_PUBLIC_SENTRY_DSN", "SENTRY_AUTH_TOKEN"] as const;
 
 type Env = Record<string, string | undefined>;
 
@@ -39,6 +42,8 @@ export function envProblems(env: Env): string[] {
     if (env.API_DOCS?.trim().toLowerCase() === "true") {
       problems.push("API_DOCS must not be true in production");
     }
+    const sentryMissing = PRODUCTION_ENV.filter((name) => !env[name]?.trim());
+    if (sentryMissing.length) problems.push(`Missing in production: ${sentryMissing.join(", ")} (see .env.example)`);
   }
   return problems;
 }

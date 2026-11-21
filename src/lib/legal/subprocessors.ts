@@ -38,4 +38,12 @@ export const SUBPROCESSORS: readonly Subprocessor[] = [
     location: "United States",
     privacyUrl: "https://supabase.com/privacy",
   },
+  {
+    name: "Sentry",
+    purpose: "Error monitoring",
+    receives:
+      "Reports of errors in the website and the API: what failed and where in our code, the page or API address, your browser type, and a one-way hash of your Google account id. Not your Applications, your email address, your IP address or your cookies.",
+    location: "United States",
+    privacyUrl: "https://sentry.io/privacy/",
+  },
 ];
