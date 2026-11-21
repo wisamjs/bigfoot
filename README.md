@@ -97,6 +97,16 @@ Like any new job seeker, the test user receives Sample Applications the first ti
 
 With the dev server and API running, `npm run screenshots` retakes the two screenshots in this README.
 
+### Coding agents (optional)
+
+If you use a coding agent such as Claude Code, install Vercel's React and Next.js performance rules for your user, not the repo:
+
+```bash
+npx skills add vercel-labs/agent-skills -s vercel-react-best-practices -g
+```
+
+Where the skill and the Next.js docs in `node_modules/next/dist/docs/` disagree, follow the docs. Skip the skill's SWR, `better-all` and LRU cache rules: this app uses neither SWR nor `better-all`, and caches with `"use cache"`.
+
 ## Quality checks
 
 | Command | What it checks |
