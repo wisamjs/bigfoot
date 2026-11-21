@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { PipelineBoard } from "@/components/pipeline-board";
-import { buttonClasses, Container } from "@/components/ui";
+import { PipelineBoard } from "@/features/applications/pipeline-board";
+import { buttonClasses } from "@/components/ui/button-classes";
+import { Container } from "@/components/ui/container";
 import { getUpcoming } from "@/lib/applications";
 import { previewApplications } from "@/lib/mock-data";
 

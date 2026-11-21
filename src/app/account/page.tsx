@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
-import { AppFooter } from "@/components/app-footer";
-import { AppHeader, Avatar } from "@/components/app-header";
-import { DeleteAccountForm } from "@/components/delete-account-form";
+import { AppFooter } from "@/features/shell/app-footer";
+import { AppHeader, Avatar } from "@/features/shell/app-header";
+import { DeleteAccountForm } from "@/features/account/delete-account-form";
 import { Download } from "lucide-react";
-import { buttonClasses, Container, LoadingRegion, Skeleton } from "@/components/ui";
+import { buttonClasses } from "@/components/ui/button-classes";
+import { Container } from "@/components/ui/container";
+import { LoadingRegion, Skeleton } from "@/components/ui/skeleton";
 import { GOOGLE_PERMISSIONS_URL } from "@/lib/account";
 import { listApplications } from "@/lib/api";
 import { getCurrentUser, type CurrentUser } from "@/lib/dal";

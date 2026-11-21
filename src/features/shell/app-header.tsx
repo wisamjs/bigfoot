@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import { SignOutButton } from "@/components/auth-button";
-import { Container, Skeleton, Wordmark } from "@/components/ui";
+import { SignOutButton } from "@/features/auth/auth-button";
+import { Container } from "@/components/ui/container";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Wordmark } from "@/features/shell/wordmark";
 import type { CurrentUser } from "@/lib/dal";
 
 const links = [

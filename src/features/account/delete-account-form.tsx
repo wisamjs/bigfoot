@@ -2,7 +2,7 @@
 
 import { useActionState, useId, useState } from "react";
 import { deleteAccountAction } from "@/app/account/actions";
-import { inputClasses } from "@/components/ui";
+import { inputClasses } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DELETE_CONFIRMATION } from "@/lib/account";
 

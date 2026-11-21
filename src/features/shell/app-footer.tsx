@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Container } from "@/components/ui";
+import { Container } from "@/components/ui/container";
 
 // Legal links for signed-in pages, which are too busy for the landing Footer.
 const links = [

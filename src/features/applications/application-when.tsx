@@ -1,6 +1,6 @@
 "use client";
 
-import { useIsClient } from "@/components/use-is-client";
+import { useIsClient } from "@/hooks/use-is-client";
 import { nextInterview, type Application } from "@/lib/applications";
 
 const whenFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });

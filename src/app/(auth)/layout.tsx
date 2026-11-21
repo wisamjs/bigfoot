@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Container, Wordmark } from "@/components/ui";
+import { Container } from "@/components/ui/container";
+import { Wordmark } from "@/features/shell/wordmark";
 
 /** Sign in and sign up: a plain header and one centred card on the hero's atmosphere. */
 export default function AuthLayout({ children }: LayoutProps<"/">) {

@@ -7,7 +7,7 @@ import {
   LegalLink as A,
   LegalSection,
   legalList as list,
-} from "@/components/legal";
+} from "@/features/legal/legal";
 import { PRIVACY_CONTACT_EMAIL } from "@/lib/legal/privacy";
 import { GOVERNING_LAW, TERMS_CHANGES, TERMS_EFFECTIVE_DATE } from "@/lib/legal/terms";
 

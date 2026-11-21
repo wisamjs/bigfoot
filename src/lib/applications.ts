@@ -2,8 +2,6 @@
 // derived views (stats, board, upcoming) the dashboard and landing preview share.
 // Allowed values mirror api/app/domain.py and the supabase/migrations check constraints.
 
-import type { Tone } from "@/components/ui";
-
 export const STATUSES = ["in_progress", "done"] as const;
 export type Status = (typeof STATUSES)[number];
 
@@ -87,41 +85,40 @@ export type ApplicationFields = Omit<
 
 export type InterviewFields = Pick<Interview, "kind" | "at" | "notes">;
 
-type Option = { label: string; tone: Tone };
+type Option = { label: string };
 
 export const STATUS_OPTIONS: Record<Status, Option> = {
-  in_progress: { label: "In Progress", tone: "brand" },
-  done: { label: "Done", tone: "gray" },
+  in_progress: { label: "In Progress" },
+  done: { label: "Done" },
 };
 
 export const OUTCOME_OPTIONS: Record<Outcome, Option> = {
-  offer: { label: "Offer", tone: "dark" },
-  rejected: { label: "Rejected", tone: "orange" },
-  position_filled: { label: "Position Filled", tone: "green" },
-  withdrawn: { label: "Withdrawn", tone: "blue" },
-  no_open_position: { label: "No Open Position", tone: "yellow" },
-  not_the_right_fit: { label: "Not the Right Fit", tone: "gray" },
+  offer: { label: "Offer" },
+  rejected: { label: "Rejected" },
+  position_filled: { label: "Position Filled" },
+  withdrawn: { label: "Withdrawn" },
+  no_open_position: { label: "No Open Position" },
+  not_the_right_fit: { label: "Not the Right Fit" },
 };
 
 export const INTERVIEW_OPTIONS: Record<InterviewKind, Option> = {
-  informal_chat: { label: "Informal Chat", tone: "purple" },
-  recruiter_screen: { label: "Recruiter Screen", tone: "purple" },
-  hiring_manager: { label: "Hiring Manager", tone: "slate" },
-  technical: { label: "Technical", tone: "blue" },
-  behavioural: { label: "Behavioural", tone: "green" },
-  leadership: { label: "Leadership", tone: "yellow" },
-  onsite_loop: { label: "Onsite Loop", tone: "red" },
-  ai_assisted_coding_challenge: { label: "AI Assisted Coding Challenge", tone: "blue" },
-  coding_challenge: { label: "Coding Challenge", tone: "blue" },
-  fe_system_design: { label: "FE System Design", tone: "slate" },
-  be_system_design: { label: "BE System Design", tone: "slate" },
-  technical_deep_dive: { label: "Technical Deep-Dive", tone: "blue" },
-  cross_functional_interview: { label: "Cross-Functional Interview", tone: "green" },
-  strategy_and_values_alignment: { label: "Strategy & Values Alignment", tone: "yellow" },
-  people_management: { label: "People Management", tone: "yellow" },
+  informal_chat: { label: "Informal Chat" },
+  recruiter_screen: { label: "Recruiter Screen" },
+  hiring_manager: { label: "Hiring Manager" },
+  technical: { label: "Technical" },
+  behavioural: { label: "Behavioural" },
+  leadership: { label: "Leadership" },
+  onsite_loop: { label: "Onsite Loop" },
+  ai_assisted_coding_challenge: { label: "AI Assisted Coding Challenge" },
+  coding_challenge: { label: "Coding Challenge" },
+  fe_system_design: { label: "FE System Design" },
+  be_system_design: { label: "BE System Design" },
+  technical_deep_dive: { label: "Technical Deep-Dive" },
+  cross_functional_interview: { label: "Cross-Functional Interview" },
+  strategy_and_values_alignment: { label: "Strategy & Values Alignment" },
+  people_management: { label: "People Management" },
 };
 
-export const WAITING_OPTION: Option = { label: "Waiting", tone: "gray" };
 
 export function isDone(app: Application) {
   return app.status === "done";

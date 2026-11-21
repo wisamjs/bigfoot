@@ -4,7 +4,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
-const ROOTS = ["src/components", "src/app"];
+const ROOTS = ["src/components", "src/features", "src/hooks", "src/app"];
 const EXTENSIONS = /\.(tsx|ts|jsx|js)$/;
 
 // Shadow utilities Bigfoot defines (`--shadow-<name>` in globals.css's @theme). Tailwind's other

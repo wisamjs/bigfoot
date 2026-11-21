@@ -1,8 +1,8 @@
 "use client";
 
 import { CalendarClock } from "lucide-react";
-import { StatCard } from "@/components/stat-card";
-import { useIsClient } from "@/components/use-is-client";
+import { StatCard } from "@/components/ui/stat-card";
+import { useIsClient } from "@/hooks/use-is-client";
 import { INTERVIEW_OPTIONS, type DatedInterview } from "@/lib/applications";
 
 const whenFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });

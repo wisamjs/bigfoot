@@ -2,8 +2,11 @@
 
 import { useId, useState, type ReactNode } from "react";
 import { CalendarClock, ChevronDown, ChevronUp, Eye, EyeOff, NotebookPen } from "lucide-react";
-import { Badge, SampleBadge, Skeleton } from "@/components/ui";
-import { ApplicationWhen, InterviewWhen } from "@/components/application-when";
+import { Badge } from "@/components/ui/badge";
+import { SampleBadge } from "@/features/applications/sample-badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ApplicationWhen, InterviewWhen } from "@/features/applications/application-when";
+import { INTERVIEW_TONE, OUTCOME_TONE } from "@/features/applications/status-tone";
 import {
   getBoardColumns,
   INTERVIEW_OPTIONS,
@@ -226,7 +229,7 @@ function Card({
           // Collapsing hides only this part; the header and "Waiting since" stay.
           <div id={bodyId} hidden={collapsed} className="flex w-full flex-col items-start gap-2">
             {job.outcome && (
-              <Badge tone={OUTCOME_OPTIONS[job.outcome].tone}>{OUTCOME_OPTIONS[job.outcome].label}</Badge>
+              <Badge tone={OUTCOME_TONE[job.outcome]}>{OUTCOME_OPTIONS[job.outcome].label}</Badge>
             )}
             {interviews.length > 0 && (
               // Every Interview in date order (undated, then past, then upcoming), one row each.
@@ -265,7 +268,7 @@ function InterviewItem({ interview }: { interview: Interview }) {
   }
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-control border border-line bg-surface px-2 py-1.5 text-heading">
-      <Badge tone={kind.tone}>{kind.label}</Badge>
+      <Badge tone={INTERVIEW_TONE[interview.kind]}>{kind.label}</Badge>
       {interview.notes && <NotesMark />}
       <span className="ml-auto">
         <InterviewWhen at={interview.at} />

@@ -1,9 +1,9 @@
 import { Suspense } from "react";
-import { AccountDeletedNotice } from "@/components/landing/account-deleted-notice";
-import { Features } from "@/components/landing/features";
-import { Footer } from "@/components/landing/footer";
-import { Hero } from "@/components/landing/hero";
-import { Navbar } from "@/components/landing/navbar";
+import { AccountDeletedNotice } from "@/features/landing/account-deleted-notice";
+import { Features } from "@/features/landing/features";
+import { Footer } from "@/features/landing/footer";
+import { Hero } from "@/features/landing/hero";
+import { Navbar } from "@/features/landing/navbar";
 
 export default function Home({ searchParams }: PageProps<"/">) {
   return (

@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { SleepingBigfoot } from "@/components/illustrations";
-import { useIsClient } from "@/components/use-is-client";
-import { Badge, Skeleton } from "@/components/ui";
+import { SleepingBigfoot } from "@/features/shell/illustrations";
+import { useIsClient } from "@/hooks/use-is-client";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { INTERVIEW_TONE } from "@/features/applications/status-tone";
 import { INTERVIEW_OPTIONS, type DatedInterview } from "@/lib/applications";
 import { dayKey, groupByDay, inWindow, monthStart, monthWeeks, monthWindow, upcomingWindow, type CalendarDay } from "@/lib/calendar";
 
@@ -304,7 +306,7 @@ function DayCell({
 function AgendaItem({ item: { application, interview }, past }: { item: DatedInterview; past: boolean }) {
   const at = new Date(interview.at);
   const kind = INTERVIEW_OPTIONS[interview.kind];
-  const tone = past ? "gray" : kind.tone;
+  const tone = past ? "gray" : INTERVIEW_TONE[interview.kind];
   return (
     <li className={agendaItemClasses}>
       <time dateTime={interview.at} className="flex w-10 shrink-0 flex-col items-center leading-tight">

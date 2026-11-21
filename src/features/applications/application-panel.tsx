@@ -2,11 +2,13 @@
 
 import { ChevronRight, Plus } from "lucide-react";
 import { useState } from "react";
-import { DeleteConfirmation } from "@/components/application-dialogs";
-import { ApplicationEditor, NewApplicationForm } from "@/components/application-forms";
-import { Modal, SidePanel } from "@/components/modal";
-import { Badge, SampleBadge } from "@/components/ui";
+import { DeleteConfirmation } from "@/features/applications/application-dialogs";
+import { ApplicationEditor, NewApplicationForm } from "@/features/applications/application-forms";
+import { Modal, SidePanel } from "@/components/ui/modal";
+import { Badge } from "@/components/ui/badge";
+import { SampleBadge } from "@/features/applications/sample-badge";
 import { Button } from "@/components/ui/button";
+import { OUTCOME_TONE, STATUS_TONE } from "@/features/applications/status-tone";
 import { OUTCOME_OPTIONS, STATUS_OPTIONS, type Application } from "@/lib/applications";
 
 /** What the panel shows: an empty Application to add, one Application, or a list to pick from. */
@@ -111,7 +113,8 @@ function ApplicationList({
   return (
     <ul className="m-0 flex list-none flex-col gap-3 p-0">
       {applications.map((app) => {
-        const state = app.outcome ? OUTCOME_OPTIONS[app.outcome] : STATUS_OPTIONS[app.status];
+        const label = app.outcome ? OUTCOME_OPTIONS[app.outcome].label : STATUS_OPTIONS[app.status].label;
+        const tone = app.outcome ? OUTCOME_TONE[app.outcome] : STATUS_TONE[app.status];
         return (
           <li key={app.id} className="relative flex items-center gap-3 rounded-control border border-line bg-surface p-3 transition-colors hover:border-line-medium hover:bg-card">
             <div className="min-w-0 flex-1">
@@ -132,7 +135,7 @@ function ApplicationList({
               <p className="m-0 text-xs leading-4 text-body">{app.title}</p>
             </div>
             {app.is_sample && <SampleBadge />}
-            <Badge tone={state.tone}>{state.label}</Badge>
+            <Badge tone={tone}>{label}</Badge>
             <ChevronRight className="size-4 shrink-0 text-body" aria-hidden />
           </li>
         );

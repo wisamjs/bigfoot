@@ -6,6 +6,7 @@ import jsxA11y from "eslint-plugin-jsx-a11y";
 import testingLibrary from "eslint-plugin-testing-library";
 import jestDom from "eslint-plugin-jest-dom";
 import unicorn from "eslint-plugin-unicorn";
+import boundaries from "eslint-plugin-boundaries";
 
 // Rule groups and what each guards are listed in CODING_STANDARDS.md ("Lint rule groups").
 
@@ -84,6 +85,83 @@ const eslintConfig = defineConfig([
       "unicorn/prefer-array-some": "error",
       // RegExp#test over String#match when only a yes or no is needed.
       "unicorn/prefer-regexp-test": "error",
+    },
+  },
+
+  // Architecture: who may import whom (CODING_STANDARDS.md, "Where code goes"). Anything not
+  // allowed below is an error, so a new link between features is a decision made here. Every
+  // file in src belongs to an element (no-unknown-files), so a new folder can't slip past.
+  {
+    files: typeScriptFiles,
+    plugins: { boundaries },
+    settings: {
+      "boundaries/elements": [
+        { type: "ui", pattern: "src/components/ui", partialMatch: false },
+        { type: "hooks", pattern: "src/hooks", partialMatch: false },
+        { type: "feature", pattern: "src/features/*", capture: ["feature"], partialMatch: false },
+        { type: "lib", pattern: "src/lib", partialMatch: false },
+        { type: "app", pattern: "src/app", partialMatch: false },
+        { type: "test", pattern: "src/test", partialMatch: false },
+      ],
+      "boundaries/files": [
+        // Next.js's root files: auth.ts, proxy.ts, instrumentation.ts and their tests.
+        { category: "server", pattern: "src/*.ts" },
+        { category: "test", pattern: "src/**/*.test.{ts,tsx}" },
+        { category: "action", pattern: "src/app/**/actions.ts" },
+      ],
+    },
+    rules: {
+      "boundaries/dependencies": [
+        "error",
+        {
+          default: "disallow",
+          // An import of a local file outside every element is reported too, not skipped.
+          checkUnknownLocals: true,
+          policies: [
+            // The design system: anything that would make sense in a different app.
+            { from: { element: { type: "ui" } }, allow: { to: { element: { types: { anyOf: ["ui", "hooks"] } } } } },
+            { from: { element: { type: "hooks" } }, allow: { to: { element: { type: "hooks" } } } },
+            // Domain and server code, used by routes and components alike; lib/dal.ts reads the
+            // session from auth.ts.
+            { from: { element: { type: "lib" } }, allow: [{ to: { element: { type: "lib" } } }, { to: { file: { categories: "server" } } }] },
+            { from: { file: { categories: "server" } }, allow: [{ to: { element: { type: "lib" } } }, { to: { file: { categories: "server" } } }] },
+            // A feature builds on the design system, the domain, and the server actions it calls.
+            {
+              from: { element: { type: "feature" } },
+              allow: [
+                { to: { element: { types: { anyOf: ["ui", "hooks", "lib"] } } } },
+                { to: { file: { categories: "action" } } },
+              ],
+            },
+            // The only links between features.
+            ...Object.entries({
+              dashboard: ["applications", "shell"],
+              landing: ["applications", "auth", "shell"],
+              shell: ["auth"],
+            }).map(([from, to]) => ({
+              from: { element: { type: "feature", captured: { feature: from } } },
+              allow: { to: { element: { type: "feature", captured: { feature: to } } } },
+            })),
+            // Routes put it all together.
+            {
+              from: { element: { type: "app" } },
+              allow: [
+                { to: { element: { types: { anyOf: ["ui", "hooks", "feature", "lib", "app"] } } } },
+                { to: { file: { categories: "server" } } },
+              ],
+            },
+            // Tests and their shared fixtures may reach anything.
+            ...[{ file: { categories: "test" } }, { element: { type: "test" } }].map((from) => ({
+              from,
+              allow: [
+                { to: { element: { types: { anyOf: ["ui", "hooks", "feature", "lib", "app", "test"] } } } },
+                { to: { file: { categories: "server" } } },
+              ],
+            })),
+          ],
+        },
+      ],
+      "boundaries/no-unknown-files": "error",
     },
   },
 
