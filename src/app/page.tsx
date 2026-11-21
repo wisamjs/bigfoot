@@ -9,7 +9,7 @@ export default function Home({ searchParams }: PageProps<"/">) {
   return (
     <>
       <Navbar />
-      <main>
+      <main id="main">
         <Suspense>
           <AccountDeletedNotice searchParams={searchParams} />
         </Suspense>

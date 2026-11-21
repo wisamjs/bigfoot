@@ -16,11 +16,11 @@ const links = [
 export function AppHeader({ user, current }: { user?: CurrentUser; current: (typeof links)[number]["href"] }) {
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-surface/80 backdrop-blur-md supports-[not(backdrop-filter:blur(0))]:bg-surface">
-      <Container className="flex h-[72px] items-center justify-between gap-4">
+      <Container className="flex h-[72px] items-center justify-between gap-2 sm:gap-4">
         <Link href="/" aria-label="Bigfoot home" className="rounded-control">
-          <Wordmark />
+          <Wordmark compact />
         </Link>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <div className="hidden items-center gap-2.5 md:flex">
             {user ? <Avatar user={user} /> : <Skeleton className="size-8 rounded-full" />}
             <div className="leading-tight">
@@ -33,13 +33,13 @@ export function AppHeader({ user, current }: { user?: CurrentUser; current: (typ
             </div>
           </div>
           <nav aria-label="Signed in">
-            <ul className="m-0 flex list-none items-center gap-2 p-0">
+            <ul className="m-0 flex list-none items-center gap-1 p-0 sm:gap-2">
               {links.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
                     aria-current={link.href === current ? "page" : undefined}
-                    className="rounded-control px-3 py-2 text-sm font-medium text-body transition-colors hover:text-heading aria-[current=page]:text-heading aria-[current=page]:underline aria-[current=page]:underline-offset-4"
+                    className="rounded-control px-2 py-2 text-sm sm:px-3 font-medium text-body transition-colors hover:text-heading aria-[current=page]:text-heading aria-[current=page]:underline aria-[current=page]:underline-offset-4"
                   >
                     {link.label}
                   </Link>

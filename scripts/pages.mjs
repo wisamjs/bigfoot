@@ -17,6 +17,8 @@ export const PAGES = [
   { path: "/privacy", signedIn: true, expect: "Privacy Policy" },
   { path: "/terms", signedIn: false, expect: "Terms of Service" },
   { path: "/terms", signedIn: true, expect: "Terms of Service" },
+  { path: "/accessibility", signedIn: false, expect: "Report a barrier" },
+  { path: "/accessibility", signedIn: true, expect: "Report a barrier" },
   { path: "/dashboard", signedIn: false, redirect: true },
   {
     path: "/dashboard",
@@ -49,5 +51,7 @@ export const PAGES = [
     ],
   },
   { path: "/account", signedIn: false, redirect: true },
-  { path: "/account", signedIn: true, expect: "Delete account" },
+  // Text only the loaded page shows: the skeleton has the headings, so waiting for one can catch
+  // the page mid-stream, with the skeleton and the loaded page both in the DOM.
+  { path: "/account", signedIn: true, expect: "to confirm" },
 ];

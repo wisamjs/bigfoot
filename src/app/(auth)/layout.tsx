@@ -18,7 +18,7 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
           </Link>
         </Container>
       </header>
-      <main className="hero-atmosphere py-16 md:py-24">
+      <main id="main" className="hero-atmosphere py-16 md:py-24">
         <Container>{children}</Container>
       </main>
     </>

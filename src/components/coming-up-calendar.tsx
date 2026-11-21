@@ -124,8 +124,9 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
         </table>
       </div>
 
-      {/* Wide screens: the agenda is as tall as the grid and scrolls past that. */}
-      <section aria-labelledby="calendar-agenda" className="flex min-w-0 flex-1 flex-col md:relative">
+      {/* Wide screens: the agenda is as tall as the grid and scrolls past that. A div, not a
+          section: the scrolling list below is the region its heading names. */}
+      <div className="flex min-w-0 flex-1 flex-col md:relative">
         <div className="flex flex-col md:absolute md:inset-0">
           <div className="mb-3 flex min-h-8 items-center justify-between gap-3">
             <h3
@@ -165,7 +166,7 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
             </div>
           )}
         </div>
-      </section>
+      </div>
     </div>
   );
 }
