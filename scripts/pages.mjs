@@ -1,7 +1,8 @@
 // Every page route, signed out and signed in, for scripts/smoke.mjs and scripts/a11y.mjs.
 // scripts/pages.test.ts fails when a src/app page.tsx has no entry here for either state.
 //   expect    text the page must show
-//   redirect  the page must redirect instead (a11y skips it)
+//   redirect  the page must redirect instead (a11y skips it): a path means an HTTP redirect there
+//             (src/proxy.ts); true allows the redirect a page streams while it renders
 //   states    what a click opens or reveals (a dialog, a toggled column); a11y checks each one,
 //             signed in as a user holding scripts/dev-applications.mjs's Applications, and
 //             `npm run capture -- --state <name>` captures one. Each step clicks the first element
@@ -10,11 +11,11 @@
 //             empty states.
 export const PAGES = [
   { path: "/", signedIn: false, expect: "Find your Bigfoot" },
-  { path: "/", signedIn: true, expect: "Find your Bigfoot" },
+  { path: "/", signedIn: true, redirect: "/dashboard" },
   { path: "/sign-in", signedIn: false, expect: "Continue with Google" },
-  { path: "/sign-in", signedIn: true, redirect: true },
+  { path: "/sign-in", signedIn: true, redirect: "/dashboard" },
   { path: "/sign-up", signedIn: false, expect: "Continue with Google" },
-  { path: "/sign-up", signedIn: true, redirect: true },
+  { path: "/sign-up", signedIn: true, redirect: "/dashboard" },
   { path: "/privacy", signedIn: false, expect: "Privacy Policy" },
   { path: "/privacy", signedIn: true, expect: "Privacy Policy" },
   { path: "/terms", signedIn: false, expect: "Terms of Service" },

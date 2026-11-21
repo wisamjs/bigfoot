@@ -2,9 +2,8 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { AuthCard } from "./auth-card";
 
-// The Google button posts to a Server Action; the session read needs Auth.js and a request.
+// The Google button posts to a Server Action, which needs Auth.js and a request.
 vi.mock("@/app/actions", () => ({ signInWithGoogle: vi.fn(), signOutAction: vi.fn() }));
-vi.mock("@/lib/dal", () => ({ findCurrentUser: vi.fn(async () => null) }));
 
 describe("AuthCard", () => {
   it("offers Continue with Google under the page's only h1", () => {

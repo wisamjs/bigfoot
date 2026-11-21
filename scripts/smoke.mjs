@@ -26,9 +26,12 @@ const REQUEST_TIMEOUT_MS = 20_000;
 const checks = [
   ...PAGES.map((page) => ({
     ...page,
-    expect: page.redirect
-      ? (r) => r.body.includes("NEXT_REDIRECT")
-      : (r) => r.status === 200 && r.body.includes(page.expect),
+    expect:
+      typeof page.redirect === "string"
+        ? (r) => r.status >= 300 && r.status < 400 && new URL(r.location ?? "", base).pathname === page.redirect
+        : page.redirect
+          ? (r) => r.body.includes("NEXT_REDIRECT")
+          : (r) => r.status === 200 && r.body.includes(page.expect),
   })),
   { path: "/api/auth/providers", signedIn: false, expect: (r) => r.status === 200 && r.body.includes('"google"') },
   // The API rejects requests without a token from the Next.js server.
@@ -66,7 +69,7 @@ for (const check of checks) {
       redirect: "manual",
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-    result = { status: res.status, body: await res.text() };
+    result = { status: res.status, location: res.headers.get("location"), body: await res.text() };
   } catch (error) {
     console.error(`✗ ${label}: ${error.name === "TimeoutError" ? `no response in ${REQUEST_TIMEOUT_MS / 1000}s` : error.message}`);
     failed++;
