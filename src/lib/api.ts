@@ -5,7 +5,8 @@ import type { Application, ApplicationFields, Interview, InterviewFields } from 
 // Client for the FastAPI service (api/). Every request carries a short-lived token naming the
 // job seeker; FastAPI scopes all reads and writes to that job seeker (docs/adr/0001).
 
-const API_URL = process.env.API_URL ?? "http://localhost:8000";
+/** Where the API is. Also the address a job seeker's scripts call with an Access token (docs/adr/0003). */
+export const API_URL = process.env.API_URL ?? "http://localhost:8000";
 
 export class ApiError extends Error {
   constructor(
@@ -55,6 +56,7 @@ const FIELD_LABELS: Record<string, string> = {
   kind: "Interview kind",
   at: "Interview date",
   notes: "Interview notes",
+  name: "Name",
 };
 
 /** FastAPI errors: {detail: string} or, for validation, {detail: [{loc, msg}]}. */
@@ -103,6 +105,32 @@ export async function getJobSeeker(jobSeekerId: string) {
 /** Deletes the job seeker and all of their Applications. Idempotent. */
 export function deleteAccount(jobSeekerId: string) {
   return request<void>(jobSeekerId, "/me", { method: "DELETE" });
+}
+
+/** An Access token (GLOSSARY.md) as the API lists it: never the secret, which Bigfoot doesn't store. */
+export type AccessToken = {
+  id: string;
+  name: string;
+  /** ISO timestamps. */
+  created_at: string;
+  expires_at: string;
+  /** Derived by the API: `expires_at` has passed, so the token no longer works. */
+  expired: boolean;
+};
+
+/** An Access token as returned once, when created: `token` is the secret. */
+export type NewAccessToken = AccessToken & { token: string };
+
+export function listAccessTokens(jobSeekerId: string) {
+  return request<AccessToken[]>(jobSeekerId, "/me/access-tokens");
+}
+
+export function createAccessToken(jobSeekerId: string, name: string) {
+  return request<NewAccessToken>(jobSeekerId, "/me/access-tokens", { method: "POST", body: { name } });
+}
+
+export function revokeAccessToken(jobSeekerId: string, id: string) {
+  return request<void>(jobSeekerId, `/me/access-tokens/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 export function listApplications(jobSeekerId: string) {
