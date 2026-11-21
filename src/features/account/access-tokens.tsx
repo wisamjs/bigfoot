@@ -10,6 +10,7 @@ import { Modal } from "@/components/ui/modal";
 import { useIsClient } from "@/hooks/use-is-client";
 import { ACCESS_TOKEN_NAME_MAX } from "@/lib/account";
 import type { AccessToken, NewAccessToken } from "@/lib/api";
+import { accessTokenNameError } from "@/lib/validation";
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
 
@@ -31,6 +32,12 @@ export function AccessTokens({ tokens, apiUrl }: { tokens: AccessToken[]; apiUrl
   const [revoking, setRevoking] = useState<AccessToken | null>(null);
   const nameId = useId();
   const hintId = useId();
+  const nameErrorId = useId();
+  // Found before sending; the Server Action's own check comes back in state.nameError.
+  const [clientNameError, setClientNameError] = useState<string | null>(null);
+  // The state the job seeker has typed since: its name error is out of date.
+  const [editedState, setEditedState] = useState<typeof state | null>(null);
+  const nameError = clientNameError ?? (editedState === state ? null : (state.nameError ?? null));
   const created = state.created && state.created.id !== hidden ? state.created : null;
 
   return (
@@ -79,8 +86,17 @@ export function AccessTokens({ tokens, apiUrl }: { tokens: AccessToken[]; apiUrl
       <form
         action={create}
         // The submit button is only aria-disabled while creating, so it keeps focus; refuse a second submit here.
+        // noValidate: the name's error shows beside it in Bigfoot's words, not as a browser bubble.
+        noValidate
         onSubmit={(e) => {
-          if (isCreating) e.preventDefault();
+          if (isCreating) return e.preventDefault();
+          const input = e.currentTarget.elements.namedItem("name") as HTMLInputElement;
+          const problem = accessTokenNameError(input.value);
+          setClientNameError(problem);
+          if (problem) {
+            e.preventDefault();
+            input.focus();
+          }
         }}
         className="flex flex-col gap-2"
       >
@@ -94,7 +110,12 @@ export function AccessTokens({ tokens, apiUrl }: { tokens: AccessToken[]; apiUrl
             required
             maxLength={ACCESS_TOKEN_NAME_MAX}
             autoComplete="off"
-            aria-describedby={hintId}
+            aria-describedby={nameError ? `${hintId} ${nameErrorId}` : hintId}
+            aria-invalid={nameError ? true : undefined}
+            onChange={() => {
+              setClientNameError(null);
+              setEditedState(state);
+            }}
             className={`${inputClasses} sm:max-w-xs`}
           />
           <Button type="submit" aria-disabled={isCreating || undefined} className="self-start">
@@ -105,6 +126,11 @@ export function AccessTokens({ tokens, apiUrl }: { tokens: AccessToken[]; apiUrl
         <p id={hintId} className="m-0 text-sm leading-[1.6] text-body">
           Say what it’s for, such as “Calendar cron job”, so you can tell your tokens apart.
         </p>
+        {nameError && (
+          <p id={nameErrorId} role="alert" className="m-0 text-sm text-fg-danger">
+            {nameError}
+          </p>
+        )}
         {state.error && (
           <p role="alert" className="m-0 text-sm text-fg-danger">
             {state.error}

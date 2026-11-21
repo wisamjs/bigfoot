@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createAccessTokenAction, revokeAccessTokenAction } from "@/app/account/actions";
 import type { AccessToken } from "@/lib/api";
+import { INJECTED_ELEMENTS, XSS_TEXT } from "@/test/xss";
 import { AccessTokens } from "./access-tokens";
 
 vi.mock("@/app/account/actions", () => ({ createAccessTokenAction: vi.fn(), revokeAccessTokenAction: vi.fn() }));
@@ -149,5 +150,65 @@ describe("AccessTokens", () => {
     await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Revoke" }));
 
     expect(screen.queryByText(SECRET)).not.toBeInTheDocument();
+  });
+});
+
+describe("the new token's name", () => {
+  const field = () => screen.getByLabelText("Name of a new Access token");
+  const submit = () => userEvent.click(screen.getByRole("button", { name: "Create Access token" }));
+
+  it("is needed: a blank name shows its error beside the field, announced, and sends nothing", async () => {
+    render(<AccessTokens tokens={[]} apiUrl={API} />);
+    await userEvent.type(field(), "   ");
+    await submit();
+
+    expect(field()).toBeInvalid();
+    expect(field()).toHaveFocus();
+    expect(field()).toHaveAccessibleDescription(expect.stringContaining("Enter the name."));
+    expect(screen.getByRole("alert")).toHaveTextContent("Enter the name.");
+    expect(createAccessTokenAction).not.toHaveBeenCalled();
+
+    await userEvent.type(field(), "Laptop script");
+    expect(field()).toBeValid();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("can't hide its text behind characters that reorder it", async () => {
+    render(<AccessTokens tokens={[]} apiUrl={API} />);
+    await userEvent.click(field());
+    await userEvent.paste("invoice\u202efdp.exe");
+    await submit();
+    expect(screen.getByRole("alert")).toHaveTextContent("Use only characters you can see in the name.");
+    expect(createAccessTokenAction).not.toHaveBeenCalled();
+  });
+
+  it("shows the Server Action's own check beside the field, until the name changes", async () => {
+    vi.mocked(createAccessTokenAction).mockResolvedValue({ error: null, nameError: "Enter the name.", created: null });
+    render(<AccessTokens tokens={[]} apiUrl={API} />);
+    await createToken();
+    expect(field()).toBeInvalid();
+    expect(screen.getByRole("alert")).toHaveTextContent("Enter the name.");
+
+    await userEvent.type(field(), "!");
+    expect(field()).toBeValid();
+  });
+
+  it.each(XSS_TEXT)("%j is sent as typed and shows as text in the list, the new token and Revoke", async (payload) => {
+    vi.mocked(createAccessTokenAction).mockResolvedValue({
+      error: null,
+      created: { ...token({ id: "t2", name: payload }), token: SECRET },
+    });
+    render(<AccessTokens tokens={[token({ name: payload })]} apiUrl={API} />);
+    await userEvent.click(field());
+    await userEvent.paste(payload);
+    await submit();
+
+    const sent = vi.mocked(createAccessTokenAction).mock.calls[0][1];
+    expect(sent.get("name")).toBe(payload);
+    expect(screen.getAllByText(payload, { exact: false }).length).toBeGreaterThan(1);
+    await userEvent.click(screen.getByRole("button", { name: `Revoke ${payload}` }));
+    expect(within(screen.getByRole("dialog")).getByText(payload)).toBeVisible();
+    // eslint-disable-next-line testing-library/no-node-access -- injected tags have no role or text to query by.
+    expect(document.body.querySelectorAll(INJECTED_ELEMENTS)).toHaveLength(0);
   });
 });

@@ -62,8 +62,8 @@ export const PAGES = [
       },
       { name: "add-panel", steps: [{ click: "button", text: "Add application" }], expect: "Job posting URL" },
       {
-        // The API's error shown in the panel: a company of only spaces passes the browser's
-        // `required` but is blank once trimmed.
+        // A company of only spaces passes the browser's `required` but is blank once trimmed: the
+        // form names the error beside the field and announces it, before anything is sent (BIG-89).
         name: "add-error",
         steps: [
           { click: "button", text: "Add application" },
@@ -71,7 +71,7 @@ export const PAGES = [
           { fill: '[role=dialog][data-state=open] input[id$="-title"]', value: "Frontend Engineer" },
           { click: '[role=dialog][data-state=open] button[type="submit"]', text: "Add application" },
         ],
-        expect: "should be a valid string",
+        expect: "Enter the company.",
       },
       { name: "nothing-coming-up", applications: "none", steps: [], expect: "All quiet in the woods" },
     ],

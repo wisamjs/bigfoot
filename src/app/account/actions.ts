@@ -6,9 +6,12 @@ import { signOut } from "@/auth";
 import { ACCOUNT_DELETED_PATH, DELETE_CONFIRMATION } from "@/lib/account";
 import * as api from "@/lib/api";
 import { findCurrentUser } from "@/lib/dal";
+import { accessTokenNameError } from "@/lib/validation";
 
 export type CreateAccessTokenState = {
   error: string | null;
+  /** What's wrong with the name, shown beside the field; `error` is for everything else. */
+  nameError?: string | null;
   /** The token just created, secret included. Held only in the page's state: reloading drops it. */
   created: api.NewAccessToken | null;
 };
@@ -20,8 +23,12 @@ export async function createAccessTokenAction(
 ): Promise<CreateAccessTokenState> {
   const user = await findCurrentUser();
   if (!user) return { error: "Your session has ended. Sign in again.", created: null };
+  // The form checks the name too, but Server Actions are plain POST endpoints.
+  const name = form.get("name");
+  const nameError = accessTokenNameError(name);
+  if (nameError) return { error: null, nameError, created: null };
   try {
-    const created = await api.createAccessToken(user.id, String(form.get("name") ?? ""));
+    const created = await api.createAccessToken(user.id, String(name));
     refresh();
     return { error: null, created };
   } catch (error) {
