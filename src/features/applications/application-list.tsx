@@ -40,8 +40,24 @@ export function ApplicationList({ applications, showDone = false, linked = false
 
   return (
     <div className={`${listClasses} ${decorative ? "card p-4 text-left shadow-2xl" : ""}`} {...a11y}>
+      {!decorative && groups.length > 1 && (
+        // On a phone the groups are one long column: these chips stay under the header and jump to a group.
+        <nav aria-label="Jump to a group" className="sticky top-[72px] z-40 -mx-1 flex flex-wrap gap-2 bg-surface px-1 py-2 md:hidden">
+          {groups.map((group) => (
+            <a key={group.id} href={`#${groupId(group.id)}`} className={chipClasses}>
+              {CHIP_LABEL[group.id] ?? group.label}
+              <span className="text-body">{group.applications.length}</span>
+            </a>
+          ))}
+        </nav>
+      )}
       {groups.map((group) => (
-        <section key={group.id} aria-label={decorative ? undefined : group.label} className={groupClasses}>
+        <section
+          key={group.id}
+          id={decorative ? undefined : groupId(group.id)}
+          aria-label={decorative ? undefined : group.label}
+          className={`${groupClasses} scroll-mt-36`}
+        >
           <div className={groupHeaderClasses}>
             <span className="text-xs font-medium uppercase tracking-[0.4px] text-body">{group.label}</span>
             <span className="text-xs font-medium text-body">{group.applications.length}</span>
@@ -83,6 +99,12 @@ export function ApplicationListSkeleton() {
     </div>
   );
 }
+
+const groupId = (id: string) => `applications-${id}`;
+// Short enough that the chips share a row on a phone.
+const CHIP_LABEL: Record<string, string> = { scheduled: "Scheduled" };
+const chipClasses =
+  "inline-flex min-h-11 items-center gap-2 rounded-full border border-line-medium bg-card-strong px-4 text-sm font-medium text-heading transition-colors hover:border-line-brand-subtle";
 
 // Shared by the list and its skeleton, so the two can't drift apart.
 // A group (8px radius, 12px padding) holds cards that use the same control radius.

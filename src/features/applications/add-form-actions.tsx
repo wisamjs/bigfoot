@@ -17,7 +17,9 @@ export function AddFormActions({
   submitText: string;
 }) {
   return (
-    <div className="mt-2 flex flex-wrap items-center justify-end gap-3 border-t border-line pt-4">
+    // On a phone the footer sticks to the bottom of the screen, so the button is in reach however long
+    // the form is (docs/guidelines/mobile.md).
+    <div className="sticky bottom-0 z-30 mt-2 flex flex-wrap items-center justify-end gap-3 border-t border-line bg-surface py-3 max-md:-mx-6 max-md:px-6 md:static md:bg-transparent md:pb-0 md:pt-4">
       <SaveStatus
         status={tracker.status.phase === "saved" ? { phase: "idle" } : tracker.status}
         label={label}

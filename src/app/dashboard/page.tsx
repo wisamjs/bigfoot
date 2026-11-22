@@ -119,7 +119,7 @@ function DashboardLayout({
           </div>
 
           <section aria-label="Search summary">
-            <ul className="m-0 grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-3">{stats}</ul>
+            <ul className="m-0 grid list-none grid-cols-3 gap-2 p-0 sm:gap-6">{stats}</ul>
           </section>
 
           <section aria-labelledby="interviews-title">

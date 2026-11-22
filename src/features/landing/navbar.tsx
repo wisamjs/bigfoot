@@ -14,7 +14,7 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-surface/80 backdrop-blur-md supports-[not(backdrop-filter:blur(0))]:bg-surface">
       <Container className="flex h-[72px] items-center justify-between">
-        <a href="#top" aria-label="Bigfoot home" className="rounded-control">
+        <a href="#top" aria-label="Bigfoot home" className="touch-target rounded-control">
           <Wordmark />
         </a>
 

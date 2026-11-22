@@ -16,7 +16,7 @@ export function DashboardApplications({ applications }: { applications: Applicat
   return (
     <>
       {doneCount > 0 && (
-        <label className="mb-4 flex w-fit cursor-pointer items-center gap-2 text-sm font-medium text-heading">
+        <label className="mb-4 flex w-fit cursor-pointer items-center gap-2 text-sm pointer-coarse:min-h-11 font-medium text-heading">
           <input
             type="checkbox"
             checked={showDone}
