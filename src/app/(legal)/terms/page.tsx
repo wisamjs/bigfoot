@@ -82,8 +82,8 @@ export default function TermsPage() {
         </p>
         <p>
           On your <A href="/account">Account page</A> you can create Access tokens, which let your
-          own scripts read your Applications. Keep them secret: anyone who has one can do the
-          same, and what is done with your Access tokens counts as done by you. Revoke a
+          own scripts read and change your Applications. Keep them secret: anyone who has one can
+          do the same, and what is done with your Access tokens counts as done by you. Revoke a
           token on your Account page if someone else may have it.
         </p>
       </Section>
