@@ -1,8 +1,8 @@
 #!/bin/sh
-# npm run check (types, lint, Python lint, the staged OpenAPI schema, design tokens, spelling,
+# npm run verify (spelling, design tokens, Python lint, the staged OpenAPI schema, types, lint,
 # then every Vitest test with the coverage floor) before every commit; a failing test blocks it.
 # It takes tens of seconds and runs in full, so a docs-only commit pays for it too.
 # A worktree without its own node_modules is stopped first: see scripts/check-worktree-packages.mjs.
 # Installed by `npm install` (the "prepare" script) and by the SessionStart hook in .claude/settings.json.
 node scripts/check-worktree-packages.mjs || exit 1
-exec npm run --silent check
+exec npm run --silent verify

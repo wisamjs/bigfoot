@@ -1,7 +1,7 @@
 # Coding standards
 
 Read when reviewing a PR. These are the judgement calls; anything a check can catch is in
-`npm run check`, `npm run smoke`, `npm run a11y` or CI instead.
+`npm run verify`, `npm run smoke`, `npm run a11y` or CI instead.
 
 ## Every claim about data is backed
 
@@ -67,7 +67,7 @@ piece down into `ui/`.
 ## Lint rule groups
 
 `npm run lint` (`eslint.config.mjs`) fails on any warning. It runs in pre-commit (inside
-`npm run check`) and as its own `lint` job in CI. Every shared config below is raised to errors.
+`npm run verify`) and once in CI, in the `fast-checks` job. Every shared config below is raised to errors.
 `scripts/lint-rules.test.ts` snapshots the rules that are on: a change to its snapshot is a
 change to this table, so the table must say the same.
 

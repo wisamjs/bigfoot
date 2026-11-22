@@ -1,7 +1,7 @@
 """Writes the API's OpenAPI schema to api/openapi.json, or with --check fails when the staged copy
-of that file is out of date with the code. `npm run openapi` writes it; `npm run check` (so the
-pre-commit hook and CI) runs the check, so every API change shows up in the PR diff as a schema
-change.
+of that file is out of date with the code. `npm run openapi` writes it; `npm run verify` (so the
+pre-commit hook) and CI's `fast-checks` job run the check, so every API change shows up in the PR
+diff as a schema change.
 
 --check compares the staged copy (the one a commit would contain), not the copy on disk, so a
 regenerated but unstaged schema still fails. When the copy on disk is stale too, --check
