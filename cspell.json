@@ -63,6 +63,7 @@
     "fastapi",
     "formatters",
     "hashtext",
+    "isready",
     "labelledby",
     "lineterm",
     "lookups",
