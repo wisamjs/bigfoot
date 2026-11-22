@@ -11,7 +11,9 @@
 // (scripts/test-schema.mjs), rebuilt as it starts.
 // Server errors are read from .next/dev/logs/next-development.log, which every dev server writes.
 import { existsSync, readFileSync, statSync } from "node:fs";
+import { withTestApplications } from "./dev-applications.mjs";
 import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
+import { pagePath } from "./page-path.mjs";
 import { PAGES } from "./pages.mjs";
 import { ensureServers } from "./servers.mjs";
 
@@ -20,6 +22,9 @@ const { base, apiBase } = await ensureServers(
   process.env.API_URL ?? "http://localhost:8000",
 );
 const LOG = ".next/dev/logs/next-development.log";
+// Not the dev-session test user, so whatever that user has stays as it was. Holds the Applications
+// that pages with an `application` open (scripts/page-path.mjs).
+const DATA_JOB_SEEKER_ID = "smoke-user";
 // Generous enough for a first compile in `next dev`; short enough that a hung request fails fast.
 const REQUEST_TIMEOUT_MS = 20_000;
 
@@ -57,31 +62,39 @@ function newLogErrors(offset) {
 
 const logOffset = existsSync(LOG) ? statSync(LOG).size : 0;
 const cookie = `${SESSION_COOKIE}=${await createTestSession()}`;
+const needsData = checks.some((check) => check.application);
+const dataCookie = needsData ? `${SESSION_COOKIE}=${await createTestSession(DATA_JOB_SEEKER_ID)}` : "";
 let failed = 0;
 
-for (const check of checks) {
-  const target = check.url ? check.url() : base + check.path;
-  const label = `${check.url ? target : check.path} (${check.signedIn ? "signed in" : "signed out"})`;
-  let result;
-  try {
-    const res = await fetch(target, {
-      headers: check.signedIn ? { cookie } : {},
-      redirect: "manual",
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-    result = { status: res.status, location: res.headers.get("location"), body: await res.text() };
-  } catch (error) {
-    console.error(`✗ ${label}: ${error.name === "TimeoutError" ? `no response in ${REQUEST_TIMEOUT_MS / 1000}s` : error.message}`);
-    failed++;
-    continue;
-  }
-  if (check.expect(result)) {
-    console.log(`✓ ${label}`);
-  } else {
-    console.error(`✗ ${label}: unexpected response (status ${result.status})`);
-    failed++;
+async function runChecks() {
+  for (const check of checks) {
+    const path = check.url ? null : await pagePath(check, DATA_JOB_SEEKER_ID);
+    const target = check.url ? check.url() : base + path;
+    const label = `${check.url ? target : path} (${check.signedIn ? "signed in" : "signed out"})`;
+    let result;
+    try {
+      const res = await fetch(target, {
+        headers: check.signedIn ? { cookie: check.application ? dataCookie : cookie } : {},
+        redirect: "manual",
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+      result = { status: res.status, location: res.headers.get("location"), body: await res.text() };
+    } catch (error) {
+      console.error(`✗ ${label}: ${error.name === "TimeoutError" ? `no response in ${REQUEST_TIMEOUT_MS / 1000}s` : error.message}`);
+      failed++;
+      continue;
+    }
+    if (check.expect(result)) {
+      console.log(`✓ ${label}`);
+    } else {
+      console.error(`✗ ${label}: unexpected response (status ${result.status})`);
+      failed++;
+    }
   }
 }
+
+if (needsData) await withTestApplications(DATA_JOB_SEEKER_ID, runChecks);
+else await runChecks();
 
 // The dev server validates prerendering after responding; give the log a moment to flush.
 await new Promise((r) => setTimeout(r, 1500));

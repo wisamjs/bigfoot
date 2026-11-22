@@ -2,17 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
-import { createApplicationAction, type ActionResult } from "@/app/applications/actions";
+import { createApplicationAction, type CreateApplicationResult } from "@/app/applications/actions";
 import { RequiredNote } from "@/components/ui/field";
 import { useIsClient } from "@/hooks/use-is-client";
 import { useSaveStatus } from "@/hooks/use-save-status";
 import { AddFormActions } from "@/features/applications/add-form-actions";
 import { DETAIL_FIELDS, DetailsFields, FormAlert, useDetails } from "@/features/applications/details-fields";
 import { todayLocal } from "@/features/applications/local-datetime";
+import { applicationHref } from "@/features/applications/routes";
 
 /**
  * The details of an Application that doesn't exist yet, on the Add Application page. Applied
- * starts at today. Adding it creates the Application and goes back to the dashboard.
+ * starts at today. Adding it creates the Application and opens its page.
  */
 export function NewApplicationForm() {
   const router = useRouter();
@@ -31,9 +32,9 @@ export function NewApplicationForm() {
     if (!details.check(fields, { creating: true })) return;
     void tracker
       .run(() => createApplicationAction(fields))
-      .then((result: ActionResult) => {
+      .then((result: CreateApplicationResult) => {
         if (!result.ok) details.setFieldErrors(result.fieldErrors ?? {});
-        else router.push("/dashboard");
+        else if ("id" in result) router.push(applicationHref(result.id));
       });
   }
 

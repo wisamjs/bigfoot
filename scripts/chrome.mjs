@@ -111,7 +111,7 @@ async function focus(chrome) {
     returnByValue: true,
     expression: `(() => {
       const el = document.activeElement;
-      // The topmost one: a popover such as the date picker's calendar opens over a side panel.
+      // The topmost one: a popover such as the date picker's calendar can open over a dialog.
       const dialogs = document.querySelectorAll("[role=dialog][data-state=open]");
       const dialog = dialogs[dialogs.length - 1];
       const opener = (window.__clicked ?? []).findLast((c) => c.isConnected);

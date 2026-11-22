@@ -1,6 +1,7 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { redirect } from "next/navigation";
 import * as api from "@/lib/api";
 import type { ApplicationFields, InterviewFields } from "@/lib/applications";
 import { findCurrentUser } from "@/lib/dal";
@@ -12,7 +13,11 @@ import { applicationErrors, interviewErrors, isValid, summarize, type FieldError
 
 export type ActionResult = { ok: true } | { ok: false; error: string; fieldErrors?: FieldErrors };
 
-async function run(mutate: (jobSeekerId: string) => Promise<unknown>, errors: FieldErrors = {}): Promise<ActionResult> {
+async function run(
+  mutate: (jobSeekerId: string) => Promise<unknown>,
+  errors: FieldErrors = {},
+  { refreshes = true }: { refreshes?: boolean } = {},
+): Promise<ActionResult> {
   const user = await findCurrentUser();
   if (!user) return { ok: false, error: "Your session has ended. Sign in again." };
   if (!isValid(errors)) return { ok: false, error: summarize(errors), fieldErrors: errors };
@@ -24,12 +29,19 @@ async function run(mutate: (jobSeekerId: string) => Promise<unknown>, errors: Fi
     console.error(error);
     return { ok: false, error: "Couldn’t reach Bigfoot’s server. Try again." };
   }
-  refresh();
+  if (refreshes) refresh();
   return { ok: true };
 }
 
-export async function createApplicationAction(fields: Partial<ApplicationFields>) {
-  return run((jobSeekerId) => api.createApplication(jobSeekerId, fields), applicationErrors(fields, { creating: true }));
+export type CreateApplicationResult = ActionResult | { ok: true; id: string };
+
+/** Adds the Application and gives back its id, so the form can open its page. */
+export async function createApplicationAction(fields: Partial<ApplicationFields>): Promise<CreateApplicationResult> {
+  let id = "";
+  const result = await run(async (jobSeekerId) => {
+    id = (await api.createApplication(jobSeekerId, fields)).id;
+  }, applicationErrors(fields, { creating: true }));
+  return result.ok ? { ok: true, id } : result;
 }
 
 export async function updateApplicationAction(id: string, changes: Partial<ApplicationFields>) {
@@ -39,8 +51,14 @@ export async function updateApplicationAction(id: string, changes: Partial<Appli
   );
 }
 
+/**
+ * Deletes the Application and goes to the dashboard. The page it was deleted from would be a
+ * not-found page once refreshed, so this redirects instead of refreshing.
+ */
 export async function deleteApplicationAction(id: string) {
-  return run((jobSeekerId) => api.deleteApplication(jobSeekerId, id));
+  const result = await run((jobSeekerId) => api.deleteApplication(jobSeekerId, id), {}, { refreshes: false });
+  if (result.ok) redirect("/dashboard");
+  return result;
 }
 
 export async function createInterviewAction(applicationId: string, fields: Partial<InterviewFields>) {

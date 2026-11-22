@@ -38,7 +38,7 @@ export function NewInterviewForm({
   applicationId: chosen = "",
 }: {
   applications: Application[];
-  /** The Application already chosen, as when the panel's Add Interview opens this page. */
+  /** The Application already chosen, as when an Application page's Add Interview opens this page. */
   applicationId?: string;
 }) {
   const id = useId();

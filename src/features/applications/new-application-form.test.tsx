@@ -13,7 +13,7 @@ vi.mock("@/app/applications/actions", () => ({ createApplicationAction: vi.fn() 
 
 beforeEach(() => {
   push.mockReset();
-  vi.mocked(actions.createApplicationAction).mockReset().mockResolvedValue({ ok: true });
+  vi.mocked(actions.createApplicationAction).mockReset().mockResolvedValue({ ok: true, id: "new-id" });
 });
 
 function openAdd() {
@@ -61,7 +61,7 @@ describe("Add Application", () => {
     }
   });
 
-  it("creates the Application from the details, trimmed, and goes back to the dashboard", async () => {
+  it("creates the Application from the details, trimmed, and opens its page", async () => {
     const { user, form } = openAdd();
     await user.type(within(form).getByLabelText("Company"), " Birch ");
     await user.type(within(form).getByLabelText("Title"), "Engineer");
@@ -76,7 +76,7 @@ describe("Add Application", () => {
       salary: "$150k",
       posting_url: null,
     });
-    expect(push).toHaveBeenCalledWith("/dashboard");
+    expect(push).toHaveBeenCalledWith("/applications/new-id");
   });
 
   it("sends the applied date picked from the calendar", async () => {

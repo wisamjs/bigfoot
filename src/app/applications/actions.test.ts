@@ -1,17 +1,32 @@
 import { refresh } from "next/cache";
+import { redirect } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "@/lib/api";
 import { findCurrentUser } from "@/lib/dal";
 import { XSS_URLS } from "@/test/xss";
-import { createApplicationAction, deleteInterviewAction, updateApplicationAction, updateInterviewAction } from "./actions";
+import {
+  createApplicationAction,
+  deleteApplicationAction,
+  deleteInterviewAction,
+  updateApplicationAction,
+  updateInterviewAction,
+} from "./actions";
 
 // The API client is mocked at its module, keeping ApiError real so actions can tell it apart.
 vi.mock("@/lib/api", async () => {
   const { ApiError } = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
-  return { ApiError, createApplication: vi.fn(), updateApplication: vi.fn(), updateInterview: vi.fn(), deleteInterview: vi.fn() };
+  return {
+    ApiError,
+    createApplication: vi.fn(),
+    updateApplication: vi.fn(),
+    deleteApplication: vi.fn(),
+    updateInterview: vi.fn(),
+    deleteInterview: vi.fn(),
+  };
 });
 vi.mock("@/lib/dal", () => ({ findCurrentUser: vi.fn() }));
 vi.mock("next/cache", () => ({ refresh: vi.fn() }));
+vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 // @/lib/api imports server-only, which throws outside a React Server Components build.
 vi.mock("server-only", () => ({}));
 
@@ -78,5 +93,34 @@ describe("dashboard Server Actions", () => {
       error: "Couldn’t reach Bigfoot’s server. Try again.",
     });
     expect(log).toHaveBeenCalled();
+  });
+});
+
+describe("adding and deleting an Application", () => {
+  const fields = { company: "Birch", title: "Engineer" };
+
+  it("give back the new Application's id, so the form can open its page", async () => {
+    vi.mocked(api.createApplication).mockResolvedValue({ id: "new-id" } as Awaited<ReturnType<typeof api.createApplication>>);
+    expect(await createApplicationAction(fields)).toEqual({ ok: true, id: "new-id" });
+    expect(api.createApplication).toHaveBeenCalledWith("seeker-1", fields);
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it("give no id when adding fails", async () => {
+    vi.mocked(api.createApplication).mockRejectedValue(new api.ApiError(422, "Title is required"));
+    expect(await createApplicationAction(fields)).toEqual({ ok: false, error: "Title is required" });
+  });
+
+  it("delete the Application and go to the dashboard, without refreshing the page it was on", async () => {
+    await deleteApplicationAction("app-1");
+    expect(api.deleteApplication).toHaveBeenCalledWith("seeker-1", "app-1");
+    expect(redirect).toHaveBeenCalledWith("/dashboard");
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("stay on the page and say why when deleting fails", async () => {
+    vi.mocked(api.deleteApplication).mockRejectedValue(new api.ApiError(404, "Application not found"));
+    expect(await deleteApplicationAction("app-1")).toEqual({ ok: false, error: "Application not found" });
+    expect(redirect).not.toHaveBeenCalled();
   });
 });

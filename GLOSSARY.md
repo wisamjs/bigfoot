@@ -19,8 +19,12 @@ A secret a job seeker creates on the Account page and gives a script, such as a 
 _Avoid_: API key, personal access token, PAT, credential; delete (a token is revoked)
 
 **Application**:
-One role at one company that the job seeker has applied to. It is added on the Add Application page, opened by the dashboard's Add Application button: company, title and applied date are required (the applied date starts at today), location, salary and job posting are optional. Adding it goes back to the dashboard.
+One role at one company that the job seeker has applied to. It is added on the Add Application page, opened by the dashboard's Add Application button: company, title and applied date are required (the applied date starts at today), location, salary and job posting are optional. Adding it opens its Application page.
 _Avoid_: job, opportunity, lead
+
+**Application page**:
+An Application on a page of its own, at `/applications/[id]`, with a "← Dashboard" link back. It shows the whole Application, all editable: Status, Outcome, the details and every Interview with its Interview notes, and it has Delete Application. It hides the salary behind a Reveal button each time it opens, against someone looking at the screen; the data download still includes it. A deleted Application, an id that isn't one and another job seeker's Application all show the same "Application not found" page. Its Add Interview opens the Add Interview page with this Application chosen. It is opened from a Pipeline card, which is a link, so it can be bookmarked or opened in a new tab.
+_Avoid_: panel, side panel, detail view
 
 **Sample Application**:
 An Application that Bigfoot creates for a new job seeker, to show how Bigfoot works before they add their own. A job seeker receives sample Applications once. They can be edited or deleted like any other Application, and are always marked as samples.
@@ -35,7 +39,7 @@ How a Done Application ended: Offer, Rejected, Position Filled, Withdrawn, No Op
 _Avoid_: closed stage, result, archived
 
 **Pipeline**:
-All of a job seeker's Applications. The board shows the In Progress ones, grouped by what they are waiting on, plus Offers. Its columns are Waiting, Interview scheduled and Offer, and a Done column for the other Done Applications when "Show done" is on; empty ones are left out. Each card answers "what's next here?": its company and role, its next Interview (kind and date, with "+1 more upcoming" when there are others) or "Waiting since" when there is none, how many of its Interviews are completed ("3 completed", with a mark when any have Interview notes, which aren't shown), and its Outcome once Done. It never lists every Interview, so cards in a column stay close to the same height. Opening a card shows its whole Application in a side panel beside the board: details, Status, Outcome and every Interview with its Interview notes, all editable there. The panel hides the salary behind a Reveal button each time it opens, against someone looking at the screen; the data download still includes it. Its Add Interview opens the Add Interview page with that Application chosen.
+All of a job seeker's Applications. The board shows the In Progress ones, grouped by what they are waiting on, plus Offers. Its columns are Waiting, Interview scheduled and Offer, and a Done column for the other Done Applications when "Show done" is on; empty ones are left out. Each card answers "what's next here?": its company and role, its next Interview (kind and date, with "+1 more upcoming" when there are others) or "Waiting since" when there is none, how many of its Interviews are completed ("3 completed", with a mark when any have Interview notes, which aren't shown), and its Outcome once Done. It never lists every Interview, so cards in a column stay close to the same height. A card is a link to its Application page.
 _Avoid_: board, funnel, tracker
 
 **Interview**:
@@ -55,7 +59,7 @@ What sort of conversation an Interview is: Informal Chat, Recruiter Screen, Hiri
 _Avoid_: round, type
 
 **Interview notes**:
-What the job seeker writes about one Interview: how it went, what they were asked, what they would do differently. Optional plain text of up to 20,000 characters, written and read in the side panel under its Interview, and saved with its own button. What the company says back is not Interview notes.
+What the job seeker writes about one Interview: how it went, what they were asked, what they would do differently. Optional plain text of up to 20,000 characters, written and read on the Application page under its Interview, and saved with its own button. What the company says back is not Interview notes.
 _Avoid_: feedback, comments, journal, debrief
 
 **Completed** (an Interview):
