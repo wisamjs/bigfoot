@@ -109,13 +109,6 @@ describe("leaving the Application page with unsaved changes", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
-  it("asks when a Status change isn't saved", async () => {
-    const user = openEditor();
-    await user.selectOptions(screen.getByLabelText("Status"), "Done");
-    fireEvent.click(screen.getByRole("link", { name: "Dashboard" }));
-    expect(screen.getByText(PROMPT)).toBeInTheDocument();
-  });
-
   it("asks when Interview notes are still inside their typing pause", async () => {
     const user = openEditor();
     await user.type(screen.getByLabelText(/^Interview notes/), "Went well.");

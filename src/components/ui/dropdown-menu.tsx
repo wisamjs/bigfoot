@@ -33,10 +33,15 @@ function DropdownMenuTrigger({
 function DropdownMenuContent({
   className,
   sideOffset = 4,
+  children,
+  container,
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+}: React.ComponentProps<typeof DropdownMenuPrimitive.Content> & {
+  /** Where the menu is rendered, instead of <body>: inside a landmark, so its items are in one. */
+  container?: HTMLElement | null
+}) {
   return (
-    <DropdownMenuPrimitive.Portal>
+    <DropdownMenuPrimitive.Portal container={container}>
       <DropdownMenuPrimitive.Content
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
@@ -45,7 +50,9 @@ function DropdownMenuContent({
           className
         )}
         {...props}
-      />
+      >
+        {children}
+      </DropdownMenuPrimitive.Content>
     </DropdownMenuPrimitive.Portal>
   )
 }
