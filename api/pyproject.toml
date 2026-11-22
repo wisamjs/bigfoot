@@ -25,6 +25,7 @@ package = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = ["rebuilds_schema: drops and rebuilds the test schema itself, so conftest restores it afterwards"]
 
 [tool.ruff]
 line-length = 120

@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, date, datetime
 
 import psycopg
+import pytest
 from psycopg import sql
 
 from tests.conftest import MIGRATIONS, TEST_SCHEMA
@@ -88,6 +89,7 @@ def test_job_seekers_with_applications_are_never_seeded(client, token):
     assert [a["company"] for a in apps] == ["Ramp"] and apps[0]["is_sample"] is False
 
 
+@pytest.mark.rebuilds_schema
 def test_job_seekers_from_before_the_migration_are_never_seeded(settings, client, token):
     """The migration records everyone who already has Applications as seeded, so deleting
     them all afterwards doesn't bring samples."""

@@ -1,4 +1,4 @@
-"""Rebuilds a test schema from supabase/migrations: before every test (conftest.py), and before
+"""Rebuilds a test schema from supabase/migrations: once per test session (conftest.py), and before
 smoke, a11y, capture or screenshots start an API (`node scripts/test-schema.mjs rebuild`, which
 runs this from api/ as `uv run python -m tests.schema` with TEST_SCHEMA set)."""
 
