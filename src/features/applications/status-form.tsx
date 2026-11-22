@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Field, RequiredNote } from "@/components/ui/field";
 import { inputClasses } from "@/components/ui/input";
 import { SaveStatus } from "@/components/ui/save-status";
+import { useUnsavedChanges } from "@/features/applications/unsaved-changes";
 import type { SaveTracker } from "@/hooks/use-save-status";
 import {
   OUTCOME_OPTIONS,
@@ -23,6 +24,10 @@ export function StatusForm({ app, tracker }: { app: Application; tracker: SaveTr
   const [status, setStatus] = useState<Status>(app.status);
   const [outcome, setOutcome] = useState<Outcome | "">(app.outcome ?? "");
   const dirty = status !== app.status || (status === "done" && outcome !== (app.outcome ?? ""));
+  // Status and Outcome save with their button, so a change not yet saved is lost on leaving.
+  useUnsavedChanges(dirty, () =>
+    document.getElementById(`${id}-${status === "done" && !outcome ? "outcome" : "status"}`)?.focus(),
+  );
 
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();

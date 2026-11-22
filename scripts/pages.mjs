@@ -98,6 +98,16 @@ export const PAGES = [
         ],
         expect: "Enter the company.",
       },
+      {
+        // Leaving with a detail typed asks first, in the page: Keep editing / Discard (BIG-125).
+        name: "unsaved-changes-prompt",
+        steps: [
+          { fill: 'input[id$="-title"]', value: "Frontend Engineer" },
+          { fill: 'input[id$="-company"]', value: "Acme" },
+          { click: "main a", text: "Dashboard" },
+        ],
+        expect: "You have unsaved changes.",
+      },
     ],
   },
   { path: "/interviews/new", signedIn: false, redirect: true },
