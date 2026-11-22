@@ -43,12 +43,12 @@ export const PAGES = [
     path: "/applications/[id]",
     signedIn: true,
     application: "Datadog",
-    expect: "Save details",
+    expect: "Job posting URL",
     states: [
       {
         name: "salary-revealed",
         steps: [{ click: "button", text: "Reveal" }],
-        expect: "Save details",
+        expect: "Job posting URL",
       },
       {
         name: "delete-confirmation",

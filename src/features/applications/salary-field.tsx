@@ -1,7 +1,7 @@
 "use client";
 
 import { Eye } from "lucide-react";
-import { useState, type InputHTMLAttributes } from "react";
+import { useState, type InputHTMLAttributes, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, fieldLabelClasses } from "@/components/ui/field";
 
@@ -12,6 +12,7 @@ import { Field, fieldLabelClasses } from "@/components/ui/field";
 export function SalaryField({
   id,
   error,
+  status,
   hidden,
   onReveal,
   input,
@@ -19,6 +20,8 @@ export function SalaryField({
   /** The input's id, as `Field` takes it. */
   id: string;
   error: string | undefined;
+  /** The salary's SaveStatus, when it saves itself. */
+  status?: ReactNode;
   hidden: boolean;
   onReveal?: () => void;
   /** The input's props from the form: value, change handler, validation. */
@@ -52,7 +55,7 @@ export function SalaryField({
   }
 
   return (
-    <Field id={id} label="Salary" error={error}>
+    <Field id={id} label="Salary" error={error} status={status}>
       {/* eslint-disable-next-line jsx-a11y/no-autofocus -- Reveal swaps its button for this field, so focus follows it. */}
       <input type="text" autoFocus={focusOnShow} {...input} />
     </Field>

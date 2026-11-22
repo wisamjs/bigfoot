@@ -1,67 +1,112 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { updateApplicationAction, type ActionResult } from "@/app/applications/actions";
+import { useState } from "react";
+import { updateApplicationAction } from "@/app/applications/actions";
 import { RequiredNote } from "@/components/ui/field";
-import type { SaveTracker } from "@/hooks/use-save-status";
-import { DetailsFormActions } from "@/features/applications/details-form-actions";
-import { DETAIL_FIELDS, DetailsFields, FormAlert, useDetails } from "@/features/applications/details-fields";
+import { SaveStatus } from "@/components/ui/save-status";
+import { useSaveStatus } from "@/hooks/use-save-status";
+import {
+  DETAIL_FIELDS,
+  DetailsFields,
+  FormAlert,
+  type DetailField,
+  type DetailValues,
+  useDetails,
+} from "@/features/applications/details-fields";
 import type { Application } from "@/lib/applications";
 
-/**
- * An Application's details, to edit on the Application page. They save together with one button, so a value
- * typed before leaving the page is never half-saved. Only the details that changed are sent.
- */
-export function DetailsForm({
-  app,
-  salaryHidden = false,
-  onRevealSalary,
-  tracker,
-}: {
-  app: Application;
-  /** Shows a Reveal button in place of the salary, against someone looking at the screen. */
-  salaryHidden?: boolean;
-  onRevealSalary?: () => void;
-  /** Tracks the save; owned by the caller, so its status outlives this form remounting. */
-  tracker: SaveTracker;
-}) {
-  const [saved] = useState(() => ({
+/** What screen readers hear before each detail's save status. */
+const LABELS: Record<DetailField, string> = {
+  company: "Company",
+  title: "Title",
+  applied_on: "Applied date",
+  location: "Location",
+  salary: "Salary",
+  posting_url: "Job posting URL",
+};
+
+/** The details as the Application has them saved: what each field is compared with when it's left. */
+function savedDetails(app: Application): DetailValues {
+  return {
     company: app.company,
     title: app.title,
     applied_on: app.applied_on,
     location: app.location ?? "",
     salary: app.salary ?? "",
     posting_url: app.posting_url ?? "",
-  }));
-  const details = useDetails(saved);
-  const changed = DETAIL_FIELDS.filter((name) => details.values[name].trim() !== saved[name]);
+  };
+}
 
-  function submit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    // The submit button is only aria-disabled while saving, so it keeps focus; refuse a second submit here.
-    if (tracker.saving) return;
-    const fields = Object.fromEntries(changed.map((name) => [name, details.values[name].trim() || null]));
-    if (!details.check(fields, { creating: false })) return;
-    void tracker
-      .run(() => updateApplicationAction(app.id, fields))
-      .then((result: ActionResult) => {
-        if (!result.ok) details.setFieldErrors(result.fieldErrors ?? {});
-      });
+/**
+ * An Application's details, to edit on the Application page. Each detail saves by itself when it's
+ * left (the applied date, when it's picked), and only if it changed, so every value saved was
+ * checked first and nothing typed waits on a button. A detail that fails its check shows why beside
+ * it, keeps what was typed, and isn't sent. Each has its own save status, beside its label.
+ *
+ * The form isn't remounted by a save: a detail only takes the saved value in when it changes
+ * elsewhere and nothing was typed over the old one, so a save never resets a field being typed in.
+ */
+export function DetailsForm({
+  app,
+  salaryHidden = false,
+  onRevealSalary,
+}: {
+  app: Application;
+  /** Shows a Reveal button in place of the salary, against someone looking at the screen. */
+  salaryHidden?: boolean;
+  onRevealSalary?: () => void;
+}) {
+  const saved = savedDetails(app);
+  const [seen, setSeen] = useState(saved);
+  const details = useDetails(saved);
+  // One tracker per detail, here so its status outlives the field being re-rendered by the save.
+  const saves: Record<DetailField, ReturnType<typeof useSaveStatus>> = {
+    company: useSaveStatus(),
+    title: useSaveStatus(),
+    applied_on: useSaveStatus(),
+    location: useSaveStatus(),
+    salary: useSaveStatus(),
+    posting_url: useSaveStatus(),
+  };
+
+  // Set during render, the way React advises for state that follows a prop.
+  const elsewhere = DETAIL_FIELDS.filter((name) => saved[name] !== seen[name]);
+  if (elsewhere.length > 0) {
+    setSeen(saved);
+    const untouched = elsewhere.filter((name) => details.values[name].trim() === seen[name]);
+    details.adopt(Object.fromEntries(untouched.map((name) => [name, saved[name]])));
+  }
+
+  function commit(name: DetailField, value: string) {
+    const next = value.trim();
+    if (next === saved[name]) return;
+    if (!details.checkField(name, next || null)) return;
+    void saves[name].run(async () => {
+      const result = await updateApplicationAction(app.id, { [name]: next || null });
+      if (!result.ok && result.fieldErrors) details.setFieldErrors((prev) => ({ ...prev, ...result.fieldErrors }));
+      return result;
+    });
   }
 
   return (
-    // noValidate: the browser's own bubbles would stop the submit before these checks, which
-    // show every problem at once, beside its field, in Bigfoot's words.
-    <form onSubmit={submit} noValidate aria-labelledby={`${details.id}-heading`} className="flex flex-col gap-4">
+    <section aria-labelledby={`${details.id}-heading`} className="flex flex-col gap-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id={`${details.id}-heading`} className="m-0 text-base font-bold leading-[1.25] text-heading">
           Details
         </h2>
         <RequiredNote />
       </div>
-      <DetailsFields details={details} app={app} salaryHidden={salaryHidden} onRevealSalary={onRevealSalary} />
+      <DetailsFields
+        details={details}
+        app={app}
+        salaryHidden={salaryHidden}
+        onRevealSalary={onRevealSalary}
+        onCommit={commit}
+        status={(name) => (
+          <SaveStatus status={saves[name].status} label={LABELS[name]} onRetry={saves[name].retry} />
+        )}
+      />
       <FormAlert message={details.invalid} />
-      <DetailsFormActions changed={changed.length > 0} tracker={tracker} />
-    </form>
+    </section>
   );
 }

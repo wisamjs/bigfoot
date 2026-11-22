@@ -1,7 +1,7 @@
 "use client";
 
 import { ExternalLink as ExternalLinkIcon } from "lucide-react";
-import { useId, useState, type ChangeEvent } from "react";
+import { useId, useState, type ChangeEvent, type FocusEvent, type ReactNode } from "react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { ExternalLink } from "@/components/ui/external-link";
 import { Field } from "@/components/ui/field";
@@ -49,7 +49,24 @@ export function useDetails(initial: DetailValues) {
     return false;
   }
 
-  return { id, values, set, fieldErrors, setFieldErrors, invalid, check };
+  /**
+   * Checks one detail with the API's rules, for a form that saves each as it's left. Shows its
+   * error beside it, announces it, and returns false; leaves the other fields and the focus alone,
+   * because the job seeker is already on their way to another field.
+   */
+  function checkField(name: DetailField, value: string | null) {
+    const problem = applicationErrors({ [name]: value }, { creating: false })[name];
+    setFieldErrors((prev) => ({ ...prev, [name]: problem }));
+    setInvalid(problem ?? null);
+    return !problem;
+  }
+
+  /** Replaces details that changed elsewhere (another tab's save) with their saved values. */
+  function adopt(changes: Partial<DetailValues>) {
+    setValues((prev) => ({ ...prev, ...changes }));
+  }
+
+  return { id, values, set, fieldErrors, setFieldErrors, invalid, check, checkField, adopt };
 }
 
 export type Details = ReturnType<typeof useDetails>;
@@ -57,15 +74,21 @@ export type Details = ReturnType<typeof useDetails>;
 /**
  * An Application's details as fields: company, title, applied date, location, salary and job
  * posting. Company, Title and Applied are required. With `app`, the job posting has a link out.
+ * With `onCommit`, each detail reports when it's left (the date, when it's picked), for a form that
+ * saves them one by one; `status` then gives each its SaveStatus, shown beside its label.
  */
 export function DetailsFields({
   details,
   app,
   salaryHidden = false,
   onRevealSalary,
+  onCommit,
+  status,
 }: {
   details: Details;
   app?: Application;
+  onCommit?: (name: DetailField, value: string) => void;
+  status?: (name: DetailField) => ReactNode;
   /** Shows a Reveal button in place of the salary, against someone looking at the screen. */
   salaryHidden?: boolean;
   onRevealSalary?: () => void;
@@ -78,6 +101,7 @@ export function DetailsFields({
       id: `${id}-${name}`,
       value: values[name],
       onChange: (e: ChangeEvent<HTMLInputElement>) => set(name, e.target.value),
+      onBlur: onCommit && ((e: FocusEvent<HTMLInputElement>) => onCommit(name, e.target.value)),
       maxLength: APPLICATION_MAX_LENGTHS[name],
       placeholder: PLACEHOLDERS[name],
       className: inputClasses,
@@ -87,7 +111,7 @@ export function DetailsFields({
 
   /** The props of one detail's Field, matching `input(name)`. */
   function field(name: DetailField) {
-    return { id: `${id}-${name}`, error: fieldErrors[name] };
+    return { id: `${id}-${name}`, error: fieldErrors[name], status: status?.(name) };
   }
 
   return (
@@ -103,7 +127,10 @@ export function DetailsFields({
           id={`${id}-applied_on`}
           label="Applied"
           value={values.applied_on}
-          onChange={(value) => set("applied_on", value)}
+          onChange={(value) => {
+            set("applied_on", value);
+            onCommit?.("applied_on", value);
+          }}
           {...invalidProps(`${id}-applied_on-error`, fieldErrors.applied_on)}
         />
       </Field>
