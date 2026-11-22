@@ -88,18 +88,14 @@ function unknownFields(input: object, known: readonly string[]): FieldErrors {
   );
 }
 
-/**
- * Problems with an Application's fields. `creating` checks a whole new Application, so Company
- * and Title are required; otherwise only the fields given are checked, as a change.
- */
-export function applicationErrors(input: unknown, { creating }: { creating: boolean }): FieldErrors {
-  if (typeof input !== "object" || input === null) return { form: "Nothing to save." };
-  const fields = input as Partial<Record<keyof ApplicationFields, unknown>>;
-  const has = (name: keyof ApplicationFields) => creating || name in fields;
-  const errors: FieldErrors = unknownFields(input, Object.keys(APPLICATION_LABELS));
+type ApplicationInput = Partial<Record<keyof ApplicationFields, unknown>>;
 
+/** Company and Title (required) and Location, Salary and Posting link (optional). */
+function applicationTextErrors(fields: ApplicationInput, creating: boolean): FieldErrors {
+  const errors: FieldErrors = {};
   for (const name of ["company", "title"] as const) {
-    const problem = has(name) && requiredText(fields[name], APPLICATION_LABELS[name], APPLICATION_MAX_LENGTHS[name]);
+    const problem =
+      (creating || name in fields) && requiredText(fields[name], APPLICATION_LABELS[name], APPLICATION_MAX_LENGTHS[name]);
     if (problem) errors[name] = problem;
   }
   for (const name of ["location", "salary"] as const) {
@@ -108,24 +104,59 @@ export function applicationErrors(input: unknown, { creating }: { creating: bool
   }
   const url = postingUrl(fields.posting_url);
   if (url) errors.posting_url = url;
+  return errors;
+}
 
+/** The Outcome's problem given the Status: only a Done Application has one, and it must. */
+function outcomeError(status: unknown, outcome: unknown) {
+  if (outcome !== null && !OUTCOME_SET.has(outcome)) return "Choose an Outcome.";
+  if (status === "done" && outcome === null) return "Choose an Outcome for a Done Application.";
+  if (status === "in_progress" && outcome !== null) return "Only a Done Application has an Outcome.";
+  return null;
+}
+
+/** Status, and the Outcome that goes with it. */
+function statusErrors(fields: ApplicationInput, creating: boolean): FieldErrors {
+  const errors: FieldErrors = {};
+  const status = "status" in fields ? fields.status : creating ? "in_progress" : undefined;
+  if (status !== undefined && !STATUS_SET.has(status)) errors.status = "Choose a Status.";
+  const outcome = outcomeError(status, fields.outcome ?? null);
+  if (outcome) errors.outcome = outcome;
+  return errors;
+}
+
+/**
+ * Problems with an Application's fields. `creating` checks a whole new Application, so Company
+ * and Title are required; otherwise only the fields given are checked, as a change.
+ */
+export function applicationErrors(input: unknown, { creating }: { creating: boolean }): FieldErrors {
+  if (typeof input !== "object" || input === null) return { form: "Nothing to save." };
+  const fields = input as ApplicationInput;
+  const errors: FieldErrors = unknownFields(input, Object.keys(APPLICATION_LABELS));
+  Object.assign(errors, applicationTextErrors(fields, creating));
   // Optional when creating (the API defaults it to today), but never cleared once set.
   if ("applied_on" in fields && (typeof fields.applied_on !== "string" || !isIsoDate(fields.applied_on))) {
     errors.applied_on = "Enter the date you applied.";
   }
-
-  const status = "status" in fields ? fields.status : creating ? "in_progress" : undefined;
-  if (status !== undefined && !STATUS_SET.has(status)) errors.status = "Choose a Status.";
-  const outcome = fields.outcome ?? null;
-  if (outcome !== null && !OUTCOME_SET.has(outcome)) errors.outcome = "Choose an Outcome.";
-  else if (status === "done" && outcome === null) errors.outcome = "Choose an Outcome for a Done Application.";
-  else if (status === "in_progress" && outcome !== null) errors.outcome = "Only a Done Application has an Outcome.";
-
-  return errors;
+  return Object.assign(errors, statusErrors(fields, creating));
 }
 
 /** Beside the date of an Interview saved before dates were required (docs/adr/0005). */
 export const DATE_NEEDED = "Date needed. Set the date and time to save any change to this Interview.";
+
+type InterviewInput = Partial<Record<keyof InterviewFields, unknown>>;
+
+function interviewKindError(fields: InterviewInput, creating: boolean) {
+  return (creating || "kind" in fields) && !KIND_SET.has(fields.kind) ? "Choose an Interview kind." : null;
+}
+
+/** The date and time's problem; when it isn't given, a saved Interview without one needs it set. */
+function interviewDateError(fields: InterviewInput, creating: boolean, savedAt: string | null | undefined) {
+  if (!creating && !("at" in fields)) return savedAt === null ? DATE_NEEDED : null;
+  if (fields.at === undefined || fields.at === null || fields.at === "") return "Enter the date and time.";
+  if (typeof fields.at !== "string" || !isTimestamp(fields.at)) return "Enter a date and time.";
+  return null;
+}
 
 /**
  * Problems with an Interview's fields. `creating` checks a whole new Interview, so the kind and the
@@ -138,17 +169,12 @@ export function interviewErrors(
   { creating = false, savedAt }: { creating?: boolean; savedAt?: string | null } = {},
 ): FieldErrors {
   if (typeof input !== "object" || input === null) return { form: "Nothing to save." };
-  const fields = input as Partial<Record<keyof InterviewFields, unknown>>;
-  const has = (name: keyof InterviewFields) => creating || name in fields;
+  const fields = input as InterviewInput;
   const errors: FieldErrors = unknownFields(input, ["kind", "at", "notes"]);
-  if (has("kind") && !KIND_SET.has(fields.kind)) errors.kind = "Choose an Interview kind.";
-  if (has("at") && (fields.at === undefined || fields.at === null || fields.at === "")) {
-    errors.at = "Enter the date and time.";
-  } else if (has("at") && (typeof fields.at !== "string" || !isTimestamp(fields.at))) {
-    errors.at = "Enter a date and time.";
-  } else if (!has("at") && savedAt === null) {
-    errors.at = DATE_NEEDED;
-  }
+  const kind = interviewKindError(fields, creating);
+  if (kind) errors.kind = kind;
+  const at = interviewDateError(fields, creating, savedAt);
+  if (at) errors.at = at;
   const notes = optionalText(fields.notes, "Interview notes", INTERVIEW_NOTES_MAX_LENGTH);
   if (notes) errors.notes = notes;
   return errors;

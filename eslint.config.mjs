@@ -29,6 +29,10 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
 
+  // Complexity: no function with more than 10 independent paths through it (CODING_STANDARDS.md,
+  // "Lint rule groups"). Every linted file, tests and scripts included; Ruff's C901 does the same for Python.
+  { rules: { complexity: ["error", 10] } },
+
   // React: ESLint React's type-checked TypeScript preset.
   {
     ...asErrors(eslintReact.configs["recommended-type-checked"]),

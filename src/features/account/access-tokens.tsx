@@ -31,14 +31,6 @@ export function AccessTokens({ tokens, apiUrl }: { tokens: AccessToken[]; apiUrl
   // The id of a created token whose secret the job seeker has put away, or revoked.
   const [hidden, setHidden] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<AccessToken | null>(null);
-  const nameId = useId();
-  const hintId = useId();
-  const nameErrorId = useId();
-  // Found before sending; the Server Action's own check comes back in state.nameError.
-  const [clientNameError, setClientNameError] = useState<string | null>(null);
-  // The state the job seeker has typed since: its name error is out of date.
-  const [editedState, setEditedState] = useState<typeof state | null>(null);
-  const nameError = clientNameError ?? (editedState === state ? null : (state.nameError ?? null));
   const created = state.created && state.created.id !== hidden ? state.created : null;
 
   return (
@@ -46,99 +38,8 @@ export function AccessTokens({ tokens, apiUrl }: { tokens: AccessToken[]; apiUrl
       {/* Always mounted, so screen readers announce the new token when it appears. */}
       {/* eslint-disable-next-line jsx-a11y/prefer-tag-over-role -- <output> allows only phrasing content, and the new token holds a heading and paragraphs. */}
       <div role="status">{created && <NewToken token={created} apiUrl={apiUrl} onDone={() => setHidden(created.id)} />}</div>
-
-      {tokens.length === 0 ? (
-        <p className="m-0 text-sm leading-[1.6] text-body">You have no Access tokens.</p>
-      ) : (
-        <ul className="m-0 flex list-none flex-col overflow-hidden rounded-card border border-line bg-surface-white p-0">
-          {tokens.map((token) => (
-            <li
-              key={token.id}
-              className="flex flex-col gap-3 border-t border-line p-4 first:border-t-0 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="flex min-w-0 flex-col gap-1">
-                <p className="m-0 flex flex-wrap items-center gap-2 text-sm font-medium text-heading">
-                  <span className="min-w-0 break-words">{token.name}</span>
-                  {token.expired && <Badge tone="warning">Expired</Badge>}
-                </p>
-                <dl className="m-0 flex flex-wrap gap-x-4 gap-y-1 text-sm leading-[1.6] text-body">
-                  <Fact label="Created">
-                    <When at={token.created_at} />
-                  </Fact>
-                  <Fact label="Last used">{token.last_used_at ? <When at={token.last_used_at} time /> : "Never"}</Fact>
-                  <Fact label={token.expired ? "Expired" : "Expires"}>
-                    <When at={token.expires_at} />
-                  </Fact>
-                </dl>
-              </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setRevoking(token)}
-                aria-label={`Revoke ${token.name}`}
-                className="self-start sm:self-auto"
-              >
-                Revoke
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <form
-        action={create}
-        // The submit button is only aria-disabled while creating, so it keeps focus; refuse a second submit here.
-        // noValidate: the name's error shows beside it in Bigfoot's words, not as a browser bubble.
-        noValidate
-        onSubmit={(e) => {
-          if (isCreating) return e.preventDefault();
-          const input = e.currentTarget.elements.namedItem("name") as HTMLInputElement;
-          const problem = accessTokenNameError(input.value);
-          setClientNameError(problem);
-          if (problem) {
-            e.preventDefault();
-            input.focus();
-          }
-        }}
-        className="flex flex-col gap-2"
-      >
-        <label htmlFor={nameId} className="block text-sm font-medium text-heading">
-          Name of a new Access token
-        </label>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <input
-            id={nameId}
-            name="name"
-            required
-            maxLength={ACCESS_TOKEN_NAME_MAX}
-            autoComplete="off"
-            aria-describedby={nameError ? `${hintId} ${nameErrorId}` : hintId}
-            aria-invalid={nameError ? true : undefined}
-            onChange={() => {
-              setClientNameError(null);
-              setEditedState(state);
-            }}
-            className={`${inputClasses} sm:max-w-xs`}
-          />
-          <Button type="submit" aria-disabled={isCreating || undefined} className="self-start">
-            <Plus className="size-4" aria-hidden />
-            {isCreating ? "Creating…" : "Create Access token"}
-          </Button>
-        </div>
-        <p id={hintId} className="m-0 text-sm leading-[1.6] text-body">
-          Say what it’s for, such as “Calendar cron job”, so you can tell your tokens apart.
-        </p>
-        {nameError && (
-          <p id={nameErrorId} role="alert" className="m-0 text-sm text-fg-danger">
-            {nameError}
-          </p>
-        )}
-        {state.error && (
-          <p role="alert" className="m-0 text-sm text-fg-danger">
-            {state.error}
-          </p>
-        )}
-      </form>
+      <TokenList tokens={tokens} onRevoke={setRevoking} />
+      <CreateTokenForm state={state} create={create} isCreating={isCreating} />
 
       <Modal open={revoking !== null} onClose={() => setRevoking(null)} title="Revoke Access token">
         {revoking && (
@@ -153,6 +54,126 @@ export function AccessTokens({ tokens, apiUrl }: { tokens: AccessToken[]; apiUrl
         )}
       </Modal>
     </div>
+  );
+}
+
+function TokenList({ tokens, onRevoke }: { tokens: AccessToken[]; onRevoke: (token: AccessToken) => void }) {
+  if (tokens.length === 0) return <p className="m-0 text-sm leading-[1.6] text-body">You have no Access tokens.</p>;
+  return (
+    <ul className="m-0 flex list-none flex-col overflow-hidden rounded-card border border-line bg-surface-white p-0">
+      {tokens.map((token) => (
+        <TokenRow key={token.id} token={token} onRevoke={() => onRevoke(token)} />
+      ))}
+    </ul>
+  );
+}
+
+function TokenRow({ token, onRevoke }: { token: AccessToken; onRevoke: () => void }) {
+  return (
+    <li className="flex flex-col gap-3 border-t border-line p-4 first:border-t-0 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-col gap-1">
+        <p className="m-0 flex flex-wrap items-center gap-2 text-sm font-medium text-heading">
+          <span className="min-w-0 break-words">{token.name}</span>
+          {token.expired && <Badge tone="warning">Expired</Badge>}
+        </p>
+        <dl className="m-0 flex flex-wrap gap-x-4 gap-y-1 text-sm leading-[1.6] text-body">
+          <Fact label="Created">
+            <When at={token.created_at} />
+          </Fact>
+          <Fact label="Last used">{token.last_used_at ? <When at={token.last_used_at} time /> : "Never"}</Fact>
+          <Fact label={token.expired ? "Expired" : "Expires"}>
+            <When at={token.expires_at} />
+          </Fact>
+        </dl>
+      </div>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={onRevoke}
+        aria-label={`Revoke ${token.name}`}
+        className="self-start sm:self-auto"
+      >
+        Revoke
+      </Button>
+    </li>
+  );
+}
+
+type CreateState = ReturnType<typeof useActionState<Awaited<ReturnType<typeof createAccessTokenAction>>, FormData>>[0];
+
+function CreateTokenForm({
+  state,
+  create,
+  isCreating,
+}: {
+  state: CreateState;
+  create: (payload: FormData) => void;
+  isCreating: boolean;
+}) {
+  const nameId = useId();
+  const hintId = useId();
+  const nameErrorId = useId();
+  // Found before sending; the Server Action's own check comes back in state.nameError.
+  const [clientNameError, setClientNameError] = useState<string | null>(null);
+  // The state the job seeker has typed since: its name error is out of date.
+  const [editedState, setEditedState] = useState<CreateState | null>(null);
+  const nameError = clientNameError ?? (editedState === state ? null : (state.nameError ?? null));
+
+  return (
+    <form
+      action={create}
+      // The submit button is only aria-disabled while creating, so it keeps focus; refuse a second submit here.
+      // noValidate: the name's error shows beside it in Bigfoot's words, not as a browser bubble.
+      noValidate
+      onSubmit={(e) => {
+        if (isCreating) return e.preventDefault();
+        const input = e.currentTarget.elements.namedItem("name") as HTMLInputElement;
+        const problem = accessTokenNameError(input.value);
+        setClientNameError(problem);
+        if (problem) {
+          e.preventDefault();
+          input.focus();
+        }
+      }}
+      className="flex flex-col gap-2"
+    >
+      <label htmlFor={nameId} className="block text-sm font-medium text-heading">
+        Name of a new Access token
+      </label>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <input
+          id={nameId}
+          name="name"
+          required
+          maxLength={ACCESS_TOKEN_NAME_MAX}
+          autoComplete="off"
+          aria-describedby={nameError ? `${hintId} ${nameErrorId}` : hintId}
+          aria-invalid={nameError ? true : undefined}
+          onChange={() => {
+            setClientNameError(null);
+            setEditedState(state);
+          }}
+          className={`${inputClasses} sm:max-w-xs`}
+        />
+        <Button type="submit" aria-disabled={isCreating || undefined} className="self-start">
+          <Plus className="size-4" aria-hidden />
+          {isCreating ? "Creating…" : "Create Access token"}
+        </Button>
+      </div>
+      <p id={hintId} className="m-0 text-sm leading-[1.6] text-body">
+        Say what it’s for, such as “Calendar cron job”, so you can tell your tokens apart.
+      </p>
+      {nameError && (
+        <p id={nameErrorId} role="alert" className="m-0 text-sm text-fg-danger">
+          {nameError}
+        </p>
+      )}
+      {state.error && (
+        <p role="alert" className="m-0 text-sm text-fg-danger">
+          {state.error}
+        </p>
+      )}
+    </form>
   );
 }
 

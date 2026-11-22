@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { SleepingBigfoot } from "@/features/shell/illustrations";
 import { useIsClient } from "@/hooks/use-is-client";
@@ -112,83 +112,167 @@ export function InterviewCalendar({ interviews }: { interviews: DatedInterview[]
           </div>
         </div>
 
-        <table aria-labelledby="calendar-month" className="w-full table-fixed border-collapse">
-          <thead>
-            <tr>
-              {weeks[0].map((d) => (
-                <th key={d.key} scope="col" className="pb-1 text-xs font-medium text-body">
-                  <abbr title={weekdayLongFormat.format(d.date)} className="no-underline">
-                    {weekdayFormat.format(d.date)}
-                  </abbr>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {weeks.map((week) => (
-              <tr key={week[0].key}>
-                {week.map((day) => (
-                  <DayCell
-                    key={day.key}
-                    day={day}
-                    count={day.inMonth ? (byDay.get(day.key)?.length ?? 0) : 0}
-                    allPast={(byDay.get(day.key) ?? []).every((d) => new Date(d.interview.at) < now)}
-                    isToday={day.key === todayKey}
-                    isSelected={day.key === selected}
-                    onSelect={() => showAgenda(day.key === selected ? null : day.key)}
-                  />
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <MonthGrid
+          weeks={weeks}
+          byDay={byDay}
+          now={now}
+          todayKey={todayKey}
+          selected={selected}
+          onSelect={(key) => showAgenda(key === selected ? null : key)}
+        />
       </div>
 
-      {/* Wide screens: the agenda is as tall as the grid and scrolls past that. A div, not a
-          section: the scrolling list below is the region its heading names. */}
-      <div className="flex min-w-0 flex-1 flex-col md:relative">
-        <div className="flex flex-col md:absolute md:inset-0">
-          <div className="mb-3 flex min-h-8 items-center justify-between gap-3">
-            <h3
-              id="calendar-agenda"
-              ref={agendaHeadingRef}
-              tabIndex={-1}
-              className="m-0 text-base font-medium text-heading focus-visible:outline-none"
-            >
-              {selectedDay ? dayFormat.format(selectedDay.date) : `Interviews in ${agendaWindow.span}`}
-            </h3>
-            {selectedDay && (
-              <Button variant="tertiary" size="sm" onClick={showUpcoming}>
-                Show upcoming
-              </Button>
-            )}
-          </div>
+      <Agenda
+        selectedDay={selectedDay}
+        agendaWindow={agendaWindow}
+        items={agendaItems}
+        hasInterviews={interviews.length > 0}
+        isThisMonth={offset === 0}
+        now={now}
+        headingRef={agendaHeadingRef}
+        onShowUpcoming={showUpcoming}
+      />
+    </div>
+  );
+}
 
-          {agendaItems.length === 0 && offset === 0 ? (
-            <NothingScheduled />
-          ) : agendaItems.length === 0 ? (
-            <p className="m-0 text-sm text-body">
-              {interviews.length === 0
-                ? "Add a dated Interview to an Application and it shows up here."
-                : `Nothing in ${agendaWindow.span} yet.`}
-            </p>
-          ) : (
-            <section
-              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrolling region must be focusable to scroll by keyboard (axe: scrollable-region-focusable).
-              tabIndex={0}
-              aria-labelledby="calendar-agenda"
-              className="min-h-0 flex-1 overflow-y-auto rounded-control focus-visible:outline-2 focus-visible:outline-offset-2"
-            >
-              <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                {agendaItems.map((d) => (
-                  <AgendaItem key={d.interview.id} item={d} past={new Date(d.interview.at) < now} />
-                ))}
-              </ul>
-            </section>
+type DayInterviews = Map<string, DatedInterview[]>;
+
+function MonthGrid({
+  weeks,
+  byDay,
+  now,
+  todayKey,
+  selected,
+  onSelect,
+}: {
+  weeks: CalendarDay[][];
+  byDay: DayInterviews;
+  now: Date;
+  todayKey: string;
+  selected: string | null;
+  onSelect: (key: string) => void;
+}) {
+  return (
+    <table aria-labelledby="calendar-month" className="w-full table-fixed border-collapse">
+      <thead>
+        <tr>
+          {weeks[0].map((d) => (
+            <th key={d.key} scope="col" className="pb-1 text-xs font-medium text-body">
+              <abbr title={weekdayLongFormat.format(d.date)} className="no-underline">
+                {weekdayFormat.format(d.date)}
+              </abbr>
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {weeks.map((week) => (
+          <tr key={week[0].key}>
+            {week.map((day) => (
+              <DayCell
+                key={day.key}
+                day={day}
+                count={day.inMonth ? (byDay.get(day.key)?.length ?? 0) : 0}
+                allPast={(byDay.get(day.key) ?? []).every((d) => new Date(d.interview.at) < now)}
+                isToday={day.key === todayKey}
+                isSelected={day.key === selected}
+                onSelect={() => onSelect(day.key)}
+              />
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** The agenda beside the grid: a heading, then the Interviews, or why there are none. */
+function Agenda({
+  selectedDay,
+  agendaWindow,
+  items,
+  hasInterviews,
+  isThisMonth,
+  now,
+  headingRef,
+  onShowUpcoming,
+}: {
+  selectedDay: CalendarDay | undefined;
+  agendaWindow: { span: string };
+  items: DatedInterview[];
+  hasInterviews: boolean;
+  isThisMonth: boolean;
+  now: Date;
+  headingRef: RefObject<HTMLHeadingElement | null>;
+  onShowUpcoming: () => void;
+}) {
+  return (
+    // Wide screens: the agenda is as tall as the grid and scrolls past that. A div, not a
+    // section: the scrolling list below is the region its heading names.
+    <div className="flex min-w-0 flex-1 flex-col md:relative">
+      <div className="flex flex-col md:absolute md:inset-0">
+        <div className="mb-3 flex min-h-8 items-center justify-between gap-3">
+          <h3
+            id="calendar-agenda"
+            ref={headingRef}
+            tabIndex={-1}
+            className="m-0 text-base font-medium text-heading focus-visible:outline-none"
+          >
+            {selectedDay ? dayFormat.format(selectedDay.date) : `Interviews in ${agendaWindow.span}`}
+          </h3>
+          {selectedDay && (
+            <Button variant="tertiary" size="sm" onClick={onShowUpcoming}>
+              Show upcoming
+            </Button>
           )}
         </div>
+        <AgendaBody
+          items={items}
+          span={agendaWindow.span}
+          hasInterviews={hasInterviews}
+          isThisMonth={isThisMonth}
+          now={now}
+        />
       </div>
     </div>
+  );
+}
+
+function AgendaBody({
+  items,
+  span,
+  hasInterviews,
+  isThisMonth,
+  now,
+}: {
+  items: DatedInterview[];
+  span: string;
+  hasInterviews: boolean;
+  isThisMonth: boolean;
+  now: Date;
+}) {
+  if (items.length === 0 && isThisMonth) return <NothingScheduled />;
+  if (items.length === 0) {
+    return (
+      <p className="m-0 text-sm text-body">
+        {hasInterviews ? `Nothing in ${span} yet.` : "Add a dated Interview to an Application and it shows up here."}
+      </p>
+    );
+  }
+  return (
+    <section
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrolling region must be focusable to scroll by keyboard (axe: scrollable-region-focusable).
+      tabIndex={0}
+      aria-labelledby="calendar-agenda"
+      className="min-h-0 flex-1 overflow-y-auto rounded-control focus-visible:outline-2 focus-visible:outline-offset-2"
+    >
+      <ul className="m-0 flex list-none flex-col gap-2 p-0">
+        {items.map((d) => (
+          <AgendaItem key={d.interview.id} item={d} past={new Date(d.interview.at) < now} />
+        ))}
+      </ul>
+    </section>
   );
 }
 

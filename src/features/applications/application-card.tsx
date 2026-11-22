@@ -25,14 +25,6 @@ export const cardClasses = "relative rounded-control border border-line bg-card-
  * `sm` up, it is one row: company and role, then the next Interview, then the completed count.
  */
 export function Card({ job, linked = false }: { job: Application; linked?: boolean }) {
-  const upcoming = upcomingInterviews(job);
-  const next = upcoming[0];
-  // Saved before dates were required (docs/adr/0005): they count as completed, but show as needing a date.
-  const dateNeeded = job.interviews.filter((interview) => interview.at === null);
-  const completed = job.interviews.filter((interview) => interview.completed && interview.at !== null);
-  const withNotes = completed.filter((interview) => interview.notes).length;
-  const hasBody = Boolean(job.outcome || next || job.is_waiting || dateNeeded.length > 0 || completed.length > 0);
-
   return (
     <li
       className={`${cardClasses} ${
@@ -42,42 +34,58 @@ export function Card({ job, linked = false }: { job: Application; linked?: boole
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
         <div className="min-w-0 sm:w-64 sm:shrink-0">
           <p className="m-0 min-w-0 text-sm font-medium leading-5 text-heading">
-            {linked ? (
-              // Stretched link: its ::after covers the card, so the whole card opens the Application.
-              <Link
-                href={applicationHref(job.id)}
-                className="after:absolute after:inset-0 after:rounded-control focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-brand"
-              >
-                <span className="sr-only">Open </span>
-                {job.company}
-                <span className="sr-only">, {job.title}</span>
-              </Link>
-            ) : (
-              job.company
-            )}
+            {linked ? <CardLink job={job} /> : job.company}
           </p>
           <div className="flex items-start justify-between gap-2">
             <p className="m-0 min-w-0 text-xs leading-4 text-body">{job.title}</p>
             {job.is_sample && <SampleBadge />}
           </div>
         </div>
-        {hasBody && (
-          <div className="flex min-w-0 flex-col items-start gap-2 text-xs text-body sm:flex-1 sm:flex-row sm:items-center sm:gap-4">
-            {job.outcome && <Badge tone={OUTCOME_TONE[job.outcome]}>{OUTCOME_OPTIONS[job.outcome].label}</Badge>}
-            {next && <NextInterview interview={next} more={upcoming.length - 1} />}
-            {job.is_waiting && <ApplicationWhen app={job} />}
-            {dateNeeded.map((interview) => (
-              <InterviewLine key={interview.id} interview={interview} label="Interview with no date: " />
-            ))}
-            {completed.length > 0 && (
-              <span className="sm:ml-auto">
-                <CompletedCount count={completed.length} withNotes={withNotes} />
-              </span>
-            )}
-          </div>
-        )}
+        <CardBody job={job} />
       </div>
     </li>
+  );
+}
+
+/** Stretched link: its ::after covers the card, so the whole card opens the Application. */
+function CardLink({ job }: { job: Application }) {
+  return (
+    <Link
+      href={applicationHref(job.id)}
+      className="after:absolute after:inset-0 after:rounded-control focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-brand"
+    >
+      <span className="sr-only">Open </span>
+      {job.company}
+      <span className="sr-only">, {job.title}</span>
+    </Link>
+  );
+}
+
+/** What's next on the Application: its Outcome, next Interview, wait, Interviews needing a date, and the completed count. */
+function CardBody({ job }: { job: Application }) {
+  const upcoming = upcomingInterviews(job);
+  const next = upcoming[0];
+  // Saved before dates were required (docs/adr/0005): they count as completed, but show as needing a date.
+  const dateNeeded = job.interviews.filter((interview) => interview.at === null);
+  const completed = job.interviews.filter((interview) => interview.completed && interview.at !== null);
+  const withNotes = completed.filter((interview) => interview.notes).length;
+  const hasBody = Boolean(job.outcome || next || job.is_waiting || dateNeeded.length > 0 || completed.length > 0);
+  if (!hasBody) return null;
+
+  return (
+    <div className="flex min-w-0 flex-col items-start gap-2 text-xs text-body sm:flex-1 sm:flex-row sm:items-center sm:gap-4">
+      {job.outcome && <Badge tone={OUTCOME_TONE[job.outcome]}>{OUTCOME_OPTIONS[job.outcome].label}</Badge>}
+      {next && <NextInterview interview={next} more={upcoming.length - 1} />}
+      {job.is_waiting && <ApplicationWhen app={job} />}
+      {dateNeeded.map((interview) => (
+        <InterviewLine key={interview.id} interview={interview} label="Interview with no date: " />
+      ))}
+      {completed.length > 0 && (
+        <span className="sm:ml-auto">
+          <CompletedCount count={completed.length} withNotes={withNotes} />
+        </span>
+      )}
+    </div>
   );
 }
 
