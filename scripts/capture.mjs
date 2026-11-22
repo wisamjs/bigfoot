@@ -3,7 +3,7 @@
 // way job seekers do: narrow columns, wrapping labels, dark-mode contrast. Signed in, it uses its
 // own job seeker holding the Applications from scripts/dev-applications.mjs, emptied afterwards
 // (none, for a state with `applications: "none"`).
-//   npm run capture -- /dashboard --width 1000 --selector 'section[aria-labelledby="pipeline-title"]'
+//   npm run capture -- /dashboard --width 1000 --selector 'section[aria-labelledby="applications-title"]'
 //   npm run capture -- /dashboard --state show-done --width 400 --theme dark
 //   npm run capture -- '/applications/[id]' --state delete-confirmation
 // Options:

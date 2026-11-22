@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { application, interview } from "@/test/applications";
-import { PipelineBoard, PipelineBoardSkeleton } from "./pipeline-board";
+import { ApplicationList, ApplicationListSkeleton } from "./application-list";
 
 const waiting = application("Acme");
 const scheduled = application("Birch", {
@@ -15,8 +15,8 @@ const offer = application("Cedar", { status: "done", outcome: "offer", is_waitin
 const rejected = application("Umbrella", { status: "done", outcome: "rejected", is_waiting: false });
 const all = [waiting, scheduled, offer, rejected];
 
-/** Each column's label and the companies on its cards. */
-function columns() {
+/** Each group's label and the companies on its cards. */
+function groups() {
   return screen.getAllByRole("region").map((section) => [
     section.getAttribute("aria-label"),
     within(section)
@@ -32,29 +32,29 @@ function nextInterview(kind: string) {
     element?.tagName === "P" && (element.textContent ?? "").startsWith(`Next Interview: ${kind}`);
 }
 
-describe("PipelineBoard", () => {
+describe("ApplicationList", () => {
   it("groups Applications into Waiting, Interview scheduled and Offer, leaving other Done ones off", () => {
-    render(<PipelineBoard title="Pipeline" subtitle="4 open" applications={all} />);
-    expect(columns()).toEqual([
+    render(<ApplicationList applications={all} />);
+    expect(groups()).toEqual([
       ["Waiting", ["Acme"]],
       ["Interview scheduled", ["Birch"]],
       ["Offer", ["Cedar"]],
     ]);
   });
 
-  it("adds a Done column when asked", () => {
-    render(<PipelineBoard title="Pipeline" subtitle="4 open" applications={all} showDone />);
-    expect(columns().at(-1)).toEqual(["Done", ["Umbrella"]]);
+  it("adds a Done group when asked", () => {
+    render(<ApplicationList applications={all} showDone />);
+    expect(groups().at(-1)).toEqual(["Done", ["Umbrella"]]);
   });
 
-  it("explains the board when there's nothing to show", () => {
-    render(<PipelineBoard title="Pipeline" subtitle="0 open" applications={[rejected]} />);
+  it("explains the list when there's nothing to show", () => {
+    render(<ApplicationList applications={[rejected]} />);
     expect(screen.queryByRole("region")).not.toBeInTheDocument();
-    expect(screen.getByText(/Open applications show up here/)).toBeInTheDocument();
+    expect(screen.getByText(/Open Applications show up here/)).toBeInTheDocument();
   });
 
   it("shows a card's next Interview and how many are completed, not every Interview", () => {
-    render(<PipelineBoard title="Pipeline" subtitle="" applications={[scheduled]} />);
+    render(<ApplicationList applications={[scheduled]} />);
     const card = screen.getByRole("listitem");
     expect(within(card).getByText(nextInterview("Technical"))).toBeInTheDocument();
     expect(within(card).queryByText("Recruiter Screen")).not.toBeInTheDocument();
@@ -70,7 +70,7 @@ describe("PipelineBoard", () => {
         interview("pm", { at: "2027-01-05T19:00:00Z", completed: false, kind: "technical" }),
       ],
     });
-    render(<PipelineBoard title="Pipeline" subtitle="" applications={[app]} />);
+    render(<ApplicationList applications={[app]} />);
     expect(screen.getByText(nextInterview("Hiring Manager"))).toBeInTheDocument();
     expect(screen.queryByText("Technical")).not.toBeInTheDocument();
     expect(screen.getByText("+1 more upcoming")).toBeInTheDocument();
@@ -86,24 +86,24 @@ describe("PipelineBoard", () => {
         interview("c", { at: "2026-10-15T15:00:00Z", completed: true }),
       ],
     });
-    render(<PipelineBoard title="Pipeline" subtitle="" applications={[app]} />);
+    render(<ApplicationList applications={[app]} />);
     expect(screen.getByText("3 completed Interviews, 2 with notes")).toBeInTheDocument();
     expect(screen.queryByText(/Asked about caching/)).not.toBeInTheDocument();
     expect(screen.queryByText("Next Interview:")).not.toBeInTheDocument();
   });
 
   it("shows a Done card's Outcome", () => {
-    render(<PipelineBoard title="Pipeline" subtitle="" applications={[offer]} />);
+    render(<ApplicationList applications={[offer]} />);
     expect(within(screen.getByRole("listitem")).getByText("Offer")).toBeInTheDocument();
   });
 
   it("links a card to its Application's page", () => {
-    render(<PipelineBoard title="Pipeline" subtitle="" applications={all} linked />);
+    render(<ApplicationList applications={all} linked />);
     expect(screen.getByRole("link", { name: /^Open Birch\b/ })).toHaveAttribute("href", "/applications/Birch");
   });
 
   it("has no controls on a card besides its link", () => {
-    render(<PipelineBoard title="Pipeline" subtitle="" applications={all} linked />);
+    render(<ApplicationList applications={all} linked />);
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
       expect.stringMatching(/^Open Acme/),
@@ -113,23 +113,22 @@ describe("PipelineBoard", () => {
   });
 
   it("is a single labelled picture when decorative", () => {
-    render(<PipelineBoard title="Your pipeline" subtitle="" applications={all} decorative />);
+    render(<ApplicationList applications={all} decorative />);
     expect(
-      screen.getByRole("img", { name: "Your pipeline: pipeline board with Waiting, Interview scheduled, Offer columns" }),
+      screen.getByRole("img", { name: "Applications grouped as Waiting, Interview scheduled, Offer" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("region")).not.toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });
 
-describe("PipelineBoardSkeleton", () => {
-  it("shows the real title and hides its column shapes", () => {
+describe("ApplicationListSkeleton", () => {
+  it("hides its shapes from assistive technology", () => {
     // Skeleton shapes are aria-hidden, with no role or text, so this checks the DOM itself.
     // eslint-disable-next-line testing-library/no-node-access -- see above
-    const columns = render(<PipelineBoardSkeleton title="Pipeline" />).container.querySelector("[aria-hidden='true'].grid")!;
-    expect(screen.getByText("Pipeline")).toBeInTheDocument();
+    const list = render(<ApplicationListSkeleton />).container.querySelector("[aria-hidden='true']")!;
     // eslint-disable-next-line testing-library/no-node-access -- see above
-    expect(columns.children).toHaveLength(3);
+    expect(list.children).toHaveLength(2);
     expect(screen.queryAllByRole("listitem")).toHaveLength(0);
   });
 });

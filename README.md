@@ -1,12 +1,12 @@
 # Bigfoot
 
-A job search tracker. Job hunting is chasing Bigfoot: Bigfoot keeps every Application in one Pipeline until you find yours, so nothing lives in a spreadsheet or a forgotten email thread.
+A job search tracker. Job hunting is chasing Bigfoot: Bigfoot keeps every Application in one place until you find yours, so nothing lives in a spreadsheet or a forgotten email thread.
 
 ![Bigfoot landing page](docs/screenshots/landing.png)
 
 ## Status
 
-Bigfoot is an early proof of concept, built as a side project. Sign in with Google, add the roles you've applied to, log their Interviews, and follow them on a Pipeline board and a calendar of what's coming up.
+Bigfoot is an early proof of concept, built as a side project. Sign in with Google, add the roles you've applied to, log their Interviews, and follow them on a dashboard with two sections: **Interviews**, a calendar and agenda of what's coming, and **Applications**, a list grouped by what each one is waiting on. Each section has its own Add button.
 
 ![Bigfoot dashboard](docs/screenshots/dashboard.png)
 
@@ -167,7 +167,7 @@ Only `main` deploys to Vercel (Production). Branches and PRs get no preview depl
 
 Bigfoot was built with AI coding agents working from the project rules in [`AGENTS.md`](AGENTS.md).
 
-[`GLOSSARY.md`](GLOSSARY.md) defines the product's terms (Application, Status, Outcome, Interview, Pipeline, Access token).
+[`GLOSSARY.md`](GLOSSARY.md) defines the product's terms (Application, Status, Outcome, Interview, Applications list, Access token).
 
 ## License
 

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
-  getBoardColumns,
+  getApplicationGroups,
   getCalendarInterviews,
   getStats,
   getUpcoming,
@@ -55,9 +55,9 @@ const rejected = application("rejected", {
   interviews: [interview("old", "2026-11-03T15:00:00Z", true)],
 });
 
-describe("getBoardColumns", () => {
+describe("getApplicationGroups", () => {
   it("has Waiting, Interview scheduled and Offer, and leaves other Done Applications off", () => {
-    const columns = getBoardColumns([waiting, scheduled, offer, rejected]);
+    const columns = getApplicationGroups([waiting, scheduled, offer, rejected]);
     expect(columns.map((c) => [c.label, c.applications.map((a) => a.id)])).toEqual([
       ["Waiting", ["waiting"]],
       ["Interview scheduled", ["scheduled"]],
@@ -66,12 +66,12 @@ describe("getBoardColumns", () => {
   });
 
   it("leaves empty columns out", () => {
-    expect(getBoardColumns([scheduled]).map((c) => c.id)).toEqual(["scheduled"]);
-    expect(getBoardColumns([rejected])).toEqual([]);
+    expect(getApplicationGroups([scheduled]).map((c) => c.id)).toEqual(["scheduled"]);
+    expect(getApplicationGroups([rejected])).toEqual([]);
   });
 
   it("adds a Done column for Done Applications other than Offers when asked", () => {
-    const columns = getBoardColumns([waiting, offer, rejected], { showDone: true });
+    const columns = getApplicationGroups([waiting, offer, rejected], { showDone: true });
     expect(columns.map((c) => [c.id, c.applications.map((a) => a.id)])).toEqual([
       ["waiting", ["waiting"]],
       ["offer", ["offer"]],
@@ -97,7 +97,7 @@ describe("an Interview saved with no date (docs/adr/0005)", () => {
 
   it("counts as completed, so its Application stays Waiting and is not Active", () => {
     expect(nextInterview(legacy)).toBeNull();
-    expect(getBoardColumns([legacy]).map((c) => c.id)).toEqual(["waiting"]);
+    expect(getApplicationGroups([legacy]).map((c) => c.id)).toEqual(["waiting"]);
     expect(getStats([legacy]).active).toBe(0);
     expect(getUpcoming([legacy])).toEqual([]);
   });

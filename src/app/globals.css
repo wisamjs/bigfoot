@@ -301,6 +301,8 @@
   --color-ring: var(--ring);
 
   --radius-card: 24px;
+  /* Overrides Candy: fields (text inputs, selects, textareas, date pickers) use this 8px radius, not
+     Candy's 24px inputs.md radius, so they sit with buttons and nested surfaces. */
   --radius-control: 8px;
   /* shadcn components round with rounded-md…xl: controls get Candy's 8px, surfaces its 24px. */
   --radius-md: var(--radius-control);

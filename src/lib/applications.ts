@@ -157,6 +157,7 @@ export function getStats(apps: Application[]) {
   return {
     open: open.length,
     active: open.filter((a) => nextInterview(a) !== null).length,
+    waiting: open.filter((a) => a.is_waiting).length,
     next: getUpcoming(apps)[0] ?? null,
   };
 }
@@ -183,29 +184,29 @@ export function getCalendarInterviews(apps: Application[]): DatedInterview[] {
     .toSorted((a, b) => a.interview.at.localeCompare(b.interview.at));
 }
 
-export type BoardColumn = {
+export type ApplicationGroup = {
   id: "waiting" | "scheduled" | "offer" | "done";
   label: string;
   applications: Application[];
 };
 
-/** Done Applications that ended without an Offer: the board's optional Done column. */
+/** Done Applications that ended without an Offer: the Applications list's optional Done group. */
 export function doneWithoutOffer(apps: Application[]): Application[] {
   return apps.filter((a) => isDone(a) && a.outcome !== "offer");
 }
 
 /**
- * The Pipeline board: Waiting (In Progress, nothing upcoming), Interview scheduled (In Progress,
- * something upcoming) and Offer (Done with Outcome Offer). Other Done Applications appear in a
- * Done column only when showDone is set. Empty columns are left out.
+ * The Applications list's groups: Waiting (In Progress, nothing upcoming), Interview scheduled
+ * (In Progress, something upcoming) and Offer (Done with Outcome Offer). Other Done Applications
+ * appear in a Done group only when showDone is set. Empty groups are left out.
  */
-export function getBoardColumns(apps: Application[], { showDone = false } = {}): BoardColumn[] {
+export function getApplicationGroups(apps: Application[], { showDone = false } = {}): ApplicationGroup[] {
   const open = apps.filter((a) => !isDone(a));
-  const columns: BoardColumn[] = [
+  const groups: ApplicationGroup[] = [
     { id: "waiting", label: "Waiting", applications: open.filter((a) => a.is_waiting) },
     { id: "scheduled", label: "Interview scheduled", applications: open.filter((a) => nextInterview(a)) },
     { id: "offer", label: "Offer", applications: apps.filter((a) => isDone(a) && a.outcome === "offer") },
     { id: "done", label: "Done", applications: showDone ? doneWithoutOffer(apps) : [] },
   ];
-  return columns.filter((c) => c.applications.length > 0);
+  return groups.filter((g) => g.applications.length > 0);
 }

@@ -8,8 +8,8 @@ import { NewInterviewForm } from "@/features/applications/new-interview-form";
 import { getUpcoming } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
 import { INJECTED_ELEMENTS, XSS_TEXT, XSS_URLS } from "@/test/xss";
-import { ComingUpCalendar } from "./coming-up-calendar";
-import { DashboardPipeline } from "./dashboard-pipeline";
+import { InterviewCalendar } from "./interview-calendar";
+import { DashboardApplications } from "./dashboard-applications";
 import { NextInterviewStat } from "./next-interview-stat";
 
 // Everything a job seeker types is shown as text and never runs (BIG-89): each payload goes into
@@ -72,8 +72,8 @@ function expectNothingInjected() {
 }
 
 describe.each(XSS_TEXT.map((payload, n) => [payload, XSS_URLS[n]] as const))("%j with Posting link %j", (payload, url) => {
-  it("shows as text on the Pipeline board, with no Posting link", () => {
-    render(<DashboardPipeline applications={[poisoned(payload, url)]} subtitle="1 open" />);
+  it("shows as text in the Applications list, with no Posting link", () => {
+    render(<DashboardApplications applications={[poisoned(payload, url)]} />);
     expect(screen.getAllByText(payload, { exact: false }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: /job posting/ })).not.toBeInTheDocument();
     expectNothingInjected();
@@ -92,7 +92,7 @@ describe.each(XSS_TEXT.map((payload, n) => [payload, XSS_URLS[n]] as const))("%j
     const apps = [poisoned(payload, url)];
     render(
       <>
-        <ComingUpCalendar interviews={getUpcoming(apps)} />
+        <InterviewCalendar interviews={getUpcoming(apps)} />
         {/* The stat is one of the dashboard's list of numbers. */}
         <ul>
           <NextInterviewStat next={getUpcoming(apps)[0] ?? null} />

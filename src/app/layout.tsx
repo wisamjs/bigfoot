@@ -20,7 +20,7 @@ const allo = localFont({
 export const metadata: Metadata = {
   title: "Bigfoot: job application tracker",
   description:
-    "Job hunting is chasing Bigfoot. Track every application, interview and follow-up in one pipeline until you find yours.",
+    "Job hunting is chasing Bigfoot. Track every application, interview and follow-up in one place until you find yours.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
