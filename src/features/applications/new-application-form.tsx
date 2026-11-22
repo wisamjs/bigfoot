@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { createApplicationAction, type CreateApplicationResult } from "@/app/applications/actions";
 import { RequiredNote } from "@/components/ui/field";
 import { useIsClient } from "@/hooks/use-is-client";
@@ -10,12 +10,22 @@ import { AddFormActions } from "@/features/applications/add-form-actions";
 import { DETAIL_FIELDS, DetailsFields, FormAlert, useDetails } from "@/features/applications/details-fields";
 import { todayLocal } from "@/features/applications/local-datetime";
 import { applicationHref } from "@/features/applications/routes";
+import { UnsavedChanges, useUnsavedChanges } from "@/features/applications/unsaved-changes";
 
 /**
  * The details of an Application that doesn't exist yet, on the Add Application page. Applied
- * starts at today. Adding it creates the Application and opens its page.
+ * starts at today. Adding it creates the Application and opens its page. Leaving with any detail
+ * filled in asks first.
  */
 export function NewApplicationForm() {
+  return (
+    <UnsavedChanges>
+      <NewApplicationFields />
+    </UnsavedChanges>
+  );
+}
+
+function NewApplicationFields() {
   const router = useRouter();
   const tracker = useSaveStatus();
   const typed = useDetails({ company: "", title: "", applied_on: "", location: "", salary: "", posting_url: "" });
@@ -23,6 +33,12 @@ export function NewApplicationForm() {
   const isClient = useIsClient();
   const values = { ...typed.values, applied_on: typed.values.applied_on || (isClient ? todayLocal() : "") };
   const details = { ...typed, values };
+  // Once it's added, the page is on its way to the new Application: nothing is lost by leaving.
+  const [added, setAdded] = useState(false);
+  const filledIn = DETAIL_FIELDS.find((name) => typed.values[name] !== "");
+  useUnsavedChanges(!added && filledIn !== undefined, () => {
+    if (filledIn) document.getElementById(`${typed.id}-${filledIn}`)?.focus();
+  });
 
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -34,7 +50,10 @@ export function NewApplicationForm() {
       .run(() => createApplicationAction(fields))
       .then((result: CreateApplicationResult) => {
         if (!result.ok) details.setFieldErrors(result.fieldErrors ?? {});
-        else if ("id" in result) router.push(applicationHref(result.id, { added: true }));
+        else if ("id" in result) {
+          setAdded(true);
+          router.push(applicationHref(result.id, { added: true }));
+        }
       });
   }
 

@@ -8,6 +8,9 @@ import { application, interview } from "@/test/applications";
 import { ApplicationEditor } from "./application-editor";
 import { NOTES_PAUSE_MS } from "./interview-notes-form";
 
+// The editor guards leaving the page, which needs the router.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
 // Server Actions are mocked at their module: what the page sends, not how it reaches the API.
 vi.mock("@/app/applications/actions", () => ({
   createApplicationAction: vi.fn(),
