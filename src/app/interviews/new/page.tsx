@@ -24,7 +24,7 @@ export default function NewInterviewPage({ searchParams }: PageProps<"/interview
 async function NewInterview({ searchParams }: Pick<PageProps<"/interviews/new">, "searchParams">) {
   const user = await getCurrentUser();
   const [applications, params] = await Promise.all([listApplications(user.id), searchParams]);
-  // The panel's Add Interview chooses its Application; an id that isn't one of theirs chooses none.
+  // An Application page's Add Interview chooses its Application; an id that isn't one of theirs chooses none.
   const chosen = params[APPLICATION_PARAM];
   const applicationId = applications.some((app) => app.id === chosen) ? (chosen as string) : "";
   return (

@@ -4,7 +4,8 @@
 // own job seeker holding the Applications from scripts/dev-applications.mjs, emptied afterwards
 // (none, for a state with `applications: "none"`).
 //   npm run capture -- /dashboard --width 1000 --selector 'section[aria-labelledby="pipeline-title"]'
-//   npm run capture -- /dashboard --state application-panel --selector '[role=dialog][data-state=open]' --theme dark
+//   npm run capture -- /dashboard --state show-done --width 400 --theme dark
+//   npm run capture -- '/applications/[id]' --state delete-confirmation
 // Options:
 //   --width <px>      viewport width (default 1440)
 //   --theme <name>    light, dark or both (default both)
@@ -18,6 +19,7 @@ import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { enterState, launchChrome, openPage } from "./chrome.mjs";
 import { withNoApplications, withTestApplications } from "./dev-applications.mjs";
+import { pagePath } from "./page-path.mjs";
 import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
 import { PAGES } from "./pages.mjs";
 import { ensureServers } from "./servers.mjs";
@@ -61,7 +63,7 @@ const { base } = await ensureServers(
 // Not the dev-session test user, so whatever that user has stays as it was.
 const CAPTURE_JOB_SEEKER_ID = "capture-user";
 const CAPTURE_EMPTY_JOB_SEEKER_ID = "capture-empty-user";
-const slug = [path.replaceAll("/", "-").replace(/^-/, "") || "home", state?.name, width].filter(Boolean).join("-");
+const slug = [path.replaceAll(/[/[\]]/g, "-").replace(/^-+/, "").replace(/-+$/, "") || "home", state?.name, width].filter(Boolean).join("-");
 mkdirSync(options.out, { recursive: true });
 
 /** The clip for `selector` (its whole box, even below the fold), or the full page. */
@@ -79,10 +81,11 @@ async function clip(chrome) {
   return { ...result.value, scale: 1 };
 }
 
-async function captureAll(chrome) {
+async function captureAll(chrome, jobSeekerId) {
+  const url = `${base}${await pagePath(page, jobSeekerId)}`;
   for (const theme of themes) {
     await chrome.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: theme }] });
-    await openPage(chrome, `${base}${path}`, page.expect);
+    await openPage(chrome, url, page.expect);
     if (state) await enterState(chrome, state);
     const { data } = await chrome.send("Page.captureScreenshot", {
       format: "png",
@@ -110,7 +113,7 @@ try {
         value: await createTestSession(jobSeekerId),
         url: base,
       });
-      await captureAll(chrome);
+      await captureAll(chrome, jobSeekerId);
     });
   } else {
     await captureAll(chrome);

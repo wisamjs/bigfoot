@@ -16,9 +16,9 @@ export function InterviewList({ app }: { app: Application }) {
   return (
     <section aria-labelledby="interviews-title" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <h3 id="interviews-title" className="m-0 text-base font-bold leading-[1.25] text-heading">
+        <h2 id="interviews-title" className="m-0 text-base font-bold leading-[1.25] text-heading">
           Interviews
-        </h3>
+        </h2>
         <Link href={addInterviewHref(app.id)} className={buttonClasses("secondary", "sm")}>
           <CalendarPlus className="size-4" aria-hidden />
           Add Interview

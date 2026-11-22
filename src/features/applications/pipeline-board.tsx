@@ -17,8 +17,8 @@ type Props = {
   showDone?: boolean;
   /** Controls beside the subtitle, such as the Show done toggle. */
   actions?: ReactNode;
-  /** Makes each card a button that opens the Application. */
-  onOpen?: (app: Application) => void;
+  /** Makes each card a link to its Application's page. */
+  linked?: boolean;
   /** Render as a decorative picture (landing page) instead of readable content. */
   decorative?: boolean;
 };
@@ -29,7 +29,7 @@ export function PipelineBoard({
   applications,
   showDone = false,
   actions,
-  onOpen,
+  linked = false,
   decorative = false,
 }: Props) {
   const columns = getBoardColumns(applications, { showDone });
@@ -70,7 +70,7 @@ export function PipelineBoard({
               </div>
               <ul className={cardListClasses}>
                 {column.applications.map((job) => (
-                  <Card key={job.id} job={job} onOpen={onOpen} />
+                  <Card key={job.id} job={job} linked={linked} />
                 ))}
               </ul>
             </section>

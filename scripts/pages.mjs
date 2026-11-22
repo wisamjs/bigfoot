@@ -1,6 +1,9 @@
 // Every page route, signed out and signed in, for scripts/smoke.mjs and scripts/a11y.mjs.
 // scripts/pages.test.ts fails when a src/app page.tsx has no entry here for either state.
 //   expect    text the page must show
+//   params, application
+//             what fills a dynamic route's [id] (scripts/page-path.mjs); a page with `application`
+//             is opened by a job seeker holding scripts/dev-applications.mjs's Applications
 //   redirect  the page must redirect instead (a11y skips it): a path means an HTTP redirect there
 //             (src/proxy.ts); true allows the redirect a page streams while it renders
 //   states    what a click or typing opens or reveals (a dialog, a toggled column, an error); a11y
@@ -30,38 +33,43 @@ export const PAGES = [
     expect: "Add Application",
     states: [
       { name: "show-done", steps: [{ click: "label", text: "Show done" }], expect: "Rejected" },
-      {
-        name: "application-panel",
-        steps: [{ click: 'section[aria-label="Interview scheduled"] li button' }],
-        expect: "Save details",
-      },
+      { name: "nothing-coming-up", applications: "none", steps: [], expect: "All quiet in the woods" },
+    ],
+  },
+  // A dynamic route's entry fills its [id]: `application` is the company of one of the
+  // Applications from scripts/dev-applications.mjs, `params` the value itself (scripts/page-path.mjs).
+  { path: "/applications/[id]", signedIn: false, params: { id: "unknown" }, redirect: true },
+  {
+    path: "/applications/[id]",
+    signedIn: true,
+    application: "Datadog",
+    expect: "Save details",
+    states: [
       {
         name: "salary-revealed",
-        steps: [
-          { click: 'section[aria-label="Interview scheduled"] li button' },
-          { click: "[role=dialog][data-state=open] button", text: "Reveal" },
-        ],
+        steps: [{ click: "button", text: "Reveal" }],
         expect: "Save details",
       },
       {
         name: "delete-confirmation",
-        steps: [
-          { click: 'section[aria-label="Interview scheduled"] li button' },
-          { click: "[role=dialog][data-state=open] button", text: "Delete application" },
-        ],
+        steps: [{ click: "button", text: "Delete application" }],
         expect: "This can’t be undone",
       },
       {
-        // The date picker's calendar, open over the panel.
         name: "interview-calendar",
-        steps: [
-          { click: 'section[aria-label="Interview scheduled"] li button' },
-          { click: '[role=dialog][data-state=open] button[id^="at-"]' },
-        ],
+        steps: [{ click: 'button[id^="at-"]' }],
         expect: "Mo",
       },
-      { name: "nothing-coming-up", applications: "none", steps: [], expect: "All quiet in the woods" },
     ],
+  },
+  {
+    // A deleted Application, a malformed id and another job seeker's Application look the same.
+    // The page streams inside Suspense, so the response is 200 with the not-found page and a
+    // noindex tag, not a 404 status.
+    path: "/applications/[id]",
+    signedIn: true,
+    params: { id: "not-an-application" },
+    expect: "Application not found",
   },
   { path: "/applications/new", signedIn: false, redirect: true },
   {

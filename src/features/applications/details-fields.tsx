@@ -18,7 +18,7 @@ export type DetailValues = Record<DetailField, string>;
 
 /**
  * What the details form being filled in holds: each detail as typed, the errors beside them, and
- * the error announced for the whole form. Shared by Add Application and the panel's Details.
+ * the error announced for the whole form. Shared by Add Application and the Application page's details.
  */
 export function useDetails(initial: DetailValues) {
   const id = useId();
