@@ -1,22 +1,22 @@
 import type { LucideIcon } from "lucide-react";
-import { CalendarDays, Kanban, ListChecks } from "lucide-react";
+import { CalendarDays, ListChecks, ListTodo } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { SectionHeader } from "@/components/ui/section-header";
 
 const features: { icon: LucideIcon; title: string; body: string }[] = [
   {
-    icon: Kanban,
-    title: "Pipeline board",
+    icon: ListTodo,
+    title: "Applications",
     body: "See every Application grouped by what it’s waiting on: a reply, an Interview or your answer to an Offer.",
   },
   {
     icon: ListChecks,
     title: "Interviews",
-    body: "Log each Interview with its kind and date. Every card lists them all, completed ones muted.",
+    body: "Log each Interview with its kind and date. Each Application shows its next one and how many are completed.",
   },
   {
     icon: CalendarDays,
-    title: "Coming up",
+    title: "Interview calendar",
     body: "A calendar of your Interviews, with the next one at the top of your dashboard.",
   },
 ];

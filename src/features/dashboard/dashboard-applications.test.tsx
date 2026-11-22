@@ -2,18 +2,18 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { application } from "@/test/applications";
-import { DashboardPipeline } from "./dashboard-pipeline";
+import { DashboardApplications } from "./dashboard-applications";
 
 const birch = application("birch", { company: "Birch", title: "Engineer" });
 const rejected = application("umbrella", { company: "Umbrella", status: "done", outcome: "rejected", is_waiting: false });
 
 function setUpDashboard() {
   const user = userEvent.setup();
-  render(<DashboardPipeline applications={[birch, rejected]} subtitle="1 open" />);
+  render(<DashboardApplications applications={[birch, rejected]} />);
   return user;
 }
 
-describe("Dashboard Pipeline", () => {
+describe("Dashboard Applications", () => {
   it("shows Done Applications only after Show done", async () => {
     const user = setUpDashboard();
     expect(screen.queryByRole("region", { name: "Done" })).not.toBeInTheDocument();
