@@ -143,7 +143,7 @@ export function InterviewRow({
         id={deleteButtonId(interview.id)}
         onClick={onDelete}
         aria-label={`Delete ${kindLabel} Interview, ${label}`}
-        className="rounded-control p-2.5 text-body transition-colors hover:bg-danger-soft hover:text-fg-danger"
+        className="touch-target rounded-control p-2.5 text-body transition-colors hover:bg-danger-soft hover:text-fg-danger"
       >
         <Trash2 className="size-4" aria-hidden />
       </button>

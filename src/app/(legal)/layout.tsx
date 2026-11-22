@@ -9,12 +9,12 @@ export default function LegalLayout({ children }: LayoutProps<"/">) {
     <>
       <header className="border-b border-line bg-surface">
         <Container className="flex h-[72px] items-center justify-between gap-4">
-          <Link href="/" aria-label="Bigfoot home" className="rounded-control">
+          <Link href="/" aria-label="Bigfoot home" className="touch-target rounded-control">
             <Wordmark />
           </Link>
           <Link
             href="/"
-            className="rounded-control text-base font-medium text-heading transition-colors hover:text-body"
+            className="touch-target rounded-control text-base font-medium text-heading transition-colors hover:text-body"
           >
             Back to Bigfoot
           </Link>

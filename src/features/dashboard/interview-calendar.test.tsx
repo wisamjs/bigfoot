@@ -39,6 +39,16 @@ function agendaItems() {
 }
 
 describe("InterviewCalendar", () => {
+  it("starts the month closed below md, and Show calendar opens it", async () => {
+    const user = userEvent.setup();
+    render(<InterviewCalendar interviews={interviewsOn(25)} />);
+    const toggle = screen.getByRole("button", { name: "Show calendar" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveAttribute("aria-controls", "calendar-month-grid");
+    await user.click(toggle);
+    expect(screen.getByRole("button", { name: "Hide calendar" })).toHaveAttribute("aria-expanded", "true");
+  });
+
   it("lists the whole month while it holds five Interviews", () => {
     render(<InterviewCalendar interviews={interviewsOn(2, 3, 21, 25, 30)} />);
     expect(screen.getByRole("heading", { name: `Interviews in ${monthName(10)}` })).toBeInTheDocument();

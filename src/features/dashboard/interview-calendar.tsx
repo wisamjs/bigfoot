@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { SleepingBigfoot } from "@/features/shell/illustrations";
 import { useIsClient } from "@/hooks/use-is-client";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,8 @@ import { INTERVIEW_OPTIONS, type DatedInterview } from "@/lib/applications";
 import { dayKey, groupByDay, inWindow, monthStart, monthWeeks, monthWindow, upcomingWindow, type CalendarDay } from "@/lib/calendar";
 
 const monthFormat = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" });
+// On a phone the heading shares a row with three 44px buttons, so it is short ("Nov 2026") and never wraps.
+const monthShortFormat = new Intl.DateTimeFormat(undefined, { month: "short", year: "numeric" });
 const weekdayFormat = new Intl.DateTimeFormat(undefined, { weekday: "short" });
 const weekdayLongFormat = new Intl.DateTimeFormat(undefined, { weekday: "long" });
 const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" });
@@ -34,6 +36,8 @@ export function InterviewCalendar({ interviews }: { interviews: DatedInterview[]
   const isClient = useIsClient();
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
+  // Below `md` the month grid starts closed so the Interviews list and the Applications come first.
+  const [monthOpen, setMonthOpen] = useState(false);
   const agendaHeadingRef = useRef<HTMLHeadingElement>(null);
   // Set by the day buttons and "Show upcoming", not by month navigation, so focus stays on the arrows.
   const focusAgendaRef = useRef(false);
@@ -76,10 +80,22 @@ export function InterviewCalendar({ interviews }: { interviews: DatedInterview[]
 
   return (
     <div className={calendarCardClasses}>
-      <div className={gridColumnClasses}>
+      <Button
+        variant="secondary"
+        size="sm"
+        className="md:hidden"
+        aria-expanded={monthOpen}
+        aria-controls="calendar-month-grid"
+        onClick={() => setMonthOpen(!monthOpen)}
+      >
+        <CalendarDays className="size-4" aria-hidden />
+        {monthOpen ? "Hide calendar" : "Show calendar"}
+      </Button>
+      <div id="calendar-month-grid" className={`${gridColumnClasses} ${monthOpen ? "" : "max-md:hidden"}`}>
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 id="calendar-month" aria-live="polite" className="m-0 text-base font-medium text-heading">
-            {monthFormat.format(start)}
+          <h3 id="calendar-month" aria-live="polite" className="m-0 whitespace-nowrap text-base font-medium text-heading">
+            <span className="md:hidden">{monthShortFormat.format(start)}</span>
+            <span className="max-md:hidden">{monthFormat.format(start)}</span>
           </h3>
           <div className="flex items-center gap-1">
             <Button variant="tertiary" size="sm" onClick={() => goTo(offset - 1)}>
@@ -267,7 +283,8 @@ function AgendaBody({
 export function InterviewCalendarSkeleton() {
   return (
     <div aria-hidden className={calendarCardClasses}>
-      <div className={gridColumnClasses}>
+      <Skeleton className="h-10 w-full md:hidden" />
+      <div className={`${gridColumnClasses} max-md:hidden`}>
         <div className="mb-3 flex items-center justify-between gap-3">
           <Skeleton className="h-5 w-32" />
           <div className="flex items-center gap-1">
@@ -311,7 +328,7 @@ export function InterviewCalendarSkeleton() {
 }
 
 // Shared by the calendar and its skeleton, so the two can't drift apart.
-const calendarCardClasses = "card flex flex-col gap-6 p-4 sm:p-6 md:flex-row";
+const calendarCardClasses = "card flex flex-col gap-4 p-3 sm:p-6 md:flex-row md:gap-6";
 // As tall as a six-week month whatever the month, so five agenda items always fit (BIG-72).
 const gridColumnClasses = "md:min-h-[22.5rem] md:w-80 md:shrink-0";
 const agendaItemClasses = "flex items-center gap-3 rounded-control bg-surface px-3 py-2 text-sm";
@@ -363,7 +380,7 @@ function DayCell({
   const dot = <span className={`size-1.5 rounded-full ${count > 0 ? (allPast ? "bg-line-medium" : "bg-brand") : ""}`} aria-hidden />;
 
   return (
-    <td aria-current={isToday ? "date" : undefined} className="p-0.5 text-center">
+    <td aria-current={isToday ? "date" : undefined} className="p-0 text-center sm:p-0.5">
       {count === 0 ? (
         <div className="flex h-11 flex-col items-center justify-center gap-0.5">
           {number}
@@ -398,7 +415,7 @@ function AgendaItem({ item: { application, interview }, past }: { item: DatedInt
         <span className={`text-base font-medium ${past ? "text-body" : "text-heading"}`}>{at.getDate()}</span>
       </time>
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-        <span className={`truncate font-medium ${past ? "text-body" : "text-heading"}`}>{application.company}</span>
+        <span className={`min-w-0 break-words font-medium ${past ? "text-body" : "text-heading"}`}>{application.company}</span>
         <Badge tone={tone}>{kind.label}</Badge>
       </div>
       <span className="shrink-0 text-body">{timeFormat.format(at)}</span>

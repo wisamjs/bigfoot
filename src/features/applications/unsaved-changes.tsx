@@ -42,6 +42,28 @@ function historyIndex(): number | undefined {
   return (window as unknown as { navigation?: { currentEntry?: { index: number } } }).navigation?.currentEntry?.index;
 }
 
+/** Whether a click is a plain left click, the kind that follows a link in this tab. */
+function isPlainClick(e: MouseEvent): boolean {
+  return !e.defaultPrevented && e.button === 0 && !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey);
+}
+
+/** The link a click landed on, unless it opens elsewhere (new tab, download). */
+function sameTabLink(e: MouseEvent): HTMLAnchorElement | null {
+  const link = e.target instanceof Element ? e.target.closest<HTMLAnchorElement>("a[href]") : null;
+  if (!link || (link.target && link.target !== "_self") || link.hasAttribute("download")) return null;
+  return link;
+}
+
+/** Where a plain click on an in-app link to another page goes; null for anything else (new tabs, downloads, other sites, this page). */
+function leavingHref(e: MouseEvent): string | null {
+  const link = isPlainClick(e) ? sameTabLink(e) : null;
+  if (!link) return null;
+  const url = new URL(link.href, window.location.href);
+  if (url.origin !== window.location.origin) return null;
+  if (url.pathname === window.location.pathname && url.search === window.location.search) return null;
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 /**
  * Guards a page against losing what's typed. While any part of it (see `useUnsavedChanges`) holds
  * unsaved changes, leaving by a link, by Back or by closing the tab doesn't happen straight away:
@@ -128,15 +150,11 @@ export function UnsavedChanges({ children }: { children: ReactNode }) {
     // Links, any of them (the header, "← Dashboard", Add Interview): caught before Next.js's own
     // Link handler sees the click. New tabs, downloads and other sites are left alone.
     const click = (e: MouseEvent) => {
-      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-      const link = e.target instanceof Element ? e.target.closest<HTMLAnchorElement>("a[href]") : null;
-      if (!link || (link.target && link.target !== "_self") || link.hasAttribute("download")) return;
-      const url = new URL(link.href, window.location.href);
-      if (url.origin !== window.location.origin) return;
-      if (url.pathname === window.location.pathname && url.search === window.location.search) return;
+      const href = leavingHref(e);
+      if (href === null) return;
       e.preventDefault();
       e.stopPropagation();
-      updateLeaving({ by: "link", href: `${url.pathname}${url.search}${url.hash}` });
+      updateLeaving({ by: "link", href });
     };
 
     // Back (and Forward): the browser has already moved, and the page's own entry can't be kept

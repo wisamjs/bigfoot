@@ -29,7 +29,7 @@ export function FormPage({
           <div className="mx-auto flex max-w-[768px] flex-col gap-6">
             <Link
               href="/dashboard"
-              className="inline-flex w-fit items-center gap-1.5 rounded-control text-sm font-medium text-body transition-colors hover:text-heading"
+              className="touch-target inline-flex w-fit items-center gap-1.5 rounded-control text-sm font-medium text-body transition-colors hover:text-heading"
             >
               <ArrowLeft className="size-4" aria-hidden />
               Dashboard

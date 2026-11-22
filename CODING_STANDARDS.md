@@ -23,6 +23,12 @@ without updating the copy and adding a `PRIVACY_CHANGES` entry.
 A PR that changes what a screen shows or does updates every GLOSSARY.md term that describes that
 screen, in the same PR. A definition that names a removed view, column or control is a defect.
 
+## UI works on a phone
+
+Read [`docs/guidelines/mobile.md`](docs/guidelines/mobile.md). `npm run a11y` fails on touch
+targets under 44×44px and on text cut off by an ellipsis. A PR that changes UI attaches
+`npm run capture -- <page> --width 375` images (light and dark) for each page or state it touches.
+
 ## Green CI before approval
 
 Approve only when the PR's latest `CI` and `PR naming` runs succeeded. A cancelled or skipped

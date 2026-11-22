@@ -79,7 +79,7 @@ export function DatePicker({
           {...aria}
         >
           <CalendarIcon className="size-4 shrink-0 text-body" aria-hidden />
-          <span className="truncate">{shown ?? placeholder}</span>
+          <span className="min-w-0 break-words">{shown ?? placeholder}</span>
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start" aria-label={label}>
