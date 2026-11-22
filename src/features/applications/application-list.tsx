@@ -2,7 +2,8 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, cardClasses } from "@/features/applications/application-card";
-import { getApplicationGroups, type Application } from "@/lib/applications";
+import { useMovedCard } from "@/features/applications/use-moved-card";
+import { getApplicationGroups, type Application, type ApplicationGroup } from "@/lib/applications";
 
 // Also draws the landing page's decorative list (src/features/landing/hero.tsx): after a
 // layout change, check docs/screenshots/landing.png too.
@@ -23,12 +24,8 @@ type Props = {
  */
 export function ApplicationList({ applications, showDone = false, linked = false, decorative = false }: Props) {
   const groups = getApplicationGroups(applications, { showDone });
-  const a11y = decorative
-    ? {
-        role: "img" as const,
-        "aria-label": `Applications grouped as ${groups.map((g) => g.label).join(", ")}`,
-      }
-    : {};
+  const { listRef, announcement, onChanged } = useMovedCard(applications, showDone);
+  const a11y = decorative ? decorativeProps(groups) : {};
 
   if (groups.length === 0) {
     return (
@@ -39,18 +36,9 @@ export function ApplicationList({ applications, showDone = false, linked = false
   }
 
   return (
-    <div className={`${listClasses} ${decorative ? "card p-4 text-left shadow-2xl" : ""}`} {...a11y}>
-      {!decorative && groups.length > 1 && (
-        // On a phone the groups are one long column: these chips stay under the header and jump to a group.
-        <nav aria-label="Jump to a group" className="sticky top-[72px] z-40 -mx-1 flex flex-wrap gap-2 bg-surface px-1 py-2 md:hidden">
-          {groups.map((group) => (
-            <a key={group.id} href={`#${groupId(group.id)}`} className={chipClasses}>
-              {CHIP_LABEL[group.id] ?? group.label}
-              <span className="text-body">{group.applications.length}</span>
-            </a>
-          ))}
-        </nav>
-      )}
+    <div ref={listRef} className={`${listClasses} ${decorative ? "card p-4 text-left shadow-2xl" : ""}`} {...a11y}>
+      {linked && <Announcement text={announcement} />}
+      {!decorative && groups.length > 1 && <JumpChips groups={groups} />}
       {groups.map((group) => (
         <section
           key={group.id}
@@ -64,13 +52,41 @@ export function ApplicationList({ applications, showDone = false, linked = false
           </div>
           <ul className={cardListClasses}>
             {group.applications.map((job) => (
-              <Card key={job.id} job={job} linked={linked} />
+              <Card key={job.id} job={job} linked={linked} onChanged={linked ? onChanged : undefined} />
             ))}
           </ul>
         </section>
       ))}
     </div>
   );
+}
+
+/** Says what a card's Change Status menu just did, e.g. "Acme marked Rejected"; screen readers hear it politely. */
+function Announcement({ text }: { text: string }) {
+  return (
+    <output aria-live="polite" className={text ? "text-sm font-medium text-heading" : "sr-only"}>
+      {text}
+    </output>
+  );
+}
+
+/** On a phone the groups are one long column: these chips stay under the header and jump to a group. */
+function JumpChips({ groups }: { groups: ApplicationGroup[] }) {
+  return (
+    <nav aria-label="Jump to a group" className="sticky top-[72px] z-40 -mx-1 flex flex-wrap gap-2 bg-surface px-1 py-2 md:hidden">
+      {groups.map((group) => (
+        <a key={group.id} href={`#${groupId(group.id)}`} className={chipClasses}>
+          {CHIP_LABEL[group.id] ?? group.label}
+          <span className="text-body">{group.applications.length}</span>
+        </a>
+      ))}
+    </nav>
+  );
+}
+
+/** Makes the landing page's list one labelled picture instead of readable content. */
+function decorativeProps(groups: ApplicationGroup[]) {
+  return { role: "img" as const, "aria-label": `Applications grouped as ${groups.map((g) => g.label).join(", ")}` };
 }
 
 /** The Applications list while they load: two groups of two cards in skeleton shapes. */

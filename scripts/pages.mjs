@@ -9,7 +9,8 @@
 //   states    what a click or typing opens or reveals (a dialog, a toggled column, an error); a11y
 //             checks each one, signed in as a user holding scripts/dev-applications.mjs's
 //             Applications and Access token, and `npm run capture -- --state <name>` captures one. Each step clicks
-//             the first element matching `click` whose text includes `text`, or types `value` into
+//             the first element matching `click` whose text includes `text` (with `pointer: true` it
+//             presses it instead, as a Radix menu opens on pointerdown), or types `value` into
 //             the first element matching `fill`; `expect` is text the state must show.
 //             `applications: "none"` signs in as a job seeker with no Applications instead, for
 //             empty states.
@@ -33,6 +34,7 @@ export const PAGES = [
     expect: "Add Application",
     states: [
       { name: "show-done", steps: [{ click: "label", text: "Show done" }], expect: "Rejected" },
+      { name: "change-status-menu", steps: [{ click: 'button[aria-label^="Change Status"]', pointer: true }], expect: "Mark Rejected" },
       { name: "nothing-scheduled", applications: "none", steps: [], expect: "All quiet in the woods" },
     ],
   },

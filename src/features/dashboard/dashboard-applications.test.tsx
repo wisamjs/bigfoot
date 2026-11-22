@@ -1,8 +1,11 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { application } from "@/test/applications";
 import { DashboardApplications } from "./dashboard-applications";
+
+// Each card's Change Status menu saves through a Server Action, which needs a request.
+vi.mock("@/app/applications/actions", () => ({ updateApplicationAction: vi.fn() }));
 
 const birch = application("birch", { company: "Birch", title: "Engineer" });
 const rejected = application("umbrella", { company: "Umbrella", status: "done", outcome: "rejected", is_waiting: false });

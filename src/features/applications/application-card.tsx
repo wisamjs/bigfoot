@@ -4,6 +4,7 @@ import { NotebookPen } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { ApplicationWhen, InterviewWhen } from "@/features/applications/application-when";
+import { ChangeStatusMenu, type StatusChange } from "@/features/applications/change-status-menu";
 import { applicationHref } from "@/features/applications/routes";
 import { SampleBadge } from "@/features/applications/sample-badge";
 import { INTERVIEW_TONE, OUTCOME_TONE } from "@/features/applications/status-tone";
@@ -24,14 +25,24 @@ export const cardClasses = "relative rounded-control border border-line bg-card-
  * its Outcome once Done. Every Interview, with its Interview notes, is on its Application page. From
  * `sm` up, it is one row: company and role, then the next Interview, then the completed count.
  */
-export function Card({ job, linked = false }: { job: Application; linked?: boolean }) {
+export function Card({
+  job,
+  linked = false,
+  onChanged,
+}: {
+  job: Application;
+  linked?: boolean;
+  /** Gives a linked card its Change Status menu; called once a change it made has saved. */
+  onChanged?: (app: Application, change: StatusChange) => void;
+}) {
   return (
     <li
+      data-application-id={job.id}
       className={`${cardClasses} ${
         linked ? "cursor-pointer transition-all duration-200 hover:border-line-medium hover:shadow-md" : ""
       }`}
     >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+      <div className={`flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 ${linked && onChanged ? "pr-12" : ""}`}>
         <div className="min-w-0 sm:w-64 sm:shrink-0">
           <p className="m-0 min-w-0 text-sm font-medium leading-5 text-heading">
             {linked ? <CardLink job={job} /> : job.company}
@@ -43,6 +54,7 @@ export function Card({ job, linked = false }: { job: Application; linked?: boole
         </div>
         <CardBody job={job} />
       </div>
+      {linked && onChanged && <ChangeStatusMenu app={job} onChanged={onChanged} />}
     </li>
   );
 }
