@@ -25,12 +25,26 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Postgres 17, the major version Supabase runs, on the runner itself: no network distance
+    # (the same tests took 33s next to Supabase and 447s from a far region) and no secret.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       # Throwaway secrets: only sign the smoke test's fake session and its API tokens.
       AUTH_SECRET: ci-smoke-secret-not-used-in-production
       API_SECRET: ci-api-secret-not-used-in-production
-      # Supabase session-pooler URL. Tests, smoke and a11y only touch this run's own schema.
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # The service container above. The migrations are plain SQL, so no Supabase bootstrap is needed.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
       TEST_SCHEMA: bigfoot_test_${{ github.run_id }}_${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
@@ -43,25 +57,17 @@ jobs:
           working-directory: api
       - run: npm ci
       - run: npm run check
-      # GitHub gives Dependabot's runs no Actions secrets, so its PRs skip every step that needs
-      # DATABASE_URL: test:api, smoke, a11y and dropping the schema. They still run check and build.
       # On this run's TEST_SCHEMA, which smoke and a11y rebuild again for the API they start.
       - run: npm run test:api
-        if: github.event.pull_request.user.login != 'dependabot[bot]'
       # Smoke runs before build: dev and build share .next/.
       - run: npm run smoke
-        if: github.event.pull_request.user.login != 'dependabot[bot]'
         timeout-minutes: 2
       # axe-core in the runner's preinstalled Chrome, light and dark.
       - run: npm run a11y
-        if: github.event.pull_request.user.login != 'dependabot[bot]'
         timeout-minutes: 3
         env:
           CHROME_PATH: /usr/bin/google-chrome
       - run: npm run build
-      - name: Drop this run's test schema
-        if: always() && github.event.pull_request.user.login != 'dependabot[bot]'
-        run: npm run db:drop-test-schema
 
   # Applies merged migrations to the dev database (applying before merge would break main),
   # then fails if any is still missing. One at a time, so two quick merges never race.
