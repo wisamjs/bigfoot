@@ -85,7 +85,7 @@ export function DatePicker({
       <PopoverContent className="w-auto p-0" align="start" aria-label={label}>
         <Calendar
           mode="single"
-          // Weeks start on Monday, like the dashboard's Coming up calendar.
+          // Weeks start on Monday, like the dashboard's Interviews calendar.
           weekStartsOn={1}
           selected={selected}
           defaultMonth={selected}

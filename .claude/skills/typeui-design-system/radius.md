@@ -2,7 +2,7 @@
 
 | Token | Value | Default usage |
 |---|---|---|
-| base | 24px | Cards, inputs, modals, sections, containers, large components |
+| base | 24px | Cards, modals, sections, containers, large components (not fields: inputs use the 8px control radius, see `inputs.md`) |
 | default | 8px | Buttons, badges, tooltips, dropdown items, small controls |
 | sm | 8px | Checkboxes, tiny elements |
 | full | 9999px | Pills, avatars, toggles, dot indicators |

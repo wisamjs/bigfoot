@@ -213,7 +213,7 @@ function DeleteAccountFormSkeleton() {
     <div className="flex flex-col gap-4">
       <div>
         <Skeleton className="mb-2 h-4 w-44" />
-        <Skeleton className="h-[42px] max-w-xs rounded-card" />
+        <Skeleton className="h-[42px] max-w-xs rounded-control" />
         <Skeleton className="mt-3 h-4 w-36" />
       </div>
       <Skeleton className="h-11 w-40" />

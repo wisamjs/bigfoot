@@ -33,7 +33,7 @@ export const PAGES = [
     expect: "Add Application",
     states: [
       { name: "show-done", steps: [{ click: "label", text: "Show done" }], expect: "Rejected" },
-      { name: "nothing-coming-up", applications: "none", steps: [], expect: "All quiet in the woods" },
+      { name: "nothing-scheduled", applications: "none", steps: [], expect: "All quiet in the woods" },
     ],
   },
   // A dynamic route's entry fills its [id]: `application` is the company of one of the

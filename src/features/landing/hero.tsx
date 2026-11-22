@@ -1,13 +1,10 @@
 import Link from "next/link";
-import { PipelineBoard } from "@/features/applications/pipeline-board";
+import { ApplicationList } from "@/features/applications/application-list";
 import { buttonClasses } from "@/components/ui/button-classes";
 import { Container } from "@/components/ui/container";
-import { getUpcoming } from "@/lib/applications";
 import { previewApplications } from "@/lib/mock-data";
 
 export function Hero() {
-  const upcoming = getUpcoming(previewApplications).length;
-
   return (
     <section id="top" aria-labelledby="hero-title" className="hero-atmosphere py-24">
       <Container>
@@ -19,7 +16,7 @@ export function Hero() {
             Job hunting is chasing Bigfoot. <span className="inline-block md:block">Let’s find yours.</span>
           </h1>
           <p className="mx-auto mt-6 max-w-[70ch] text-balance text-lg leading-[1.5] text-body lg:text-xl">
-            Bigfoot keeps every role you apply to, and every Interview for it, in one Pipeline.
+            Bigfoot keeps every role you apply to, and every Interview for it, in one place.
           </p>
           <div className="mt-8 flex flex-col items-stretch justify-center gap-4 sm:flex-row sm:items-center">
             <Link href="/sign-up" className={buttonClasses("brand", "xl")}>
@@ -29,12 +26,7 @@ export function Hero() {
         </div>
 
         <div className="mt-16">
-          <PipelineBoard
-            decorative
-            title="Pipeline"
-            subtitle={`${upcoming} upcoming ${upcoming === 1 ? "Interview" : "Interviews"}`}
-            applications={previewApplications}
-          />
+          <ApplicationList decorative applications={previewApplications} />
         </div>
       </Container>
     </section>
