@@ -8,7 +8,7 @@ import { RequiredMark } from "@/components/ui/field";
 import { FieldError, invalidProps } from "@/components/ui/field-error";
 import { inputClasses } from "@/components/ui/input";
 import { SaveStatus } from "@/components/ui/save-status";
-import { useSaveStatus, type SaveTracker } from "@/hooks/use-save-status";
+import { useSaveStatus, type SaveResult, type SaveTracker } from "@/hooks/use-save-status";
 import { InterviewNotesForm } from "@/features/applications/interview-notes-form";
 import { fromLocalInput, toLocalInput } from "@/features/applications/local-datetime";
 import {
@@ -25,9 +25,9 @@ const fieldLabelClasses = "mb-1 flex min-h-4 flex-wrap items-center justify-betw
 
 /**
  * One Interview: its kind (saved on change), date and time (saved once both are given, on picking
- * a date or leaving the time field), Delete, and its Interview notes. Each has its own save status,
- * kept here because the fields are keyed by their saved values and remount when a save lands; this
- * row is keyed by the Interview. An Interview saved before dates were required shows "Date needed"
+ * a date or leaving the time field), Delete, and its Interview notes (a draft, saved after a pause
+ * in typing and on leaving them). Each has its own save status, kept here because the kind and date
+ * are keyed by their saved values and remount when a save lands; this row is keyed by the Interview. An Interview saved before dates were required shows "Date needed"
  * beside its date, and no other change saves until it has one (docs/adr/0005).
  */
 export function InterviewRow({
@@ -52,20 +52,23 @@ export function InterviewRow({
 
   /**
    * Checks one change with the API's rules, then saves it, or shows why not beside its field (and
-   * beside the date, when the Interview has none). Returns the problems found before sending.
+   * beside the date, when the Interview has none). Returns the problems found before sending, and
+   * the save when one was sent.
    */
-  function saveChange(tracker: SaveTracker, changes: Partial<InterviewFields>): FieldErrors {
+  function saveChange(
+    tracker: SaveTracker,
+    changes: Partial<InterviewFields>,
+  ): { problems: FieldErrors; sent: Promise<SaveResult> | null } {
     const problems = interviewErrors(changes, { savedAt: interview.at });
     const checked = Object.fromEntries(Object.keys(changes).map((name) => [name, problems[name]]));
     setErrors((prev) => ({ ...prev, ...checked, ...(problems.at ? { at: problems.at } : {}) }));
-    if (isValid(problems)) {
-      void tracker.run(async () => {
-        const result = await updateInterviewAction(app.id, interview.id, changes);
-        if (!result.ok && result.fieldErrors) setErrors((prev) => ({ ...prev, ...result.fieldErrors }));
-        return result;
-      });
-    }
-    return problems;
+    if (!isValid(problems)) return { problems, sent: null };
+    const sent = tracker.run(async () => {
+      const result = await updateInterviewAction(app.id, interview.id, changes);
+      if (!result.ok && result.fieldErrors) setErrors((prev) => ({ ...prev, ...result.fieldErrors }));
+      return result;
+    });
+    return { problems, sent };
   }
 
   return (
@@ -155,11 +158,13 @@ export function InterviewRow({
         />
       )}
       <InterviewNotesForm
-        key={interview.notes ?? ""}
         interview={interview}
         label={label}
         tracker={notesSave}
-        onSave={(notes) => saveChange(notesSave, { notes }).notes}
+        onSave={(notes) => {
+          const { problems, sent } = saveChange(notesSave, { notes });
+          return { problem: problems.notes, sent };
+        }}
       />
     </li>
   );

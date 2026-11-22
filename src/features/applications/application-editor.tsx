@@ -14,30 +14,28 @@ import type { Application } from "@/lib/applications";
 /**
  * The Application page's body: the whole Application, editable. Status and Outcome, the details,
  * then the Interview list, and Delete application.
- * Interviews save one field at a time through the nested API routes, each one's Interview notes
- * with their own button; Status and Outcome save together, because Done needs an Outcome.
- * Each save shows its own status beside what started it, and disables only that control (BIG-118).
+ * Bigfoot autosaves here: each detail saves when it's left, each Interview's fields when they
+ * change, and its Interview notes after a pause in typing and when they're left, so closing the
+ * page loses nothing typed. Status and Outcome still save together, with a button, because Done
+ * needs an Outcome (BIG-128 replaces it). Each save shows its own status beside what started it (BIG-118).
  */
 export function ApplicationEditor({ app }: { app: Application }) {
   // Lives here, not in DetailsForm, so saving the details doesn't hide the salary again. This
   // component mounts each time the page opens, which does.
   const [salaryRevealed, setSalaryRevealed] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  // Here too, not in the forms: a form keyed by its saved values remounts when its save lands,
+  // Here too, not in the form: it's keyed by its saved values and remounts when its save lands,
   // and "Saved" must outlast that.
   const statusSave = useSaveStatus();
-  const detailsSave = useSaveStatus();
 
   return (
     <div className="flex flex-col gap-6">
       <StatusForm key={`${app.status}-${app.outcome}`} app={app} tracker={statusSave} />
 
       <DetailsForm
-        key={`${app.company}-${app.title}-${app.applied_on}-${app.location}-${app.salary}-${app.posting_url}`}
         app={app}
         salaryHidden={Boolean(app.salary) && !salaryRevealed}
         onRevealSalary={() => setSalaryRevealed(true)}
-        tracker={detailsSave}
       />
 
       <InterviewList app={app} />

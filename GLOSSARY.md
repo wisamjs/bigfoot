@@ -59,7 +59,7 @@ What sort of conversation an Interview is: Informal Chat, Recruiter Screen, Hiri
 _Avoid_: round, type
 
 **Interview notes**:
-What the job seeker writes about one Interview: how it went, what they were asked, what they would do differently. Optional plain text of up to 20,000 characters, written and read on the Application page under its Interview, and saved with its own button. What the company says back is not Interview notes.
+What the job seeker writes about one Interview: how it went, what they were asked, what they would do differently. Optional plain text of up to 20,000 characters, written and read on the Application page under its Interview, and saved by itself as a draft, after a pause in typing and on leaving the field. What the company says back is not Interview notes.
 _Avoid_: feedback, comments, journal, debrief
 
 **Completed** (an Interview):

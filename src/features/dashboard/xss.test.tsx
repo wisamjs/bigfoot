@@ -154,14 +154,12 @@ describe("the edit forms on the Application page", () => {
     const { user, fill } = await openBirch();
     await fill("Company", payload);
     await fill("Location", payload);
-    await user.click(screen.getByRole("button", { name: "Save details" }));
-    expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", {
-      company: payload.trim(),
-      location: payload.trim(),
-    });
+    await user.tab();
+    expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { company: payload.trim() });
+    expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { location: payload.trim() });
 
     await fill(/^Interview notes/, payload);
-    await user.click(screen.getByRole("button", { name: "Save notes, Interview 1" }));
+    await user.tab();
     expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { notes: payload.trim() });
     expectNothingInjected();
   });
@@ -171,7 +169,7 @@ describe("the edit forms on the Application page", () => {
     async (url) => {
       const { user, fill } = await openBirch();
       await fill("Job posting URL", url);
-      await user.click(screen.getByRole("button", { name: "Save details" }));
+      await user.tab();
 
       const field = screen.getByLabelText("Job posting URL");
       expect(field).toBeInvalid();
