@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { NewInterviewForm } from "@/features/applications/new-interview-form";
+import { NewInterviewForm } from "@/features/applications/newInterviewForm";
 import { APPLICATION_PARAM } from "@/features/applications/routes";
-import { AppHeader } from "@/features/shell/app-header";
-import { FormPage } from "@/features/shell/form-page";
+import { AppHeader } from "@/features/shell/appHeader";
+import { FormPage } from "@/features/shell/formPage";
 import { listApplications } from "@/lib/api";
 import { getCurrentUser } from "@/lib/dal";
 

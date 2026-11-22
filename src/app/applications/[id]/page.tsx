@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ApplicationEditor } from "@/features/applications/application-editor";
-import { AppHeader } from "@/features/shell/app-header";
-import { FormPage } from "@/features/shell/form-page";
+import { ApplicationEditor } from "@/features/applications/applicationEditor";
+import { AppHeader } from "@/features/shell/appHeader";
+import { FormPage } from "@/features/shell/formPage";
 import { ADDED_PARAM } from "@/features/applications/routes";
 import { listApplications } from "@/lib/api";
 import { getCurrentUser } from "@/lib/dal";

@@ -38,7 +38,7 @@ needs GitHub Pro), so the review is the only gate.
 ## What a job seeker types stays text
 
 React escapes text, so typed values are shown as `{value}` and nothing else. A link built from
-typed input uses `ExternalLink` (`src/components/ui/external-link.tsx`), which drops anything
+typed input uses `ExternalLink` (`src/components/ui/externalLink.tsx`), which drops anything
 but `http` and `https` and opens with `rel="noopener noreferrer"`. Typed values never go into
 `<script>`, JSON-LD, inline event handlers or page metadata unescaped. Rich text, such as
 Markdown Interview notes, renders through a sanitizer (DOMPurify, or a Markdown renderer with
@@ -68,7 +68,7 @@ piece down into `ui/`.
 
 Files under `src/components/`, `src/features/` and `src/hooks/` are named in camelCase, with
 the extension and any `.test` suffix after the name: `applicationCard.tsx`,
-`applicationCard.test.tsx`, `localDatetime.ts`, `useUnsavedChanges.ts`. No kebab-case, no
+`applicationCard.test.tsx`, `localDatetime.ts`, `useSaveStatus.ts`. No kebab-case, no
 snake_case. Exports keep their usual names (components in PascalCase, hooks as `useX`); only
 the file name changes. The exceptions are files whose name a tool fixes: Next.js's reserved
 route files in `src/app/` (`page.tsx`, `layout.tsx`, `not-found.tsx`, `global-error.tsx`) and
@@ -92,6 +92,7 @@ change to this table, so the table must say the same.
 | `jsx-a11y` `strict`, plus every live rule it leaves off | `**/*.{jsx,tsx}` | Semantic HTML and ARIA mistakes: a `role` where a native element exists (`prefer-tag-over-role`: `<fieldset>`, `<section>`, `<output>`), controls with no label, focusable elements hidden with `aria-hidden`, vague link text, missing labels and alt text, invalid roles, click handlers on non-interactive elements, `autoFocus`, `tabIndex` on non-interactive elements. Heading order and landmarks are runtime checks in `npm run a11y`. |
 | `eslint-plugin-boundaries` (`dependencies`, `no-unknown-files`) | `src/**/*.{ts,tsx}` | Imports that cross the layers in "Where code goes": the design system reaching into a feature, the domain, `auth.ts` or a server action; `lib` importing UI; a feature importing a feature the config doesn't link it to, or a route; production code importing test fixtures. Anything not allowed is an error, and a file in a folder no rule covers is an error too. |
 | `complexity` (ESLint core) and Ruff `C90` (mccabe), maximum 10 | all, including tests and scripts; `api/` and `scripts/*.py` for Ruff | A function with more than 10 independent paths through it (each `if`, loop, `case`, `&&`, `||`, `?:` and `catch` adds one). Every path needs a test, and a function with many has more bugs and is slower to change. Split it into smaller functions, or into components in React. |
+| `unicorn/filename-case` (camelCase) | `src/{components,features,hooks}/**/*.{ts,tsx}` | A file named in kebab-case or snake_case, so the rule in "Frontend files are named in camelCase" can't drift. |
 | Testing Library (React) and jest-dom | `**/*.test.tsx` | Tests that reach into the DOM instead of querying as a user would, misnamed render results, and assertions with a clearer jest-dom matcher. |
 
 An inline `eslint-disable` names its rule and gives a reason after `--`. Today's exceptions:

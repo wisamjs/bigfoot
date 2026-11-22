@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { ApplicationList } from "@/features/applications/application-list";
-import { buttonClasses } from "@/components/ui/button-classes";
+import { ApplicationList } from "@/features/applications/applicationList";
+import { buttonClasses } from "@/components/ui/buttonClasses";
 import { Container } from "@/components/ui/container";
 import { previewApplications } from "@/lib/mock-data";
 

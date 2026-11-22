@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { FieldError } from "@/components/ui/field-error";
+import { FieldError } from "@/components/ui/fieldError";
 
 /** A form field's label: above its control, in the heading colour. */
 export const fieldLabelClasses = "mb-2 block text-sm font-medium text-heading";

@@ -5,7 +5,7 @@ import { Features } from "./features";
 import { Footer } from "./footer";
 import { Hero } from "./hero";
 import { Navbar } from "./navbar";
-import { AppFooter } from "@/features/shell/app-footer";
+import { AppFooter } from "@/features/shell/appFooter";
 
 // The sign-in buttons post to Server Actions, which need Auth.js and a request.
 vi.mock("@/app/actions", () => ({ signInWithGoogle: vi.fn(), signOutAction: vi.fn() }));

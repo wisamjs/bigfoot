@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { AccountDeletedNotice } from "@/features/landing/account-deleted-notice";
+import { AccountDeletedNotice } from "@/features/landing/accountDeletedNotice";
 import { Features } from "@/features/landing/features";
 import { Footer } from "@/features/landing/footer";
 import { Hero } from "@/features/landing/hero";

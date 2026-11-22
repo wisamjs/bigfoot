@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { CalendarDays, ListChecks, ListTodo } from "lucide-react";
 import { Container } from "@/components/ui/container";
-import { SectionHeader } from "@/components/ui/section-header";
+import { SectionHeader } from "@/components/ui/sectionHeader";
 
 const features: { icon: LucideIcon; title: string; body: string }[] = [
   {

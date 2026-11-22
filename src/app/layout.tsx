@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { buttonClasses } from "@/components/ui/button-classes";
+import { buttonClasses } from "@/components/ui/buttonClasses";
 import "./globals.css";
 
 // Allo (allo-font, SIL OFL 1.1), self-hosted from the npm package so dev, smoke and build

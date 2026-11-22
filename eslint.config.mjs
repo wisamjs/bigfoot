@@ -92,6 +92,16 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // File names: camelCase under components, features and hooks (CODING_STANDARDS.md, "Frontend
+  // files are named in camelCase"). Route files in src/app keep the names Next.js fixes.
+  {
+    files: ["src/components/**/*.{ts,tsx}", "src/features/**/*.{ts,tsx}", "src/hooks/**/*.{ts,tsx}"],
+    plugins: { unicorn },
+    rules: {
+      "unicorn/filename-case": ["error", { case: "camelCase" }],
+    },
+  },
+
   // Architecture: who may import whom (CODING_STANDARDS.md, "Where code goes"). Anything not
   // allowed below is an error, so a new link between features is a decision made here. Every
   // file in src belongs to an element (no-unknown-files), so a new folder can't slip past.

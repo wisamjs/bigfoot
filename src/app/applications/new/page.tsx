@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { NewApplicationForm } from "@/features/applications/new-application-form";
-import { AppHeader } from "@/features/shell/app-header";
-import { FormPage } from "@/features/shell/form-page";
+import { NewApplicationForm } from "@/features/applications/newApplicationForm";
+import { AppHeader } from "@/features/shell/appHeader";
+import { FormPage } from "@/features/shell/formPage";
 import { getCurrentUser } from "@/lib/dal";
 
 const TITLE = "Add Application";

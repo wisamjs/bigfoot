@@ -2,15 +2,15 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/applications/actions";
-import { ApplicationEditor } from "@/features/applications/application-editor";
-import { NewApplicationForm } from "@/features/applications/new-application-form";
-import { NewInterviewForm } from "@/features/applications/new-interview-form";
+import { ApplicationEditor } from "@/features/applications/applicationEditor";
+import { NewApplicationForm } from "@/features/applications/newApplicationForm";
+import { NewInterviewForm } from "@/features/applications/newInterviewForm";
 import { getUpcoming } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
 import { INJECTED_ELEMENTS, XSS_TEXT, XSS_URLS } from "@/test/xss";
-import { InterviewCalendar } from "./interview-calendar";
-import { DashboardApplications } from "./dashboard-applications";
-import { NextInterviewStat } from "./next-interview-stat";
+import { InterviewCalendar } from "./interviewCalendar";
+import { DashboardApplications } from "./dashboardApplications";
+import { NextInterviewStat } from "./nextInterviewStat";
 
 // Everything a job seeker types is shown as text and never runs (BIG-89): each payload goes into
 // every Application field and the Interview notes, then through each display and form.

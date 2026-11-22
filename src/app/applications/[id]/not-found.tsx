@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { AppHeader } from "@/features/shell/app-header";
-import { FormPage } from "@/features/shell/form-page";
+import { AppHeader } from "@/features/shell/appHeader";
+import { FormPage } from "@/features/shell/formPage";
 import { getCurrentUser } from "@/lib/dal";
 
 const TITLE = "Application not found";

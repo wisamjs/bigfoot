@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
-import { SignInNote } from "@/features/auth/sign-in-note";
-import { buttonClasses } from "@/components/ui/button-classes";
+import { SignInNote } from "@/features/auth/signInNote";
+import { buttonClasses } from "@/components/ui/buttonClasses";
 import { Container } from "@/components/ui/container";
 import { Wordmark } from "@/features/shell/wordmark";
 
