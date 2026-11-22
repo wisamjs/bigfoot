@@ -3,6 +3,7 @@
 from datetime import UTC
 
 import psycopg
+import pytest
 from psycopg import sql
 
 from tests.conftest import MIGRATIONS, TEST_SCHEMA
@@ -10,6 +11,7 @@ from tests.conftest import MIGRATIONS, TEST_SCHEMA
 MIGRATION = "20261113000000_give_applications_many_interviews.sql"
 
 
+@pytest.mark.rebuilds_schema
 def test_existing_rounds_and_stages_become_interviews_status_and_outcome(settings):
     before = [m for m in sorted(MIGRATIONS.glob("*.sql")) if m.name < MIGRATION]
     schema = sql.Identifier(TEST_SCHEMA)

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// This checkout's test schema: the one `npm run test:api` rebuilds before every test, and the one
+// This checkout's test schema: the one `npm run test:api` builds once per run, and the one
 // the API that smoke, a11y, capture and screenshots start reads. A BIG ticket branch gets its own
 // (bigfoot_test_big<n>), so checkouts running checks side by side never rebuild each other's
 // schema mid-run. CI sets TEST_SCHEMA, one per run.
