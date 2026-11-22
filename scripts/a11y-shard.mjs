@@ -46,3 +46,5 @@ export function shardPages(pages, { index, total }) {
   }
   return pages.filter((_, i) => owner.get(i) === index);
 }
+
+// A deliberate misspelling to show CI going red early: behavior.
