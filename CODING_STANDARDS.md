@@ -64,6 +64,17 @@ in `eslint.config.mjs` ("Architecture"); `scripts/boundaries.test.ts` checks it 
 new link between features is a design decision for review: the alternative is moving the shared
 piece down into `ui/`.
 
+## Frontend files are named in camelCase
+
+Files under `src/components/`, `src/features/` and `src/hooks/` are named in camelCase, with
+the extension and any `.test` suffix after the name: `applicationCard.tsx`,
+`applicationCard.test.tsx`, `localDatetime.ts`, `useUnsavedChanges.ts`. No kebab-case, no
+snake_case. Exports keep their usual names (components in PascalCase, hooks as `useX`); only
+the file name changes. The exceptions are files whose name a tool fixes: Next.js's reserved
+route files in `src/app/` (`page.tsx`, `layout.tsx`, `not-found.tsx`, `global-error.tsx`) and
+folders that are URL segments. A file `npx shadcn add` writes is renamed to camelCase when it
+is restyled with Candy tokens, and `components.json` aliases keep pointing at it.
+
 ## Lint rule groups
 
 `npm run lint` (`eslint.config.mjs`) fails on any warning. It runs in pre-commit (inside
