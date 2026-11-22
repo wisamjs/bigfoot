@@ -1,5 +1,7 @@
 """The Interviews migration keeps what job seekers already recorded (BIG-38)."""
 
+from datetime import UTC
+
 import psycopg
 from psycopg import sql
 
@@ -44,7 +46,7 @@ def test_existing_rounds_and_stages_become_interviews_status_and_outcome(setting
             "select a.company, i.kind, i.at from interviews i join applications a on a.id = i.application_id"
             " order by i.at nulls first, i.kind"
         ):
-            interviews.setdefault(company, []).append((kind, at.isoformat() if at else None))
+            interviews.setdefault(company, []).append((kind, at.astimezone(UTC).isoformat() if at else None))
 
     assert statuses["round"] == ("in_progress", None)
     assert statuses["offer"] == ("done", "offer")
