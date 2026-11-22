@@ -152,6 +152,10 @@ Two Supabase projects, both in `us-east-1`:
 
 [`docs/runbooks/database.md`](docs/runbooks/database.md) covers connecting to prod, applying migrations and restoring from a backup.
 
+## Deployments
+
+Only `main` deploys to Vercel (Production). Branches and PRs get no preview deployment, because the Hobby plan's limit of 100 deployments a day ran out. [`docs/runbooks/vercel.md`](docs/runbooks/vercel.md) says how it is set up and how to turn previews back on.
+
 ## How it was built
 
 Bigfoot was built with AI coding agents working from the project rules in [`AGENTS.md`](AGENTS.md).
