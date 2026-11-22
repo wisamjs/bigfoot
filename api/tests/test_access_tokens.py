@@ -121,13 +121,15 @@ def test_an_access_token_cannot_change_data(client, token):
     application = client.post("/applications", json={"company": "Ramp", "title": "Engineer"}, headers=token("alice"))
     application_id = application.json()["id"]
     interviews = f"/applications/{application_id}/interviews"
-    interview_id = client.post(interviews, json={"kind": "technical"}, headers=token("alice")).json()["id"]
+    interview_id = client.post(
+        interviews, json={"kind": "technical", "at": "2026-11-20T17:00:00Z"}, headers=token("alice")
+    ).json()["id"]
 
     refused = [
         client.post("/applications", json={"company": "Ramp", "title": "Engineer"}, headers=headers),
         client.patch(f"/applications/{application_id}", json={"location": "Remote"}, headers=headers),
         client.delete(f"/applications/{application_id}", headers=headers),
-        client.post(interviews, json={"kind": "technical"}, headers=headers),
+        client.post(interviews, json={"kind": "technical", "at": "2026-11-20T17:00:00Z"}, headers=headers),
         client.patch(f"{interviews}/{interview_id}", json={"kind": "onsite_loop"}, headers=headers),
         client.delete(f"{interviews}/{interview_id}", headers=headers),
     ]

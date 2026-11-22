@@ -34,7 +34,8 @@ function at(days, hour) {
   return d.toISOString();
 }
 
-// Interviews are [kind, days from today, hour]; negative days are completed, none is undated.
+// Interviews are [kind, days from today, hour]; negative days are completed. Every Interview has a
+// date and time (docs/adr/0005).
 function applications() {
   const applied_on = at(-14, 9).slice(0, 10);
   return [
@@ -47,10 +48,10 @@ function applications() {
     // The longest kind, so captures and a11y always see how a label wraps beside its date.
     { company: "Okta", title: "Engineering Manager", interviews: [["cross_functional_interview", 3, 16], ["be_system_design", 4, 11]] },
     { company: "Stripe", title: "Software Engineer II", interviews: [] },
-    { company: "Shopify", title: "Senior Developer", interviews: [["informal_chat"]] },
+    { company: "Shopify", title: "Senior Developer", interviews: [["informal_chat", -1, 12]] },
     { company: "Ramp", title: "Staff Engineer", status: "done", outcome: "offer", interviews: [["onsite_loop", -6, 10]] },
     { company: "Vercel", title: "Frontend Engineer", status: "done", outcome: "rejected", interviews: [["technical", -8, 10]] },
-    { company: "Plaid", title: "Software Engineer", status: "done", outcome: "withdrawn", interviews: [["recruiter_screen"]] },
+    { company: "Plaid", title: "Software Engineer", status: "done", outcome: "withdrawn", interviews: [["recruiter_screen", -10, 10]] },
       // Each has a salary, so the panel's hidden salary and its Reveal button are captured and checked.
   ].map((a) => ({ applied_on, salary: "$150k–$180k", ...a }));
 }
@@ -66,8 +67,8 @@ export async function addTestApplications(jobSeekerId = TEST_JOB_SEEKER_ID) {
   for (const { interviews, ...fields } of applications()) {
     const application = await call(jobSeekerId, "POST", "/applications", fields);
     for (const [kind, days, hour] of interviews) {
-      const body = days === undefined ? { kind } : { kind, at: at(days, hour) };
-      // Every completed, dated Interview has Interview notes, so cards show the notes mark.
+      const body = { kind, at: at(days, hour) };
+      // Every completed Interview has Interview notes, so cards show the notes mark.
       if (days < 0) body.notes = "Went well. Asked about past projects.\n\nNext time: have a question ready about the team.";
       await call(jobSeekerId, "POST", `/applications/${application.id}/interviews`, body);
     }

@@ -14,6 +14,8 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    /** For a validation error (422): each field's message, keyed by field name. */
+    readonly fieldErrors?: Record<string, string>,
   ) {
     super(message);
   }
@@ -45,7 +47,10 @@ async function request<T>(jobSeekerId: string, path: string, init: { method?: st
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
     cache: "no-store",
   });
-  if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
+  if (!res.ok) {
+    const { message, fieldErrors } = await apiError(res);
+    throw new ApiError(res.status, message, fieldErrors);
+  }
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
 
@@ -64,22 +69,27 @@ const FIELD_LABELS: Record<string, string> = {
   name: "Name",
 };
 
-/** FastAPI errors: {detail: string} or, for validation, {detail: [{loc, msg}]}. */
-async function errorMessage(res: Response) {
+/**
+ * FastAPI errors: {detail: string} or, for validation, {detail: [{loc, msg}]}. A validation error
+ * also gives each field's message, worded to stand alone beside that field.
+ */
+async function apiError(res: Response): Promise<{ message: string; fieldErrors?: Record<string, string> }> {
   try {
     const { detail } = await res.json();
-    if (typeof detail === "string") return detail;
+    if (typeof detail === "string") return { message: detail };
     if (Array.isArray(detail)) {
-      return detail
-        .map((d: { loc?: unknown[]; msg?: string }) => {
-          const field = String(d.loc?.at(-1) ?? "");
-          const message = (d.msg ?? "is invalid").replace(/^Value error, /, "");
-          return `${FIELD_LABELS[field] ?? "A field"} ${message}`;
-        })
-        .join("; ");
+      const problems = detail.map((d: { loc?: unknown[]; msg?: string }) => {
+        const field = String(d.loc?.at(-1) ?? "");
+        const message = `${FIELD_LABELS[field] ?? "A field"} ${(d.msg ?? "is invalid").replace(/^Value error, /, "")}`;
+        return [field, message] as const;
+      });
+      return {
+        message: problems.map(([, message]) => message).join("; "),
+        fieldErrors: Object.fromEntries(problems.filter(([field]) => field in FIELD_LABELS)),
+      };
     }
   } catch {}
-  return `Request failed (${res.status})`;
+  return { message: `Request failed (${res.status})` };
 }
 
 /** Records the job seeker; the first time only, gives them Sample Applications. Idempotent. */

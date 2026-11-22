@@ -3,7 +3,15 @@ import { describe, expect, it } from "vitest";
 import { XSS_TEXT, XSS_URLS } from "@/test/xss";
 import { ACCESS_TOKEN_NAME_MAX } from "./account";
 import { APPLICATION_MAX_LENGTHS, INTERVIEW_NOTES_MAX_LENGTH } from "./applications";
-import { accessTokenNameError, applicationErrors, interviewErrors, isHttpUrl, isValid, summarize } from "./validation";
+import {
+  accessTokenNameError,
+  applicationErrors,
+  DATE_NEEDED,
+  interviewErrors,
+  isHttpUrl,
+  isValid,
+  summarize,
+} from "./validation";
 
 const valid = { company: "Birch", title: "Engineer", applied_on: "2026-11-01" };
 
@@ -95,10 +103,12 @@ describe("applicationErrors", () => {
 });
 
 describe("interviewErrors", () => {
-  it("accepts a kind, a timestamp or no date, and notes up to the limit", () => {
+  it("accepts a kind, a timestamp, and notes up to the limit", () => {
     const notes = "a".repeat(INTERVIEW_NOTES_MAX_LENGTH);
-    expect(interviewErrors({ kind: "technical", at: "2026-12-01T15:00:00.000Z", notes })).toEqual({});
-    expect(interviewErrors({ at: null, notes: null })).toEqual({});
+    expect(interviewErrors({ kind: "technical", at: "2026-12-01T15:00:00.000Z", notes }, { creating: true })).toEqual(
+      {},
+    );
+    expect(interviewErrors({ notes: null })).toEqual({});
   });
 
   it("refuses an unknown kind, a date that isn't one, and notes over the limit", () => {
@@ -106,9 +116,31 @@ describe("interviewErrors", () => {
       interviewErrors({ kind: "<script>", at: "tomorrow", notes: "a".repeat(INTERVIEW_NOTES_MAX_LENGTH + 1) }),
     ).toEqual({
       kind: "Choose an Interview kind.",
-      at: "Enter a date and time, or leave it blank.",
+      at: "Enter a date and time.",
       notes: "Interview notes can be at most 20,000 characters.",
     });
+  });
+
+  it("needs the kind and a date and time on a new Interview, never just a date", () => {
+    expect(interviewErrors({}, { creating: true })).toEqual({
+      kind: "Choose an Interview kind.",
+      at: "Enter the date and time.",
+    });
+    expect(interviewErrors({ kind: "technical", at: "2026-12-01" }, { creating: true })).toEqual({
+      at: "Enter a date and time.",
+    });
+  });
+
+  it("refuses clearing the date of an Interview", () => {
+    expect(interviewErrors({ at: null })).toEqual({ at: "Enter the date and time." });
+    expect(interviewErrors({ at: "" })).toEqual({ at: "Enter the date and time." });
+  });
+
+  it("needs any change to an Interview with no date to set one (ADR 0005)", () => {
+    expect(interviewErrors({ kind: "technical" }, { savedAt: null })).toEqual({ at: DATE_NEEDED });
+    expect(interviewErrors({ notes: "Went well." }, { savedAt: null })).toEqual({ at: DATE_NEEDED });
+    expect(interviewErrors({ notes: "Booked.", at: "2026-12-01T15:00:00.000Z" }, { savedAt: null })).toEqual({});
+    expect(interviewErrors({ kind: "technical" }, { savedAt: "2026-12-01T15:00:00.000Z" })).toEqual({});
   });
 
   it.each(XSS_TEXT)("keeps %j in Interview notes as typed", (notes) => {

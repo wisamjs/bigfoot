@@ -7,6 +7,8 @@ import {
   getUpcoming,
   INTERVIEW_KINDS,
   INTERVIEW_OPTIONS,
+  lastCompletedInterview,
+  nextInterview,
   OUTCOME_OPTIONS,
   OUTCOMES,
   STATUS_OPTIONS,
@@ -83,6 +85,26 @@ describe("getCalendarInterviews", () => {
     const undated = application("undated", { is_waiting: false, interviews: [interview("none", null, true)] });
     const result = getCalendarInterviews([scheduled, rejected, undated]);
     expect(result.map((d) => d.interview.id)).toEqual(["past", "next"]);
+  });
+});
+
+describe("an Interview saved with no date (docs/adr/0005)", () => {
+  // As the API sends it: completed, and last, since it has no place by date.
+  const legacy = application("legacy", {
+    is_waiting: true,
+    interviews: [interview("past", "2026-11-02T15:00:00Z", true), interview("none", null, true)],
+  });
+
+  it("counts as completed, so its Application stays Waiting and is not Active", () => {
+    expect(nextInterview(legacy)).toBeNull();
+    expect(getBoardColumns([legacy]).map((c) => c.id)).toEqual(["waiting"]);
+    expect(getStats([legacy]).active).toBe(0);
+    expect(getUpcoming([legacy])).toEqual([]);
+  });
+
+  it("is never the last completed Interview, which is the latest dated one", () => {
+    expect(lastCompletedInterview(legacy)?.id).toBe("past");
+    expect(lastCompletedInterview(application("only", { interviews: [interview("none", null, true)] }))).toBeNull();
   });
 });
 

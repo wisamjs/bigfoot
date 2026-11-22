@@ -19,11 +19,21 @@ def create_application(client, headers, **fields):
     return res.json()
 
 
-def add(client, headers, application, kind="technical", at=None):
-    body = {"kind": kind, **({"at": at.isoformat()} if at else {})}
+def add(client, headers, application, kind="technical", at=PAST):
+    body = {"kind": kind, "at": at.isoformat()}
     res = client.post(f"/applications/{application['id']}/interviews", json=body, headers=headers)
     assert res.status_code == 201, res.text
     return res.json()
+
+
+def add_undated(settings, application, kind="informal_chat"):
+    """An Interview saved before the date was required (docs/adr/0005): only the database can make one now."""
+    with psycopg.connect(settings.database_url, prepare_threshold=None, autocommit=True) as conn:
+        conn.execute(sql.SQL("set search_path to {}").format(sql.Identifier(TEST_SCHEMA)))
+        row = conn.execute(
+            "insert into interviews (application_id, kind) values (%s, %s) returning id", (application["id"], kind)
+        ).fetchone()
+    return str(row[0])
 
 
 def reread(client, headers, application):
@@ -35,12 +45,19 @@ def reread(client, headers, application):
 # Create and read
 
 
-def test_an_interview_has_a_required_kind_and_an_optional_date(client, token):
+def test_an_interview_has_a_required_kind_and_date_and_time(client, token):
     app = create_application(client, token())
-    undated = add(client, token(), app, "informal_chat")
     dated = add(client, token(), app, "technical", FUTURE)
-    assert undated["at"] is None and undated["completed"] is True
     assert dated["application_id"] == app["id"] and dated["completed"] is False
+
+
+@pytest.mark.parametrize("at", [None, "2026-11-20", "", "not a date"])
+def test_create_needs_a_date_and_time(client, token, at):
+    app = create_application(client, token())
+    body = {"kind": "technical", **({} if at is None else {"at": at})}
+    res = client.post(f"/applications/{app['id']}/interviews", json=body, headers=token())
+    assert res.status_code == 422
+    assert [e["loc"] for e in res.json()["detail"]] == [["body", "at"]]
 
 
 def test_every_kind_is_accepted_and_kinds_can_repeat(client, token):
@@ -63,21 +80,25 @@ def test_create_rejects_invalid_interviews(client, token, body):
     assert client.post(f"/applications/{app['id']}/interviews", json=body, headers=token()).status_code == 422
 
 
-def test_interviews_are_ordered_by_date_with_undated_first(client, token):
+def test_interviews_are_ordered_by_date_alone(client, token, settings):
     app = create_application(client, token())
+    add_undated(settings, app, "recruiter_screen")
     add(client, token(), app, "onsite_loop", FUTURE)
     add(client, token(), app, "technical", PAST)
-    add(client, token(), app, "recruiter_screen")
     kinds = [i["kind"] for i in client.get(f"/applications/{app['id']}/interviews", headers=token()).json()]
-    assert kinds == ["recruiter_screen", "technical", "onsite_loop"]
+    # One saved without a date has no place by date, so it comes last.
+    assert kinds == ["technical", "onsite_loop", "recruiter_screen"]
     assert [i["kind"] for i in reread(client, token(), app)["interviews"]] == kinds
 
 
-def test_completed_is_derived_from_the_date(client, token):
+def test_completed_is_derived_from_the_date(client, token, settings):
     app = create_application(client, token())
     add(client, token(), app, "recruiter_screen", PAST)
     add(client, token(), app, "technical", FUTURE)
-    assert [i["completed"] for i in reread(client, token(), app)["interviews"]] == [True, False]
+    add_undated(settings, app)
+    interviews = reread(client, token(), app)["interviews"]
+    # An undated one counts as completed until it gets a date, so the Application looks no further along.
+    assert [(i["completed"], i["at"] is None) for i in interviews] == [(True, False), (False, False), (True, True)]
 
 
 # Update and delete
@@ -89,9 +110,45 @@ def test_patch_changes_the_kind_and_date(client, token):
     url = f"/applications/{app['id']}/interviews/{interview['id']}"
     changed = client.patch(url, json={"kind": "onsite_loop"}, headers=token()).json()
     assert changed["kind"] == "onsite_loop" and changed["at"] == interview["at"]
-    cleared = client.patch(url, json={"at": None}, headers=token()).json()
-    assert cleared["at"] is None and cleared["completed"] is True
+    moved = client.patch(url, json={"at": PAST.isoformat()}, headers=token()).json()
+    assert datetime.fromisoformat(moved["at"]) == PAST and moved["completed"] is True
     assert client.patch(url, json={"kind": None}, headers=token()).status_code == 422
+
+
+@pytest.mark.parametrize("at", [None, "2026-11-20"])
+def test_patch_cannot_clear_the_date_or_drop_its_time(client, token, at):
+    app = create_application(client, token())
+    interview = add(client, token(), app, "technical", FUTURE)
+    url = f"/applications/{app['id']}/interviews/{interview['id']}"
+    res = client.patch(url, json={"at": at}, headers=token())
+    assert res.status_code == 422
+    assert [e["loc"] for e in res.json()["detail"]] == [["body", "at"]]
+    assert reread(client, token(), app)["interviews"][0]["at"] == interview["at"]
+
+
+@pytest.mark.parametrize("change", [{"kind": "leadership"}, {"notes": "Went well."}, {}])
+def test_a_change_to_an_undated_interview_must_set_its_date(client, token, settings, change):
+    app = create_application(client, token())
+    url = f"/applications/{app['id']}/interviews/{add_undated(settings, app)}"
+    res = client.patch(url, json=change, headers=token())
+    assert res.status_code == 422
+    assert [e["loc"] for e in res.json()["detail"]] == [["body", "at"]]
+    assert reread(client, token(), app)["interviews"][0]["at"] is None
+
+
+def test_setting_its_date_fixes_an_undated_interview(client, token, settings):
+    app = create_application(client, token())
+    url = f"/applications/{app['id']}/interviews/{add_undated(settings, app)}"
+    res = client.patch(url, json={"at": FUTURE.isoformat(), "notes": "Booked."}, headers=token())
+    assert res.status_code == 200, res.text
+    assert res.json()["completed"] is False and res.json()["notes"] == "Booked."
+    assert reread(client, token(), app)["is_waiting"] is False
+
+
+def test_a_missing_interview_is_not_found_before_its_date_is_checked(client, token):
+    app = create_application(client, token())
+    url = f"/applications/{app['id']}/interviews/00000000-0000-0000-0000-000000000000"
+    assert client.patch(url, json={"kind": "leadership"}, headers=token()).status_code == 404
 
 
 # Interview notes
@@ -120,7 +177,7 @@ def test_notes_are_optional_and_can_be_added_changed_and_cleared(client, token):
 
 def test_notes_can_be_given_when_adding_an_interview(client, token):
     app = create_application(client, token())
-    body = {"kind": "technical", "notes": "  Bring ID.\n"}
+    body = {"kind": "technical", "at": FUTURE.isoformat(), "notes": "  Bring ID.\n"}
     res = client.post(f"/applications/{app['id']}/interviews", json=body, headers=token())
     assert res.status_code == 201 and res.json()["notes"] == "Bring ID."
 
@@ -185,7 +242,8 @@ def test_other_job_seekers_cannot_touch_interviews(client, token):
     interview = add(client, token("alice"), app)
     base = f"/applications/{app['id']}/interviews"
     assert client.get(base, headers=token("bob")).status_code == 404
-    assert client.post(base, json={"kind": "technical"}, headers=token("bob")).status_code == 404
+    body = {"kind": "technical", "at": FUTURE.isoformat()}
+    assert client.post(base, json=body, headers=token("bob")).status_code == 404
     assert (
         client.patch(f"{base}/{interview['id']}", json={"kind": "leadership"}, headers=token("bob")).status_code == 404
     )
@@ -210,19 +268,19 @@ def test_a_new_application_is_waiting_since_it_was_applied(client, token):
     assert app["is_waiting"] is True and app["waiting_since"] == "2026-10-02"
 
 
-def test_waiting_since_the_last_completed_interview(client, token):
+def test_waiting_since_the_last_completed_interview(client, token, settings):
     app = create_application(client, token(), applied_on="2026-10-02")
     add(client, token(), app, "recruiter_screen", LONG_PAST)
     add(client, token(), app, "technical", PAST)
-    add(client, token(), app, "informal_chat")  # undated: completed, but has no date to wait since
+    add_undated(settings, app)  # completed, but has no date to wait since
     waiting = reread(client, token(), app)
     assert waiting["is_waiting"] is True
     assert datetime.fromisoformat(waiting["waiting_since"]) == PAST
 
 
-def test_only_undated_interviews_wait_since_the_applied_date(client, token):
+def test_only_undated_interviews_wait_since_the_applied_date(client, token, settings):
     app = create_application(client, token(), applied_on="2026-10-02")
-    add(client, token(), app, "informal_chat")
+    add_undated(settings, app)
     assert reread(client, token(), app)["waiting_since"] == "2026-10-02"
 
 
@@ -275,7 +333,8 @@ def test_an_application_can_have_at_most_50_interviews(settings, client, token):
         )
     add(client, token(), application)
 
-    res = client.post(f"/applications/{application['id']}/interviews", json={"kind": "technical"}, headers=token())
+    body = {"kind": "technical", "at": FUTURE.isoformat()}
+    res = client.post(f"/applications/{application['id']}/interviews", json=body, headers=token())
 
     assert res.status_code == 409
     assert "50 Interviews" in res.json()["detail"]

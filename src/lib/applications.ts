@@ -52,11 +52,14 @@ export type Interview = {
   id: string;
   application_id: string;
   kind: InterviewKind;
-  /** ISO timestamp; null when the Interview has no date, which counts as completed. */
+  /**
+   * ISO timestamp, required (docs/adr/0005). Null only on an Interview saved before it was: that
+   * shows "Date needed", counts as completed, and can't be changed without setting a date.
+   */
   at: string | null;
   /** Interview notes: plain text the job seeker wrote about this Interview; null when there are none. */
   notes: string | null;
-  /** Derived by the API: the date is in the past, or there is no date. */
+  /** Derived by the API: the date is in the past (or there is none yet, so nothing looks further along). */
   completed: boolean;
   created_at: string;
   updated_at: string;
@@ -74,7 +77,7 @@ export type Application = {
   status: Status;
   /** Set exactly when the status is done. */
   outcome: Outcome | null;
-  /** Ordered by date, undated first. */
+  /** Ordered by date; any with no date yet come last. */
   interviews: Interview[];
   /** Derived by the API: In Progress with no upcoming Interview, including a new Application. */
   is_waiting: boolean;
@@ -143,9 +146,9 @@ export function nextInterview(app: Application): Interview | null {
   return upcomingInterviews(app)[0] ?? null;
 }
 
-/** The latest completed Interview, by date (undated ones come first, so they lose to dated ones). */
+/** The latest completed Interview with a date; one with no date yet has no place by date. */
 export function lastCompletedInterview(app: Application): Interview | null {
-  return app.interviews.findLast((i) => i.completed) ?? null;
+  return app.interviews.findLast((i) => i.completed && i.at !== null) ?? null;
 }
 
 /** The dashboard's three numbers: Open, Active, and the Next Interview across In Progress Applications. */

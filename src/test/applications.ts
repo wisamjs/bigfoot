@@ -1,14 +1,14 @@
 import type { Application, Interview } from "@/lib/applications";
 
 // Builders for test Applications and Interviews: an In Progress, Waiting Application with no
-// Interviews unless overridden.
+// Interviews unless overridden. An Interview is completed, on a past date, unless overridden.
 
 export function interview(id: string, overrides: Partial<Interview> = {}): Interview {
   return {
     id,
     application_id: "a",
     kind: "technical",
-    at: null,
+    at: "2026-11-01T15:00:00Z",
     notes: null,
     completed: true,
     created_at: "",

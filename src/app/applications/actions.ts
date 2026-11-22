@@ -19,7 +19,8 @@ async function run(mutate: (jobSeekerId: string) => Promise<unknown>, errors: Fi
   try {
     await mutate(user.id);
   } catch (error) {
-    if (error instanceof api.ApiError) return { ok: false, error: error.message };
+    // The API's validation errors name their fields, so a form can show each beside its field.
+    if (error instanceof api.ApiError) return { ok: false, error: error.message, fieldErrors: error.fieldErrors };
     console.error(error);
     return { ok: false, error: "Couldn’t reach Bigfoot’s server. Try again." };
   }
@@ -43,7 +44,10 @@ export async function deleteApplicationAction(id: string) {
 }
 
 export async function createInterviewAction(applicationId: string, fields: Partial<InterviewFields>) {
-  return run((jobSeekerId) => api.createInterview(jobSeekerId, applicationId, fields), interviewErrors(fields));
+  return run(
+    (jobSeekerId) => api.createInterview(jobSeekerId, applicationId, fields),
+    interviewErrors(fields, { creating: true }),
+  );
 }
 
 export async function updateInterviewAction(applicationId: string, id: string, changes: Partial<InterviewFields>) {

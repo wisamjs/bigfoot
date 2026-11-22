@@ -77,7 +77,7 @@ export function NewInterviewForm({
   function check(fields: { kind: InterviewKind; at: string | null; notes: string | null }): FieldErrors<Control> {
     const errors: FieldErrors<Control> = {};
     if (!applicationId) errors.application = "Choose the Application this Interview belongs to.";
-    const api = interviewErrors(fields);
+    const api = interviewErrors(fields, { creating: true });
     if (api.kind) errors.kind = api.kind;
     if (!at.date) errors.date = "Pick the date and enter the time.";
     else if (!at.time) errors.time = "Enter the time.";
