@@ -66,6 +66,7 @@
     "labelledby",
     "lineterm",
     "lookups",
+    "mccabe",
     "noninteractive",
     "Northwind",
     "pooler",

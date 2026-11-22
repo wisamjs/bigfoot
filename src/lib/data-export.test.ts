@@ -31,21 +31,26 @@ function parseCsv(text: string) {
   let row: string[] = [];
   let cell = "";
   let quoted = false;
+  const endCell = () => {
+    row.push(cell);
+    cell = "";
+  };
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
-    if (quoted && c === '"' && text[i + 1] === '"') {
-      cell += '"';
-      i++;
+    if (quoted) {
+      if (c !== '"') cell += c;
+      else if (text[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else quoted = false;
     } else if (c === '"') {
-      quoted = !quoted;
-    } else if (!quoted && c === ",") {
-      row.push(cell);
-      cell = "";
-    } else if (!quoted && c === "\r" && text[i + 1] === "\n") {
-      row.push(cell);
+      quoted = true;
+    } else if (c === ",") {
+      endCell();
+    } else if (c === "\r" && text[i + 1] === "\n") {
+      endCell();
       rows.push(row);
       row = [];
-      cell = "";
       i++;
     } else {
       cell += c;

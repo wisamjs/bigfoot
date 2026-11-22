@@ -42,6 +42,12 @@ describe.each(FILES)("lint rules on for %s", (file) => {
     expect(result.messages.filter((m) => m.severity === 2).map((m) => m.ruleId)).toContain(rule);
   });
 
+  it("refuse a function with a cyclomatic complexity over 10 (BIG-116)", async () => {
+    const branches = Array.from({ length: 10 }, (_, i) => `if (n === ${i}) return ${i};`).join(" ");
+    const [result] = await eslint.lintText(`export function f(n: number) { ${branches} return -1; }`, { filePath: file });
+    expect(result.messages.filter((m) => m.severity === 2).map((m) => m.ruleId)).toContain("complexity");
+  });
+
   it("report each problem once: no react-hooks rule is on beside its ESLint React copy", async () => {
     const on = new Set(await rulesOn(file));
     const twice = [...on]

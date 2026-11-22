@@ -31,5 +31,8 @@ line-length = 120
 extend-include = ["../scripts/*.py"]
 
 [tool.ruff.lint]
-# pyflakes, pycodestyle, isort, pyupgrade, bugbear
-select = ["F", "E", "W", "I", "UP", "B"]
+# pyflakes, pycodestyle, isort, pyupgrade, bugbear, mccabe (cyclomatic complexity)
+select = ["F", "E", "W", "I", "UP", "B", "C90"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10

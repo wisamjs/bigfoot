@@ -66,30 +66,40 @@ const needsData = checks.some((check) => check.application);
 const dataCookie = needsData ? `${SESSION_COOKIE}=${await createTestSession(DATA_JOB_SEEKER_ID)}` : "";
 let failed = 0;
 
+/** The request headers for a check: signed out sends none, and a check on data uses the data user. */
+function headersFor(check) {
+  if (!check.signedIn) return {};
+  return { cookie: check.application ? dataCookie : cookie };
+}
+
+/** Runs one check, printing its result; true when it passed. */
+async function runCheck(check) {
+  const path = check.url ? null : await pagePath(check, DATA_JOB_SEEKER_ID);
+  const target = check.url ? check.url() : base + path;
+  const label = `${check.url ? target : path} (${check.signedIn ? "signed in" : "signed out"})`;
+  let result;
+  try {
+    const res = await fetch(target, {
+      headers: headersFor(check),
+      redirect: "manual",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    result = { status: res.status, location: res.headers.get("location"), body: await res.text() };
+  } catch (error) {
+    console.error(`✗ ${label}: ${error.name === "TimeoutError" ? `no response in ${REQUEST_TIMEOUT_MS / 1000}s` : error.message}`);
+    return false;
+  }
+  if (check.expect(result)) {
+    console.log(`✓ ${label}`);
+    return true;
+  }
+  console.error(`✗ ${label}: unexpected response (status ${result.status})`);
+  return false;
+}
+
 async function runChecks() {
   for (const check of checks) {
-    const path = check.url ? null : await pagePath(check, DATA_JOB_SEEKER_ID);
-    const target = check.url ? check.url() : base + path;
-    const label = `${check.url ? target : path} (${check.signedIn ? "signed in" : "signed out"})`;
-    let result;
-    try {
-      const res = await fetch(target, {
-        headers: check.signedIn ? { cookie: check.application ? dataCookie : cookie } : {},
-        redirect: "manual",
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      });
-      result = { status: res.status, location: res.headers.get("location"), body: await res.text() };
-    } catch (error) {
-      console.error(`✗ ${label}: ${error.name === "TimeoutError" ? `no response in ${REQUEST_TIMEOUT_MS / 1000}s` : error.message}`);
-      failed++;
-      continue;
-    }
-    if (check.expect(result)) {
-      console.log(`✓ ${label}`);
-    } else {
-      console.error(`✗ ${label}: unexpected response (status ${result.status})`);
-      failed++;
-    }
+    if (!(await runCheck(check))) failed++;
   }
 }
 
