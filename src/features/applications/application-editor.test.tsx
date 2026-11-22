@@ -1,4 +1,4 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/applications/actions";
@@ -593,5 +593,22 @@ describe("deleting an Interview", () => {
     await user.click(within(confirm).getByRole("button", { name: "Delete" }));
     expect(await within(confirm).findByRole("alert")).toHaveTextContent("Interview not found");
     expect(within(confirm).getByRole("button", { name: "Delete" })).toBeEnabled();
+  });
+});
+
+describe("just after adding the Application", () => {
+  const fresh = application("fresh", { company: "Fresh", interviews: [] });
+
+  it("focuses Add Interview, prompts for the first Interview and announces the add", async () => {
+    render(<ApplicationEditor app={fresh} justAdded />);
+    await waitFor(() => expect(screen.getByRole("link", { name: "Add Interview" })).toHaveFocus());
+    expect(screen.getByText("Added. Got an Interview lined up? Add it here.")).toBeInTheDocument();
+    expect(screen.getByText("Fresh added")).toBeInTheDocument();
+  });
+
+  it("shows no prompt when the page is opened any other way", () => {
+    render(<ApplicationEditor app={fresh} />);
+    expect(screen.queryByText(/Got an Interview lined up/)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add Interview" })).not.toHaveFocus();
   });
 });

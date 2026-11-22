@@ -20,11 +20,24 @@ const ADD_INTERVIEW_ID = "add-interview";
  * delete button (the previous one's when it was the last), or to Add Interview when none is left,
  * and a status line tells screen readers.
  */
-export function InterviewList({ app }: { app: Application }) {
+export function InterviewList({ app, justAdded = false }: { app: Application; justAdded?: boolean }) {
   const [deleting, setDeleting] = useState<Interview | null>(null);
   const [announcement, setAnnouncement] = useState("");
   // The element to focus once the deleted Interview has left the list, and which one that was.
   const focusAfterRef = useRef<{ gone: string; target: string } | null>(null);
+
+  // Straight after adding the Application, the page asks for its first Interview: focus lands on
+  // Add Interview, and the "added" search param goes so a refresh or a shared link doesn't repeat it.
+  useEffect(() => {
+    if (!justAdded) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    // After mount, so the live region exists before its text changes and is announced.
+    const frame = requestAnimationFrame(() => {
+      document.getElementById(ADD_INTERVIEW_ID)?.focus();
+      setAnnouncement(`${app.company} added`);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [justAdded, app.company]);
 
   useEffect(() => {
     const pending = focusAfterRef.current;
@@ -54,6 +67,9 @@ export function InterviewList({ app }: { app: Application }) {
           Add Interview
         </Link>
       </div>
+      {justAdded && (
+        <p className="m-0 text-sm text-body">Added. Got an Interview lined up? Add it here.</p>
+      )}
       {app.interviews.length === 0 ? (
         <p className="m-0 text-sm text-body">No Interviews yet. Add one when you have a conversation lined up.</p>
       ) : (

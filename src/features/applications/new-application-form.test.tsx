@@ -76,7 +76,7 @@ describe("Add Application", () => {
       salary: "$150k",
       posting_url: null,
     });
-    expect(push).toHaveBeenCalledWith("/applications/new-id");
+    expect(push).toHaveBeenCalledWith("/applications/new-id?added=1");
   });
 
   it("sends the applied date picked from the calendar", async () => {

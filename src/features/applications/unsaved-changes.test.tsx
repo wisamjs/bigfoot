@@ -320,7 +320,7 @@ describe("Add Application", () => {
     await user.type(screen.getByLabelText("Company"), "Acme");
     await user.type(screen.getByLabelText("Title"), "Engineer");
     await user.click(screen.getByRole("button", { name: "Add Application" }));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/applications/new-id"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/applications/new-id?added=1"));
     expect(clickGoesThrough("Dashboard")).toBe(true);
   });
 });
