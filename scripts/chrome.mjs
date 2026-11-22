@@ -111,12 +111,15 @@ async function focus(chrome) {
     returnByValue: true,
     expression: `(() => {
       const el = document.activeElement;
-      const dialog = document.querySelector("[role=dialog][data-state=open]");
+      // The topmost one: a popover such as the date picker's calendar opens over a side panel.
+      const dialogs = document.querySelectorAll("[role=dialog][data-state=open]");
+      const dialog = dialogs[dialogs.length - 1];
       const opener = (window.__clicked ?? []).findLast((c) => c.isConnected);
       const label = (el.getAttribute("aria-label") ?? el.textContent).trim().slice(0, 40);
       return {
         name: el === document.body ? "<body>" : \`<\${el.tagName.toLowerCase()}> "\${label}"\`,
         dialogOpen: Boolean(dialog),
+        dialogs: dialogs.length,
         inDialog: Boolean(dialog?.contains(el)),
         onOpener: el === opener,
       };
@@ -126,7 +129,7 @@ async function focus(chrome) {
 }
 
 /**
- * Keyboard use of an open modal dialog, which unit tests can't check (their DOM has no focus
+ * Keyboard use of the topmost open modal dialog, which unit tests can't check (their DOM has no focus
  * model): focus starts inside it, Tab never reaches the page behind it, Escape closes it, and focus
  * returns to the control that opened it. Returns one line per problem; none when no dialog is open.
  */
@@ -148,7 +151,7 @@ export async function dialogKeyboardProblems(chrome) {
   await press(chrome, "Escape", 27);
   await sleep(400);
   const after = await focus(chrome);
-  if (after.dialogOpen) problems.push("Escape leaves the dialog open");
+  if (after.dialogs >= start.dialogs) problems.push("Escape leaves the dialog open");
   else if (!after.onOpener) problems.push(`after Escape, focus is on ${after.name}, not the control that opened the dialog`);
   return problems;
 }

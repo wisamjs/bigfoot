@@ -32,7 +32,7 @@ export function SalaryField({
     return (
       <fieldset aria-labelledby={`${id}-label`} className="m-0 min-w-0 border-0 p-0">
         <span id={`${id}-label`} className={fieldLabelClasses}>
-          Salary (optional)
+          Salary
         </span>
         <div className="flex items-center justify-between gap-3">
           <span className="text-sm text-body">Hidden</span>
@@ -52,9 +52,9 @@ export function SalaryField({
   }
 
   return (
-    <Field id={id} label="Salary (optional)" error={error}>
+    <Field id={id} label="Salary" error={error}>
       {/* eslint-disable-next-line jsx-a11y/no-autofocus -- Reveal swaps its button for this field, so focus follows it. */}
-      <input type="text" placeholder="$150k–$180k" autoFocus={focusOnShow} {...input} />
+      <input type="text" autoFocus={focusOnShow} {...input} />
     </Field>
   );
 }

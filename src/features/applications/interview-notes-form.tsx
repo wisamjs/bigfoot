@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { updateInterviewAction } from "@/app/dashboard/actions";
+import { updateInterviewAction } from "@/app/applications/actions";
 import { Button } from "@/components/ui/button";
 import { FieldError, invalidProps } from "@/components/ui/field-error";
 import { inputClasses } from "@/components/ui/input";
+import { PLACEHOLDERS } from "@/features/applications/placeholders";
 import { SaveStatus } from "@/components/ui/save-status";
 import type { SaveTracker } from "@/hooks/use-save-status";
 import { INTERVIEW_NOTES_MAX_LENGTH, type Application, type Interview } from "@/lib/applications";
@@ -46,7 +47,7 @@ export function InterviewNotesForm({
     <form onSubmit={submit} className="flex w-full flex-col gap-2">
       <div>
         <label htmlFor={`notes-${interview.id}`} className="mb-1 block text-xs font-medium text-body">
-          Interview notes (optional)<span className="sr-only">, {label}</span>
+          Interview notes<span className="sr-only">, {label}</span>
         </label>
         <textarea
           id={`notes-${interview.id}`}
@@ -54,7 +55,7 @@ export function InterviewNotesForm({
           rows={3}
           maxLength={INTERVIEW_NOTES_MAX_LENGTH}
           readOnly={tracker.saving}
-          placeholder="How it went, what you were asked, what you’d do differently"
+          placeholder={PLACEHOLDERS.notes}
           onChange={(e) => {
             setDraft(e.target.value);
             setError(undefined);
