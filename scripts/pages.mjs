@@ -27,7 +27,7 @@ export const PAGES = [
   {
     path: "/dashboard",
     signedIn: true,
-    expect: "Add application",
+    expect: "Add Application",
     states: [
       { name: "show-done", steps: [{ click: "label", text: "Show done" }], expect: "Rejected" },
       {
@@ -52,28 +52,65 @@ export const PAGES = [
         expect: "This can’t be undone",
       },
       {
-        // A save's status beside its button (BIG-118), checked while "Added" shows.
-        name: "interview-added",
+        // The date picker's calendar, open over the panel.
+        name: "interview-calendar",
         steps: [
           { click: 'section[aria-label="Interview scheduled"] li button' },
-          { click: "[role=dialog][data-state=open] button", text: "Add Interview" },
+          { click: '[role=dialog][data-state=open] button[id^="at-"]' },
         ],
-        expect: "Added",
+        expect: "Mo",
       },
-      { name: "add-panel", steps: [{ click: "button", text: "Add application" }], expect: "Job posting URL" },
+      { name: "nothing-coming-up", applications: "none", steps: [], expect: "All quiet in the woods" },
+    ],
+  },
+  { path: "/applications/new", signedIn: false, redirect: true },
+  {
+    path: "/applications/new",
+    signedIn: true,
+    expect: "Job posting URL",
+    states: [
+      {
+        name: "applied-calendar",
+        steps: [{ click: 'button[id$="-applied_on"]' }],
+        expect: "Mo",
+      },
       {
         // A company of only spaces passes the browser's `required` but is blank once trimmed: the
         // form names the error beside the field and announces it, before anything is sent (BIG-89).
         name: "add-error",
         steps: [
-          { click: "button", text: "Add application" },
-          { fill: '[role=dialog][data-state=open] input[id$="-company"]', value: "   " },
-          { fill: '[role=dialog][data-state=open] input[id$="-title"]', value: "Frontend Engineer" },
-          { click: '[role=dialog][data-state=open] button[type="submit"]', text: "Add application" },
+          { fill: 'input[id$="-company"]', value: "   " },
+          { fill: 'input[id$="-title"]', value: "Frontend Engineer" },
+          { click: 'button[type="submit"]', text: "Add Application" },
         ],
         expect: "Enter the company.",
       },
-      { name: "nothing-coming-up", applications: "none", steps: [], expect: "All quiet in the woods" },
+    ],
+  },
+  { path: "/interviews/new", signedIn: false, redirect: true },
+  {
+    path: "/interviews/new",
+    signedIn: true,
+    // In the form ("Application") and the empty state ("Add Application"), not the loading state.
+    expect: "Application",
+    states: [
+      {
+        name: "interview-date-calendar",
+        steps: [{ click: 'button[id$="-at"]' }],
+        expect: "Mo",
+      },
+      {
+        // Nothing chosen or picked: each error beside its field, announced, nothing sent.
+        name: "add-interview-error",
+        steps: [{ click: 'button[type="submit"]', text: "Add Interview" }],
+        expect: "Choose the Application this Interview belongs to.",
+      },
+      {
+        name: "add-interview-no-applications",
+        applications: "none",
+        steps: [],
+        expect: "An Interview belongs to an Application",
+      },
     ],
   },
   { path: "/account", signedIn: false, redirect: true },

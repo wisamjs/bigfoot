@@ -1,9 +1,9 @@
 "use client";
 
 import { useId, useState, type FormEvent } from "react";
-import { updateApplicationAction } from "@/app/dashboard/actions";
+import { updateApplicationAction } from "@/app/applications/actions";
 import { Button } from "@/components/ui/button";
-import { Field } from "@/components/ui/field";
+import { Field, RequiredNote } from "@/components/ui/field";
 import { inputClasses } from "@/components/ui/input";
 import { SaveStatus } from "@/components/ui/save-status";
 import type { SaveTracker } from "@/hooks/use-save-status";
@@ -32,9 +32,11 @@ export function StatusForm({ app, tracker }: { app: Application; tracker: SaveTr
 
   return (
     <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
-      <Field id={`${id}-status`} label="Status" className="min-w-40 flex-1">
+      <RequiredNote className="w-full" />
+      <Field id={`${id}-status`} label="Status" required className="min-w-40 flex-1">
         <select
           id={`${id}-status`}
+          required
           value={status}
           onChange={(e) => setStatus(e.target.value as Status)}
           className={inputClasses}
@@ -47,7 +49,7 @@ export function StatusForm({ app, tracker }: { app: Application; tracker: SaveTr
         </select>
       </Field>
       {status === "done" && (
-        <Field id={`${id}-outcome`} label="Outcome" className="min-w-40 flex-1">
+        <Field id={`${id}-outcome`} label="Outcome" required className="min-w-40 flex-1">
           <select
             id={`${id}-outcome`}
             value={outcome}

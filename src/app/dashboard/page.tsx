@@ -3,7 +3,7 @@ import { Suspense, type ReactNode } from "react";
 import { BriefcaseBusiness, CalendarCheck, CalendarClock } from "lucide-react";
 import { AppFooter } from "@/features/shell/app-footer";
 import { AppHeader } from "@/features/shell/app-header";
-import { AddApplicationButton } from "@/features/applications/application-panel";
+import { AddApplicationLink, AddInterviewLink } from "@/features/applications/add-links";
 import { ComingUpCalendar, ComingUpCalendarSkeleton } from "@/features/dashboard/coming-up-calendar";
 import { NextInterviewStat } from "@/features/dashboard/next-interview-stat";
 import { DashboardPipeline } from "@/features/dashboard/dashboard-pipeline";
@@ -38,7 +38,12 @@ async function Dashboard() {
     <DashboardLayout
       header={<AppHeader user={user} current="/dashboard" />}
       greeting={`Welcome back, ${user.firstName}`}
-      addButton={<AddApplicationButton />}
+      addButtons={
+        <>
+          <AddInterviewLink />
+          <AddApplicationLink />
+        </>
+      }
       stats={
         <>
           <StatCard icon={BriefcaseBusiness} label="Open" value={stats.open} note="Applications In Progress" />
@@ -68,7 +73,12 @@ function DashboardSkeleton() {
       <DashboardLayout
         header={<AppHeader current="/dashboard" />}
         greeting={<Skeleton className="inline-block h-8 w-80 max-w-full align-middle md:h-9" />}
-        addButton={<Skeleton className="h-11 w-44" />}
+        addButtons={
+          <>
+            <Skeleton className="h-11 w-40" />
+            <Skeleton className="h-11 w-48" />
+          </>
+        }
         stats={
           <>
             <StatCard icon={BriefcaseBusiness} label="Open" value={value} note="Applications In Progress" />
@@ -92,14 +102,14 @@ function DashboardSkeleton() {
 function DashboardLayout({
   header,
   greeting,
-  addButton,
+  addButtons,
   stats,
   calendar,
   pipeline,
 }: {
   header: ReactNode;
   greeting: ReactNode;
-  addButton: ReactNode;
+  addButtons: ReactNode;
   stats: ReactNode;
   calendar: ReactNode;
   pipeline: ReactNode;
@@ -118,7 +128,7 @@ function DashboardLayout({
                 Here’s where the hunt stands this week.
               </p>
             </div>
-            {addButton}
+            <div className="flex flex-wrap gap-3">{addButtons}</div>
           </div>
 
           <section aria-label="Search summary">

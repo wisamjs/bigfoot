@@ -1,8 +1,9 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import * as actions from "@/app/dashboard/actions";
-import { AddApplicationButton } from "@/features/applications/application-panel";
+import * as actions from "@/app/applications/actions";
+import { NewApplicationForm } from "@/features/applications/new-application-form";
+import { NewInterviewForm } from "@/features/applications/new-interview-form";
 import { getUpcoming } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
 import { INJECTED_ELEMENTS, XSS_TEXT, XSS_URLS } from "@/test/xss";
@@ -13,7 +14,9 @@ import { NextInterviewStat } from "./next-interview-stat";
 // Everything a job seeker types is shown as text and never runs (BIG-89): each payload goes into
 // every Application field and the Interview notes, then through each display and form.
 
-vi.mock("@/app/dashboard/actions", () => ({
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
+vi.mock("@/app/applications/actions", () => ({
   createApplicationAction: vi.fn(),
   updateApplicationAction: vi.fn(),
   deleteApplicationAction: vi.fn(),
@@ -77,7 +80,7 @@ describe.each(XSS_TEXT.map((payload, n) => [payload, XSS_URLS[n]] as const))("%j
     await user.click(screen.getByRole("button", { name: /^Open / }));
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByLabelText("Company")).toHaveValue(payload);
-    expect(within(dialog).getByLabelText("Location (optional)")).toHaveValue(payload);
+    expect(within(dialog).getByLabelText("Location")).toHaveValue(payload);
     expect(within(dialog).getByLabelText(/^Interview notes/)).toHaveValue(payload);
     expect(within(dialog).queryByRole("link", { name: /job posting/ })).not.toBeInTheDocument();
     expectNothingInjected();
@@ -95,6 +98,32 @@ describe.each(XSS_TEXT.map((payload, n) => [payload, XSS_URLS[n]] as const))("%j
       </>,
     );
     expect(screen.getAllByText(payload, { exact: false }).length).toBeGreaterThan(0);
+    expectNothingInjected();
+  });
+
+  it("shows as text in the Add Interview page's Application picker", () => {
+    render(<NewInterviewForm applications={[poisoned(payload, url)]} />);
+    expect(screen.getByRole("option", { name: `${payload} · ${payload}` })).toBeInTheDocument();
+    expectNothingInjected();
+  });
+});
+
+describe("the Add Interview form", () => {
+  it.each(XSS_TEXT)("sends Interview notes %j exactly as typed", async (payload) => {
+    const user = userEvent.setup();
+    render(<NewInterviewForm applications={[application("birch", { company: "Birch" })]} applicationId="birch" />);
+    await user.click(screen.getByRole("button", { name: /^Date, / }));
+    await user.click(within(screen.getByRole("grid")).getByText("20"));
+    await user.type(screen.getByLabelText("Time"), "10:00");
+    // Pastes rather than types: user-event reads braces and brackets as key names.
+    await user.click(screen.getByLabelText("Interview notes"));
+    await user.paste(payload);
+    await user.click(screen.getByRole("button", { name: "Add Interview" }));
+
+    expect(actions.createInterviewAction).toHaveBeenCalledWith(
+      "birch",
+      expect.objectContaining({ notes: payload.trim() }),
+    );
     expectNothingInjected();
   });
 });
@@ -124,7 +153,7 @@ describe("the edit forms", () => {
   it.each(XSS_TEXT)("send %j exactly as typed, from the details and the Interview notes", async (payload) => {
     const { user, dialog, fill } = await openBirch();
     await fill("Company", payload);
-    await fill("Location (optional)", payload);
+    await fill("Location", payload);
     await user.click(within(dialog).getByRole("button", { name: "Save details" }));
     expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", {
       company: payload.trim(),
@@ -141,10 +170,10 @@ describe("the edit forms", () => {
     "refuse Posting link %j beside the field, and send nothing",
     async (url) => {
       const { user, dialog, fill } = await openBirch();
-      await fill("Job posting URL (optional)", url);
+      await fill("Job posting URL", url);
       await user.click(within(dialog).getByRole("button", { name: "Save details" }));
 
-      const field = within(dialog).getByLabelText("Job posting URL (optional)");
+      const field = within(dialog).getByLabelText("Job posting URL");
       expect(field).toBeInvalid();
       expect(field).toHaveAccessibleDescription("Enter a link that starts with http:// or https://.");
       expect(within(dialog).getByRole("alert")).toHaveTextContent("Enter a link that starts with http:// or https://.");
@@ -156,9 +185,8 @@ describe("the edit forms", () => {
 describe("the Add form", () => {
   async function openAdd() {
     const user = userEvent.setup();
-    render(<AddApplicationButton />);
-    await user.click(screen.getByRole("button", { name: "Add application" }));
-    const panel = screen.getByRole("dialog", { name: "Add application" });
+    render(<NewApplicationForm />);
+    const panel = screen.getByRole("form", { name: "New Application" });
     /** Pastes rather than types: user-event reads braces and brackets as key names. */
     async function fill(label: string, value: string) {
       const input = within(panel).getByLabelText(label);
@@ -175,10 +203,10 @@ describe("the Add form", () => {
       const { user, panel, fill } = await openAdd();
       await fill("Company", "Birch");
       await fill("Title", "Engineer");
-      await fill("Job posting URL (optional)", url);
-      await user.click(within(panel).getByRole("button", { name: "Add application" }));
+      await fill("Job posting URL", url);
+      await user.click(within(panel).getByRole("button", { name: "Add Application" }));
 
-      const field = within(panel).getByLabelText("Job posting URL (optional)");
+      const field = within(panel).getByLabelText("Job posting URL");
       expect(field).toBeInvalid();
       expect(field).toHaveAccessibleDescription("Enter a link that starts with http:// or https://.");
       expect(field).toHaveFocus();
@@ -189,8 +217,8 @@ describe("the Add form", () => {
 
   it("names every missing or too-long field at once, and focuses the first", async () => {
     const { user, panel, fill } = await openAdd();
-    await fill("Location (optional)", "x".repeat(201));
-    await user.click(within(panel).getByRole("button", { name: "Add application" }));
+    await fill("Location", "x".repeat(201));
+    await user.click(within(panel).getByRole("button", { name: "Add Application" }));
 
     expect(within(panel).getByLabelText("Company")).toHaveFocus();
     expect(within(panel).getByLabelText("Company")).toHaveAccessibleDescription("Enter the company.");
@@ -212,7 +240,7 @@ describe("the Add form", () => {
     const { user, panel, fill } = await openAdd();
     await fill("Company", "Birch");
     await fill("Title", "Engineer");
-    await user.click(within(panel).getByRole("button", { name: "Add application" }));
+    await user.click(within(panel).getByRole("button", { name: "Add Application" }));
     expect(within(panel).getByLabelText("Title")).toHaveAccessibleDescription("Title can be at most 200 characters.");
   });
 
@@ -220,8 +248,8 @@ describe("the Add form", () => {
     const { user, panel, fill } = await openAdd();
     await fill("Company", payload);
     await fill("Title", payload);
-    await fill("Salary (optional)", payload);
-    await user.click(within(panel).getByRole("button", { name: "Add application" }));
+    await fill("Salary", payload);
+    await user.click(within(panel).getByRole("button", { name: "Add Application" }));
 
     expect(actions.createApplicationAction).toHaveBeenCalledWith(
       expect.objectContaining({ company: payload.trim(), title: payload.trim(), salary: payload.trim() }),

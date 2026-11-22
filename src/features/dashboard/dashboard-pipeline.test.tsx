@@ -1,12 +1,12 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import * as actions from "@/app/dashboard/actions";
+import * as actions from "@/app/applications/actions";
 import { application, interview } from "@/test/applications";
 import { DashboardPipeline } from "./dashboard-pipeline";
 
 // Server Actions are mocked at their module: what the panel sends, not how it reaches the API.
-vi.mock("@/app/dashboard/actions", () => ({
+vi.mock("@/app/applications/actions", () => ({
   createApplicationAction: vi.fn(),
   updateApplicationAction: vi.fn(),
   deleteApplicationAction: vi.fn(),
@@ -61,19 +61,33 @@ describe("editing an Application", () => {
     expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { kind: "behavioural" });
   });
 
-  it("saves an Interview's date when the field loses focus, and only if it changed", async () => {
+  it("saves an Interview's date and time once both are given, with no time assumed", async () => {
     const { user, dialog } = await openBirch();
-    const date = within(dialog).getByLabelText(/^Date and time/);
-    await user.click(date);
-    await user.tab();
+    const time = within(dialog).getByLabelText(/^Time/);
+    expect(time).toBeDisabled();
+
+    await user.click(within(dialog).getByRole("button", { name: /^Date/ }));
+    await user.click(within(screen.getByRole("grid")).getByText("15"));
+    expect(time).toHaveValue("");
     expect(actions.updateInterviewAction).not.toHaveBeenCalled();
 
-    await user.type(date, "2027-01-05T10:30");
-    expect(actions.updateInterviewAction).not.toHaveBeenCalled();
+    await user.type(time, "09:45");
     await user.tab();
-    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", {
-      at: new Date("2027-01-05T10:30").toISOString(),
+    const now = new Date();
+    expect(actions.updateInterviewAction).toHaveBeenLastCalledWith("birch", "i1", {
+      at: new Date(now.getFullYear(), now.getMonth(), 15, 9, 45).toISOString(),
     });
+  });
+
+  it("clears an Interview's date and time together", async () => {
+    const dated = { ...birch, interviews: [{ ...technical, at: "2026-12-01T15:00:00.000Z" }] };
+    const user = userEvent.setup();
+    render(<DashboardPipeline subtitle="1 open" applications={[dated]} />);
+    await user.click(screen.getByRole("button", { name: /^Open Birch\b/ }));
+    const dialog = screen.getByRole("dialog", { name: "Birch" });
+    await user.click(within(dialog).getByRole("button", { name: /^Date/ }));
+    await user.click(screen.getByRole("button", { name: "Clear" }));
+    expect(actions.updateInterviewAction).toHaveBeenLastCalledWith("birch", "i1", { at: null });
   });
 
   it("saves only the details that changed, trimmed, with a cleared optional field as empty", async () => {
@@ -83,7 +97,7 @@ describe("editing an Application", () => {
 
     await user.clear(within(dialog).getByLabelText("Company"));
     await user.type(within(dialog).getByLabelText("Company"), "  Birch Trees ");
-    await user.clear(within(dialog).getByLabelText("Location (optional)"));
+    await user.clear(within(dialog).getByLabelText("Location"));
     await user.click(save);
     expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { company: "Birch Trees", location: null });
   });
@@ -100,10 +114,9 @@ describe("editing an Application", () => {
   });
 
   it("shows why a save failed", async () => {
-    vi.mocked(actions.createInterviewAction).mockResolvedValue({ ok: false, error: "Interview kind is invalid" });
+    vi.mocked(actions.updateInterviewAction).mockResolvedValue({ ok: false, error: "Interview kind is invalid" });
     const { user, dialog } = await openBirch();
-    await user.click(within(dialog).getByRole("button", { name: "Add Interview" }));
-    expect(actions.createInterviewAction).toHaveBeenCalledWith("birch", { kind: "informal_chat" });
+    await user.selectOptions(within(dialog).getByLabelText(/^Kind/), "behavioural");
     expect(await within(dialog).findByRole("alert")).toHaveTextContent("Interview kind is invalid");
   });
 });
