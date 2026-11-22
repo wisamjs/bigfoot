@@ -1,12 +1,10 @@
 "use client";
 
-import { useId, useState, type FormEvent } from "react";
-import { updateApplicationAction } from "@/app/applications/actions";
-import { Button } from "@/components/ui/button";
-import { Field, RequiredNote } from "@/components/ui/field";
-import { inputClasses } from "@/components/ui/input";
+import { useId, useState } from "react";
+import { toneClasses } from "@/components/ui/badge";
 import { SaveStatus } from "@/components/ui/save-status";
-import { useUnsavedChanges } from "@/features/applications/unsaved-changes";
+import { OUTCOME_TONE } from "@/features/applications/status-tone";
+import { updateApplicationAction } from "@/app/applications/actions";
 import type { SaveTracker } from "@/hooks/use-save-status";
 import {
   OUTCOME_OPTIONS,
@@ -18,67 +16,86 @@ import {
   type Status,
 } from "@/lib/applications";
 
-/** An Application's Status, and its Outcome once Done; they save together with one button. */
-export function StatusForm({ app, tracker }: { app: Application; tracker: SaveTracker }) {
-  const id = useId();
-  const [status, setStatus] = useState<Status>(app.status);
-  const [outcome, setOutcome] = useState<Outcome | "">(app.outcome ?? "");
-  const dirty = status !== app.status || (status === "done" && outcome !== (app.outcome ?? ""));
-  // Status and Outcome save with their button, so a change not yet saved is lost on leaving.
-  useUnsavedChanges(dirty, () =>
-    document.getElementById(`${id}-${status === "done" && !outcome ? "outcome" : "status"}`)?.focus(),
-  );
+const OUTCOME_HINT = "Choose an Outcome to finish";
 
-  function submit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fields = status === "done" ? { status, outcome: outcome || null } : { status, outcome: null };
-    void tracker.run(() => updateApplicationAction(app.id, fields));
+/**
+ * An Application's Status and, once Done, its Outcome. There is no Save button: picking an
+ * Outcome saves Done and that Outcome together, and picking In Progress on a Done Application
+ * reopens it and clears the Outcome. Choosing Done saves nothing until an Outcome is picked, so a
+ * Done Application is never saved without one. The save's status shows beside the controls.
+ */
+export function StatusForm({ app, tracker }: { app: Application; tracker: SaveTracker }) {
+  const nameId = useId();
+  // Done is chosen before its Outcome, so what's shown can be ahead of what's saved.
+  const [chosen, setChosen] = useState<Status>(app.status);
+
+  function chooseStatus(status: Status) {
+    setChosen(status);
+    if (status === "in_progress" && app.status === "done") {
+      void tracker.run(() => updateApplicationAction(app.id, { status: "in_progress", outcome: null }));
+    }
   }
 
+  function chooseOutcome(outcome: Outcome) {
+    void tracker.run(() => updateApplicationAction(app.id, { status: "done", outcome }));
+  }
+
+  const needsOutcome = chosen === "done" && !app.outcome;
+
   return (
-    <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
-      <RequiredNote className="w-full" />
-      <Field id={`${id}-status`} label="Status" required className="min-w-40 flex-1">
-        <select
-          id={`${id}-status`}
-          required
-          value={status}
-          onChange={(e) => setStatus(e.target.value as Status)}
-          className={inputClasses}
-        >
-          {STATUSES.map((value) => (
-            <option key={value} value={value}>
-              {STATUS_OPTIONS[value].label}
-            </option>
+    <div className="flex flex-col gap-3">
+      <fieldset className="m-0 flex min-w-0 flex-col gap-3 border-0 p-0">
+        <legend className="mb-2 p-0 text-sm font-medium text-heading">Status</legend>
+        <div className="inline-flex w-fit rounded-full border border-line-medium bg-surface p-1">
+          {STATUSES.map((status) => (
+            <label key={status} className="relative">
+              <input
+                type="radio"
+                name={`${nameId}-status`}
+                value={status}
+                checked={chosen === status}
+                onChange={() => chooseStatus(status)}
+                className="peer sr-only"
+              />
+              <span className="inline-flex min-h-9 cursor-pointer items-center rounded-full px-4 text-sm font-medium text-body transition-colors pointer-coarse:min-h-11 peer-checked:bg-brand peer-checked:text-on-brand peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand">
+                {STATUS_OPTIONS[status].label}
+              </span>
+            </label>
           ))}
-        </select>
-      </Field>
-      {status === "done" && (
-        <Field id={`${id}-outcome`} label="Outcome" required className="min-w-40 flex-1">
-          <select
-            id={`${id}-outcome`}
-            value={outcome}
-            required
-            onChange={(e) => setOutcome(e.target.value as Outcome)}
-            className={inputClasses}
-          >
-            <option value="" disabled>
-              Choose an Outcome
-            </option>
-            {OUTCOMES.map((value) => (
-              <option key={value} value={value}>
-                {OUTCOME_OPTIONS[value].label}
-              </option>
+        </div>
+      </fieldset>
+
+      {chosen === "done" && (
+        <fieldset className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
+          <legend className="mb-2 p-0 text-sm font-medium text-heading">Outcome</legend>
+          <div className="flex flex-wrap gap-2">
+            {OUTCOMES.map((outcome) => (
+              <label key={outcome} className="relative">
+                <input
+                  type="radio"
+                  name={`${nameId}-outcome`}
+                  value={outcome}
+                  checked={app.outcome === outcome}
+                  onChange={() => chooseOutcome(outcome)}
+                  className="peer sr-only"
+                />
+                <span
+                  className={`inline-flex min-h-9 cursor-pointer items-center rounded-full border px-4 text-sm font-medium transition-colors pointer-coarse:min-h-11 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand ${
+                    app.outcome === outcome
+                      ? toneClasses[OUTCOME_TONE[outcome]]
+                      : "border-line-medium bg-card-strong text-heading hover:border-line-brand-subtle"
+                  }`}
+                >
+                  {OUTCOME_OPTIONS[outcome].label}
+                </span>
+              </label>
             ))}
-          </select>
-        </Field>
+          </div>
+          {needsOutcome && <p className="m-0 text-xs text-body">{OUTCOME_HINT}</p>}
+        </fieldset>
       )}
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        <SaveStatus status={tracker.status} label="Status" onRetry={tracker.retry} />
-        <Button type="submit" disabled={!dirty || tracker.saving}>
-          Save status
-        </Button>
-      </div>
-    </form>
+
+      <SaveStatus status={tracker.status} label="Status" onRetry={tracker.retry} />
+    </div>
   );
 }

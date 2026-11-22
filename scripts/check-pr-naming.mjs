@@ -7,6 +7,12 @@
 /** A Linear branch name for a BIG ticket; group 1 is the ticket number. */
 export const LINEAR_BRANCH = /^wisamzaghal\/big-(\d+)-/;
 
+/**
+ * A link to a Claude Code session. The repo is public and the session is private, so a commit
+ * message or PR body must not carry one (cloud sessions add a `Claude-Session:` trailer).
+ */
+export const SESSION_LINK = /claude\.ai\/code\/session_/;
+
 /** The GitHub login Dependabot opens its PRs as. */
 export const DEPENDABOT = "dependabot[bot]";
 
@@ -19,6 +25,11 @@ function ticketNumbers({ branch, title, body }) {
   };
 }
 
+/** The problem with a PR body that links a Claude Code session, or false. */
+function sessionLinkProblem(body) {
+  return SESSION_LINK.test(body) && "body links a Claude Code session (claude.ai/code/session_…); remove that line";
+}
+
 /** Problems with a PR's naming; empty when it is fine. */
 export function prNamingProblems({ author = "", branch = "", title = "", body = "" }) {
   if (author === DEPENDABOT) return [];
@@ -27,6 +38,7 @@ export function prNamingProblems({ author = "", branch = "", title = "", body = 
     !fromBranch && `branch "${branch}" is not a Linear branch name (wisamzaghal/big-n-…)`,
     !fromTitle && `title "${title}" does not end with (BIG-n)`,
     !fromBody && "body does not start with `Closes BIG-n`",
+    sessionLinkProblem(body),
   ].filter(Boolean);
   const numbers = new Set([fromBranch, fromTitle, fromBody].filter(Boolean));
   if (numbers.size > 1) problems.push(`branch, title and body name different tickets: ${[...numbers].map((n) => `BIG-${n}`).join(", ")}`);

@@ -204,15 +204,31 @@ describe("editing an Application", () => {
     expect(within(dialog).queryByRole("button", { name: /^Save (details|notes)/ })).not.toBeInTheDocument();
   });
 
-  it("asks for an Outcome before saving Done", async () => {
+  it("marks Done with an Outcome in two clicks, with no Save button, and never without one", async () => {
     const { user, dialog } = await openBirch();
-    expect(within(dialog).queryByLabelText("Outcome")).not.toBeInTheDocument();
-    await user.selectOptions(within(dialog).getByLabelText("Status"), "done");
-    expect(within(dialog).getByLabelText("Outcome")).toBeRequired();
+    expect(within(dialog).queryByRole("radio", { name: "Withdrawn" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Save status" })).not.toBeInTheDocument();
 
-    await user.selectOptions(within(dialog).getByLabelText("Outcome"), "withdrawn");
-    await user.click(within(dialog).getByRole("button", { name: "Save status" }));
+    await user.click(within(dialog).getByRole("radio", { name: "Done" }));
+    expect(within(dialog).getByText("Choose an Outcome to finish")).toBeInTheDocument();
+    expect(actions.updateApplicationAction).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole("radio", { name: "Withdrawn" }));
+    expect(actions.updateApplicationAction).toHaveBeenCalledTimes(1);
     expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { status: "done", outcome: "withdrawn" });
+  });
+
+  it("reopens a Done Application in one click, clearing its Outcome", async () => {
+    const { user, dialog } = await openBirch({ ...birch, status: "done", outcome: "rejected" });
+    expect(within(dialog).getByRole("radio", { name: "Rejected" })).toBeChecked();
+    await user.click(within(dialog).getByRole("radio", { name: "In Progress" }));
+    expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { status: "in_progress", outcome: null });
+  });
+
+  it("changes a Done Application's Outcome in one click", async () => {
+    const { user, dialog } = await openBirch({ ...birch, status: "done", outcome: "rejected" });
+    await user.click(within(dialog).getByRole("radio", { name: "Offer" }));
+    expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { status: "done", outcome: "offer" });
   });
 
   it("shows why a save failed", async () => {
@@ -501,11 +517,10 @@ describe("save status beside each field (BIG-118)", () => {
     expect(statuses()).toEqual(["Interview 2 notes: Saved"]);
   });
 
-  it("shows Status saving by its button, and each detail saving beside itself", async () => {
+  it("shows Status saving by its controls, and each detail saving beside itself", async () => {
     const { user, page, statuses } = await openOak();
-    await user.selectOptions(within(page).getByLabelText("Status"), "done");
-    await user.selectOptions(within(page).getByLabelText("Outcome"), "rejected");
-    await user.click(within(page).getByRole("button", { name: "Save status" }));
+    await user.click(within(page).getByRole("radio", { name: "Done" }));
+    await user.click(within(page).getByRole("radio", { name: "Rejected" }));
     expect(await screen.findByText("Saved")).toBeInTheDocument();
     expect(statuses()).toEqual(["Status: Saved"]);
 

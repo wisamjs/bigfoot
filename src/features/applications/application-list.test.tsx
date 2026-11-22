@@ -1,7 +1,16 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as actions from "@/app/applications/actions";
 import { application, interview } from "@/test/applications";
 import { ApplicationList, ApplicationListSkeleton } from "./application-list";
+
+// Server Actions are mocked at their module: what the menu sends, not how it reaches the API.
+vi.mock("@/app/applications/actions", () => ({ updateApplicationAction: vi.fn() }));
+
+beforeEach(() => {
+  vi.mocked(actions.updateApplicationAction).mockReset().mockResolvedValue({ ok: true });
+});
 
 const waiting = application("Acme");
 const scheduled = application("Birch", {
@@ -102,9 +111,13 @@ describe("ApplicationList", () => {
     expect(screen.getByRole("link", { name: /^Open Birch\b/ })).toHaveAttribute("href", "/applications/Birch");
   });
 
-  it("has no controls on a card besides its link", () => {
+  it("has no controls on a card besides its link and its Change Status menu", () => {
     render(<ApplicationList applications={all} linked />);
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button").map((button) => button.getAttribute("aria-label"))).toEqual([
+      "Change Status, Acme",
+      "Change Status, Birch",
+      "Change Status, Cedar",
+    ]);
     expect(screen.getAllByRole("link", { name: /^Open/ }).map((link) => link.textContent)).toEqual([
       expect.stringMatching(/^Open Acme/),
       expect.stringMatching(/^Open Birch/),
@@ -145,5 +158,81 @@ describe("ApplicationListSkeleton", () => {
     // eslint-disable-next-line testing-library/no-node-access -- see above
     expect(list.children).toHaveLength(2);
     expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+  });
+});
+
+describe("a card's Change Status menu", () => {
+  const menuButton = (company: string) => screen.getByRole("button", { name: `Change Status, ${company}` });
+
+  it("is one button per linked card, named with its company, and none on a decorative list", () => {
+    const { rerender } = render(<ApplicationList applications={all} showDone linked />);
+    expect(screen.getAllByRole("button", { name: /^Change Status, / })).toHaveLength(4);
+    expect(menuButton("Acme")).toBeInTheDocument();
+    rerender(<ApplicationList applications={all} showDone decorative />);
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("lists every Outcome on an In Progress card, and no Reopen", async () => {
+    const user = userEvent.setup();
+    render(<ApplicationList applications={[waiting]} linked />);
+    await user.click(menuButton("Acme"));
+    expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+      "Mark Offer",
+      "Mark Rejected",
+      "Mark Position Filled",
+      "Mark Withdrawn",
+      "Mark No Open Position",
+      "Mark Not the Right Fit",
+    ]);
+    await user.keyboard("{Escape}");
+  });
+
+  it("lists the other Outcomes and Reopen on a Done card", async () => {
+    const user = userEvent.setup();
+    render(<ApplicationList applications={[rejected]} showDone linked />);
+    await user.click(menuButton("Umbrella"));
+    const items = screen.getAllByRole("menuitem").map((item) => item.textContent);
+    expect(items).not.toContain("Mark Rejected");
+    expect(items.at(-1)).toBe("Reopen");
+    await user.keyboard("{Escape}");
+  });
+
+  it("saves the pick at once, without opening the Application, and says so", async () => {
+    const user = userEvent.setup();
+    render(<ApplicationList applications={[waiting]} linked />);
+    await user.click(menuButton("Acme"));
+    await user.click(screen.getByRole("menuitem", { name: "Mark Rejected" }));
+    expect(actions.updateApplicationAction).toHaveBeenCalledWith("Acme", { status: "done", outcome: "rejected" });
+    expect(await screen.findByText(/Acme marked Rejected/)).toBeInTheDocument();
+    expect(screen.getByText(/Show done/)).toBeInTheDocument();
+  });
+
+  it("reopens a Done card, clearing its Outcome", async () => {
+    const user = userEvent.setup();
+    render(<ApplicationList applications={[rejected]} showDone linked />);
+    await user.click(menuButton("Umbrella"));
+    await user.click(screen.getByRole("menuitem", { name: "Reopen" }));
+    expect(actions.updateApplicationAction).toHaveBeenCalledWith("Umbrella", { status: "in_progress", outcome: null });
+    expect(await screen.findByText("Umbrella reopened")).toBeInTheDocument();
+  });
+
+  it("moves focus to the card once its change reaches the list", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<ApplicationList applications={[waiting, offer]} linked />);
+    await user.click(menuButton("Acme"));
+    await user.click(screen.getByRole("menuitem", { name: "Mark Offer" }));
+    await screen.findByText("Acme marked Offer");
+    rerender(<ApplicationList applications={[{ ...waiting, status: "done", outcome: "offer", is_waiting: false }, offer]} linked />);
+    expect(screen.getByRole("link", { name: /^Open Acme/ })).toHaveFocus();
+  });
+
+  it("shows why a save failed beside the button, and the card stays where it is", async () => {
+    vi.mocked(actions.updateApplicationAction).mockResolvedValue({ ok: false, error: "Couldn’t save" });
+    const user = userEvent.setup();
+    render(<ApplicationList applications={[waiting]} linked />);
+    await user.click(menuButton("Acme"));
+    await user.click(screen.getByRole("menuitem", { name: "Mark Rejected" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t save");
+    expect(screen.queryByText(/marked Rejected/)).not.toBeInTheDocument();
   });
 });

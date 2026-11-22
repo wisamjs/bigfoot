@@ -10,6 +10,9 @@ import { AppFooter } from "@/features/shell/app-footer";
 // The sign-in buttons post to Server Actions, which need Auth.js and a request.
 vi.mock("@/app/actions", () => ({ signInWithGoogle: vi.fn(), signOutAction: vi.fn() }));
 
+// The Applications list imports its cards' Change Status menu, which saves through a Server Action, which needs a request.
+vi.mock("@/app/applications/actions", () => ({ updateApplicationAction: vi.fn() }));
+
 /** The section a heading names, checking the heading labels it. */
 function sectionNamedBy(level: number) {
   const heading = screen.getByRole("heading", { level });

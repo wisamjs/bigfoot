@@ -16,8 +16,9 @@ import type { Application } from "@/lib/applications";
  * then the Interview list, and Delete application.
  * Bigfoot autosaves here: each detail saves when it's left, each Interview's fields when they
  * change, and its Interview notes after a pause in typing and when they're left, so closing the
- * page loses nothing typed. Status and Outcome still save together, with a button, because Done
- * needs an Outcome (BIG-128 replaces it). Each save shows its own status beside what started it (BIG-118).
+ * page loses nothing typed. Status and Outcome save the moment an Outcome is picked or the
+ * Application is reopened, together, because Done needs an Outcome. Each save shows its own status
+ * beside what started it (BIG-118).
  * `justAdded` is set when the page opens straight after adding the Application: the Interview list
  * then prompts for its first Interview.
  * Leaving with anything typed but not saved asks first (UnsavedChanges).
