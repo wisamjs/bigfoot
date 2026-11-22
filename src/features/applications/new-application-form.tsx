@@ -34,7 +34,7 @@ export function NewApplicationForm() {
       .run(() => createApplicationAction(fields))
       .then((result: CreateApplicationResult) => {
         if (!result.ok) details.setFieldErrors(result.fieldErrors ?? {});
-        else if ("id" in result) router.push(applicationHref(result.id));
+        else if ("id" in result) router.push(applicationHref(result.id, { added: true }));
       });
   }
 

@@ -17,8 +17,10 @@ import type { Application } from "@/lib/applications";
  * change, and its Interview notes after a pause in typing and when they're left, so closing the
  * page loses nothing typed. Status and Outcome still save together, with a button, because Done
  * needs an Outcome (BIG-128 replaces it). Each save shows its own status beside what started it (BIG-118).
+ * `justAdded` is set when the page opens straight after adding the Application: the Interview list
+ * then prompts for its first Interview.
  */
-export function ApplicationEditor({ app }: { app: Application }) {
+export function ApplicationEditor({ app, justAdded = false }: { app: Application; justAdded?: boolean }) {
   // Lives here, not in DetailsForm, so saving the details doesn't hide the salary again. This
   // component mounts each time the page opens, which does.
   const [salaryRevealed, setSalaryRevealed] = useState(false);
@@ -37,7 +39,7 @@ export function ApplicationEditor({ app }: { app: Application }) {
         onRevealSalary={() => setSalaryRevealed(true)}
       />
 
-      <InterviewList app={app} />
+      <InterviewList app={app} justAdded={justAdded} />
 
       <div className="flex border-t border-line pt-4">
         <Button onClick={() => setDeleting(true)} variant="danger">

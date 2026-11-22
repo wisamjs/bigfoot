@@ -98,6 +98,16 @@ export const PAGES = [
         ],
         expect: "Enter the company.",
       },
+      {
+        // Adding opens the new Application's page, which asks for its first Interview (BIG-130).
+        name: "application-added",
+        steps: [
+          { fill: 'input[id$="-company"]', value: "Acme" },
+          { fill: 'input[id$="-title"]', value: "Frontend Engineer" },
+          { click: 'button[type="submit"]', text: "Add Application" },
+        ],
+        expect: "Got an Interview lined up?",
+      },
     ],
   },
   { path: "/interviews/new", signedIn: false, redirect: true },
