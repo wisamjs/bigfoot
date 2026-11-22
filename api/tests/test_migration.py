@@ -1,11 +1,13 @@
-"""The Interviews migration keeps what job seekers already recorded (BIG-38)."""
+"""The Interviews migration keeps what job seekers recorded (BIG-38); the date migration requires one (BIG-139)."""
 
 import psycopg
+import pytest
 from psycopg import sql
 
 from tests.conftest import MIGRATIONS, TEST_SCHEMA
 
 MIGRATION = "20261113000000_give_applications_many_interviews.sql"
+REQUIRE_DATE = "20261122000000_require_interview_date.sql"
 
 
 def test_existing_rounds_and_stages_become_interviews_status_and_outcome(settings):
@@ -57,3 +59,46 @@ def test_existing_rounds_and_stages_become_interviews_status_and_outcome(setting
     assert interviews["waiting"] == [("onsite_loop", None)]  # waiting creates nothing
     assert "fresh" not in interviews
     assert interviews["offer"] == [("onsite_loop", None)]
+
+
+def _schema_before(conn, migration):
+    schema = sql.Identifier(TEST_SCHEMA)
+    conn.execute(sql.SQL("drop schema if exists {} cascade").format(schema))
+    conn.execute(sql.SQL("create schema {}").format(schema))
+    conn.execute(sql.SQL("set search_path to {}").format(schema))
+    for earlier in sorted(MIGRATIONS.glob("*.sql")):
+        if earlier.name < migration:
+            conn.execute(earlier.read_text())
+
+
+def _add_application(conn):
+    return conn.execute(
+        "insert into applications (job_seeker_id, company, title) values ('alice', 'Ramp', 'Engineer') returning id"
+    ).fetchone()[0]
+
+
+def test_the_database_requires_an_interviews_date(settings):
+    with psycopg.connect(settings.database_url, prepare_threshold=None, autocommit=True) as conn:
+        conn.execute(sql.SQL("set search_path to {}").format(sql.Identifier(TEST_SCHEMA)))
+        application = _add_application(conn)
+        with pytest.raises(psycopg.errors.NotNullViolation):
+            conn.execute("insert into interviews (application_id, kind) values (%s, 'technical')", (application,))
+
+
+def test_the_date_migration_keeps_dated_interviews_and_refuses_an_undated_one(settings):
+    with psycopg.connect(settings.database_url, prepare_threshold=None, autocommit=True) as conn:
+        _schema_before(conn, REQUIRE_DATE)
+        application = _add_application(conn)
+        conn.execute(
+            "insert into interviews (application_id, kind, at) values (%s, 'technical', '2026-09-15T16:00:00Z')",
+            (application,),
+        )
+        migration = (MIGRATIONS / REQUIRE_DATE).read_text()
+        conn.execute(migration)
+        assert conn.execute("select count(*) from interviews").fetchone()[0] == 1
+
+        _schema_before(conn, REQUIRE_DATE)
+        application = _add_application(conn)
+        conn.execute("insert into interviews (application_id, kind) values (%s, 'technical')", (application,))
+        with pytest.raises(psycopg.errors.NotNullViolation):
+            conn.execute(migration)

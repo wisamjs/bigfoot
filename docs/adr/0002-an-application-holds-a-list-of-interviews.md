@@ -6,4 +6,4 @@ Whether an Interview is completed, and whether an Application is Waiting, are de
 
 The migration keeps what job seekers recorded: a Previous round became an undated Interview, a Round-kind Next round became an Interview at its date, Scheduled became an Informal Chat keeping its date, and Waiting created nothing.
 
-_Superseded in part by ADR 0005_: an Interview's date and time are now required, Interviews are ordered by date alone, and one saved without a date shows "Date needed" until it gets one.
+_Superseded in part by ADR 0005_: an Interview's date and time are now required, Interviews are ordered by date alone, and the database requires one too (BIG-139).

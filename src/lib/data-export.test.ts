@@ -70,7 +70,7 @@ describe("applicationsCsv", () => {
           outcome: "not_the_right_fit",
           is_sample: true,
           interviews: [
-            { id: "i1", application_id: "a1", kind: "recruiter_screen", at: null, notes: "Friendly, asked about salary.", completed: true, created_at: ts, updated_at: ts },
+            { id: "i1", application_id: "a1", kind: "recruiter_screen", at: ts, notes: "Friendly, asked about salary.", completed: true, created_at: ts, updated_at: ts },
             { id: "i2", application_id: "a1", kind: "technical", at: ts, notes: null, completed: true, created_at: ts, updated_at: ts },
             { id: "i3", application_id: "a1", kind: "fe_system_design", at: ts, notes: "Drew the cache late.\nStart with the diagram.", completed: true, created_at: ts, updated_at: ts },
           ],
@@ -90,9 +90,9 @@ describe("applicationsCsv", () => {
       "Applied date": "2026-11-01",
       Status: "Done",
       Outcome: "Not the Right Fit",
-      Interviews: "Recruiter Screen (no date); Technical (2026-11-02T15:00:00Z); FE System Design (2026-11-02T15:00:00Z)",
+      Interviews: "Recruiter Screen (2026-11-02T15:00:00Z); Technical (2026-11-02T15:00:00Z); FE System Design (2026-11-02T15:00:00Z)",
       "Interview notes":
-        "Recruiter Screen (no date): Friendly, asked about salary.\n\n" +
+        "Recruiter Screen (2026-11-02T15:00:00Z): Friendly, asked about salary.\n\n" +
         "FE System Design (2026-11-02T15:00:00Z): Drew the cache late.\nStart with the diagram.",
       "Sample Application": "Yes",
       Created: "2026-11-02T15:00:00Z",

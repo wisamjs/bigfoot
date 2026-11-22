@@ -29,16 +29,8 @@ const shortWhenFormat = new Intl.DateTimeFormat(undefined, {
   minute: "2-digit",
 });
 
-/**
- * One Interview's date and time, in the viewer's time zone, without the year; "Date needed" for one
- * saved before dates were required (docs/adr/0005).
- */
-export function InterviewWhen({ at }: { at: string | null }) {
-  if (!at) return <span className="font-medium text-fg-danger">Date needed</span>;
-  return <InterviewDate at={at} />;
-}
-
-function InterviewDate({ at }: { at: string }) {
+/** One Interview's date and time, in the viewer's time zone, without the year. */
+export function InterviewWhen({ at }: { at: string }) {
   const isClient = useIsClient();
   if (!isClient) return <span className="block h-5" />;
   return (

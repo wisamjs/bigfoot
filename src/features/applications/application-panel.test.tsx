@@ -288,18 +288,15 @@ describe("save status beside each field (BIG-118)", () => {
     expect(within(panel).getByRole("button", { name: /^Delete .* Interview, Interview 1$/ })).toBeEnabled();
   });
 
-  it("saves the date and time once both are given, assuming no time, and nothing when the time didn't change", async () => {
-    // Saved before dates were required, so it has no time to keep (docs/adr/0005).
-    const { user, panel, at, statuses } = await openOak([{ ...oak, interviews: [{ ...first, at: null }, second] }]);
+  it("saves a new date with the time it has, and nothing when the time didn't change", async () => {
+    const now = new Date();
+    const booked = { ...first, at: new Date(now.getFullYear(), now.getMonth(), 3, 10, 30).toISOString() };
+    const { user, panel, at, statuses } = await openOak([{ ...oak, interviews: [booked, second] }]);
     const time = within(panel).getByLabelText("Time, Interview 1");
+    expect(time).toHaveValue("10:30");
     await user.click(at(1));
     await user.click(within(screen.getByRole("grid")).getByText("15"));
-    expect(time).toHaveValue("");
-    expect(actions.updateInterviewAction).not.toHaveBeenCalled();
 
-    await user.type(time, "10:30");
-    await user.tab();
-    const now = new Date();
     expect(actions.updateInterviewAction).toHaveBeenCalledWith("oak", "i1", {
       at: new Date(now.getFullYear(), now.getMonth(), 15, 10, 30).toISOString(),
     });

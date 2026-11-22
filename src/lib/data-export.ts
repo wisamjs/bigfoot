@@ -44,7 +44,10 @@ function csvCell(value: string | null) {
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
-const CSV_COLUMNS: { header: string; value: (app: Application) => string | null }[] = [
+const CSV_COLUMNS: {
+  header: string;
+  value: (app: Application) => string | null;
+}[] = [
   { header: "Company", value: (a) => a.company },
   { header: "Title", value: (a) => a.title },
   { header: "Job posting URL", value: (a) => a.posting_url },
@@ -52,7 +55,10 @@ const CSV_COLUMNS: { header: string; value: (app: Application) => string | null 
   { header: "Salary", value: (a) => a.salary },
   { header: "Applied date", value: (a) => a.applied_on },
   { header: "Status", value: (a) => STATUS_OPTIONS[a.status].label },
-  { header: "Outcome", value: (a) => (a.outcome ? OUTCOME_OPTIONS[a.outcome].label : null) },
+  {
+    header: "Outcome",
+    value: (a) => (a.outcome ? OUTCOME_OPTIONS[a.outcome].label : null),
+  },
   {
     header: "Interviews",
     value: (a) => a.interviews.map(interviewName).join("; "),
@@ -71,9 +77,9 @@ const CSV_COLUMNS: { header: string; value: (app: Application) => string | null 
   { header: "Updated", value: (a) => isoUtc(a.updated_at) },
 ];
 
-/** `Technical (2026-11-11T15:30:00Z)`, or `Technical (no date)`. */
+/** `Technical (2026-11-11T15:30:00Z)`. */
 function interviewName(interview: Interview) {
-  return `${INTERVIEW_OPTIONS[interview.kind].label} (${interview.at ? isoUtc(interview.at) : "no date"})`;
+  return `${INTERVIEW_OPTIONS[interview.kind].label} (${isoUtc(interview.at)})`;
 }
 
 /** `2026-11-11T15:30:00Z`: ISO 8601 in UTC, to the second, which spreadsheets read as a date. */
@@ -114,12 +120,14 @@ export function dataExportJson(
       last_seen_at: record?.last_seen_at ?? null,
     },
     applications,
-    access_tokens: accessTokens.map(({ name, created_at, last_used_at, expires_at }) => ({
-      name,
-      created_at,
-      last_used_at,
-      expires_at,
-    })),
+    access_tokens: accessTokens.map(
+      ({ name, created_at, last_used_at, expires_at }) => ({
+        name,
+        created_at,
+        last_used_at,
+        expires_at,
+      }),
+    ),
   };
   return `${JSON.stringify(data, null, 2)}\n`;
 }

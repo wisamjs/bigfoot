@@ -2,7 +2,6 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/applications/actions";
-import { DATE_NEEDED } from "@/lib/validation";
 import { application, interview } from "@/test/applications";
 import { DashboardPipeline } from "./dashboard-pipeline";
 
@@ -26,8 +25,6 @@ beforeEach(() => {
 
 const technical = interview("i1", { application_id: "birch", kind: "technical", completed: true });
 const birch = application("birch", { company: "Birch", location: "Remote", interviews: [technical] });
-// Saved before an Interview's date was required (docs/adr/0005).
-const undated = { ...birch, interviews: [{ ...technical, at: null }] };
 const rejected = application("umbrella", { company: "Umbrella", status: "done", outcome: "rejected", is_waiting: false });
 
 function setUpDashboard(app = birch) {
@@ -64,51 +61,12 @@ describe("editing an Application", () => {
     expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { kind: "behavioural" });
   });
 
-  it("saves an Interview's date and time once both are given, with no time assumed", async () => {
-    const { user, dialog } = await openBirch(undated);
-    const time = within(dialog).getByLabelText(/^Time/);
-    expect(time).toBeDisabled();
-
-    await user.click(within(dialog).getByRole("button", { name: /^Date/ }));
-    await user.click(within(screen.getByRole("grid")).getByText("15"));
-    expect(time).toHaveValue("");
-    expect(actions.updateInterviewAction).not.toHaveBeenCalled();
-
-    await user.type(time, "09:45");
-    await user.tab();
-    const now = new Date();
-    expect(actions.updateInterviewAction).toHaveBeenLastCalledWith("birch", "i1", {
-      at: new Date(now.getFullYear(), now.getMonth(), 15, 9, 45).toISOString(),
-    });
-  });
-
   it("refuses clearing an Interview's date, and says so beside it", async () => {
     const { user, dialog } = await openBirch();
     await user.click(within(dialog).getByRole("button", { name: /^Date/ }));
     await user.click(screen.getByRole("button", { name: "Clear" }));
     expect(within(dialog).getByText("Enter the date and time.")).toBeInTheDocument();
     expect(actions.updateInterviewAction).not.toHaveBeenCalled();
-  });
-
-  it("shows Date needed for an Interview with no date, on its card and beside its date (ADR 0005)", async () => {
-    const user = setUpDashboard(undated);
-    // It counts as completed, so its Application is Waiting, but the card doesn't count it twice.
-    const column = screen.getByRole("region", { name: "Waiting" });
-    expect(within(column).getByText("Date needed")).toBeInTheDocument();
-    expect(column).not.toHaveTextContent("completed");
-
-    await user.click(screen.getByRole("button", { name: /^Open Birch\b/ }));
-    const dialog = screen.getByRole("dialog", { name: "Birch" });
-    expect(within(dialog).getByText(DATE_NEEDED)).toBeInTheDocument();
-  });
-
-  it("saves no other change to an Interview with no date until it has one", async () => {
-    const { user, dialog } = await openBirch(undated);
-    await user.selectOptions(within(dialog).getByLabelText(/^Kind/), "behavioural");
-    await user.type(within(dialog).getByLabelText(/^Interview notes/), "Went well.");
-    await user.click(within(dialog).getByRole("button", { name: /^Save notes/ }));
-    expect(actions.updateInterviewAction).not.toHaveBeenCalled();
-    expect(within(dialog).getByText(DATE_NEEDED)).toBeInTheDocument();
   });
 
   it("shows the API's error about the date beside the date", async () => {

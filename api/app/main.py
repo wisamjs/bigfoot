@@ -11,7 +11,6 @@ from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI, HTTPException, Path, Request, status
-from fastapi.exceptions import RequestValidationError
 from psycopg import sql
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
@@ -103,16 +102,13 @@ SALARY = Field(default=None, description="The pay range, as the job seeker write
 STATUS = "Whether the Application is still going (GLOSSARY.md, Status)."
 OUTCOME = "How a Done Application ended. Required when the status is `done`, and only then."
 KIND = "What sort of conversation the Interview is (GLOSSARY.md, Interview kind)."
-AT = (
-    "When the Interview happens: a date and time, with a time zone. Required (docs/adr/0005); "
-    'null only on an Interview saved before it was, which shows "Date needed" until one is set.'
-)
+AT = "When the Interview happens: a date and time, with a time zone. Required (docs/adr/0005)."
 NOTES = (
     "Interview notes (GLOSSARY.md): what the job seeker wrote about this Interview, as plain text of at most "
     f"{INTERVIEW_NOTES_MAX_LENGTH:,} characters. Null when there are none."
 )
 EXAMPLE_NOTES = "Asked about caching trade-offs. Next time, draw the diagram first."
-INTERVIEW_ORDER_DESCRIPTION = "Ordered by date. Any with no date yet come last."
+INTERVIEW_ORDER_DESCRIPTION = "Ordered by date."
 
 
 ApplicationId = Annotated[UUID, Path(description="The Application's id.")]
@@ -191,8 +187,7 @@ class InterviewCreate(BaseModel):
 
 
 class InterviewPatch(BaseModel):
-    """Only the fields sent are changed; send null for `notes` to clear them. The date can't be cleared, and a
-    change to an Interview saved without one must set it."""
+    """Only the fields sent are changed; send null for `notes` to clear them. The date can't be cleared."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -225,13 +220,10 @@ class Interview(BaseModel):
     id: UUID
     application_id: UUID = Field(description="The Application this Interview belongs to.")
     kind: InterviewKind = Field(description=KIND, examples=["technical"])
-    at: datetime | None = Field(description=AT, examples=["2026-11-20T17:00:00Z"])
+    at: datetime = Field(description=AT, examples=["2026-11-20T17:00:00Z"])
     notes: str | None = Field(description=NOTES, examples=[EXAMPLE_NOTES])
     completed: bool = Field(
-        description=(
-            "Derived, never stored: the date is in the past. An Interview with no date yet counts as completed "
-            "until it gets one, so no Application looks further along than it is."
-        ),
+        description=("Derived, never stored: the date is in the past."),
         examples=[False],
     )
     created_at: datetime
@@ -333,21 +325,13 @@ APPLICATION_COLUMNS = (
 COLUMNS = sql.SQL(APPLICATION_COLUMNS)
 # `expired` is derived on every read, never stored, like an Interview's `completed`.
 ACCESS_TOKEN_COLUMNS = sql.SQL("id, name, created_at, last_used_at, expires_at, expires_at <= now() as expired")
-# Shaped like Pydantic's own errors, so the web app shows it beside the date field.
-DATE_NEEDED_ERROR = {
-    "type": "missing",
-    "loc": ("body", "at"),
-    "msg": "is needed: this Interview has no date yet, so any change to it must set one",
-    "input": None,
-}
 INTERVIEW_COLUMNS = sql.SQL("id, application_id, kind, at, notes, created_at, updated_at")
-# By date alone (docs/adr/0005). An Interview with no date yet has no place by date, so it sorts last,
-# Postgres' default for nulls in ascending order.
+# By date alone (docs/adr/0005).
 INTERVIEW_ORDER = sql.SQL("order by at, created_at, id")
 
 
 def _interview(row: dict[str, Any], now: datetime) -> Interview:
-    return Interview(**row, completed=row["at"] is None or row["at"] <= now)
+    return Interview(**row, completed=row["at"] <= now)
 
 
 def _application(row: dict[str, Any], interviews: list[dict[str, Any]], now: datetime) -> Application:
@@ -355,8 +339,7 @@ def _application(row: dict[str, Any], interviews: list[dict[str, Any]], now: dat
     waiting = row["status"] == "in_progress" and not any(not i.completed for i in views)
     since: datetime | date | None = None
     if waiting:
-        dated = [i.at for i in views if i.at is not None]
-        since = max(dated) if dated else row["applied_on"]
+        since = max((i.at for i in views), default=row["applied_on"])
     return Application(**row, interviews=views, is_waiting=waiting, waiting_since=since)
 
 
@@ -748,7 +731,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         responses={404: {"model": ErrorMessage, "description": APPLICATION_NOT_FOUND[404]["description"]}},
     )
     def list_interviews(request: Request, job_seeker: JobSeekerId, application_id: ApplicationId) -> list[Interview]:
-        """The Application's Interviews, ordered by date. Any with no date yet come last."""
+        """The Application's Interviews, ordered by date."""
         with pool(request).connection() as conn, conn.transaction():
             owned(conn, job_seeker, application_id)
             rows = conn.execute(
@@ -808,22 +791,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ) -> Interview:
         """Change an Interview's kind, date or Interview notes.
 
-        Only the fields sent change; send null for `notes` to clear them. The date can't be cleared, and
-        any change to an Interview saved without a date must set one (422).
+        Only the fields sent change; send null for `notes` to clear them. The date can't be cleared.
         """
         changes = body.model_dump(exclude_unset=True)
         assignments = [sql.SQL("{} = %s").format(sql.Identifier(name)) for name in changes]
         assignments.append(sql.SQL("updated_at = now()"))
         with pool(request).connection() as conn, conn.transaction():
             owned(conn, job_seeker, application_id)
-            current = conn.execute(
-                "select at from interviews where id = %s and application_id = %s for update",
-                (interview_id, application_id),
-            ).fetchone()
-            if current is None:
-                raise HTTPException(status.HTTP_404_NOT_FOUND, "Interview not found")
-            if current["at"] is None and "at" not in changes:
-                raise RequestValidationError([DATE_NEEDED_ERROR])
             row = conn.execute(
                 sql.SQL("update interviews set {} where id = %s and application_id = %s returning {}").format(
                     sql.SQL(", ").join(assignments), INTERVIEW_COLUMNS

@@ -124,19 +124,12 @@ export function applicationErrors(input: unknown, { creating }: { creating: bool
   return errors;
 }
 
-/** Beside the date of an Interview saved before dates were required (docs/adr/0005). */
-export const DATE_NEEDED = "Date needed. Set the date and time to save any change to this Interview.";
-
 /**
  * Problems with an Interview's fields. `creating` checks a whole new Interview, so the kind and the
  * date and time are required; otherwise only the fields given are checked, as a change, and the
- * date can't be cleared. `savedAt` is the date the Interview has now: when it has none, a change
- * must set one.
+ * date can't be cleared.
  */
-export function interviewErrors(
-  input: unknown,
-  { creating = false, savedAt }: { creating?: boolean; savedAt?: string | null } = {},
-): FieldErrors {
+export function interviewErrors(input: unknown, { creating = false }: { creating?: boolean } = {}): FieldErrors {
   if (typeof input !== "object" || input === null) return { form: "Nothing to save." };
   const fields = input as Partial<Record<keyof InterviewFields, unknown>>;
   const has = (name: keyof InterviewFields) => creating || name in fields;
@@ -146,8 +139,6 @@ export function interviewErrors(
     errors.at = "Enter the date and time.";
   } else if (has("at") && (typeof fields.at !== "string" || !isTimestamp(fields.at))) {
     errors.at = "Enter a date and time.";
-  } else if (!has("at") && savedAt === null) {
-    errors.at = DATE_NEEDED;
   }
   const notes = optionalText(fields.notes, "Interview notes", INTERVIEW_NOTES_MAX_LENGTH);
   if (notes) errors.notes = notes;

@@ -17,8 +17,17 @@ import {
   type Interview,
 } from "./applications";
 
-function interview(id: string, at: string | null, completed: boolean): Interview {
-  return { id, application_id: "a", kind: "technical", at, notes: null, completed, created_at: "", updated_at: "" };
+function interview(id: string, at: string, completed: boolean): Interview {
+  return {
+    id,
+    application_id: "a",
+    kind: "technical",
+    at,
+    notes: null,
+    completed,
+    created_at: "",
+    updated_at: "",
+  };
 }
 
 function application(id: string, overrides: Partial<Application>): Application {
@@ -45,9 +54,16 @@ function application(id: string, overrides: Partial<Application>): Application {
 const waiting = application("waiting", {});
 const scheduled = application("scheduled", {
   is_waiting: false,
-  interviews: [interview("past", "2026-11-02T15:00:00Z", true), interview("next", "2026-12-01T15:00:00Z", false)],
+  interviews: [
+    interview("past", "2026-11-02T15:00:00Z", true),
+    interview("next", "2026-12-01T15:00:00Z", false),
+  ],
 });
-const offer = application("offer", { status: "done", outcome: "offer", is_waiting: false });
+const offer = application("offer", {
+  status: "done",
+  outcome: "offer",
+  is_waiting: false,
+});
 const rejected = application("rejected", {
   status: "done",
   outcome: "rejected",
@@ -58,7 +74,9 @@ const rejected = application("rejected", {
 describe("getBoardColumns", () => {
   it("has Waiting, Interview scheduled and Offer, and leaves other Done Applications off", () => {
     const columns = getBoardColumns([waiting, scheduled, offer, rejected]);
-    expect(columns.map((c) => [c.label, c.applications.map((a) => a.id)])).toEqual([
+    expect(
+      columns.map((c) => [c.label, c.applications.map((a) => a.id)]),
+    ).toEqual([
       ["Waiting", ["waiting"]],
       ["Interview scheduled", ["scheduled"]],
       ["Offer", ["offer"]],
@@ -66,45 +84,59 @@ describe("getBoardColumns", () => {
   });
 
   it("leaves empty columns out", () => {
-    expect(getBoardColumns([scheduled]).map((c) => c.id)).toEqual(["scheduled"]);
+    expect(getBoardColumns([scheduled]).map((c) => c.id)).toEqual([
+      "scheduled",
+    ]);
     expect(getBoardColumns([rejected])).toEqual([]);
   });
 
   it("adds a Done column for Done Applications other than Offers when asked", () => {
-    const columns = getBoardColumns([waiting, offer, rejected], { showDone: true });
-    expect(columns.map((c) => [c.id, c.applications.map((a) => a.id)])).toEqual([
-      ["waiting", ["waiting"]],
-      ["offer", ["offer"]],
-      ["done", ["rejected"]],
-    ]);
+    const columns = getBoardColumns([waiting, offer, rejected], {
+      showDone: true,
+    });
+    expect(columns.map((c) => [c.id, c.applications.map((a) => a.id)])).toEqual(
+      [
+        ["waiting", ["waiting"]],
+        ["offer", ["offer"]],
+        ["done", ["rejected"]],
+      ],
+    );
   });
 });
 
 describe("getCalendarInterviews", () => {
   it("keeps past and upcoming dated Interviews of In Progress Applications, by date", () => {
-    const undated = application("undated", { is_waiting: false, interviews: [interview("none", null, true)] });
-    const result = getCalendarInterviews([scheduled, rejected, undated]);
+    const result = getCalendarInterviews([scheduled, rejected]);
     expect(result.map((d) => d.interview.id)).toEqual(["past", "next"]);
   });
 });
 
-describe("an Interview saved with no date (docs/adr/0005)", () => {
-  // As the API sends it: completed, and last, since it has no place by date.
-  const legacy = application("legacy", {
-    is_waiting: true,
-    interviews: [interview("past", "2026-11-02T15:00:00Z", true), interview("none", null, true)],
+describe("lastCompletedInterview and nextInterview", () => {
+  const mixed = application("mixed", {
+    is_waiting: false,
+    interviews: [
+      interview("old", "2026-11-02T15:00:00Z", true),
+      interview("recent", "2026-11-10T15:00:00Z", true),
+      interview("soon", "2026-11-30T15:00:00Z", false),
+    ],
   });
 
-  it("counts as completed, so its Application stays Waiting and is not Active", () => {
-    expect(nextInterview(legacy)).toBeNull();
-    expect(getBoardColumns([legacy]).map((c) => c.id)).toEqual(["waiting"]);
-    expect(getStats([legacy]).active).toBe(0);
-    expect(getUpcoming([legacy])).toEqual([]);
+  it("find the latest completed Interview and the soonest one ahead", () => {
+    expect(lastCompletedInterview(mixed)?.id).toBe("recent");
+    expect(nextInterview(mixed)?.id).toBe("soon");
   });
 
-  it("is never the last completed Interview, which is the latest dated one", () => {
-    expect(lastCompletedInterview(legacy)?.id).toBe("past");
-    expect(lastCompletedInterview(application("only", { interviews: [interview("none", null, true)] }))).toBeNull();
+  it("find nothing when there is none", () => {
+    expect(
+      lastCompletedInterview(application("new", { interviews: [] })),
+    ).toBeNull();
+    expect(
+      nextInterview(
+        application("done", {
+          interviews: [interview("old", "2026-11-02T15:00:00Z", true)],
+        }),
+      ),
+    ).toBeNull();
   });
 });
 
@@ -129,7 +161,10 @@ describe("getUpcoming", () => {
   it("lists upcoming Interviews of In Progress Applications, soonest first, leaving past and Done ones out", () => {
     const later = application("later", {
       is_waiting: false,
-      interviews: [interview("in-2027", "2027-01-05T15:00:00Z", false), interview("in-dec", "2026-12-10T15:00:00Z", false)],
+      interviews: [
+        interview("in-2027", "2027-01-05T15:00:00Z", false),
+        interview("in-dec", "2026-12-10T15:00:00Z", false),
+      ],
     });
     const doneWithUpcoming = application("done", {
       status: "done",
@@ -149,7 +184,9 @@ describe("getUpcoming", () => {
 /** The values of a `Name = Literal[...]` in api/app/domain.py. */
 function pythonLiteral(name: string) {
   const source = readFileSync("api/app/domain.py", "utf8");
-  const body = source.match(new RegExp(`^${name} = Literal\\[([^\\]]*)\\]`, "m"))?.[1];
+  const body = source.match(
+    new RegExp(`^${name} = Literal\\[([^\\]]*)\\]`, "m"),
+  )?.[1];
   if (!body) throw new Error(`api/app/domain.py has no ${name} Literal`);
   return [...body.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
 }
