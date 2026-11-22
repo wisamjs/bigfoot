@@ -148,13 +148,13 @@ Where the skill and the Next.js docs in `node_modules/next/dist/docs/` disagree,
 | `npm run a11y` | axe-core WCAG 2.2 AA on the same pages and their open dialogs, light and dark, and uses each dialog by keyboard: focus stays inside, Escape closes it, focus returns |
 | `npm run build` | Production build (stop `next dev` first: they share `.next/`) |
 
-[CI](.github/workflows/ci.yml) runs all of these but `npm run openapi` on every push and pull request. It needs a `DATABASE_URL` repository secret.
+[CI](.github/workflows/ci.yml) runs all of these but `npm run openapi` on every push and pull request. Its tests, smoke and a11y run against a Postgres 17 service container on the runner (no secret, so Dependabot PRs run them too). Only the `migrations-applied` job on pushes to `main` needs the `DATABASE_URL` repository secret, for the dev database. To run the same database locally: `docker run --rm -d -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgres:17`, then `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres npm run test:api`.
 
 ## Databases
 
 Two Supabase projects, both in `us-east-1`:
 
-- **`Bigfoot`** (Free plan) is for local development (`public` schema) and CI (throwaway `bigfoot_test_*` schemas). `.env.local` and the CI `DATABASE_URL` secret point here.
+- **`Bigfoot`** (Free plan) is for local development (`public` schema) and the `migrations-applied` CI job. `.env.local` and the CI `DATABASE_URL` secret point here. Tests, smoke and a11y in CI use a Postgres container instead.
 - **`bigfoot-prod`** (Pro plan: daily backups, never pauses) holds real job seekers' data. Its `DATABASE_URL` is only in Vercel's Production environment and the password manager, never in the repo or CI.
 
 [`docs/runbooks/database.md`](docs/runbooks/database.md) covers connecting to prod, applying migrations and restoring from a backup.
