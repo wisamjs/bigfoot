@@ -5,6 +5,7 @@ import { updateApplicationAction } from "@/app/applications/actions";
 import { RequiredNote } from "@/components/ui/field";
 import { SaveStatus } from "@/components/ui/save-status";
 import { useSaveStatus } from "@/hooks/use-save-status";
+import { useUnsavedChanges } from "@/features/applications/unsaved-changes";
 import {
   DETAIL_FIELDS,
   DetailsFields,
@@ -76,6 +77,15 @@ export function DetailsForm({
     const untouched = elsewhere.filter((name) => details.values[name].trim() === seen[name]);
     details.adopt(Object.fromEntries(untouched.map((name) => [name, saved[name]])));
   }
+
+  // A detail typed but not yet left, one that failed its check, or one whose save failed: each
+  // still differs from what's saved. A hidden salary isn't on screen, so it holds nothing typed.
+  const unsavedDetail = DETAIL_FIELDS.find(
+    (name) => !(name === "salary" && salaryHidden) && details.values[name].trim() !== saved[name],
+  );
+  useUnsavedChanges(unsavedDetail !== undefined, () => {
+    if (unsavedDetail) document.getElementById(`${details.id}-${unsavedDetail}`)?.focus();
+  });
 
   function commit(name: DetailField, value: string) {
     const next = value.trim();
