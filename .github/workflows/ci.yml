@@ -34,46 +34,33 @@ jobs:
       TEST_SCHEMA: bigfoot_test_${{ github.run_id }}_${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
-      # A PR that changes only README files skips every step below, and `check` still reports
-      # green (the main ruleset requires it). See scripts/ci-docs-only.mjs. Pushes run everything.
-      - id: scope
-        run: node scripts/ci-docs-only.mjs
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
       - uses: actions/setup-node@v4
-        if: steps.scope.outputs.docs_only != 'true'
         with:
           node-version: 24
           cache: npm
       - uses: astral-sh/setup-uv@v6
-        if: steps.scope.outputs.docs_only != 'true'
         with:
           working-directory: api
       - run: npm ci
-        if: steps.scope.outputs.docs_only != 'true'
       - run: npm run check
-        if: steps.scope.outputs.docs_only != 'true'
       # GitHub gives Dependabot's runs no Actions secrets, so its PRs skip every step that needs
       # DATABASE_URL: test:api, smoke, a11y and dropping the schema. They still run check and build.
       # On this run's TEST_SCHEMA, which smoke and a11y rebuild again for the API they start.
       - run: npm run test:api
-        if: steps.scope.outputs.docs_only != 'true' && github.event.pull_request.user.login != 'dependabot[bot]'
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
       # Smoke runs before build: dev and build share .next/.
       - run: npm run smoke
-        if: steps.scope.outputs.docs_only != 'true' && github.event.pull_request.user.login != 'dependabot[bot]'
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
         timeout-minutes: 2
       # axe-core in the runner's preinstalled Chrome, light and dark.
       - run: npm run a11y
-        if: steps.scope.outputs.docs_only != 'true' && github.event.pull_request.user.login != 'dependabot[bot]'
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
         timeout-minutes: 3
         env:
           CHROME_PATH: /usr/bin/google-chrome
       - run: npm run build
-        if: steps.scope.outputs.docs_only != 'true'
       - name: Drop this run's test schema
-        if: always() && steps.scope.outputs.docs_only != 'true' && github.event.pull_request.user.login != 'dependabot[bot]'
+        if: always() && github.event.pull_request.user.login != 'dependabot[bot]'
         run: npm run db:drop-test-schema
 
   # Applies merged migrations to the dev database (applying before merge would break main),
