@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createAccessTokenAction, revokeAccessTokenAction } from "@/app/account/actions";
@@ -80,7 +80,8 @@ describe("AccessTokens", () => {
     const form = vi.mocked(createAccessTokenAction).mock.calls[0][1];
     expect(form.get("name")).toBe("Laptop script");
     const announcement = screen.getByRole("status");
-    expect(within(announcement).getByRole("heading", { name: "Copy your Access token now" })).toBeVisible();
+    // The Server Action's result commits in a transition, after the click has resolved.
+    expect(await within(announcement).findByRole("heading", { name: "Copy your Access token now" })).toBeVisible();
     expect(within(announcement).getByText(SECRET)).toBeVisible();
     expect(announcement).toHaveTextContent(`curl -H "Authorization: Bearer $BIGFOOT_TOKEN" ${API}/applications`);
   });
@@ -98,24 +99,24 @@ describe("AccessTokens", () => {
     await user.type(screen.getByLabelText("Name of a new Access token"), "Laptop script");
     await user.click(screen.getByRole("button", { name: "Create Access token" }));
 
-    await user.click(screen.getByRole("button", { name: "Copy" }));
+    await user.click(await screen.findByRole("button", { name: "Copy" }));
 
     expect(await navigator.clipboard.readText()).toBe(SECRET);
-    expect(screen.getByRole("button", { name: "Copied" })).toBeVisible();
+    expect(await screen.findByRole("button", { name: "Copied" })).toBeVisible();
   });
 
   it("stops showing the secret once the job seeker has copied it", async () => {
     render(<AccessTokens tokens={[]} apiUrl={API} />);
     await createToken();
-    await userEvent.click(screen.getByRole("button", { name: "I’ve copied it" }));
-    expect(screen.queryByText(SECRET)).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: "I’ve copied it" }));
+    await waitFor(() => expect(screen.queryByText(SECRET)).not.toBeInTheDocument());
   });
 
   it("shows why a token couldn't be created", async () => {
     vi.mocked(createAccessTokenAction).mockResolvedValue({ error: "Name must not be blank", created: null });
     render(<AccessTokens tokens={[]} apiUrl={API} />);
     await createToken();
-    expect(screen.getByRole("alert")).toHaveTextContent("Name must not be blank");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Name must not be blank");
     expect(screen.queryByText(SECRET)).not.toBeInTheDocument();
   });
 
@@ -123,40 +124,40 @@ describe("AccessTokens", () => {
     render(<AccessTokens tokens={[token()]} apiUrl={API} />);
     await userEvent.click(screen.getByRole("button", { name: "Revoke Calendar cron job" }));
 
-    const dialog = screen.getByRole("dialog", { name: "Revoke Access token" });
+    const dialog = await screen.findByRole("dialog", { name: "Revoke Access token" });
     expect(dialog).toHaveTextContent("Calendar cron job will stop working straight away");
     expect(revokeAccessTokenAction).not.toHaveBeenCalled();
 
     await userEvent.click(within(dialog).getByRole("button", { name: "Revoke" }));
     expect(revokeAccessTokenAction).toHaveBeenCalledWith("t1");
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
   it("keeps the token when the job seeker cancels", async () => {
     render(<AccessTokens tokens={[token()]} apiUrl={API} />);
     await userEvent.click(screen.getByRole("button", { name: "Revoke Calendar cron job" }));
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Cancel" }));
     expect(revokeAccessTokenAction).not.toHaveBeenCalled();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
   it("keeps the dialog open and says why when revoking fails", async () => {
     vi.mocked(revokeAccessTokenAction).mockResolvedValue({ ok: false, error: "The token was not revoked." });
     render(<AccessTokens tokens={[token()]} apiUrl={API} />);
     await userEvent.click(screen.getByRole("button", { name: "Revoke Calendar cron job" }));
-    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Revoke" }));
-    expect(within(screen.getByRole("dialog")).getByRole("alert")).toHaveTextContent("The token was not revoked.");
+    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Revoke" }));
+    expect(await within(screen.getByRole("dialog")).findByRole("alert")).toHaveTextContent("The token was not revoked.");
   });
 
   it("stops showing a new token's secret when that token is revoked", async () => {
     render(<AccessTokens tokens={[token({ id: "t2", name: "Laptop script" })]} apiUrl={API} />);
     await createToken();
-    expect(screen.getByText(SECRET)).toBeVisible();
+    expect(await screen.findByText(SECRET)).toBeVisible();
 
     await userEvent.click(screen.getByRole("button", { name: "Revoke Laptop script" }));
-    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Revoke" }));
+    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Revoke" }));
 
-    expect(screen.queryByText(SECRET)).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText(SECRET)).not.toBeInTheDocument());
   });
 });
 
@@ -172,7 +173,7 @@ describe("the new token's name", () => {
     expect(field()).toBeInvalid();
     expect(field()).toHaveFocus();
     expect(field()).toHaveAccessibleDescription(expect.stringContaining("Enter the name."));
-    expect(screen.getByRole("alert")).toHaveTextContent("Enter the name.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Enter the name.");
     expect(createAccessTokenAction).not.toHaveBeenCalled();
 
     await userEvent.type(field(), "Laptop script");
@@ -185,7 +186,7 @@ describe("the new token's name", () => {
     await userEvent.click(field());
     await userEvent.paste("invoice\u202efdp.exe");
     await submit();
-    expect(screen.getByRole("alert")).toHaveTextContent("Use only characters you can see in the name.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Use only characters you can see in the name.");
     expect(createAccessTokenAction).not.toHaveBeenCalled();
   });
 
@@ -193,8 +194,8 @@ describe("the new token's name", () => {
     vi.mocked(createAccessTokenAction).mockResolvedValue({ error: null, nameError: "Enter the name.", created: null });
     render(<AccessTokens tokens={[]} apiUrl={API} />);
     await createToken();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Enter the name.");
     expect(field()).toBeInvalid();
-    expect(screen.getByRole("alert")).toHaveTextContent("Enter the name.");
 
     await userEvent.type(field(), "!");
     expect(field()).toBeValid();
@@ -212,9 +213,9 @@ describe("the new token's name", () => {
 
     const sent = vi.mocked(createAccessTokenAction).mock.calls[0][1];
     expect(sent.get("name")).toBe(payload);
-    expect(screen.getAllByText(payload, { exact: false }).length).toBeGreaterThan(1);
+    await waitFor(() => expect(screen.getAllByText(payload, { exact: false }).length).toBeGreaterThan(1));
     await userEvent.click(screen.getByRole("button", { name: `Revoke ${payload}` }));
-    expect(within(screen.getByRole("dialog")).getByText(payload)).toBeVisible();
+    expect(within(await screen.findByRole("dialog")).getByText(payload)).toBeVisible();
     // eslint-disable-next-line testing-library/no-node-access -- injected tags have no role or text to query by.
     expect(document.body.querySelectorAll(INJECTED_ELEMENTS)).toHaveLength(0);
   });
