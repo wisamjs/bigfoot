@@ -19,7 +19,7 @@ export function Footer() {
       <Container>
         <div className="grid grid-cols-1 gap-12 pt-16 pb-12 md:grid-cols-[2fr_1fr]">
           <div className="max-w-sm">
-            <Link href="/#top" aria-label="Bigfoot home" className="mb-4 inline-block rounded-control">
+            <Link href="/#top" aria-label="Bigfoot home" className="touch-target mb-4 inline-block rounded-control">
               <Wordmark />
             </Link>
             <p className="m-0 text-base leading-[1.7] text-body">
@@ -36,7 +36,7 @@ export function Footer() {
                   <li key={link.label}>
                     <a
                       href={link.href}
-                      className="rounded-control text-base text-body transition-colors hover:text-heading"
+                      className="touch-target justify-start rounded-control text-base text-body transition-colors hover:text-heading"
                     >
                       {link.label}
                     </a>

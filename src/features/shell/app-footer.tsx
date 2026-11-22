@@ -17,7 +17,7 @@ export function AppFooter() {
             <li key={link.href}>
               <Link
                 href={link.href}
-                className="rounded-control underline underline-offset-4 transition-colors hover:text-heading"
+                className="touch-target rounded-control underline underline-offset-4 transition-colors hover:text-heading"
               >
                 {link.label}
               </Link>

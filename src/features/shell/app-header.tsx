@@ -19,7 +19,7 @@ export function AppHeader({ user, current }: { user?: CurrentUser; current: (typ
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-surface/80 backdrop-blur-md supports-[not(backdrop-filter:blur(0))]:bg-surface">
       <Container className="flex h-[72px] items-center justify-between gap-2 sm:gap-4">
-        <Link href="/" aria-label="Bigfoot home" className="rounded-control">
+        <Link href="/" aria-label="Bigfoot home" className="touch-target rounded-control">
           <Wordmark compact />
         </Link>
         <div className="flex items-center gap-2 sm:gap-4">
@@ -41,7 +41,7 @@ export function AppHeader({ user, current }: { user?: CurrentUser; current: (typ
                   <Link
                     href={link.href}
                     aria-current={link.href === current ? "page" : undefined}
-                    className="rounded-control px-2 py-2 text-sm sm:px-3 font-medium text-body transition-colors hover:text-heading aria-[current=page]:text-heading aria-[current=page]:underline aria-[current=page]:underline-offset-4"
+                    className="touch-target rounded-control px-2 py-2 text-sm sm:px-3 font-medium text-body transition-colors hover:text-heading aria-[current=page]:text-heading aria-[current=page]:underline aria-[current=page]:underline-offset-4"
                   >
                     {link.label}
                   </Link>

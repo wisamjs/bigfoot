@@ -105,11 +105,26 @@ describe("ApplicationList", () => {
   it("has no controls on a card besides its link", () => {
     render(<ApplicationList applications={all} linked />);
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
-    expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
+    expect(screen.getAllByRole("link", { name: /^Open/ }).map((link) => link.textContent)).toEqual([
       expect.stringMatching(/^Open Acme/),
       expect.stringMatching(/^Open Birch/),
       expect.stringMatching(/^Open Cedar/),
     ]);
+  });
+
+  it("has a chip for each group that jumps to it, with its count", () => {
+    render(<ApplicationList applications={all} linked />);
+    const chips = within(screen.getByRole("navigation", { name: "Jump to a group" })).getAllByRole("link");
+    expect(chips.map((chip) => chip.textContent)).toEqual(["Waiting1", "Scheduled1", "Offer1"]);
+    expect(chips[1]).toHaveAttribute("href", "#applications-scheduled");
+    expect(screen.getByRole("region", { name: "Interview scheduled" })).toHaveAttribute("id", "applications-scheduled");
+  });
+
+  it("has no chips for one group, or when decorative", () => {
+    const { rerender } = render(<ApplicationList applications={[offer]} linked />);
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+    rerender(<ApplicationList applications={all} decorative />);
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
   });
 
   it("is a single labelled picture when decorative", () => {
