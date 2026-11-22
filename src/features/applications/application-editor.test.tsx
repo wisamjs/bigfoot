@@ -422,17 +422,74 @@ describe("save status beside each field (BIG-118)", () => {
     expect(actions.createInterviewAction).not.toHaveBeenCalled();
   });
 
-  it("shows deleting an Interview by its row, and why it failed", async () => {
-    const save = inFlight();
-    vi.mocked(actions.deleteInterviewAction).mockReturnValue(save.promise);
-    const { user, page, statuses } = await openOak();
-    const remove = within(page).getByRole("button", { name: "Delete Technical Interview, Interview 2" });
-    await user.click(remove);
+});
 
-    expect(remove).toBeDisabled();
-    expect(statuses()).toEqual(["Deleting Interview 2: Deleting…"]);
-    save.settle({ ok: false, error: "Interview not found" });
-    expect(await within(page).findByRole("alert")).toHaveTextContent("Deleting Interview 2: Interview not found");
-    expect(remove).toBeEnabled();
+describe("deleting an Interview", () => {
+  const first = interview("i1", { application_id: "oak", kind: "recruiter_screen", notes: "Friendly." });
+  const second = interview("i2", { application_id: "oak", kind: "technical" });
+  const oak = application("oak", { company: "Oak", interviews: [first, second] });
+
+  async function askToDelete(app = oak, n = 1) {
+    const user = userEvent.setup();
+    const view = render(<Editor app={app} />);
+    const page = screen.getByRole("region", { name: "Oak" });
+    const trash = within(page).getAllByRole("button", { name: /^Delete .* Interview, Interview \d$/ })[n - 1];
+    await user.click(trash);
+    return { user, page, trash, view, confirm: screen.getByRole("dialog", { name: "Delete Interview?" }) };
+  }
+
+  it("asks first, naming the Interview and its notes, with Cancel focused, and deletes nothing yet", async () => {
+    const { confirm } = await askToDelete();
+    expect(confirm).toHaveTextContent(/Recruiter Screen on \d+ Nov will be deleted, with its Interview notes\. This can’t be undone\./);
+    expect(within(confirm).getByRole("button", { name: "Cancel" })).toHaveFocus();
+    expect(actions.deleteInterviewAction).not.toHaveBeenCalled();
+  });
+
+  it("leaves the notes out of the warning when there are none, and the date when there is none", async () => {
+    const bare = { ...second, notes: null, at: null };
+    const { confirm } = await askToDelete({ ...oak, interviews: [bare] });
+    expect(confirm).toHaveTextContent("Technical will be deleted. This can’t be undone.");
+  });
+
+  it("closes on Cancel or Escape, keeps the Interview, and returns focus to its delete button", async () => {
+    const { user, confirm, trash } = await askToDelete();
+    await user.click(within(confirm).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(trash).toHaveFocus();
+
+    await user.click(trash);
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(trash).toHaveFocus();
+    expect(actions.deleteInterviewAction).not.toHaveBeenCalled();
+  });
+
+  it("deletes once confirmed, closes, announces it, and focuses the next Interview's delete button", async () => {
+    const { user, confirm, view, page } = await askToDelete();
+    await user.click(within(confirm).getByRole("button", { name: "Delete" }));
+    expect(actions.deleteInterviewAction).toHaveBeenCalledWith("oak", "i1");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(await within(page).findByText("Interview deleted")).toBeInTheDocument();
+    expect(within(page).getByText("Interview deleted").tagName).toBe("OUTPUT");
+
+    // The page refreshes with the Interview gone.
+    view.rerender(<Editor app={{ ...oak, interviews: [second] }} />);
+    const next = within(page).getByRole("button", { name: "Delete Technical Interview, Interview 1" });
+    await vi.waitFor(() => expect(next).toHaveFocus());
+  });
+
+  it("focuses Add Interview when the last Interview is deleted", async () => {
+    const { user, confirm, view, page } = await askToDelete({ ...oak, interviews: [second] });
+    await user.click(within(confirm).getByRole("button", { name: "Delete" }));
+    view.rerender(<Editor app={{ ...oak, interviews: [] }} />);
+    await vi.waitFor(() => expect(within(page).getByRole("link", { name: "Add Interview" })).toHaveFocus());
+  });
+
+  it("stays open and says why when deleting fails", async () => {
+    vi.mocked(actions.deleteInterviewAction).mockResolvedValue({ ok: false, error: "Interview not found" });
+    const { user, confirm } = await askToDelete();
+    await user.click(within(confirm).getByRole("button", { name: "Delete" }));
+    expect(await within(confirm).findByRole("alert")).toHaveTextContent("Interview not found");
+    expect(within(confirm).getByRole("button", { name: "Delete" })).toBeEnabled();
   });
 });
