@@ -85,3 +85,5 @@ _Avoid_: API key, password
 **Insight**:
 _Planned_ (BIG-66). One observation about a job seeker's Applications, such as which Interview kind their Rejected Applications ended after. Bigfoot computes it from their Applications and Interviews, and it always names the Applications behind it. The Assistant puts an Insight into words but never computes one.
 _Avoid_: trend, analytics, stat, finding
+
+<!-- BIG-152 throwaway: docs-only -->
