@@ -19,7 +19,7 @@ A secret a job seeker creates on the Account page and gives a script, such as a 
 _Avoid_: API key, personal access token, PAT, credential; delete (a token is revoked)
 
 **Application**:
-One role at one company that the job seeker has applied to. It is added on the Add Application page, opened by the dashboard's Add Application button: company, title and applied date are required (the applied date starts at today), location, salary and job posting are optional. Adding it opens its Application page.
+One role at one company that the job seeker has applied to. It is added on the Add Application page, opened by the dashboard's Add Application button: company, title and applied date are required (the applied date starts at today), location, salary and job posting are optional. Adding it opens its Application page, which asks "Got an Interview lined up? Add it here." and puts focus on Add Interview.
 _Avoid_: job, opportunity, lead
 
 **Application page**:

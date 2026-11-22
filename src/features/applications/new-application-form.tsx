@@ -52,7 +52,7 @@ function NewApplicationFields() {
         if (!result.ok) details.setFieldErrors(result.fieldErrors ?? {});
         else if ("id" in result) {
           setAdded(true);
-          router.push(applicationHref(result.id));
+          router.push(applicationHref(result.id, { added: true }));
         }
       });
   }
