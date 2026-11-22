@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/applications/actions";
+import { ApplicationEditor } from "@/features/applications/application-editor";
 import { NewApplicationForm } from "@/features/applications/new-application-form";
 import { NewInterviewForm } from "@/features/applications/new-interview-form";
 import { getUpcoming } from "@/lib/applications";
@@ -71,18 +72,19 @@ function expectNothingInjected() {
 }
 
 describe.each(XSS_TEXT.map((payload, n) => [payload, XSS_URLS[n]] as const))("%j with Posting link %j", (payload, url) => {
-  it("shows as text in the Applications list and in the open Application, with no Posting link", async () => {
-    const user = userEvent.setup();
+  it("shows as text in the Applications list, with no Posting link", () => {
     render(<DashboardApplications applications={[poisoned(payload, url)]} />);
     expect(screen.getAllByText(payload, { exact: false }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("link", { name: /job posting/ })).not.toBeInTheDocument();
     expectNothingInjected();
+  });
 
-    await user.click(screen.getByRole("button", { name: /^Open / }));
-    const dialog = screen.getByRole("dialog");
-    expect(within(dialog).getByLabelText("Company")).toHaveValue(payload);
-    expect(within(dialog).getByLabelText("Location")).toHaveValue(payload);
-    expect(within(dialog).getByLabelText(/^Interview notes/)).toHaveValue(payload);
-    expect(within(dialog).queryByRole("link", { name: /job posting/ })).not.toBeInTheDocument();
+  it("shows as text on the Application page, with no Posting link", () => {
+    render(<ApplicationEditor app={poisoned(payload, url)} />);
+    expect(screen.getByLabelText("Company")).toHaveValue(payload);
+    expect(screen.getByLabelText("Location")).toHaveValue(payload);
+    expect(screen.getByLabelText(/^Interview notes/)).toHaveValue(payload);
+    expect(screen.queryByRole("link", { name: /job posting/ })).not.toBeInTheDocument();
     expectNothingInjected();
   });
 
@@ -128,7 +130,7 @@ describe("the Add Interview form", () => {
   });
 });
 
-describe("the edit forms", () => {
+describe("the edit forms on the Application page", () => {
   const birch = application("birch", {
     company: "Birch",
     is_waiting: false,
@@ -137,31 +139,29 @@ describe("the edit forms", () => {
 
   async function openBirch() {
     const user = userEvent.setup();
-    render(<DashboardApplications applications={[birch]} />);
-    await user.click(screen.getByRole("button", { name: /^Open Birch\b/ }));
-    const dialog = screen.getByRole("dialog", { name: "Birch" });
+    render(<ApplicationEditor app={birch} />);
     /** Pastes rather than types: user-event reads braces and brackets as key names. */
     async function fill(label: string | RegExp, value: string) {
-      const input = within(dialog).getByLabelText(label);
+      const input = screen.getByLabelText(label);
       await user.clear(input);
       await user.click(input);
       await user.paste(value);
     }
-    return { user, dialog, fill };
+    return { user, fill };
   }
 
   it.each(XSS_TEXT)("send %j exactly as typed, from the details and the Interview notes", async (payload) => {
-    const { user, dialog, fill } = await openBirch();
+    const { user, fill } = await openBirch();
     await fill("Company", payload);
     await fill("Location", payload);
-    await user.click(within(dialog).getByRole("button", { name: "Save details" }));
+    await user.click(screen.getByRole("button", { name: "Save details" }));
     expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", {
       company: payload.trim(),
       location: payload.trim(),
     });
 
     await fill(/^Interview notes/, payload);
-    await user.click(within(dialog).getByRole("button", { name: "Save notes, Interview 1" }));
+    await user.click(screen.getByRole("button", { name: "Save notes, Interview 1" }));
     expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { notes: payload.trim() });
     expectNothingInjected();
   });
@@ -169,14 +169,14 @@ describe("the edit forms", () => {
   it.each(XSS_URLS.filter((url) => url.trim() === url))(
     "refuse Posting link %j beside the field, and send nothing",
     async (url) => {
-      const { user, dialog, fill } = await openBirch();
+      const { user, fill } = await openBirch();
       await fill("Job posting URL", url);
-      await user.click(within(dialog).getByRole("button", { name: "Save details" }));
+      await user.click(screen.getByRole("button", { name: "Save details" }));
 
-      const field = within(dialog).getByLabelText("Job posting URL");
+      const field = screen.getByLabelText("Job posting URL");
       expect(field).toBeInvalid();
       expect(field).toHaveAccessibleDescription("Enter a link that starts with http:// or https://.");
-      expect(within(dialog).getByRole("alert")).toHaveTextContent("Enter a link that starts with http:// or https://.");
+      expect(screen.getByRole("alert")).toHaveTextContent("Enter a link that starts with http:// or https://.");
       expect(actions.updateApplicationAction).not.toHaveBeenCalled();
     },
   );

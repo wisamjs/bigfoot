@@ -2,16 +2,14 @@
 
 import { useState } from "react";
 import { ApplicationList } from "@/features/applications/application-list";
-import { ApplicationPanel } from "@/features/applications/application-panel";
 import { doneWithoutOffer, type Application } from "@/lib/applications";
 
 /**
- * The dashboard's Applications: each card opens its Application in the side panel, and Show done
- * adds the Done group.
+ * The dashboard's Applications: each card links to its Application's page, and Show done adds the
+ * Done group.
  */
 export function DashboardApplications({ applications }: { applications: Application[] }) {
   const [showDone, setShowDone] = useState(false);
-  const [openId, setOpenId] = useState<string | null>(null);
 
   const doneCount = doneWithoutOffer(applications).length;
 
@@ -28,13 +26,7 @@ export function DashboardApplications({ applications }: { applications: Applicat
           Show done ({doneCount})
         </label>
       )}
-      <ApplicationList applications={applications} showDone={showDone} onOpen={(app) => setOpenId(app.id)} />
-
-      <ApplicationPanel
-        view={openId ? { kind: "application", id: openId } : null}
-        applications={applications}
-        onClose={() => setOpenId(null)}
-      />
+      <ApplicationList applications={applications} showDone={showDone} linked />
     </>
   );
 }

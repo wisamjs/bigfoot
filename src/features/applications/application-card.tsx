@@ -1,8 +1,10 @@
 "use client";
 
 import { NotebookPen } from "lucide-react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { ApplicationWhen, InterviewWhen } from "@/features/applications/application-when";
+import { applicationHref } from "@/features/applications/routes";
 import { SampleBadge } from "@/features/applications/sample-badge";
 import { INTERVIEW_TONE, OUTCOME_TONE } from "@/features/applications/status-tone";
 import {
@@ -19,10 +21,10 @@ export const cardClasses = "relative rounded-control border border-line bg-card-
 /**
  * One Application in the list, answering "what's next here?": its next Interview (or how long
  * it has been waiting), any Interview whose date is needed, how many Interviews are completed, and
- * its Outcome once Done. Every Interview, with its Interview notes, is in the side panel. From
+ * its Outcome once Done. Every Interview, with its Interview notes, is on its Application page. From
  * `sm` up, it is one row: company and role, then the next Interview, then the completed count.
  */
-export function Card({ job, onOpen }: { job: Application; onOpen?: (app: Application) => void }) {
+export function Card({ job, linked = false }: { job: Application; linked?: boolean }) {
   const upcoming = upcomingInterviews(job);
   const next = upcoming[0];
   // Saved before dates were required (docs/adr/0005): they count as completed, but show as needing a date.
@@ -34,23 +36,22 @@ export function Card({ job, onOpen }: { job: Application; onOpen?: (app: Applica
   return (
     <li
       className={`${cardClasses} ${
-        onOpen ? "cursor-pointer transition-all duration-200 hover:border-line-medium hover:shadow-md" : ""
+        linked ? "cursor-pointer transition-all duration-200 hover:border-line-medium hover:shadow-md" : ""
       }`}
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
         <div className="min-w-0 sm:w-64 sm:shrink-0">
           <p className="m-0 min-w-0 text-sm font-medium leading-5 text-heading">
-            {onOpen ? (
-              // Stretched button: its ::after covers the card, so the whole card opens the Application.
-              <button
-                type="button"
-                onClick={() => onOpen(job)}
-                className="cursor-pointer text-left after:absolute after:inset-0 after:rounded-control focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-brand"
+            {linked ? (
+              // Stretched link: its ::after covers the card, so the whole card opens the Application.
+              <Link
+                href={applicationHref(job.id)}
+                className="after:absolute after:inset-0 after:rounded-control focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-brand"
               >
                 <span className="sr-only">Open </span>
                 {job.company}
                 <span className="sr-only">, {job.title}</span>
-              </button>
+              </Link>
             ) : (
               job.company
             )}
@@ -108,7 +109,7 @@ function InterviewLine({ interview, label }: { interview: Interview; label: stri
   );
 }
 
-/** "3 completed", with a mark when any of them have Interview notes (read in the side panel). */
+/** "3 completed", with a mark when any of them have Interview notes (read on its Application page). */
 function CompletedCount({ count, withNotes }: { count: number; withNotes: number }) {
   return (
     <p className="m-0 inline-flex items-center gap-1.5">

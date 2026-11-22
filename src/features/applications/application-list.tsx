@@ -11,8 +11,8 @@ type Props = {
   applications: Application[];
   /** Show Done Applications other than Offers in a Done group. */
   showDone?: boolean;
-  /** Makes each card a button that opens the Application. */
-  onOpen?: (app: Application) => void;
+  /** Makes each card a link to its Application's page. */
+  linked?: boolean;
   /** Render as a decorative picture (landing page) instead of readable content. */
   decorative?: boolean;
 };
@@ -21,7 +21,7 @@ type Props = {
  * The dashboard's Applications: one full-width group per thing they are waiting on (Waiting,
  * Interview scheduled, Offer, and Done on request), each holding full-width cards.
  */
-export function ApplicationList({ applications, showDone = false, onOpen, decorative = false }: Props) {
+export function ApplicationList({ applications, showDone = false, linked = false, decorative = false }: Props) {
   const groups = getApplicationGroups(applications, { showDone });
   const a11y = decorative
     ? {
@@ -48,7 +48,7 @@ export function ApplicationList({ applications, showDone = false, onOpen, decora
           </div>
           <ul className={cardListClasses}>
             {group.applications.map((job) => (
-              <Card key={job.id} job={job} onOpen={onOpen} />
+              <Card key={job.id} job={job} linked={linked} />
             ))}
           </ul>
         </section>

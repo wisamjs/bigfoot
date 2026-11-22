@@ -5,16 +5,19 @@ import { deleteApplicationAction } from "@/app/applications/actions";
 import { Button } from "@/components/ui/button";
 import type { Application } from "@/lib/applications";
 
-/** The body of the Delete application? dialog: deletes only once confirmed. */
-export function DeleteConfirmation({ app, onDone }: { app: Application; onDone: () => void }) {
+/**
+ * The body of the Delete application? dialog: deletes only once confirmed. The action then takes
+ * the job seeker to the dashboard, so only Cancel is handled here.
+ */
+export function DeleteConfirmation({ app, onCancel }: { app: Application; onCancel: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function remove() {
     startTransition(async () => {
       const result = await deleteApplicationAction(app.id);
-      if (result.ok) onDone();
-      else setError(result.error);
+      // On success the action redirects, so there is nothing to do but show a failure.
+      if (!result.ok) setError(result.error);
     });
   }
 
@@ -33,7 +36,7 @@ export function DeleteConfirmation({ app, onDone }: { app: Application; onDone: 
       )}
       <div className="mt-2 flex justify-end gap-3 border-t border-line pt-4">
         <Button
-          onClick={onDone}
+          onClick={onCancel}
           // eslint-disable-next-line jsx-a11y/no-autofocus -- opening a delete dialog moves focus to its safe choice (WAI-ARIA dialog pattern).
           autoFocus
           variant="secondary"

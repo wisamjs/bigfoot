@@ -14,6 +14,7 @@ import { createRequire } from "node:module";
 import { dialogKeyboardProblems, enterState, launchChrome, openPage, skipLinkProblems } from "./chrome.mjs";
 import { withNoApplications, withTestApplications } from "./dev-applications.mjs";
 import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
+import { pagePath } from "./page-path.mjs";
 import { PAGES } from "./pages.mjs";
 import { ensureServers } from "./servers.mjs";
 
@@ -30,8 +31,11 @@ const STATES_JOB_SEEKER_ID = "a11y-user";
 const EMPTY_JOB_SEEKER_ID = "a11y-empty-user";
 const SCHEMES = ["light", "dark"];
 
-// Every page that renders (not redirects), signed out and signed in.
-const pages = PAGES.filter((page) => !page.redirect);
+// Every page that renders (not redirects), signed out and signed in. A page with an `application` needs
+// the Applications from scripts/dev-applications.mjs, so it is checked with the `states` below.
+const rendered = PAGES.filter((page) => !page.redirect);
+const pages = rendered.filter((page) => !page.application);
+const dataPages = rendered.filter((page) => page.application);
 
 /** axe violations on the page as it stands, one line per failing element. */
 async function violations(chrome, where) {
@@ -104,7 +108,7 @@ try {
     await setScheme(chrome, scheme);
     for (const page of pages) {
       await signIn(chrome, page.signedIn ? undefined : null);
-      await openPage(chrome, `${base}${page.path}`, page.expect);
+      await openPage(chrome, `${base}${await pagePath(page)}`, page.expect);
       report(`${page.path} (${page.signedIn ? "signed in" : "signed out"}, ${scheme})`, await violations(chrome, page.path));
     }
   }
@@ -114,13 +118,13 @@ try {
   for (const page of pages) {
     const label = `${page.path} (${page.signedIn ? "signed in" : "signed out"})`;
     await signIn(chrome, page.signedIn ? undefined : null);
-    await openPage(chrome, `${base}${page.path}`, page.expect);
+    await openPage(chrome, `${base}${await pagePath(page)}`, page.expect);
     report(`${label} at ${REFLOW_WIDTH}px`, await reflowProblems(chrome));
     report(`${label} skip link`, await skipLinkProblems(chrome));
   }
   await setWidth(chrome, DESKTOP);
 
-  const withStates = pages.filter((page) => page.states?.length);
+  const withStates = rendered.filter((page) => page.states?.length);
   const empty = (state) => state.applications === "none";
 
   /** Runs axe on each state `pick` keeps, signed in as `jobSeekerId`, and uses any open dialog by keyboard. */
@@ -132,7 +136,7 @@ try {
         if (!states.length) continue;
         await signIn(chrome, page.signedIn ? jobSeekerId : null);
         for (const state of states) {
-          await openPage(chrome, `${base}${page.path}`, page.expect);
+          await openPage(chrome, `${base}${await pagePath(page, jobSeekerId)}`, page.expect);
           await enterState(chrome, state);
           report(`${page.path} ${state.name} (${scheme})`, await violations(chrome, `${page.path} ${state.name}`));
           // Keyboard behaviour doesn't depend on the colour scheme, so check it once. Last: it closes the dialog.
@@ -142,9 +146,32 @@ try {
     }
   }
 
+  /** The pages that need Applications, as the pages above are checked: colours, reflow and the skip link. */
+  async function checkDataPages(jobSeekerId) {
+    for (const scheme of SCHEMES) {
+      await setScheme(chrome, scheme);
+      for (const page of dataPages) {
+        await signIn(chrome, jobSeekerId);
+        await openPage(chrome, `${base}${await pagePath(page, jobSeekerId)}`, page.expect);
+        report(`${page.path} (signed in, ${scheme})`, await violations(chrome, page.path));
+      }
+    }
+    await setWidth(chrome, { width: REFLOW_WIDTH, height: 640 });
+    for (const page of dataPages) {
+      await signIn(chrome, jobSeekerId);
+      await openPage(chrome, `${base}${await pagePath(page, jobSeekerId)}`, page.expect);
+      report(`${page.path} (signed in) at ${REFLOW_WIDTH}px`, await reflowProblems(chrome));
+      report(`${page.path} (signed in) skip link`, await skipLinkProblems(chrome));
+    }
+    await setWidth(chrome, DESKTOP);
+  }
+
   const states = withStates.flatMap((page) => page.states);
-  if (states.some((s) => !empty(s))) {
-    await withTestApplications(STATES_JOB_SEEKER_ID, () => checkStates(STATES_JOB_SEEKER_ID, (s) => !empty(s)));
+  if (dataPages.length || states.some((s) => !empty(s))) {
+    await withTestApplications(STATES_JOB_SEEKER_ID, async () => {
+      await checkDataPages(STATES_JOB_SEEKER_ID);
+      await checkStates(STATES_JOB_SEEKER_ID, (s) => !empty(s));
+    });
   }
   if (states.some(empty)) {
     await withNoApplications(EMPTY_JOB_SEEKER_ID, () => checkStates(EMPTY_JOB_SEEKER_ID, empty));

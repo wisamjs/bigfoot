@@ -52,7 +52,7 @@ function applications() {
     { company: "Ramp", title: "Staff Engineer", status: "done", outcome: "offer", interviews: [["onsite_loop", -6, 10]] },
     { company: "Vercel", title: "Frontend Engineer", status: "done", outcome: "rejected", interviews: [["technical", -8, 10]] },
     { company: "Plaid", title: "Software Engineer", status: "done", outcome: "withdrawn", interviews: [["recruiter_screen", -10, 10]] },
-      // Each has a salary, so the panel's hidden salary and its Reveal button are captured and checked.
+      // Each has a salary, so an Application page's hidden salary and its Reveal button are captured and checked.
   ].map((a) => ({ applied_on, salary: "$150k–$180k", ...a }));
 }
 

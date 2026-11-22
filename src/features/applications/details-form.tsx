@@ -9,8 +9,8 @@ import { DETAIL_FIELDS, DetailsFields, FormAlert, useDetails } from "@/features/
 import type { Application } from "@/lib/applications";
 
 /**
- * An Application's details, to edit in the panel. They save together with one button, so a value
- * typed before closing the panel is never half-saved. Only the details that changed are sent.
+ * An Application's details, to edit on the Application page. They save together with one button, so a value
+ * typed before leaving the page is never half-saved. Only the details that changed are sent.
  */
 export function DetailsForm({
   app,
@@ -54,9 +54,9 @@ export function DetailsForm({
     // show every problem at once, beside its field, in Bigfoot's words.
     <form onSubmit={submit} noValidate aria-labelledby={`${details.id}-heading`} className="flex flex-col gap-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 id={`${details.id}-heading`} className="m-0 text-base font-bold leading-[1.25] text-heading">
+        <h2 id={`${details.id}-heading`} className="m-0 text-base font-bold leading-[1.25] text-heading">
           Details
-        </h3>
+        </h2>
         <RequiredNote />
       </div>
       <DetailsFields details={details} app={app} salaryHidden={salaryHidden} onRevealSalary={onRevealSalary} />
