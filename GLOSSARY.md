@@ -15,7 +15,7 @@ The person running a job search in Bigfoot: its user. A job seeker has one accou
 _Avoid_: user, owner, candidate, applicant
 
 **Access token**:
-A secret a job seeker creates on the Account page and gives a script, such as a cron job, so it can use Bigfoot's API as them without a browser. It reads that job seeker's Applications and Interviews, and nothing else: it can't change them, delete the account or manage Access tokens. A job seeker names each one and can have several. Bigfoot shows the secret once, when the token is created, and stores only a hash of it. The Account page lists each token's name and when it was created and expires. A token expires one year after it is created. Revoking one stops it working straight away and removes it from the list; this can't be undone.
+A secret a job seeker creates on the Account page and gives a script, such as a cron job, so it can use Bigfoot's API as them without a browser. It reads and writes that job seeker's Applications and Interviews, and nothing else: it can't delete the account or manage Access tokens. A job seeker names each one and can have several. Bigfoot shows the secret once, when the token is created, and stores only a hash of it. The Account page lists each token's name and when it was created, last used and expires. A token expires one year after it is created. Revoking one stops it working straight away and removes it from the list; this can't be undone.
 _Avoid_: API key, personal access token, PAT, credential; delete (a token is revoked)
 
 **Application**:

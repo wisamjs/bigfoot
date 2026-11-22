@@ -16,6 +16,7 @@ function token(overrides: Partial<AccessToken> = {}): AccessToken {
     id: "t1",
     name: "Calendar cron job",
     created_at: "2026-11-16T12:00:00Z",
+    last_used_at: null,
     expires_at: "2027-11-16T12:00:00Z",
     expired: false,
     ...overrides,
@@ -49,13 +50,19 @@ describe("AccessTokens", () => {
     return within(item).getAllByRole("definition")[terms.findIndex((term) => term.textContent === label)];
   }
 
-  it("lists each token's name, created date and expiry, and never a secret", () => {
-    render(<AccessTokens tokens={[token(), token({ id: "t3", name: "Old laptop" })]} apiUrl={API} />);
+  it("lists each token's name, created date, last use and expiry, and never a secret", () => {
+    render(
+      <AccessTokens
+        tokens={[token(), token({ id: "t3", name: "Old laptop", last_used_at: "2026-11-17T09:30:00Z" })]}
+        apiUrl={API}
+      />,
+    );
     const [first, second] = screen.getAllByRole("listitem");
     expect(within(first).getByText("Calendar cron job")).toBeVisible();
     expect(fact(first, "Created")).toHaveTextContent("2026");
+    expect(fact(first, "Last used")).toHaveTextContent("Never");
     expect(fact(first, "Expires")).toHaveTextContent("2027");
-    expect(within(second).getByText("Old laptop")).toBeVisible();
+    expect(fact(second, "Last used")).toHaveTextContent("2026");
     expect(document.body).not.toHaveTextContent("bigfoot_");
   });
 

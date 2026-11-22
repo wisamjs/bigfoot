@@ -254,6 +254,10 @@ class AccessToken(BaseModel):
     id: UUID
     name: str = Field(description="What the job seeker called the token.", examples=["Calendar cron job"])
     created_at: datetime
+    last_used_at: datetime | None = Field(
+        description="When a request last used the token, to within a minute; null until one does.",
+        examples=["2026-11-20T17:00:00Z"],
+    )
     expires_at: datetime = Field(
         description="When the token stops working: a year after it was created.", examples=["2027-11-16T17:00:00Z"]
     )
@@ -297,7 +301,7 @@ APPLICATION_COLUMNS = (
 )
 COLUMNS = sql.SQL(APPLICATION_COLUMNS)
 # `expired` is derived on every read, never stored, like an Interview's `completed`.
-ACCESS_TOKEN_COLUMNS = sql.SQL("id, name, created_at, expires_at, expires_at <= now() as expired")
+ACCESS_TOKEN_COLUMNS = sql.SQL("id, name, created_at, last_used_at, expires_at, expires_at <= now() as expired")
 INTERVIEW_COLUMNS = sql.SQL("id, application_id, kind, at, notes, created_at, updated_at")
 # Undated Interviews sort first (GLOSSARY.md, Interview).
 INTERVIEW_ORDER = sql.SQL("order by at nulls first, created_at, id")
@@ -341,8 +345,8 @@ def job_seeker_hash(job_seeker: str) -> str:
 UNAUTHORIZED: dict[int | str, dict[str, Any]] = {
     401: {"model": ErrorMessage, "description": "The bearer token is missing, expired or invalid."}
 }
-WEB_TOKEN_ONLY: dict[int | str, dict[str, Any]] = {
-    403: {"model": ErrorMessage, "description": "The bearer token is an Access token, which can't use this route."}
+ACCOUNT_ONLY: dict[int | str, dict[str, Any]] = {
+    403: {"model": ErrorMessage, "description": "The bearer token is an Access token, which can't use Account routes."}
 }
 APPLICATION_NOT_FOUND: dict[int | str, dict[str, Any]] = {
     404: {"model": ErrorMessage, "description": "No Application with this id belongs to the job seeker."}
@@ -361,13 +365,12 @@ Every route but `/health` needs `Authorization: Bearer <token>`, and reads and w
 of the job seeker the token names. There are two kinds of token:
 
 - **Access token** (`AccessToken`): a secret starting with `bigfoot_` that a job seeker creates on
-  their Account page and gives a script, such as a cron job. It works on the routes that read
-  Applications and Interviews; every other route answers it with 403. It expires after a year, and
-  can be revoked
+  their Account page and gives a script, such as a cron job. It works on the Applications and
+  Interviews routes, expires after a year, and can be revoked
   ([ADR 0003](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0003-access-tokens-open-fastapi-to-scripts.md)).
 - **Web token** (`WebToken`): a short-lived JWT the Next.js server signs for the signed-in job
   seeker. The browser itself never calls this API. Web tokens work on every route, and are the only
-  way to change data or use the Account and Access tokens routes
+  way to use the Account and Access tokens routes
   ([ADR 0001](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0001-fastapi-behind-nextjs-with-authjs.md)).
 
 Terms such as Application, Interview, Waiting, Sample Application and Access token are defined in
@@ -434,9 +437,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         openapi_url="/openapi.json" if docs else None,
     )
     app.state.settings = settings
-    account = APIRouter(prefix="/me", tags=["Account"], responses={**UNAUTHORIZED, **WEB_TOKEN_ONLY})
+    account = APIRouter(prefix="/me", tags=["Account"], responses={**UNAUTHORIZED, **ACCOUNT_ONLY})
     access_tokens = APIRouter(
-        prefix="/me/access-tokens", tags=["Access tokens"], responses={**UNAUTHORIZED, **WEB_TOKEN_ONLY}
+        prefix="/me/access-tokens", tags=["Access tokens"], responses={**UNAUTHORIZED, **ACCOUNT_ONLY}
     )
     applications = APIRouter(prefix="/applications", tags=["Applications"], responses=UNAUTHORIZED)
     interviews = APIRouter(
@@ -600,14 +603,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         status_code=status.HTTP_201_CREATED,
         summary="Add an Application",
         responses={
-            **WEB_TOKEN_ONLY,
             409: {
                 "model": ErrorMessage,
                 "description": f"The job seeker already has {APPLICATIONS_MAX:,} Applications, the most Bigfoot keeps.",
-            },
+            }
         },
     )
-    def create_application(request: Request, job_seeker: SignedInJobSeekerId, body: ApplicationCreate) -> Application:
+    def create_application(request: Request, job_seeker: JobSeekerId, body: ApplicationCreate) -> Application:
         """Add an Application for the job seeker. It starts In Progress with no Interviews unless the body
         says otherwise; a Done Application needs an Outcome. The number of Applications is capped (409)."""
         values = body.model_dump(exclude_none=True)
@@ -635,7 +637,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         "/{application_id}",
         summary="Edit an Application",
         responses={
-            **WEB_TOKEN_ONLY,
             **APPLICATION_NOT_FOUND,
             422: {
                 "description": (
@@ -656,7 +657,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         },
     )
     def update_application(
-        request: Request, job_seeker: SignedInJobSeekerId, application_id: ApplicationId, body: ApplicationPatch
+        request: Request, job_seeker: JobSeekerId, application_id: ApplicationId, body: ApplicationPatch
     ) -> Application:
         """Change some of an Application's fields and return it with its Interviews.
 
@@ -691,9 +692,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         "/{application_id}",
         status_code=status.HTTP_204_NO_CONTENT,
         summary="Delete an Application",
-        responses={**APPLICATION_NOT_FOUND, **WEB_TOKEN_ONLY},
+        responses=APPLICATION_NOT_FOUND,
     )
-    def delete_application(request: Request, job_seeker: SignedInJobSeekerId, application_id: ApplicationId) -> None:
+    def delete_application(request: Request, job_seeker: JobSeekerId, application_id: ApplicationId) -> None:
         """Delete an Application and all of its Interviews. Sample Applications can be deleted like any other."""
         with pool(request).connection() as conn:
             deleted = conn.execute(
@@ -725,7 +726,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         status_code=status.HTTP_201_CREATED,
         summary="Add an Interview",
         responses={
-            **WEB_TOKEN_ONLY,
             404: {"model": ErrorMessage, "description": APPLICATION_NOT_FOUND[404]["description"]},
             409: {
                 "model": ErrorMessage,
@@ -736,7 +736,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         },
     )
     def create_interview(
-        request: Request, job_seeker: SignedInJobSeekerId, application_id: ApplicationId, body: InterviewCreate
+        request: Request, job_seeker: JobSeekerId, application_id: ApplicationId, body: InterviewCreate
     ) -> Interview:
         """Add an Interview to an Application. Kinds can repeat; the date and Interview notes are optional.
         The number of Interviews per Application is capped (409)."""
@@ -759,10 +759,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             ).fetchone()
         return _interview(row, datetime.now(UTC))
 
-    @interviews.patch("/{interview_id}", summary="Edit an Interview", responses=WEB_TOKEN_ONLY)
+    @interviews.patch("/{interview_id}", summary="Edit an Interview")
     def update_interview(
         request: Request,
-        job_seeker: SignedInJobSeekerId,
+        job_seeker: JobSeekerId,
         application_id: ApplicationId,
         interview_id: InterviewId,
         body: InterviewPatch,
@@ -786,14 +786,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Interview not found")
         return _interview(row, datetime.now(UTC))
 
-    @interviews.delete(
-        "/{interview_id}",
-        status_code=status.HTTP_204_NO_CONTENT,
-        summary="Delete an Interview",
-        responses=WEB_TOKEN_ONLY,
-    )
+    @interviews.delete("/{interview_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete an Interview")
     def delete_interview(
-        request: Request, job_seeker: SignedInJobSeekerId, application_id: ApplicationId, interview_id: InterviewId
+        request: Request, job_seeker: JobSeekerId, application_id: ApplicationId, interview_id: InterviewId
     ) -> None:
         """Delete an Interview, for example a cancelled one, and its Interview notes with it."""
         with pool(request).connection() as conn, conn.transaction():
