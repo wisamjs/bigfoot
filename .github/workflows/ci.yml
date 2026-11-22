@@ -92,11 +92,16 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
         # `--name-only` lists a renamed file by its new path only, so the old paths are added from
         # the diff's `rename from` lines: moving code to a .md name must still need review.
+        # If the base has no classifier yet (the PR that adds it), the PR needs review.
         run: |
-          {
-            gh pr diff "$PR" --name-only
-            gh pr diff "$PR" | sed -n 's/^rename from //p'
-          } | node scripts/review-needed.mjs >> "$GITHUB_OUTPUT"
+          if [ ! -f scripts/review-needed.mjs ]; then
+            echo "review=true" >> "$GITHUB_OUTPUT"
+          else
+            {
+              gh pr diff "$PR" --name-only
+              gh pr diff "$PR" | sed -n 's/^rename from //p'
+            } | node scripts/review-needed.mjs >> "$GITHUB_OUTPUT"
+          fi
           cat "$GITHUB_OUTPUT"
 
   # Holds every PR that needs review until the owner clicks "Review deployments" (the

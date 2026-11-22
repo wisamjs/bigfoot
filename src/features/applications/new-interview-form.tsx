@@ -15,6 +15,7 @@ import { FormAlert } from "@/features/applications/details-fields";
 import { fromLocalInput } from "@/features/applications/local-datetime";
 import { PLACEHOLDERS } from "@/features/applications/placeholders";
 import { ADD_APPLICATION_HREF } from "@/features/applications/routes";
+import { UnsavedChanges, useUnsavedChanges } from "@/features/applications/unsaved-changes";
 import {
   INTERVIEW_KINDS,
   INTERVIEW_NOTES_MAX_LENGTH,
@@ -33,12 +34,23 @@ type Control = keyof typeof CONTROLS;
  * its kind, its date and time (both required, no time assumed), and Interview notes. Adding it
  * goes back to the dashboard. With no Applications, it explains that an Interview needs one.
  */
-export function NewInterviewForm({
+export function NewInterviewForm(props: {
+  applications: Application[];
+  /** The Application already chosen, as when an Application page's Add Interview opens this page. */
+  applicationId?: string;
+}) {
+  return (
+    <UnsavedChanges>
+      <NewInterviewFields {...props} />
+    </UnsavedChanges>
+  );
+}
+
+function NewInterviewFields({
   applications,
   applicationId: chosen = "",
 }: {
   applications: Application[];
-  /** The Application already chosen, as when an Application page's Add Interview opens this page. */
   applicationId?: string;
 }) {
   const id = useId();
@@ -51,6 +63,21 @@ export function NewInterviewForm({
   const [fieldErrors, setFieldErrors] = useState<FieldErrors<Control>>({});
   // What's wrong before anything is sent; errors from the save itself show in SaveStatus.
   const [invalid, setInvalid] = useState<string | null>(null);
+  // Once it's added, the page is on its way back to the dashboard: nothing is lost by leaving.
+  const [added, setAdded] = useState(false);
+  // The first control changed from where the form started; the Application chosen for it doesn't count.
+  const changed = (
+    [
+      ["application", applicationId !== chosen],
+      ["kind", kind !== "informal_chat"],
+      ["date", at.date !== ""],
+      ["time", at.time !== ""],
+      ["notes", notes !== ""],
+    ] as const
+  ).find(([, differs]) => differs)?.[0];
+  useUnsavedChanges(!added && changed !== undefined, () => {
+    if (changed) document.getElementById(`${id}-${CONTROLS[changed]}`)?.focus();
+  });
 
   if (applications.length === 0) {
     return (
@@ -111,7 +138,10 @@ export function NewInterviewForm({
         if (!result.ok) {
           const { at: atError, ...rest } = result.fieldErrors ?? {};
           setFieldErrors({ ...rest, ...(atError ? { date: atError } : {}) });
-        } else router.push("/dashboard");
+        } else {
+          setAdded(true);
+          router.push("/dashboard");
+        }
       });
   }
 

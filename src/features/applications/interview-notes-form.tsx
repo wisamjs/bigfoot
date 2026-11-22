@@ -5,6 +5,7 @@ import { FieldError, invalidProps } from "@/components/ui/field-error";
 import { inputClasses } from "@/components/ui/input";
 import { PLACEHOLDERS } from "@/features/applications/placeholders";
 import { SaveStatus } from "@/components/ui/save-status";
+import { useUnsavedChanges } from "@/features/applications/unsaved-changes";
 import type { SaveResult, SaveTracker } from "@/hooks/use-save-status";
 import { INTERVIEW_NOTES_MAX_LENGTH, type Interview } from "@/lib/applications";
 
@@ -38,6 +39,8 @@ export function InterviewNotesForm({
 }) {
   const [draft, setDraft] = useState(interview.notes ?? "");
   const [seen, setSeen] = useState(interview.notes);
+  // What the server holds, for the unsaved check: the saved notes, or what a save just stored.
+  const [stored, setStored] = useState(interview.notes);
   const [error, setError] = useState<string | undefined>();
   const errorId = `notes-${interview.id}-error`;
   const nearLimit = draft.length >= INTERVIEW_NOTES_MAX_LENGTH * 0.9;
@@ -64,8 +67,14 @@ export function InterviewNotesForm({
   // React advises for state that follows a prop.
   if (interview.notes !== seen) {
     setSeen(interview.notes);
+    setStored(interview.notes);
     if ((draft.trim() || null) === seen) setDraft(interview.notes ?? "");
   }
+
+  // Notes still inside their typing pause, or whose save failed, are lost on leaving.
+  useUnsavedChanges((draft.trim() || null) !== stored, () =>
+    document.getElementById(`notes-${interview.id}`)?.focus(),
+  );
 
   /** Saves what's typed now, if it differs from what's stored, once no other save is in flight. */
   function flush() {
@@ -83,7 +92,10 @@ export function InterviewNotesForm({
     sendingRef.current = true;
     void sent.then((result) => {
       sendingRef.current = false;
-      if (result.ok) storedRef.current = notes;
+      if (result.ok) {
+        storedRef.current = notes;
+        setStored(notes);
+      }
       if (flushAgainRef.current) {
         flushAgainRef.current = false;
         flush();
