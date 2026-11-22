@@ -10,7 +10,11 @@ export function addInterviewHref(applicationId?: string) {
   return `/interviews/new?${new URLSearchParams({ [APPLICATION_PARAM]: applicationId })}`;
 }
 
-/** An Application's own page. */
-export function applicationHref(id: string) {
-  return `/applications/${encodeURIComponent(id)}`;
+/** The search param that marks an Application page opened just after adding it. */
+export const ADDED_PARAM = "added";
+
+/** An Application's own page, or with `added`, as it opens just after the Application was added. */
+export function applicationHref(id: string, { added = false }: { added?: boolean } = {}) {
+  const path = `/applications/${encodeURIComponent(id)}`;
+  return added ? `${path}?${ADDED_PARAM}=1` : path;
 }

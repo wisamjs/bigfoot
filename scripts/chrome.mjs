@@ -64,7 +64,7 @@ async function expectText(chrome, expect, where, timeoutMs = 0) {
 /**
  * Runs a page state's steps (scripts/pages.mjs). A `click` step focuses and clicks the first element
  * matching it whose text includes `text`, as a pointer click in Chrome does, so a dialog it opens
- * knows where to return focus. A `fill` step types `value` into the first element matching it. Then
+ * knows where to return focus. A `fill` step types `value` into the first element matching it, once React has hydrated it. Then
  * waits for the page to show the state's `expect`, failing if it never does.
  */
 export async function enterState(chrome, state) {
@@ -72,7 +72,8 @@ export async function enterState(chrome, state) {
     const expression = step.fill
       ? `(() => {
         const el = document.querySelector(${JSON.stringify(step.fill)});
-        if (!el) return false;
+        // Not until React has hydrated the input: a value typed before then is lost to it.
+        if (!el || !Object.keys(el).some((key) => key.startsWith("__reactProps$"))) return false;
         // Through the prototype's setter, so React sees the change on a controlled input.
         Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), "value").set.call(el, ${JSON.stringify(step.value)});
         el.dispatchEvent(new Event("input", { bubbles: true }));
@@ -86,8 +87,14 @@ export async function enterState(chrome, state) {
         (window.__clicked ??= []).push(el);
         return Boolean(el);
       })()`;
-    const { result } = await chrome.send("Runtime.evaluate", { returnByValue: true, expression });
-    if (!result.value) throw new Error(`State "${state.name}": nothing matches ${JSON.stringify(step)}`);
+    // A fill step retries while the page hydrates; a click matches or doesn't.
+    const attempts = step.fill ? PAGE_TEXT_TIMEOUT_MS / 250 : 1;
+    let matched = false;
+    for (let attempt = 0; attempt < attempts && !matched; attempt++) {
+      if (attempt) await sleep(250);
+      matched = (await chrome.send("Runtime.evaluate", { returnByValue: true, expression })).result.value;
+    }
+    if (!matched) throw new Error(`State "${state.name}": nothing matches ${JSON.stringify(step)}`);
     await sleep(400);
   }
   // Waits, not just checks: some states show text only once client components render, which a cold
