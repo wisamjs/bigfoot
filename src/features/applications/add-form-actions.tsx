@@ -1,0 +1,32 @@
+import { Button } from "@/components/ui/button";
+import { SaveStatus } from "@/components/ui/save-status";
+import type { SaveTracker } from "@/hooks/use-save-status";
+
+/**
+ * The foot of an Add page's form: its save status and its submit button. There's no Cancel: the
+ * page's back link leaves it. And no "Saved": the page goes back to the dashboard once it's added.
+ */
+export function AddFormActions({
+  tracker,
+  label,
+  submitText,
+}: {
+  tracker: SaveTracker;
+  /** What is being added, for the save status, such as "New Interview". */
+  label: string;
+  submitText: string;
+}) {
+  return (
+    <div className="mt-2 flex flex-wrap items-center justify-end gap-3 border-t border-line pt-4">
+      <SaveStatus
+        status={tracker.status.phase === "saved" ? { phase: "idle" } : tracker.status}
+        label={label}
+        savingText="Adding…"
+        onRetry={tracker.retry}
+      />
+      <Button type="submit" aria-disabled={tracker.saving || undefined}>
+        {submitText}
+      </Button>
+    </div>
+  );
+}

@@ -36,6 +36,12 @@ const pages = PAGES.filter((page) => !page.redirect);
 /** axe violations on the page as it stands, one line per failing element. */
 async function violations(chrome, where) {
   await chrome.send("Runtime.evaluate", { expression: AXE_SOURCE });
+  // Colours are measured at rest: a button re-enabled by a save fades back in over .btn's
+  // transition, and mid-fade it fails contrast. Animations (spinners, "Saved" fading out) run on.
+  await chrome.send("Runtime.evaluate", {
+    expression: `Promise.all(document.getAnimations().filter((a) => a instanceof CSSTransition).map((a) => a.finished.catch(() => {})))`,
+    awaitPromise: true,
+  });
   const { result, exceptionDetails } = await chrome.send("Runtime.evaluate", {
     expression: `axe.run(document, { runOnly: { type: "tag", values: ${JSON.stringify(AXE_TAGS)} } }).then((r) =>
       r.violations.flatMap((v) => v.nodes.map((n) => \`\${v.id} (\${v.impact}): \${n.target.join(" ")}: \${n.failureSummary.split("\\n").slice(1).join(" ").trim()}\`)))`,

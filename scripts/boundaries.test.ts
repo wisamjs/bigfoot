@@ -68,8 +68,13 @@ describe("import boundaries", () => {
 
   it("flag a file in src that belongs to no element, such as a new top-level folder", async () => {
     // The file doesn't exist, so the TypeScript project service can't parse it; this rule needs
-    // no types, so lint it without them.
-    const untyped = new ESLint({ overrideConfig: { languageOptions: { parserOptions: { projectService: false } } } });
+    // no types, so lint it without them, and without the one rule that refuses to run untyped.
+    const untyped = new ESLint({
+      overrideConfig: {
+        languageOptions: { parserOptions: { projectService: false } },
+        rules: { "@typescript-eslint/no-implied-eval": "off" },
+      },
+    });
     const [result] = await untyped.lintText("export const x = 1;\n", { filePath: "src/utils/probe.ts" });
     expect(result.messages.filter((message) => message.fatal)).toEqual([]);
     expect(result.messages.map((message) => message.ruleId)).toContain("boundaries/no-unknown-files");

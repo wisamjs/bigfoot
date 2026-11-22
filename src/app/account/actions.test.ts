@@ -56,9 +56,22 @@ describe("createAccessTokenAction", () => {
     expect(api.createAccessToken).not.toHaveBeenCalled();
   });
 
+  it("checks the name with the form's rules, without calling the API, because anyone can call it", async () => {
+    expect(await createAccessTokenAction(nothing, form(" "))).toEqual({
+      error: null,
+      nameError: "Enter the name.",
+      created: null,
+    });
+    expect(await createAccessTokenAction(nothing, form("\u202eevil"))).toMatchObject({
+      nameError: "Use only characters you can see in the name.",
+    });
+    expect(await createAccessTokenAction(nothing, new FormData())).toMatchObject({ nameError: "Enter the name." });
+    expect(api.createAccessToken).not.toHaveBeenCalled();
+  });
+
   it("passes on the API's own error message", async () => {
     vi.mocked(api.createAccessToken).mockRejectedValue(new api.ApiError(422, "Name must not be blank"));
-    expect(await createAccessTokenAction(nothing, form(" "))).toEqual({
+    expect(await createAccessTokenAction(nothing, form("x"))).toEqual({
       error: "Name must not be blank",
       created: null,
     });

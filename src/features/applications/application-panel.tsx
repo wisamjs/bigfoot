@@ -1,25 +1,23 @@
 "use client";
 
-import { ChevronRight, Plus } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { DeleteConfirmation } from "@/features/applications/application-dialogs";
-import { ApplicationEditor, NewApplicationForm } from "@/features/applications/application-forms";
+import { ApplicationEditor } from "@/features/applications/application-editor";
 import { Modal, SidePanel } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { SampleBadge } from "@/features/applications/sample-badge";
-import { Button } from "@/components/ui/button";
 import { OUTCOME_TONE, STATUS_TONE } from "@/features/applications/status-tone";
 import { OUTCOME_OPTIONS, STATUS_OPTIONS, type Application } from "@/lib/applications";
 
-/** What the panel shows: an empty Application to add, one Application, or a list to pick from. */
+/** What the panel shows: one Application, or a list to pick from. */
 export type PanelView =
-  | { kind: "add" }
   | { kind: "application"; id: string }
   | { kind: "list"; title: string; ids: string[] };
 
 /**
- * The side panel beside the Pipeline. It shows one whole Application to read and edit, an empty
- * one to add, or a list of Applications that each open in the panel with a Back link. Closed
+ * The side panel beside the Pipeline. It shows one whole Application to read and edit, or a list
+ * of Applications that each open in the panel with a Back link. Closed
  * while `view` is null. Applications are looked up by id in `applications`, so the panel shows
  * each one as saved after every change.
  */
@@ -50,7 +48,7 @@ export function ApplicationPanel({
     onClose();
   }
 
-  const title = shown ? shown.company : view?.kind === "list" ? view.title : "Add application";
+  const title = shown ? shown.company : view?.kind === "list" ? view.title : "";
 
   return (
     <>
@@ -79,14 +77,14 @@ export function ApplicationPanel({
               close();
             }}
           />
-        ) : view?.kind === "list" ? (
-          <ApplicationList
-            applications={view.ids.flatMap((id) => find(id) ?? [])}
-            focusId={returnToId}
-            onOpen={setOpenedId}
-          />
         ) : (
-          <NewApplicationForm onDone={close} />
+          view?.kind === "list" && (
+            <ApplicationList
+              applications={view.ids.flatMap((id) => find(id) ?? [])}
+              focusId={returnToId}
+              onOpen={setOpenedId}
+            />
+          )
         )}
       </SidePanel>
 
@@ -141,19 +139,5 @@ function ApplicationList({
         );
       })}
     </ul>
-  );
-}
-
-/** The dashboard's Add application button, which opens the panel empty. */
-export function AddApplicationButton() {
-  const [adding, setAdding] = useState(false);
-  return (
-    <>
-      <Button onClick={() => setAdding(true)}>
-        <Plus className="size-4" aria-hidden />
-        Add application
-      </Button>
-      <ApplicationPanel view={adding ? { kind: "add" } : null} applications={[]} onClose={() => setAdding(false)} />
-    </>
   );
 }

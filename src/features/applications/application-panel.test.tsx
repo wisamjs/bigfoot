@@ -2,14 +2,14 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import * as actions from "@/app/dashboard/actions";
+import * as actions from "@/app/applications/actions";
 import type { Application } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
-import { AddApplicationButton, ApplicationPanel, type PanelView } from "./application-panel";
+import { ApplicationPanel, type PanelView } from "./application-panel";
 
 // Server Actions are mocked at their module: what the panel sends, not how it reaches the API.
 // Editing Status, details and an Interview's kind and date is covered in dashboard-pipeline.test.tsx.
-vi.mock("@/app/dashboard/actions", () => ({
+vi.mock("@/app/applications/actions", () => ({
   createApplicationAction: vi.fn(),
   updateApplicationAction: vi.fn(),
   deleteApplicationAction: vi.fn(),
@@ -49,71 +49,18 @@ async function openPanel(view: PanelView, applications?: Application[]) {
   return { user, ...utils };
 }
 
-describe("adding an Application", () => {
-  async function openAdd() {
-    const user = userEvent.setup();
-    render(<AddApplicationButton />);
-    await user.click(screen.getByRole("button", { name: "Add application" }));
-    return { user, panel: screen.getByRole("dialog", { name: "Add application" }) };
-  }
-
-  it("opens the panel empty, with no Status, Interviews or Delete", async () => {
-    const { panel } = await openAdd();
-    expect(within(panel).getByLabelText("Company")).toHaveValue("");
-    expect(within(panel).getByLabelText("Salary (optional)")).toHaveValue("");
-    expect(within(panel).getByLabelText("Applied")).not.toHaveValue("");
-    expect(within(panel).queryByLabelText("Status")).not.toBeInTheDocument();
-    expect(within(panel).queryByRole("button", { name: "Add Interview" })).not.toBeInTheDocument();
-    expect(within(panel).queryByRole("button", { name: "Delete application" })).not.toBeInTheDocument();
-  });
-
-  it("creates the Application from the details, trimmed, and closes", async () => {
-    const { user, panel } = await openAdd();
-    await user.type(within(panel).getByLabelText("Company"), " Birch ");
-    await user.type(within(panel).getByLabelText("Title"), "Engineer");
-    await user.type(within(panel).getByLabelText("Salary (optional)"), "$150k");
-    await user.click(within(panel).getByRole("button", { name: "Add application" }));
-
-    expect(actions.createApplicationAction).toHaveBeenCalledWith({
-      company: "Birch",
-      title: "Engineer",
-      applied_on: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
-      location: null,
-      salary: "$150k",
-      posting_url: null,
-    });
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
-
-  it("stays open and shows why adding failed", async () => {
-    vi.mocked(actions.createApplicationAction).mockResolvedValue({ ok: false, error: "Company is required" });
-    const { user, panel } = await openAdd();
-    await user.type(within(panel).getByLabelText("Company"), "Birch");
-    await user.type(within(panel).getByLabelText("Title"), "Engineer");
-    await user.click(within(panel).getByRole("button", { name: "Add application" }));
-    expect(await within(panel).findByRole("alert")).toHaveTextContent("Company is required");
-  });
-
-  it("closes without adding on Cancel", async () => {
-    const { user, panel } = await openAdd();
-    await user.click(within(panel).getByRole("button", { name: "Cancel" }));
-    expect(actions.createApplicationAction).not.toHaveBeenCalled();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
-});
-
 describe("the salary", () => {
   const view: PanelView = { kind: "application", id: "birch" };
 
   it("is hidden until Reveal is pressed", async () => {
     const { user } = await openPanel(view);
     const panel = screen.getByRole("dialog", { name: "Birch" });
-    expect(within(panel).getByRole("group", { name: "Salary (optional)" })).toHaveTextContent("Hidden");
+    expect(within(panel).getByRole("group", { name: "Salary" })).toHaveTextContent("Hidden");
     expect(panel).not.toHaveTextContent("$150k");
     expect(within(panel).queryByDisplayValue("$150k")).not.toBeInTheDocument();
 
     await user.click(within(panel).getByRole("button", { name: "Reveal" }));
-    expect(within(panel).getByLabelText("Salary (optional)")).toHaveValue("$150k");
+    expect(within(panel).getByLabelText("Salary")).toHaveValue("$150k");
   });
 
   it("is hidden again the next time the panel opens", async () => {
@@ -130,12 +77,12 @@ describe("the salary", () => {
     await user.click(screen.getByRole("button", { name: "Reveal" }));
     // What a saved change does: the dashboard re-renders with the Application as saved.
     rerender(<Caller view={view} applications={[{ ...birch, salary: "$160k" }]} />);
-    expect(screen.getByLabelText("Salary (optional)")).toHaveValue("$160k");
+    expect(screen.getByLabelText("Salary")).toHaveValue("$160k");
   });
 
   it("has nothing to hide on an Application without one", async () => {
     await openPanel({ kind: "application", id: "maple" });
-    expect(screen.getByLabelText("Salary (optional)")).toHaveValue("");
+    expect(screen.getByLabelText("Salary")).toHaveValue("");
     expect(screen.queryByRole("button", { name: "Reveal" })).not.toBeInTheDocument();
   });
 });
@@ -208,7 +155,7 @@ describe("Interview notes", () => {
     return {
       ...opened,
       panel,
-      notes: (n: number) => within(panel).getByLabelText(`Interview notes (optional), Interview ${n}`),
+      notes: (n: number) => within(panel).getByLabelText(`Interview notes, Interview ${n}`),
       saveButton: (n: number) => within(panel).getByRole("button", { name: `Save notes, Interview ${n}` }),
     };
   }
@@ -300,7 +247,7 @@ describe("save status beside each field (BIG-118)", () => {
       ...opened,
       panel,
       kind: (n: number) => within(panel).getByLabelText(`Kind, Interview ${n}`),
-      at: (n: number) => within(panel).getByLabelText(`Date and time (optional), Interview ${n}`),
+      at: (n: number) => within(panel).getByRole("button", { name: new RegExp(`^Date, Interview ${n}`) }),
       /** Every status the panel shows, as screen readers hear them. */
       statuses: () =>
         within(panel)
@@ -337,23 +284,31 @@ describe("save status beside each field (BIG-118)", () => {
     expect(kind(1)).toBeDisabled();
     expect(kind(2)).toBeEnabled();
     expect(at(1)).toBeEnabled();
-    expect(within(panel).getByRole("button", { name: "Add Interview" })).toBeEnabled();
-    expect(within(panel).getByLabelText("Interview notes (optional), Interview 1")).not.toHaveAttribute("readonly");
+    expect(within(panel).getByLabelText("Interview notes, Interview 1")).not.toHaveAttribute("readonly");
     expect(within(panel).getByRole("button", { name: /^Delete .* Interview, Interview 1$/ })).toBeEnabled();
   });
 
-  it("saves the date and time on leaving the field, and shows nothing when it didn't change", async () => {
-    const { user, at, statuses } = await openOak();
+  it("saves the date and time once both are given, assuming no time, and nothing when the time didn't change", async () => {
+    const { user, panel, at, statuses } = await openOak();
+    const time = within(panel).getByLabelText("Time, Interview 1");
     await user.click(at(1));
-    await user.tab();
+    await user.click(within(screen.getByRole("grid")).getByText("15"));
+    expect(time).toHaveValue("");
     expect(actions.updateInterviewAction).not.toHaveBeenCalled();
-    expect(statuses()).toEqual([]);
 
-    await user.type(at(1), "2026-12-01T10:30");
+    await user.type(time, "10:30");
     await user.tab();
-    expect(actions.updateInterviewAction).toHaveBeenCalledWith("oak", "i1", { at: expect.any(String) });
+    const now = new Date();
+    expect(actions.updateInterviewAction).toHaveBeenCalledWith("oak", "i1", {
+      at: new Date(now.getFullYear(), now.getMonth(), 15, 10, 30).toISOString(),
+    });
     expect(await screen.findByText("Saved")).toBeInTheDocument();
     expect(statuses()).toEqual(["Interview 1 date and time: Saved"]);
+
+    vi.mocked(actions.updateInterviewAction).mockClear();
+    await user.click(within(panel).getByLabelText("Time, Interview 1"));
+    await user.tab();
+    expect(actions.updateInterviewAction).not.toHaveBeenCalled();
   });
 
   it("shows a failed save beside its field, keeps the pick, and Retry sends it again", async () => {
@@ -374,7 +329,7 @@ describe("save status beside each field (BIG-118)", () => {
     const save = inFlight();
     vi.mocked(actions.updateInterviewAction).mockReturnValue(save.promise);
     const { user, panel, statuses } = await openOak();
-    const notes = within(panel).getByLabelText("Interview notes (optional), Interview 2");
+    const notes = within(panel).getByLabelText("Interview notes, Interview 2");
     await user.type(notes, "Went well");
     await user.click(within(panel).getByRole("button", { name: "Save notes, Interview 2" }));
 
@@ -393,19 +348,19 @@ describe("save status beside each field (BIG-118)", () => {
     expect(await screen.findByText("Saved")).toBeInTheDocument();
     expect(statuses()).toEqual(["Status: Saved"]);
 
-    await user.type(within(panel).getByLabelText("Location (optional)"), "Remote");
+    await user.type(within(panel).getByLabelText("Location"), "Remote");
     await user.click(within(panel).getByRole("button", { name: "Save details" }));
     expect(statuses()).toContain("Details: Saved");
   });
 
-  it("shows adding an Interview by its button, and why it failed", async () => {
-    vi.mocked(actions.createInterviewAction).mockResolvedValueOnce({ ok: false, error: "Too many Interviews" });
-    const { user, panel, statuses } = await openOak();
-    await user.click(within(panel).getByRole("button", { name: "Add Interview" }));
-    expect(await within(panel).findByRole("alert")).toHaveTextContent("New Interview: Too many Interviews");
-
-    await user.click(within(panel).getByRole("button", { name: "Retry, New Interview" }));
-    expect(statuses()).toEqual(["New Interview: Added"]);
+  it("opens the Add Interview page with this Application chosen, and creates nothing itself", async () => {
+    const { panel } = await openOak();
+    expect(within(panel).getByRole("link", { name: "Add Interview" })).toHaveAttribute(
+      "href",
+      "/interviews/new?application=oak",
+    );
+    expect(within(panel).queryByRole("button", { name: "Add Interview" })).not.toBeInTheDocument();
+    expect(actions.createInterviewAction).not.toHaveBeenCalled();
   });
 
   it("shows deleting an Interview by its row, and why it failed", async () => {

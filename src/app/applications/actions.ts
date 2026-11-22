@@ -4,15 +4,18 @@ import { refresh } from "next/cache";
 import * as api from "@/lib/api";
 import type { ApplicationFields, InterviewFields } from "@/lib/applications";
 import { findCurrentUser } from "@/lib/dal";
+import { applicationErrors, interviewErrors, isValid, summarize, type FieldErrors } from "@/lib/validation";
 
-// Inputs are untrusted (Server Actions are plain POST endpoints): FastAPI validates every
-// field and scopes every change to the signed-in job seeker.
+// Inputs are untrusted (Server Actions are plain POST endpoints, callable with any values): each
+// one is checked here with the forms' own rules before it reaches FastAPI, which validates every
+// field again and scopes every change to the signed-in job seeker.
 
-export type ActionResult = { ok: true } | { ok: false; error: string };
+export type ActionResult = { ok: true } | { ok: false; error: string; fieldErrors?: FieldErrors };
 
-async function run(mutate: (jobSeekerId: string) => Promise<unknown>): Promise<ActionResult> {
+async function run(mutate: (jobSeekerId: string) => Promise<unknown>, errors: FieldErrors = {}): Promise<ActionResult> {
   const user = await findCurrentUser();
   if (!user) return { ok: false, error: "Your session has ended. Sign in again." };
+  if (!isValid(errors)) return { ok: false, error: summarize(errors), fieldErrors: errors };
   try {
     await mutate(user.id);
   } catch (error) {
@@ -25,11 +28,14 @@ async function run(mutate: (jobSeekerId: string) => Promise<unknown>): Promise<A
 }
 
 export async function createApplicationAction(fields: Partial<ApplicationFields>) {
-  return run((jobSeekerId) => api.createApplication(jobSeekerId, fields));
+  return run((jobSeekerId) => api.createApplication(jobSeekerId, fields), applicationErrors(fields, { creating: true }));
 }
 
 export async function updateApplicationAction(id: string, changes: Partial<ApplicationFields>) {
-  return run((jobSeekerId) => api.updateApplication(jobSeekerId, id, changes));
+  return run(
+    (jobSeekerId) => api.updateApplication(jobSeekerId, id, changes),
+    applicationErrors(changes, { creating: false }),
+  );
 }
 
 export async function deleteApplicationAction(id: string) {
@@ -37,11 +43,14 @@ export async function deleteApplicationAction(id: string) {
 }
 
 export async function createInterviewAction(applicationId: string, fields: Partial<InterviewFields>) {
-  return run((jobSeekerId) => api.createInterview(jobSeekerId, applicationId, fields));
+  return run((jobSeekerId) => api.createInterview(jobSeekerId, applicationId, fields), interviewErrors(fields));
 }
 
 export async function updateInterviewAction(applicationId: string, id: string, changes: Partial<InterviewFields>) {
-  return run((jobSeekerId) => api.updateInterview(jobSeekerId, applicationId, id, changes));
+  return run(
+    (jobSeekerId) => api.updateInterview(jobSeekerId, applicationId, id, changes),
+    interviewErrors(changes),
+  );
 }
 
 export async function deleteInterviewAction(applicationId: string, id: string) {
