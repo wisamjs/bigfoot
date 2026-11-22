@@ -18,15 +18,17 @@ export const cardClasses = "relative rounded-control border border-line bg-card-
 
 /**
  * One Application on the board, answering "what's next here?": its next Interview (or how long
- * it has been waiting), how many Interviews are completed, and its Outcome once Done. Every
- * Interview, with its Interview notes, is in the side panel.
+ * it has been waiting), any Interview whose date is needed, how many Interviews are completed, and
+ * its Outcome once Done. Every Interview, with its Interview notes, is in the side panel.
  */
 export function Card({ job, onOpen }: { job: Application; onOpen?: (app: Application) => void }) {
   const upcoming = upcomingInterviews(job);
   const next = upcoming[0];
-  const completed = job.interviews.filter((interview) => interview.completed);
+  // Saved before dates were required (docs/adr/0005): they count as completed, but show as needing a date.
+  const dateNeeded = job.interviews.filter((interview) => interview.at === null);
+  const completed = job.interviews.filter((interview) => interview.completed && interview.at !== null);
   const withNotes = completed.filter((interview) => interview.notes).length;
-  const hasBody = Boolean(job.outcome || next || job.is_waiting || completed.length > 0);
+  const hasBody = Boolean(job.outcome || next || job.is_waiting || dateNeeded.length > 0 || completed.length > 0);
 
   return (
     <li
@@ -59,6 +61,9 @@ export function Card({ job, onOpen }: { job: Application; onOpen?: (app: Applica
           {job.outcome && <Badge tone={OUTCOME_TONE[job.outcome]}>{OUTCOME_OPTIONS[job.outcome].label}</Badge>}
           {next && <NextInterview interview={next} more={upcoming.length - 1} />}
           {job.is_waiting && <ApplicationWhen app={job} />}
+          {dateNeeded.map((interview) => (
+            <InterviewLine key={interview.id} interview={interview} label="Interview with no date: " />
+          ))}
           {completed.length > 0 && <CompletedCount count={completed.length} withNotes={withNotes} />}
         </div>
       )}
@@ -73,17 +78,24 @@ export function Card({ job, onOpen }: { job: Application; onOpen?: (app: Applica
 function NextInterview({ interview, more }: { interview: Interview; more: number }) {
   return (
     <div className="flex w-full flex-col gap-1">
-      <p className="m-0 flex w-full items-center gap-3 rounded-control border border-line bg-surface px-2 py-1.5 text-heading">
-        <span className="sr-only">Next Interview: </span>
-        <span className="min-w-0">
-          <Badge tone={INTERVIEW_TONE[interview.kind]}>{INTERVIEW_OPTIONS[interview.kind].label}</Badge>
-        </span>
-        <span className="ml-auto shrink-0">
-          <InterviewWhen at={interview.at} />
-        </span>
-      </p>
+      <InterviewLine interview={interview} label="Next Interview: " />
       {more > 0 && <p className="m-0">+{more} more upcoming</p>}
     </div>
+  );
+}
+
+/** One Interview: its kind badge on the left and its date (or "Date needed") on the right. */
+function InterviewLine({ interview, label }: { interview: Interview; label: string }) {
+  return (
+    <p className="m-0 flex w-full items-center gap-3 rounded-control border border-line bg-surface px-2 py-1.5 text-heading">
+      <span className="sr-only">{label}</span>
+      <span className="min-w-0">
+        <Badge tone={INTERVIEW_TONE[interview.kind]}>{INTERVIEW_OPTIONS[interview.kind].label}</Badge>
+      </span>
+      <span className="ml-auto shrink-0">
+        <InterviewWhen at={interview.at} />
+      </span>
+    </p>
   );
 }
 

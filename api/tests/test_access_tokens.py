@@ -133,14 +133,15 @@ def test_an_access_token_reaches_nobody_elses_data(client, token):
     alice = bearer(create(client, token("alice"))["token"])
     bobs = client.post("/applications", json={"company": "Bob's", "title": "Engineer"}, headers=token("bob")).json()
     interviews = f"/applications/{bobs['id']}/interviews"
-    interview_id = client.post(interviews, json={"kind": "technical"}, headers=token("bob")).json()["id"]
+    interview = {"kind": "technical", "at": "2026-11-20T17:00:00Z"}
+    interview_id = client.post(interviews, json=interview, headers=token("bob")).json()["id"]
     bobs_interview = f"{interviews}/{interview_id}"
 
     assert client.get("/applications", headers=alice).json() == []
     assert client.patch(f"/applications/{bobs['id']}", json={"company": "Mine"}, headers=alice).status_code == 404
     assert client.delete(f"/applications/{bobs['id']}", headers=alice).status_code == 404
     assert client.get(interviews, headers=alice).status_code == 404
-    assert client.post(interviews, json={"kind": "technical"}, headers=alice).status_code == 404
+    assert client.post(interviews, json=interview, headers=alice).status_code == 404
     assert client.patch(bobs_interview, json={"kind": "onsite_loop"}, headers=alice).status_code == 404
     assert client.delete(bobs_interview, headers=alice).status_code == 404
     [unchanged] = client.get("/applications", headers=token("bob")).json()

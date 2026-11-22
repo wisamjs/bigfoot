@@ -11,8 +11,15 @@ import { SaveStatus } from "@/components/ui/save-status";
 import { useSaveStatus, type SaveTracker } from "@/hooks/use-save-status";
 import { InterviewNotesForm } from "@/features/applications/interview-notes-form";
 import { fromLocalInput, toLocalInput } from "@/features/applications/local-datetime";
-import { INTERVIEW_KINDS, INTERVIEW_OPTIONS, type Application, type Interview, type InterviewKind } from "@/lib/applications";
-import { interviewErrors, type FieldErrors } from "@/lib/validation";
+import {
+  INTERVIEW_KINDS,
+  INTERVIEW_OPTIONS,
+  type Application,
+  type Interview,
+  type InterviewFields,
+  type InterviewKind,
+} from "@/lib/applications";
+import { DATE_NEEDED, interviewErrors, isValid, type FieldErrors } from "@/lib/validation";
 
 const fieldLabelClasses = "mb-1 flex min-h-4 flex-wrap items-center justify-between gap-x-2 text-xs font-medium text-body";
 
@@ -20,7 +27,8 @@ const fieldLabelClasses = "mb-1 flex min-h-4 flex-wrap items-center justify-betw
  * One Interview: its kind (saved on change), date and time (saved once both are given, on picking
  * a date or leaving the time field), Delete, and its Interview notes. Each has its own save status,
  * kept here because the fields are keyed by their saved values and remount when a save lands; this
- * row is keyed by the Interview.
+ * row is keyed by the Interview. An Interview saved before dates were required shows "Date needed"
+ * beside its date, and no other change saves until it has one (docs/adr/0005).
  */
 export function InterviewRow({
   app,
@@ -36,18 +44,28 @@ export function InterviewRow({
   const atSave = useSaveStatus();
   const notesSave = useSaveStatus();
   const deleteSave = useSaveStatus();
-  // The kind's and date's errors, found before sending, beside their fields.
-  const [errors, setErrors] = useState<FieldErrors>({});
+  // The kind's and date's errors, found before sending or by the API, beside their fields.
+  const [errors, setErrors] = useState<FieldErrors>(() => (interview.at ? {} : { at: DATE_NEEDED }));
   const saved = toLocalInput(interview.at);
   const label = `Interview ${position}`;
   const kindLabel = INTERVIEW_OPTIONS[interview.kind].label;
 
-  /** Checks one change with the API's rules, then saves it, or shows why not beside its field. */
-  function saveChange(tracker: SaveTracker, changes: { kind: InterviewKind } | { at: string | null }) {
-    const [name] = Object.keys(changes) as ("kind" | "at")[];
-    const problem = interviewErrors(changes)[name];
-    setErrors((prev) => ({ ...prev, [name]: problem }));
-    if (!problem) void tracker.run(() => updateInterviewAction(app.id, interview.id, changes));
+  /**
+   * Checks one change with the API's rules, then saves it, or shows why not beside its field (and
+   * beside the date, when the Interview has none). Returns the problems found before sending.
+   */
+  function saveChange(tracker: SaveTracker, changes: Partial<InterviewFields>): FieldErrors {
+    const problems = interviewErrors(changes, { savedAt: interview.at });
+    const checked = Object.fromEntries(Object.keys(changes).map((name) => [name, problems[name]]));
+    setErrors((prev) => ({ ...prev, ...checked, ...(problems.at ? { at: problems.at } : {}) }));
+    if (isValid(problems)) {
+      void tracker.run(async () => {
+        const result = await updateInterviewAction(app.id, interview.id, changes);
+        if (!result.ok && result.fieldErrors) setErrors((prev) => ({ ...prev, ...result.fieldErrors }));
+        return result;
+      });
+    }
+    return problems;
   }
 
   return (
@@ -85,8 +103,11 @@ export function InterviewRow({
       </div>
       <div className="min-w-52 flex-1">
         <div className={fieldLabelClasses}>
-          <span id={`at-${interview.id}-label`}>
-            Date and time<span className="sr-only">, {label}</span>
+          <span>
+            <span id={`at-${interview.id}-label`}>
+              Date and time<span className="sr-only">, {label}</span>
+            </span>
+            <RequiredMark />
           </span>
           <SaveStatus status={atSave.status} label={`${label} date and time`} onRetry={atSave.retry} />
         </div>
@@ -98,7 +119,7 @@ export function InterviewRow({
             timeLabel={`Time, ${label}`}
             value={saved}
             disabled={atSave.saving}
-            // A date with no time yet waits for one; no time is assumed. Clearing the date clears both.
+            // A date with no time yet waits for one; no time is assumed. Clearing the date is refused.
             onChange={({ date, time }) => {
               if (!date) saveChange(atSave, { at: null });
               else if (time) saveChange(atSave, { at: fromLocalInput(`${date}T${time}`) });
@@ -133,7 +154,13 @@ export function InterviewRow({
           className="w-full justify-end"
         />
       )}
-      <InterviewNotesForm key={interview.notes ?? ""} app={app} interview={interview} label={label} tracker={notesSave} />
+      <InterviewNotesForm
+        key={interview.notes ?? ""}
+        interview={interview}
+        label={label}
+        tracker={notesSave}
+        onSave={(notes) => saveChange(notesSave, { notes }).notes}
+      />
     </li>
   );
 }

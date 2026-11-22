@@ -240,8 +240,8 @@ describe("save status beside each field (BIG-118)", () => {
   const second = interview("i2", { application_id: "oak", kind: "technical" });
   const oak = application("oak", { company: "Oak", interviews: [first, second] });
 
-  async function openOak() {
-    const opened = await openPanel(view, [oak]);
+  async function openOak(apps = [oak]) {
+    const opened = await openPanel(view, apps);
     const panel = screen.getByRole("dialog", { name: "Oak" });
     return {
       ...opened,
@@ -289,7 +289,8 @@ describe("save status beside each field (BIG-118)", () => {
   });
 
   it("saves the date and time once both are given, assuming no time, and nothing when the time didn't change", async () => {
-    const { user, panel, at, statuses } = await openOak();
+    // Saved before dates were required, so it has no time to keep (docs/adr/0005).
+    const { user, panel, at, statuses } = await openOak([{ ...oak, interviews: [{ ...first, at: null }, second] }]);
     const time = within(panel).getByLabelText("Time, Interview 1");
     await user.click(at(1));
     await user.click(within(screen.getByRole("grid")).getByText("15"));

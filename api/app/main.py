@@ -11,10 +11,11 @@ from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI, HTTPException, Path, Request, status
+from fastapi.exceptions import RequestValidationError
 from psycopg import sql
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
+from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, Field, field_validator, model_validator
 
 from app import monitoring
 from app.auth import ACCESS_TOKEN_PREFIX, JobSeekerId, SignedInJobSeekerId, access_token_hash, new_access_token
@@ -78,6 +79,17 @@ PostingUrl = Annotated[str | None, Field(max_length=POSTING_URL_MAX_LENGTH), Aft
 InterviewNotes = Annotated[str | None, Field(max_length=INTERVIEW_NOTES_MAX_LENGTH), AfterValidator(_optional_text)]
 
 
+def _has_a_time(value: Any) -> Any:
+    """Refuses a date with no time, which Pydantic would otherwise read as midnight: no time is assumed."""
+    if isinstance(value, str) and re.fullmatch(r"\s*\d{4}-\d{2}-\d{2}\s*", value):
+        raise ValueError("needs a time as well as a date")
+    return value
+
+
+# An Interview always has a date and time (docs/adr/0005).
+InterviewAt = Annotated[datetime, BeforeValidator(_has_a_time)]
+
+
 # Example values shared by the request and response schemas.
 EXAMPLE_COMPANY = "Northwind Robotics"
 EXAMPLE_TITLE = "Frontend Engineer"
@@ -91,12 +103,16 @@ SALARY = Field(default=None, description="The pay range, as the job seeker write
 STATUS = "Whether the Application is still going (GLOSSARY.md, Status)."
 OUTCOME = "How a Done Application ended. Required when the status is `done`, and only then."
 KIND = "What sort of conversation the Interview is (GLOSSARY.md, Interview kind)."
-AT = "When the Interview happens, with a time zone. Null when it has no date yet."
+AT = (
+    "When the Interview happens: a date and time, with a time zone. Required (docs/adr/0005); "
+    'null only on an Interview saved before it was, which shows "Date needed" until one is set.'
+)
 NOTES = (
     "Interview notes (GLOSSARY.md): what the job seeker wrote about this Interview, as plain text of at most "
     f"{INTERVIEW_NOTES_MAX_LENGTH:,} characters. Null when there are none."
 )
 EXAMPLE_NOTES = "Asked about caching trade-offs. Next time, draw the diagram first."
+INTERVIEW_ORDER_DESCRIPTION = "Ordered by date. Any with no date yet come last."
 
 
 ApplicationId = Annotated[UUID, Path(description="The Application's id.")]
@@ -170,20 +186,31 @@ class InterviewCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     kind: InterviewKind = Field(description=KIND, examples=["technical"])
-    at: datetime | None = Field(default=None, description=AT, examples=["2026-11-20T17:00:00Z"])
+    at: InterviewAt = Field(description=AT, examples=["2026-11-20T17:00:00Z"])
     notes: InterviewNotes = Field(default=None, description=f"{NOTES} Blank is stored as null.", examples=[None])
 
 
 class InterviewPatch(BaseModel):
-    """Only the fields sent are changed; send null for `at` to clear the date, or for `notes` to clear them."""
+    """Only the fields sent are changed; send null for `notes` to clear them. The date can't be cleared, and a
+    change to an Interview saved without one must set it."""
 
     model_config = ConfigDict(extra="forbid")
 
     kind: InterviewKind | None = Field(default=None, description=f"{KIND} Cannot be cleared.", examples=["onsite_loop"])
-    at: datetime | None = Field(default=None, description=AT, examples=["2026-11-27T15:30:00Z"])
+    at: InterviewAt | None = Field(
+        default=None, description=f"{AT} Cannot be cleared.", examples=["2026-11-27T15:30:00Z"]
+    )
     notes: InterviewNotes = Field(
         default=None, description=f"{NOTES} Blank is stored as null.", examples=[EXAMPLE_NOTES]
     )
+
+    @field_validator("at")
+    @classmethod
+    def _at_not_cleared(cls, value: datetime | None) -> datetime | None:
+        # Runs only when `at` is sent, so null here means clearing it.
+        if value is None:
+            raise ValueError("cannot be cleared: an Interview always has a date and time")
+        return value
 
     @model_validator(mode="after")
     def _kind_not_cleared(self) -> "InterviewPatch":
@@ -201,7 +228,11 @@ class Interview(BaseModel):
     at: datetime | None = Field(description=AT, examples=["2026-11-20T17:00:00Z"])
     notes: str | None = Field(description=NOTES, examples=[EXAMPLE_NOTES])
     completed: bool = Field(
-        description="Derived, never stored: the date is in the past, or there is no date.", examples=[False]
+        description=(
+            "Derived, never stored: the date is in the past. An Interview with no date yet counts as completed "
+            "until it gets one, so no Application looks further along than it is."
+        ),
+        examples=[False],
     )
     created_at: datetime
     updated_at: datetime
@@ -219,7 +250,7 @@ class Application(BaseModel):
     applied_on: date = Field(description="When the job seeker applied.", examples=["2026-11-02"])
     status: Status = Field(description=STATUS)
     outcome: Outcome | None = Field(description=OUTCOME)
-    interviews: list[Interview] = Field(description="Ordered by date, undated first.")
+    interviews: list[Interview] = Field(description=INTERVIEW_ORDER_DESCRIPTION)
     is_waiting: bool = Field(
         description="Derived (GLOSSARY.md, Waiting): In Progress with no upcoming Interview, including a new one."
     )
@@ -302,9 +333,17 @@ APPLICATION_COLUMNS = (
 COLUMNS = sql.SQL(APPLICATION_COLUMNS)
 # `expired` is derived on every read, never stored, like an Interview's `completed`.
 ACCESS_TOKEN_COLUMNS = sql.SQL("id, name, created_at, last_used_at, expires_at, expires_at <= now() as expired")
+# Shaped like Pydantic's own errors, so the web app shows it beside the date field.
+DATE_NEEDED_ERROR = {
+    "type": "missing",
+    "loc": ("body", "at"),
+    "msg": "is needed: this Interview has no date yet, so any change to it must set one",
+    "input": None,
+}
 INTERVIEW_COLUMNS = sql.SQL("id, application_id, kind, at, notes, created_at, updated_at")
-# Undated Interviews sort first (GLOSSARY.md, Interview).
-INTERVIEW_ORDER = sql.SQL("order by at nulls first, created_at, id")
+# By date alone (docs/adr/0005). An Interview with no date yet has no place by date, so it sorts last,
+# Postgres' default for nulls in ascending order.
+INTERVIEW_ORDER = sql.SQL("order by at, created_at, id")
 
 
 def _interview(row: dict[str, Any], now: datetime) -> Interview:
@@ -709,7 +748,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         responses={404: {"model": ErrorMessage, "description": APPLICATION_NOT_FOUND[404]["description"]}},
     )
     def list_interviews(request: Request, job_seeker: JobSeekerId, application_id: ApplicationId) -> list[Interview]:
-        """The Application's Interviews, ordered by date, undated first."""
+        """The Application's Interviews, ordered by date. Any with no date yet come last."""
         with pool(request).connection() as conn, conn.transaction():
             owned(conn, job_seeker, application_id)
             rows = conn.execute(
@@ -738,8 +777,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def create_interview(
         request: Request, job_seeker: JobSeekerId, application_id: ApplicationId, body: InterviewCreate
     ) -> Interview:
-        """Add an Interview to an Application. Kinds can repeat; the date and Interview notes are optional.
-        The number of Interviews per Application is capped (409)."""
+        """Add an Interview to an Application. The kind and the date and time are required; kinds can
+        repeat, and Interview notes are optional. The number of Interviews per Application is capped (409)."""
         with pool(request).connection() as conn, conn.transaction():
             owned(conn, job_seeker, application_id, lock=True)
             count = conn.execute(
@@ -769,13 +808,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ) -> Interview:
         """Change an Interview's kind, date or Interview notes.
 
-        Only the fields sent change; send null for `at` to clear the date, or for `notes` to clear them.
+        Only the fields sent change; send null for `notes` to clear them. The date can't be cleared, and
+        any change to an Interview saved without a date must set one (422).
         """
         changes = body.model_dump(exclude_unset=True)
         assignments = [sql.SQL("{} = %s").format(sql.Identifier(name)) for name in changes]
         assignments.append(sql.SQL("updated_at = now()"))
         with pool(request).connection() as conn, conn.transaction():
             owned(conn, job_seeker, application_id)
+            current = conn.execute(
+                "select at from interviews where id = %s and application_id = %s for update",
+                (interview_id, application_id),
+            ).fetchone()
+            if current is None:
+                raise HTTPException(status.HTTP_404_NOT_FOUND, "Interview not found")
+            if current["at"] is None and "at" not in changes:
+                raise RequestValidationError([DATE_NEEDED_ERROR])
             row = conn.execute(
                 sql.SQL("update interviews set {} where id = %s and application_id = %s returning {}").format(
                     sql.SQL(", ").join(assignments), INTERVIEW_COLUMNS

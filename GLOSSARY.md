@@ -39,7 +39,7 @@ All of a job seeker's Applications. The board shows the In Progress ones, groupe
 _Avoid_: board, funnel, tracker
 
 **Interview**:
-One conversation in a company's hiring process, belonging to one Application, In Progress or Done (one added to a Done Application keeps a record of how it went). It has a required, editable kind, a date and time and optional Interview notes, and no title. It is added on the Add Interview page, opened by the dashboard's Add Interview button or an Application's own: the Application (chosen as "company · role", In Progress ones first, then Done), kind, date and time are required there, and no time is assumed. Adding it goes back to the dashboard. _Planned_ (BIG-136): the date and time are required everywhere, not just when adding; until then an Interview saved earlier may have none, and its date can be cleared in the side panel. An Application can have many; kinds can repeat. Interviews are ordered by date, undated ones first, with no manual order and no per-company template. A cancelled Interview is deleted, and its Interview notes with it. Deleting the Application deletes its Interviews. The Coming up calendar shows every dated Interview of an In Progress Application, past ones muted. Its agenda lists this month's Interviews while there are five or fewer; past that, it narrows to the next 2 weeks, the next week or the next 2 days, whichever is widest with five or fewer, each starting now, so completed Interviews earlier today drop off.
+One conversation in a company's hiring process, belonging to one Application, In Progress or Done (one added to a Done Application keeps a record of how it went). It has a required, editable kind, a required date and time and optional Interview notes, and no title. It is added on the Add Interview page, opened by the dashboard's Add Interview button or an Application's own: the Application (chosen as "company · role", In Progress ones first, then Done), kind, date and time are required there, and no time is assumed. Adding it goes back to the dashboard. The date can be changed but never cleared. An Interview saved before dates were required may have none: it shows "Date needed" on its card and beside its date, and no change to it saves until it has one. An Application can have many; kinds can repeat. Interviews are ordered by date alone (any with no date yet come last), with no manual order and no per-company template. A cancelled Interview is deleted, and its Interview notes with it. Deleting the Application deletes its Interviews. The Coming up calendar shows every dated Interview of an In Progress Application, past ones muted. Its agenda lists this month's Interviews while there are five or fewer; past that, it narrows to the next 2 weeks, the next week or the next 2 days, whichever is widest with five or fewer, each starting now, so completed Interviews earlier today drop off.
 _Avoid_: round, step, stage, meeting
 
 **Questions for them**:
@@ -59,7 +59,7 @@ What the job seeker writes about one Interview: how it went, what they were aske
 _Avoid_: feedback, comments, journal, debrief
 
 **Completed** (an Interview):
-Derived, never stored: the Interview's date is in the past, or it has no date. Nothing is written when Bigfoot reads Applications.
+Derived, never stored: the Interview's date is in the past. One saved with no date counts as completed until it gets one, so no Application looks further along than it is. Nothing is written when Bigfoot reads Applications.
 _Avoid_: done (that is a Status), past
 
 **Waiting**:

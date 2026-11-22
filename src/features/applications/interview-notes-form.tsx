@@ -1,15 +1,13 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { updateInterviewAction } from "@/app/applications/actions";
 import { Button } from "@/components/ui/button";
 import { FieldError, invalidProps } from "@/components/ui/field-error";
 import { inputClasses } from "@/components/ui/input";
 import { PLACEHOLDERS } from "@/features/applications/placeholders";
 import { SaveStatus } from "@/components/ui/save-status";
 import type { SaveTracker } from "@/hooks/use-save-status";
-import { INTERVIEW_NOTES_MAX_LENGTH, type Application, type Interview } from "@/lib/applications";
-import { interviewErrors } from "@/lib/validation";
+import { INTERVIEW_NOTES_MAX_LENGTH, type Interview } from "@/lib/applications";
 
 /**
  * An Interview's notes: written, read and cleared here, under their Interview. They save with
@@ -17,17 +15,18 @@ import { interviewErrors } from "@/lib/validation";
  * notes are read-only: the form remounts with the saved notes when the save lands.
  */
 export function InterviewNotesForm({
-  app,
   interview,
   label,
   tracker,
+  onSave,
 }: {
-  app: Application;
   interview: Interview;
   /** "Interview 2": tells the rows apart for screen readers. */
   label: string;
   /** Owned by the row, so "Saved" outlasts this form remounting with the saved notes. */
   tracker: SaveTracker;
+  /** Checks and saves the notes with the row, which shows a missing date beside it; returns the notes' problem. */
+  onSave: (notes: string | null) => string | undefined;
 }) {
   const [draft, setDraft] = useState(interview.notes ?? "");
   const [error, setError] = useState<string | undefined>();
@@ -38,9 +37,7 @@ export function InterviewNotesForm({
 
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const problem = interviewErrors({ notes }).notes;
-    setError(problem);
-    if (!problem) void tracker.run(() => updateInterviewAction(app.id, interview.id, { notes }));
+    setError(onSave(notes));
   }
 
   return (
