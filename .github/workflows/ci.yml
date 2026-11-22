@@ -69,6 +69,53 @@ jobs:
           CHROME_PATH: /usr/bin/google-chrome
       - run: npm run build
 
+  # Decides whether the PR needs the owner's manual approval: every PR except one that changes
+  # only .md files (scripts/review-needed.mjs is the one definition). Read-only token, and the
+  # PR's own code is never run: only its list of file names is read.
+  classify:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      review: ${{ steps.classify.outputs.review }}
+    steps:
+      # The base branch, so the classifier is main's, not the PR's.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+      - id: classify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        # `--name-only` lists a renamed file by its new path only, so the old paths are added from
+        # the diff's `rename from` lines: moving code to a .md name must still need review.
+        # If the base has no classifier yet (the PR that adds it), the PR needs review.
+        run: |
+          if [ ! -f scripts/review-needed.mjs ]; then
+            echo "review=true" >> "$GITHUB_OUTPUT"
+          else
+            {
+              gh pr diff "$PR" --name-only
+              gh pr diff "$PR" | sed -n 's/^rename from //p'
+            } | node scripts/review-needed.mjs >> "$GITHUB_OUTPUT"
+          fi
+          cat "$GITHUB_OUTPUT"
+
+  # Holds every PR that needs review until the owner clicks "Review deployments" (the
+  # `manual-review` environment has a required reviewer). When `classify` says no, this job is
+  # skipped, and a skipped job counts as passing for the required check. Waits for `check`, so
+  # a red PR never asks for approval. It is skipped on push to main, so merges are never held.
+  review-gate:
+    needs: [classify, check]
+    if: needs.classify.outputs.review == 'true'
+    runs-on: ubuntu-latest
+    environment: manual-review
+    steps:
+      - run: echo "Approved in the manual-review environment"
+
   # Applies merged migrations to the dev database (applying before merge would break main),
   # then fails if any is still missing. One at a time, so two quick merges never race.
   migrations-applied:
