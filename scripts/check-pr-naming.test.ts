@@ -49,6 +49,13 @@ describe("prNamingProblems", () => {
     expect(prNamingProblems({ author: "wisamjs", branch: "dependabot/npm_and_yarn/x", title: "Bump x", body: "" })).toHaveLength(3);
   });
 
+  it("rejects a body that links a Claude Code session", () => {
+    const body = `${ok.body}\n\nClaude-Session: https://claude.ai/code/session_01G6LSzpc1xaoGqHGnY5gHFq`;
+    expect(prNamingProblems({ ...ok, body })).toEqual([
+      "body links a Claude Code session (claude.ai/code/session_…); remove that line",
+    ]);
+  });
+
   it("reports everything when nothing is set", () => {
     expect(prNamingProblems({})).toHaveLength(3);
   });

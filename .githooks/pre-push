@@ -1,5 +1,5 @@
 #!/bin/sh
 # Stops a push of a branch CI's PR naming check would reject (say a worktree's `worktree-BIG-n`),
 # and says how to rename it. Git passes the refs being pushed on stdin.
-# Installed by `npm install` (the "prepare" script sets core.hooksPath).
+# Installed by `npm install` (the "prepare" script) and by the SessionStart hook in .claude/settings.json.
 exec node scripts/check-push-branch.mjs

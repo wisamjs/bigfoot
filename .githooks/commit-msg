@@ -1,0 +1,5 @@
+#!/bin/sh
+# Stops a commit whose message links a Claude Code session (claude.ai/code/session_…).
+# Git passes the message file's path as $1.
+# Installed by `npm install` (the "prepare" script) and by the SessionStart hook in .claude/settings.json.
+exec node scripts/check-commit-message.mjs "$1"
