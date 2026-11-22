@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { SaveStatus } from "@/components/ui/save-status";
 import type { SaveTracker } from "@/hooks/use-save-status";
 
-/** The panel's details form's Save details button, and its save status. */
+/** The Application page's details form's Save details button, and its save status. */
 export function DetailsFormActions({
   changed,
   tracker,

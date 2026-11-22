@@ -1,6 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { application, interview } from "@/test/applications";
 import { PipelineBoard, PipelineBoardSkeleton } from "./pipeline-board";
 
@@ -98,16 +97,15 @@ describe("PipelineBoard", () => {
     expect(within(screen.getByRole("listitem")).getByText("Offer")).toBeInTheDocument();
   });
 
-  it("opens an Application from its card", async () => {
-    const onOpen = vi.fn();
-    render(<PipelineBoard title="Pipeline" subtitle="" applications={all} onOpen={onOpen} />);
-    await userEvent.click(screen.getByRole("button", { name: /^Open Birch\b/ }));
-    expect(onOpen).toHaveBeenCalledWith(scheduled);
+  it("links a card to its Application's page", () => {
+    render(<PipelineBoard title="Pipeline" subtitle="" applications={all} linked />);
+    expect(screen.getByRole("link", { name: /^Open Birch\b/ })).toHaveAttribute("href", "/applications/Birch");
   });
 
-  it("has no controls on a card besides opening it", () => {
-    render(<PipelineBoard title="Pipeline" subtitle="" applications={all} onOpen={vi.fn()} />);
-    expect(screen.getAllByRole("button").map((button) => button.textContent)).toEqual([
+  it("has no controls on a card besides its link", () => {
+    render(<PipelineBoard title="Pipeline" subtitle="" applications={all} linked />);
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
       expect.stringMatching(/^Open Acme/),
       expect.stringMatching(/^Open Birch/),
       expect.stringMatching(/^Open Cedar/),

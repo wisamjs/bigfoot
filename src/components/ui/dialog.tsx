@@ -31,8 +31,8 @@ const CONTENT = "[data-slot$='-content']";
 const OPEN_CONTENT = `${CONTENT}[data-state=open]`;
 
 /**
- * The control that opened the open dialog. A dialog that replaces another (Delete application?
- * replacing the side panel) opens with focus nowhere, so it keeps the first one's.
+ * The control that opened the open dialog. A dialog that replaces another opens with focus
+ * nowhere, so it keeps the first one's.
  */
 let opener: HTMLElement | null = null;
 

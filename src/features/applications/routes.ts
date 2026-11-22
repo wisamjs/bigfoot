@@ -9,3 +9,8 @@ export function addInterviewHref(applicationId?: string) {
   if (!applicationId) return "/interviews/new";
   return `/interviews/new?${new URLSearchParams({ [APPLICATION_PARAM]: applicationId })}`;
 }
+
+/** An Application's own page. */
+export function applicationHref(id: string) {
+  return `/applications/${encodeURIComponent(id)}`;
+}

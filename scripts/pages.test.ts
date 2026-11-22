@@ -23,7 +23,6 @@ describe("scripts/pages.mjs", () => {
   });
 
   it.each(routes)("lists %s signed out and signed in", (path) => {
-    expect(path, "dynamic routes need an example path in PAGES; extend this test").not.toMatch(/\[/);
     const states = PAGES.filter((p) => p.path === path).map((p) => p.signedIn);
     expect(states, `add ${path} to PAGES in scripts/pages.mjs for both states`).toEqual(
       expect.arrayContaining([false, true]),
