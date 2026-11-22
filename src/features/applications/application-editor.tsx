@@ -3,9 +3,8 @@
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Modal } from "@/components/ui/modal";
 import { useSaveStatus } from "@/hooks/use-save-status";
-import { DeleteConfirmation } from "@/features/applications/application-dialogs";
+import { DeleteApplicationDialog } from "@/features/applications/application-dialogs";
 import { DetailsForm } from "@/features/applications/details-form";
 import { InterviewList } from "@/features/applications/interview-list";
 import { StatusForm } from "@/features/applications/status-form";
@@ -49,9 +48,7 @@ export function ApplicationEditor({ app }: { app: Application }) {
         </Button>
       </div>
 
-      <Modal open={deleting} onClose={() => setDeleting(false)} title="Delete application?">
-        <DeleteConfirmation app={app} onCancel={() => setDeleting(false)} />
-      </Modal>
+      <DeleteApplicationDialog app={app} open={deleting} onClose={() => setDeleting(false)} />
     </div>
   );
 }

@@ -56,6 +56,11 @@ export const PAGES = [
         expect: "This can’t be undone",
       },
       {
+        name: "delete-interview-confirmation",
+        steps: [{ click: 'button[aria-label^="Delete Technical Interview"]' }],
+        expect: "This can’t be undone",
+      },
+      {
         name: "interview-calendar",
         steps: [{ click: 'button[id^="at-"]' }],
         expect: "Mo",
