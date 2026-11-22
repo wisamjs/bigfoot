@@ -13,12 +13,13 @@ import type { AccessToken, NewAccessToken } from "@/lib/api";
 import { accessTokenNameError } from "@/lib/validation";
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
+const dateTimeFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 
 /** A date in the viewer's time zone, which the server doesn't know: rendered after hydration. */
-function When({ at }: { at: string }) {
+function When({ at, time = false }: { at: string; time?: boolean }) {
   const isClient = useIsClient();
   if (!isClient) return <span className="inline-block h-4 w-20" />;
-  return <time dateTime={at}>{dateFormat.format(new Date(at))}</time>;
+  return <time dateTime={at}>{(time ? dateTimeFormat : dateFormat).format(new Date(at))}</time>;
 }
 
 /**
@@ -64,6 +65,7 @@ export function AccessTokens({ tokens, apiUrl }: { tokens: AccessToken[]; apiUrl
                   <Fact label="Created">
                     <When at={token.created_at} />
                   </Fact>
+                  <Fact label="Last used">{token.last_used_at ? <When at={token.last_used_at} time /> : "Never"}</Fact>
                   <Fact label={token.expired ? "Expired" : "Expires"}>
                     <When at={token.expires_at} />
                   </Fact>

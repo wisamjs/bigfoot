@@ -26,6 +26,9 @@ ACCESS_TOKEN_PREFIX = "bigfoot_"
 # Every Access token new_access_token makes: the prefix, then 32 random bytes in URL-safe base64.
 # Anything else is refused before it reaches the database.
 ACCESS_TOKEN_PATTERN = re.compile(rf"^{ACCESS_TOKEN_PREFIX}[A-Za-z0-9_-]{{43}}$")
+# How stale last_used_at may get. Writing it on every request would make a script's parallel
+# requests wait on the token's row lock, and turn every read into a write.
+LAST_USED_RESOLUTION = "1 minute"
 
 # Declared so OpenAPI lists both schemes and Swagger UI shows them in its Authorize dialog.
 # auto_error is off so a missing or non-bearer header gets this module's 401, not FastAPI's.
@@ -34,8 +37,8 @@ access_token_bearer = HTTPBearer(
     scheme_name="AccessToken",
     description=(
         f"An Access token: a secret starting with `{ACCESS_TOKEN_PREFIX}` that a job seeker creates on their "
-        "Account page and gives a script. It reads that job seeker's Applications and Interviews, expires a "
-        "year after it is created, and stops working when revoked. It can't change data or reach the Account routes."
+        "Account page and gives a script. It reads and writes that job seeker's Applications and Interviews, "
+        "expires a year after it is created, and stops working when revoked. It can't reach the Account routes."
     ),
 )
 web_token_bearer = HTTPBearer(
@@ -86,12 +89,24 @@ def _from_web_token(request: Request, token: str) -> str:
 
 
 def _from_access_token(request: Request, token: str) -> str:
-    """The job seeker a live token belongs to. A revoked token has no row."""
+    """One statement both checks the token and records its use, at most once per
+    LAST_USED_RESOLUTION. A revoked token has no row."""
     if not ACCESS_TOKEN_PATTERN.fullmatch(token):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token")
     with request.app.state.pool.connection() as conn:
         row = conn.execute(
-            "select job_seeker_id from access_tokens where token_hash = %s and expires_at > now()",
+            f"""
+            with found as (
+                select id, job_seeker_id, last_used_at from access_tokens
+                where token_hash = %s and expires_at > now()
+            ), touched as (
+                update access_tokens set last_used_at = now() from found
+                where access_tokens.id = found.id
+                    and (found.last_used_at is null
+                         or found.last_used_at < now() - interval '{LAST_USED_RESOLUTION}')
+            )
+            select job_seeker_id from found
+            """,
             (access_token_hash(token),),
         ).fetchone()
     if row is None:
@@ -114,17 +129,15 @@ def job_seeker_id(
 
 
 def signed_in_job_seeker_id(request: Request, web_token: Annotated[Credentials, Depends(web_token_bearer)]) -> str:
-    """The job seeker's id, from a web token only: for the Account routes, and for every route that
-    changes data, which a script can't use yet (write access is BIG-110).
+    """The job seeker's id, from a web token only: for the Account routes, which a script can't use.
 
-    A leaked Access token then can only read: it can't change or delete data, delete the account, or
-    create tokens that outlive its revocation.
+    A leaked Access token then can't delete the account or create tokens that outlive its revocation.
     """
     token = _token(web_token)
     if token.startswith(ACCESS_TOKEN_PREFIX):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
-            "An Access token can only read Applications and Interviews. Sign in to Bigfoot to change them.",
+            "An Access token can't use Account routes. Sign in to Bigfoot and use the Account page.",
         )
     return _from_web_token(request, token)
 

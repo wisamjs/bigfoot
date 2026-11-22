@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Bigfoot API",
-    "description": "Bigfoot's data API: a job seeker's Applications and their Interviews, in Supabase Postgres.\n\nEvery route but `/health` needs `Authorization: Bearer <token>`, and reads and writes only the data\nof the job seeker the token names. There are two kinds of token:\n\n- **Access token** (`AccessToken`): a secret starting with `bigfoot_` that a job seeker creates on\n  their Account page and gives a script, such as a cron job. It works on the routes that read\n  Applications and Interviews; every other route answers it with 403. It expires after a year, and\n  can be revoked\n  ([ADR 0003](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0003-access-tokens-open-fastapi-to-scripts.md)).\n- **Web token** (`WebToken`): a short-lived JWT the Next.js server signs for the signed-in job\n  seeker. The browser itself never calls this API. Web tokens work on every route, and are the only\n  way to change data or use the Account and Access tokens routes\n  ([ADR 0001](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0001-fastapi-behind-nextjs-with-authjs.md)).\n\nTerms such as Application, Interview, Waiting, Sample Application and Access token are defined in\n[GLOSSARY.md](https://github.com/wisamjs/bigfoot/blob/main/GLOSSARY.md).\n\nTo try a request, click **Authorize** and paste an Access token from the Account page, or a web\ntoken from `node scripts/dev-api-token.mjs`.\n",
+    "description": "Bigfoot's data API: a job seeker's Applications and their Interviews, in Supabase Postgres.\n\nEvery route but `/health` needs `Authorization: Bearer <token>`, and reads and writes only the data\nof the job seeker the token names. There are two kinds of token:\n\n- **Access token** (`AccessToken`): a secret starting with `bigfoot_` that a job seeker creates on\n  their Account page and gives a script, such as a cron job. It works on the Applications and\n  Interviews routes, expires after a year, and can be revoked\n  ([ADR 0003](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0003-access-tokens-open-fastapi-to-scripts.md)).\n- **Web token** (`WebToken`): a short-lived JWT the Next.js server signs for the signed-in job\n  seeker. The browser itself never calls this API. Web tokens work on every route, and are the only\n  way to use the Account and Access tokens routes\n  ([ADR 0001](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0001-fastapi-behind-nextjs-with-authjs.md)).\n\nTerms such as Application, Interview, Waiting, Sample Application and Access token are defined in\n[GLOSSARY.md](https://github.com/wisamjs/bigfoot/blob/main/GLOSSARY.md).\n\nTo try a request, click **Authorize** and paste an Access token from the Account page, or a web\ntoken from `node scripts/dev-api-token.mjs`.\n",
     "version": "0.1.0"
   },
   "paths": {
@@ -58,7 +58,7 @@
             }
           },
           "403": {
-            "description": "The bearer token is an Access token, which can't use this route.",
+            "description": "The bearer token is an Access token, which can't use Account routes.",
             "content": {
               "application/json": {
                 "schema": {
@@ -105,7 +105,7 @@
             }
           },
           "403": {
-            "description": "The bearer token is an Access token, which can't use this route.",
+            "description": "The bearer token is an Access token, which can't use Account routes.",
             "content": {
               "application/json": {
                 "schema": {
@@ -153,7 +153,7 @@
             }
           },
           "403": {
-            "description": "The bearer token is an Access token, which can't use this route.",
+            "description": "The bearer token is an Access token, which can't use Account routes.",
             "content": {
               "application/json": {
                 "schema": {
@@ -204,7 +204,7 @@
             }
           },
           "403": {
-            "description": "The bearer token is an Access token, which can't use this route.",
+            "description": "The bearer token is an Access token, which can't use Account routes.",
             "content": {
               "application/json": {
                 "schema": {
@@ -259,7 +259,7 @@
             }
           },
           "403": {
-            "description": "The bearer token is an Access token, which can't use this route.",
+            "description": "The bearer token is an Access token, which can't use Account routes.",
             "content": {
               "application/json": {
                 "schema": {
@@ -328,7 +328,7 @@
             }
           },
           "403": {
-            "description": "The bearer token is an Access token, which can't use this route.",
+            "description": "The bearer token is an Access token, which can't use Account routes.",
             "content": {
               "application/json": {
                 "schema": {
@@ -441,16 +441,6 @@
               }
             }
           },
-          "403": {
-            "description": "The bearer token is an Access token, which can't use this route.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
-          },
           "409": {
             "description": "The job seeker already has 1,000 Applications, the most Bigfoot keeps.",
             "content": {
@@ -474,6 +464,9 @@
         },
         "security": [
           {
+            "AccessToken": []
+          },
+          {
             "WebToken": []
           }
         ]
@@ -488,6 +481,9 @@
         "description": "Change some of an Application's fields and return it with its Interviews.\n\nOnly the fields sent change. Setting the status to `in_progress` without an outcome reopens the\nApplication and clears its Outcome; setting it to `done` needs an Outcome, sent now or already set.",
         "operationId": "update_application_applications__application_id__patch",
         "security": [
+          {
+            "AccessToken": []
+          },
           {
             "WebToken": []
           }
@@ -537,16 +533,6 @@
               }
             }
           },
-          "403": {
-            "description": "The bearer token is an Access token, which can't use this route.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
-          },
           "404": {
             "description": "No Application with this id belongs to the job seeker.",
             "content": {
@@ -585,6 +571,9 @@
         "operationId": "delete_application_applications__application_id__delete",
         "security": [
           {
+            "AccessToken": []
+          },
+          {
             "WebToken": []
           }
         ],
@@ -618,16 +607,6 @@
           },
           "404": {
             "description": "No Application with this id belongs to the job seeker.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The bearer token is an Access token, which can't use this route.",
             "content": {
               "application/json": {
                 "schema": {
@@ -735,6 +714,9 @@
         "operationId": "create_interview_applications__application_id__interviews_post",
         "security": [
           {
+            "AccessToken": []
+          },
+          {
             "WebToken": []
           }
         ],
@@ -793,16 +775,6 @@
               }
             }
           },
-          "403": {
-            "description": "The bearer token is an Access token, which can't use this route.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
-          },
           "409": {
             "description": "The Application already has 50 Interviews, the most it can have.",
             "content": {
@@ -835,6 +807,9 @@
         "description": "Change an Interview's kind, date or Interview notes.\n\nOnly the fields sent change; send null for `at` to clear the date, or for `notes` to clear them.",
         "operationId": "update_interview_applications__application_id__interviews__interview_id__patch",
         "security": [
+          {
+            "AccessToken": []
+          },
           {
             "WebToken": []
           }
@@ -906,16 +881,6 @@
               }
             }
           },
-          "403": {
-            "description": "The bearer token is an Access token, which can't use this route.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
-          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -936,6 +901,9 @@
         "description": "Delete an Interview, for example a cancelled one, and its Interview notes with it.",
         "operationId": "delete_interview_applications__application_id__interviews__interview_id__delete",
         "security": [
+          {
+            "AccessToken": []
+          },
           {
             "WebToken": []
           }
@@ -990,16 +958,6 @@
               }
             }
           },
-          "403": {
-            "description": "The bearer token is an Access token, which can't use this route.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
-          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -1036,6 +994,22 @@
             "format": "date-time",
             "title": "Created At"
           },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At",
+            "description": "When a request last used the token, to within a minute; null until one does.",
+            "examples": [
+              "2026-11-20T17:00:00Z"
+            ]
+          },
           "expires_at": {
             "type": "string",
             "format": "date-time",
@@ -1059,6 +1033,7 @@
           "id",
           "name",
           "created_at",
+          "last_used_at",
           "expires_at",
           "expired"
         ],
@@ -1880,6 +1855,22 @@
             "format": "date-time",
             "title": "Created At"
           },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At",
+            "description": "When a request last used the token, to within a minute; null until one does.",
+            "examples": [
+              "2026-11-20T17:00:00Z"
+            ]
+          },
           "expires_at": {
             "type": "string",
             "format": "date-time",
@@ -1911,6 +1902,7 @@
           "id",
           "name",
           "created_at",
+          "last_used_at",
           "expires_at",
           "expired",
           "token"
@@ -1982,7 +1974,7 @@
       },
       "AccessToken": {
         "type": "http",
-        "description": "An Access token: a secret starting with `bigfoot_` that a job seeker creates on their Account page and gives a script. It reads that job seeker's Applications and Interviews, expires a year after it is created, and stops working when revoked. It can't change data or reach the Account routes.",
+        "description": "An Access token: a secret starting with `bigfoot_` that a job seeker creates on their Account page and gives a script. It reads and writes that job seeker's Applications and Interviews, expires a year after it is created, and stops working when revoked. It can't reach the Account routes.",
         "scheme": "bearer"
       }
     }
