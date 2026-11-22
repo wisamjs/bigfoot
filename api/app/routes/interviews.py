@@ -1,0 +1,142 @@
+"""The Interviews of an Application."""
+
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
+from psycopg import sql
+
+from app.auth import JobSeekerId
+from app.domain import INTERVIEWS_PER_APPLICATION_MAX
+from app.models import (
+    ApplicationId,
+    ErrorMessage,
+    Interview,
+    InterviewCreate,
+    InterviewId,
+    InterviewPatch,
+)
+from app.queries import INTERVIEW_COLUMNS, INTERVIEW_ORDER, interview_view, owned, pool
+from app.responses import APPLICATION_NOT_FOUND, INTERVIEW_NOT_FOUND, UNAUTHORIZED
+
+router = APIRouter(
+    prefix="/applications/{application_id}/interviews",
+    tags=["Interviews"],
+    responses={**UNAUTHORIZED, **INTERVIEW_NOT_FOUND},
+)
+
+DATE_NEEDED_ERROR = {
+    "type": "missing",
+    "loc": ("body", "at"),
+    "msg": "is needed: this Interview has no date yet, so any change to it must set one",
+    "input": None,
+}
+
+
+@router.get(
+    "",
+    summary="List an Application's Interviews",
+    responses={404: {"model": ErrorMessage, "description": APPLICATION_NOT_FOUND[404]["description"]}},
+)
+def list_interviews(request: Request, job_seeker: JobSeekerId, application_id: ApplicationId) -> list[Interview]:
+    """The Application's Interviews, ordered by date. Any with no date yet come last."""
+    with pool(request).connection() as conn, conn.transaction():
+        owned(conn, job_seeker, application_id)
+        rows = conn.execute(
+            sql.SQL("select {} from interviews where application_id = %s {}").format(
+                INTERVIEW_COLUMNS, INTERVIEW_ORDER
+            ),
+            (application_id,),
+        ).fetchall()
+    now = datetime.now(UTC)
+    return [interview_view(row, now) for row in rows]
+
+
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    summary="Add an Interview",
+    responses={
+        404: {"model": ErrorMessage, "description": APPLICATION_NOT_FOUND[404]["description"]},
+        409: {
+            "model": ErrorMessage,
+            "description": (
+                f"The Application already has {INTERVIEWS_PER_APPLICATION_MAX} Interviews, the most it can have."
+            ),
+        },
+    },
+)
+def create_interview(
+    request: Request, job_seeker: JobSeekerId, application_id: ApplicationId, body: InterviewCreate
+) -> Interview:
+    """Add an Interview to an Application. The kind and the date and time are required; kinds can
+    repeat, and Interview notes are optional. The number of Interviews per Application is capped (409)."""
+    with pool(request).connection() as conn, conn.transaction():
+        owned(conn, job_seeker, application_id, lock=True)
+        count = conn.execute("select count(*) from interviews where application_id = %s", (application_id,)).fetchone()[
+            "count"
+        ]
+        if count >= INTERVIEWS_PER_APPLICATION_MAX:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                f"This Application has {INTERVIEWS_PER_APPLICATION_MAX} Interviews, the most it can have. "
+                "Delete one to add another.",
+            )
+        row = conn.execute(
+            sql.SQL(
+                "insert into interviews (application_id, kind, at, notes) values (%s, %s, %s, %s) returning {}"
+            ).format(INTERVIEW_COLUMNS),
+            (application_id, body.kind, body.at, body.notes),
+        ).fetchone()
+    return interview_view(row, datetime.now(UTC))
+
+
+@router.patch("/{interview_id}", summary="Edit an Interview")
+def update_interview(
+    request: Request,
+    job_seeker: JobSeekerId,
+    application_id: ApplicationId,
+    interview_id: InterviewId,
+    body: InterviewPatch,
+) -> Interview:
+    """Change an Interview's kind, date or Interview notes.
+
+    Only the fields sent change; send null for `notes` to clear them. The date can't be cleared, and
+    any change to an Interview saved without a date must set one (422).
+    """
+    changes = body.model_dump(exclude_unset=True)
+    assignments = [sql.SQL("{} = %s").format(sql.Identifier(name)) for name in changes]
+    assignments.append(sql.SQL("updated_at = now()"))
+    with pool(request).connection() as conn, conn.transaction():
+        owned(conn, job_seeker, application_id)
+        current = conn.execute(
+            "select at from interviews where id = %s and application_id = %s for update",
+            (interview_id, application_id),
+        ).fetchone()
+        if current is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Interview not found")
+        if current["at"] is None and "at" not in changes:
+            raise RequestValidationError([DATE_NEEDED_ERROR])
+        row = conn.execute(
+            sql.SQL("update interviews set {} where id = %s and application_id = %s returning {}").format(
+                sql.SQL(", ").join(assignments), INTERVIEW_COLUMNS
+            ),
+            [*changes.values(), interview_id, application_id],
+        ).fetchone()
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Interview not found")
+    return interview_view(row, datetime.now(UTC))
+
+
+@router.delete("/{interview_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete an Interview")
+def delete_interview(
+    request: Request, job_seeker: JobSeekerId, application_id: ApplicationId, interview_id: InterviewId
+) -> None:
+    """Delete an Interview, for example a cancelled one, and its Interview notes with it."""
+    with pool(request).connection() as conn, conn.transaction():
+        owned(conn, job_seeker, application_id)
+        deleted = conn.execute(
+            "delete from interviews where id = %s and application_id = %s", (interview_id, application_id)
+        ).rowcount
+    if not deleted:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Interview not found")
