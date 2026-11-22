@@ -16,7 +16,7 @@ export type PanelView =
   | { kind: "list"; title: string; ids: string[] };
 
 /**
- * The side panel beside the Pipeline. It shows one whole Application to read and edit, or a list
+ * The side panel beside the Applications list. It shows one whole Application to read and edit, or a list
  * of Applications that each open in the panel with a Back link. Closed
  * while `view` is null. Applications are looked up by id in `applications`, so the panel shows
  * each one as saved after every change.
@@ -117,7 +117,7 @@ function ApplicationList({
           <li key={app.id} className="relative flex items-center gap-3 rounded-control border border-line bg-surface p-3 transition-colors hover:border-line-medium hover:bg-card">
             <div className="min-w-0 flex-1">
               <p className="m-0 text-sm font-medium leading-5 text-heading">
-                {/* Stretched button, as on the Pipeline's cards: the whole row opens the Application. */}
+                {/* Stretched button, as on the Applications list's cards: the whole row opens the Application. */}
                 <button
                   type="button"
                   // eslint-disable-next-line jsx-a11y/no-autofocus -- on Back to list, focus returns to the row that was opened.

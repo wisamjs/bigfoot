@@ -1,10 +1,10 @@
-"""Sample Applications (GLOSSARY.md): what a new job seeker finds in their Pipeline the first
+"""Sample Applications (GLOSSARY.md): what a new job seeker finds in their Applications the first
 time they load the dashboard, to show how Bigfoot works before they add their own.
 
 Companies are made up. Dates are relative to when the job seeker is onboarded: applied in the
-past few weeks, with an Interview a few days ahead so "Coming up" isn't empty. Each sample shows
-a different state: one with a completed and an upcoming Interview, one new and Waiting, one Done
-with an Offer, one Done with Rejected.
+past few weeks, with an Interview a few days ahead so the Interviews calendar isn't empty. Each
+sample shows a different state: one with a completed and an upcoming Interview, one new and
+Waiting, one Done with an Offer, one Done with Rejected.
 """
 
 from datetime import datetime, time, timedelta

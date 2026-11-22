@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Adds or removes a fixed set of Applications for the dev-session test user, through the API, so
-// the dashboard can be seen filled (Pipeline board, Coming up, Done Applications), long
+// the dashboard can be seen filled (the Applications list, the Interviews calendar, Done Applications), long
 // Interview labels included.
 //   node scripts/dev-applications.mjs add      # refuses if the test user already has Applications
 //   node scripts/dev-applications.mjs remove   # deletes every Application the test user has
@@ -26,7 +26,7 @@ export async function call(jobSeekerId, method, path, body) {
   return res.status === 204 ? null : res.json();
 }
 
-/** `days` from today at `hour` local time, so Coming up always lists future Interviews. */
+/** `days` from today at `hour` local time, so the Interviews calendar always lists future Interviews. */
 function at(days, hour) {
   const d = new Date();
   d.setDate(d.getDate() + days);

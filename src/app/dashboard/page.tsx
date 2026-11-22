@@ -4,15 +4,15 @@ import { BriefcaseBusiness, CalendarCheck, CalendarClock } from "lucide-react";
 import { AppFooter } from "@/features/shell/app-footer";
 import { AppHeader } from "@/features/shell/app-header";
 import { AddApplicationLink, AddInterviewLink } from "@/features/applications/add-links";
-import { ComingUpCalendar, ComingUpCalendarSkeleton } from "@/features/dashboard/coming-up-calendar";
+import { InterviewCalendar, InterviewCalendarSkeleton } from "@/features/dashboard/interview-calendar";
 import { NextInterviewStat } from "@/features/dashboard/next-interview-stat";
-import { DashboardPipeline } from "@/features/dashboard/dashboard-pipeline";
-import { PipelineBoardSkeleton } from "@/features/applications/pipeline-board";
+import { DashboardApplications } from "@/features/dashboard/dashboard-applications";
+import { ApplicationListSkeleton } from "@/features/applications/application-list";
 import { StatCard } from "@/components/ui/stat-card";
 import { Container } from "@/components/ui/container";
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton";
 import { listApplications, onboard } from "@/lib/api";
-import { getCalendarInterviews, getStats, getUpcoming } from "@/lib/applications";
+import { getCalendarInterviews, getStats } from "@/lib/applications";
 import { getCurrentUser } from "@/lib/dal";
 
 export const metadata: Metadata = {
@@ -32,18 +32,13 @@ async function Dashboard() {
   await onboard(user.id);
   const applications = await listApplications(user.id);
   const stats = getStats(applications);
-  const upcoming = getUpcoming(applications);
 
   return (
     <DashboardLayout
       header={<AppHeader user={user} current="/dashboard" />}
       greeting={`Welcome back, ${user.firstName}`}
-      addButtons={
-        <>
-          <AddInterviewLink />
-          <AddApplicationLink />
-        </>
-      }
+      addInterview={<AddInterviewLink />}
+      addApplication={<AddApplicationLink />}
       stats={
         <>
           <StatCard icon={BriefcaseBusiness} label="Open" value={stats.open} note="Applications In Progress" />
@@ -51,13 +46,9 @@ async function Dashboard() {
           <NextInterviewStat next={stats.next} />
         </>
       }
-      calendar={<ComingUpCalendar interviews={getCalendarInterviews(applications)} />}
-      pipeline={
-        <DashboardPipeline
-          subtitle={`${upcoming.length} upcoming ${upcoming.length === 1 ? "interview" : "interviews"}`}
-          applications={applications}
-        />
-      }
+      calendar={<InterviewCalendar interviews={getCalendarInterviews(applications)} />}
+      applicationsSubtitle={stats.waiting === 0 ? "None waiting on a reply" : `${stats.waiting} waiting on a reply`}
+      applications={<DashboardApplications applications={applications} />}
     />
   );
 }
@@ -73,12 +64,8 @@ function DashboardSkeleton() {
       <DashboardLayout
         header={<AppHeader current="/dashboard" />}
         greeting={<Skeleton className="inline-block h-8 w-80 max-w-full align-middle md:h-9" />}
-        addButtons={
-          <>
-            <Skeleton className="h-11 w-40" />
-            <Skeleton className="h-11 w-48" />
-          </>
-        }
+        addInterview={<Skeleton className="h-11 w-40" />}
+        addApplication={<Skeleton className="h-11 w-48" />}
         stats={
           <>
             <StatCard icon={BriefcaseBusiness} label="Open" value={value} note="Applications In Progress" />
@@ -91,8 +78,9 @@ function DashboardSkeleton() {
             />
           </>
         }
-        calendar={<ComingUpCalendarSkeleton />}
-        pipeline={<PipelineBoardSkeleton title="Pipeline" />}
+        calendar={<InterviewCalendarSkeleton />}
+        applicationsSubtitle={<Skeleton className="inline-block h-4 w-36 align-middle" />}
+        applications={<ApplicationListSkeleton />}
       />
     </LoadingRegion>
   );
@@ -102,55 +90,80 @@ function DashboardSkeleton() {
 function DashboardLayout({
   header,
   greeting,
-  addButtons,
+  addInterview,
+  addApplication,
   stats,
   calendar,
-  pipeline,
+  applicationsSubtitle,
+  applications,
 }: {
   header: ReactNode;
   greeting: ReactNode;
-  addButtons: ReactNode;
+  addInterview: ReactNode;
+  addApplication: ReactNode;
   stats: ReactNode;
   calendar: ReactNode;
-  pipeline: ReactNode;
+  applicationsSubtitle: ReactNode;
+  applications: ReactNode;
 }) {
   return (
     <>
       {header}
       <main id="main" className="py-12">
         <Container className="flex flex-col gap-8">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h1 className="m-0 mb-2 text-[32px] font-bold leading-[1.1] text-heading md:text-[40px]">
-                {greeting}
-              </h1>
-              <p className="m-0 text-base leading-[1.7] text-body">
-                Here’s where the hunt stands this week.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">{addButtons}</div>
+          <div>
+            <h1 className="m-0 mb-2 text-[32px] font-bold leading-[1.1] text-heading md:text-[40px]">
+              {greeting}
+            </h1>
+            <p className="m-0 text-base leading-[1.7] text-body">Here’s where the hunt stands this week.</p>
           </div>
 
           <section aria-label="Search summary">
             <ul className="m-0 grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-3">{stats}</ul>
           </section>
 
-          <section aria-labelledby="upcoming-title">
-            <h2 id="upcoming-title" className="m-0 mb-4 text-xl font-bold leading-[1.25] text-heading">
-              Coming up
-            </h2>
+          <section aria-labelledby="interviews-title">
+            <SectionHeading id="interviews-title" title="Interviews" action={addInterview} />
             {calendar}
           </section>
 
-          <section aria-labelledby="pipeline-title">
-            <h2 id="pipeline-title" className="sr-only">
-              Pipeline
-            </h2>
-            {pipeline}
+          <section aria-labelledby="applications-title">
+            <SectionHeading
+              id="applications-title"
+              title="Applications"
+              subtitle={applicationsSubtitle}
+              action={addApplication}
+            />
+            {applications}
           </section>
         </Container>
       </main>
       <AppFooter />
     </>
+  );
+}
+
+/** A dashboard section's h2 with its own Add button, and an optional subtitle under the h2. */
+function SectionHeading({
+  id,
+  title,
+  subtitle,
+  action,
+}: {
+  id: string;
+  title: string;
+  subtitle?: ReactNode;
+  action: ReactNode;
+}) {
+  return (
+    <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h2 id={id} className="m-0 text-xl font-bold leading-[1.25] text-heading">
+          {title}
+        </h2>
+        {subtitle ? <p className="m-0 mt-1 text-sm text-body">{subtitle}</p> : null}
+      </div>
+      {action}
+    </div>
   );
 }

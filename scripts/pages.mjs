@@ -60,7 +60,7 @@ export const PAGES = [
         ],
         expect: "Mo",
       },
-      { name: "nothing-coming-up", applications: "none", steps: [], expect: "All quiet in the woods" },
+      { name: "nothing-scheduled", applications: "none", steps: [], expect: "All quiet in the woods" },
     ],
   },
   { path: "/applications/new", signedIn: false, redirect: true },

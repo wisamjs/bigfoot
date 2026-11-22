@@ -6,7 +6,7 @@
 
 const outline = { stroke: "var(--art-outline)", strokeWidth: 3, strokeLinecap: "round", strokeLinejoin: "round" } as const;
 
-/** Bigfoot asleep in its hood beside an empty calendar: nothing coming up (BIG-97). */
+/** Bigfoot asleep in its hood beside an empty calendar: no upcoming Interviews (BIG-97). */
 export function SleepingBigfoot({ className }: { className?: string }) {
   return (
     <svg viewBox="0 8 200 164" aria-hidden focusable="false" className={className}>

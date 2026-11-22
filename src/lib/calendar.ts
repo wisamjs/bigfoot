@@ -1,4 +1,4 @@
-// Month-grid arithmetic for the Coming up calendar. Every function works in the time zone of the
+// Month-grid arithmetic for the Interviews calendar. Every function works in the time zone of the
 // machine it runs on, so call them in the browser: an Interview belongs to the job seeker's day.
 
 export type CalendarDay = {
@@ -39,10 +39,10 @@ export function monthWeeks(start: Date): CalendarDay[][] {
   return weeks;
 }
 
-/** The most Interviews the Coming up agenda lists before it narrows its window. */
+/** The most Interviews the Interviews agenda lists before it narrows its window. */
 export const AGENDA_LIMIT = 5;
 
-/** The days the Coming up agenda lists: local YYYY-MM-DD keys, both ends included. */
+/** The days the Interviews agenda lists: local YYYY-MM-DD keys, both ends included. */
 export type AgendaWindow = {
   /** Completes "Interviews in …" and "Nothing in … yet.", e.g. "November" or "the next week". */
   span: string;

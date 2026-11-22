@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/applications/actions";
 import { DATE_NEEDED } from "@/lib/validation";
 import { application, interview } from "@/test/applications";
-import { DashboardPipeline } from "./dashboard-pipeline";
+import { DashboardApplications } from "./dashboard-applications";
 
 // Server Actions are mocked at their module: what the panel sends, not how it reaches the API.
 vi.mock("@/app/applications/actions", () => ({
@@ -32,7 +32,7 @@ const rejected = application("umbrella", { company: "Umbrella", status: "done", 
 
 function setUpDashboard(app = birch) {
   const user = userEvent.setup();
-  render(<DashboardPipeline applications={[app, rejected]} subtitle="1 open" />);
+  render(<DashboardApplications applications={[app, rejected]} />);
   return user;
 }
 
@@ -42,7 +42,7 @@ async function openBirch(app = birch) {
   return { user, dialog: screen.getByRole("dialog", { name: "Birch" }) };
 }
 
-describe("Dashboard Pipeline", () => {
+describe("Dashboard Applications", () => {
   it("shows Done Applications only after Show done", async () => {
     const user = setUpDashboard();
     expect(screen.queryByRole("region", { name: "Done" })).not.toBeInTheDocument();

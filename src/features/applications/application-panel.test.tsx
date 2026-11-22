@@ -8,7 +8,7 @@ import { application, interview } from "@/test/applications";
 import { ApplicationPanel, type PanelView } from "./application-panel";
 
 // Server Actions are mocked at their module: what the panel sends, not how it reaches the API.
-// Editing Status, details and an Interview's kind and date is covered in dashboard-pipeline.test.tsx.
+// Editing Status, details and an Interview's kind and date is covered in dashboard-applications.test.tsx.
 vi.mock("@/app/applications/actions", () => ({
   createApplicationAction: vi.fn(),
   updateApplicationAction: vi.fn(),
@@ -29,7 +29,7 @@ const cedar = application("cedar", { company: "Cedar", title: "Designer", status
 const maple = application("maple", { company: "Maple" });
 const ALL = [birch, cedar, maple];
 
-/** A caller that opens the panel on `view`, as the Pipeline does for a card. */
+/** A caller that opens the panel on `view`, as the Applications list does for a card. */
 function Caller({ view, applications = ALL }: { view: PanelView; applications?: Application[] }) {
   const [open, setOpen] = useState(false);
   return (

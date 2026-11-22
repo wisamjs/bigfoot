@@ -22,15 +22,15 @@ function interviewCount(n: number) {
 }
 
 /**
- * Coming up as a small month grid beside an agenda (BIG-36): every dated Interview of an In
+ * The Interviews calendar: a small month grid beside an agenda (BIG-36): every dated Interview of an In
  * Progress Application, with past ones muted.
  * The grid marks days with a dot (muted when all of the day's Interviews are past). The agenda lists
  * one day's Interviews once that day is picked; otherwise another month's Interviews, or for this
  * month the widest upcoming window that holds five (BIG-72).
  * Days and times are the job seeker's own, so the calendar renders only in the browser; the server
- * sends ComingUpCalendarSkeleton, the same layout in skeleton shapes.
+ * sends InterviewCalendarSkeleton, the same layout in skeleton shapes.
  */
-export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] }) {
+export function InterviewCalendar({ interviews }: { interviews: DatedInterview[] }) {
   const isClient = useIsClient();
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
@@ -45,7 +45,7 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
     }
   }, [selected, offset]);
 
-  if (!isClient) return <ComingUpCalendarSkeleton />;
+  if (!isClient) return <InterviewCalendarSkeleton />;
 
   // eslint-disable-next-line @eslint-react/purity -- today is read on each render on purpose: the calendar renders only in the browser (isClient above), and a stored date would go stale past midnight.
   const now = new Date();
@@ -149,7 +149,7 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
           </div>
 
           {agendaItems.length === 0 && offset === 0 ? (
-            <NothingComingUp />
+            <NothingScheduled />
           ) : agendaItems.length === 0 ? (
             <p className="m-0 text-sm text-body">
               {interviews.length === 0
@@ -177,10 +177,10 @@ export function ComingUpCalendar({ interviews }: { interviews: DatedInterview[] 
 }
 
 /**
- * Coming up while it waits for data or for the browser: the month grid (five weeks, the usual
+ * The calendar while it waits for data or for the browser: the month grid (five weeks, the usual
  * month) and five agenda items, sized like the real ones.
  */
-export function ComingUpCalendarSkeleton() {
+export function InterviewCalendarSkeleton() {
   return (
     <div aria-hidden className={calendarCardClasses}>
       <div className={gridColumnClasses}>
@@ -236,7 +236,7 @@ const agendaItemClasses = "flex items-center gap-3 rounded-control bg-surface px
  * The agenda for this month or the upcoming window when it has nothing to list (BIG-97). A picked
  * day always has Interviews, and other months keep their one line of text.
  */
-function NothingComingUp() {
+function NothingScheduled() {
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-center">
       <SleepingBigfoot className="w-full max-w-44 min-h-0 shrink" />

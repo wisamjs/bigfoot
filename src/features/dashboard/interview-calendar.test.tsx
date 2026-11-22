@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DatedInterview } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
-import { ComingUpCalendar, ComingUpCalendarSkeleton } from "./coming-up-calendar";
+import { InterviewCalendar, InterviewCalendarSkeleton } from "./interview-calendar";
 
 const monthName = (month: number) => new Intl.DateTimeFormat(undefined, { month: "long" }).format(new Date(2026, month, 1));
 
@@ -38,15 +38,15 @@ function agendaItems() {
   return within(screen.getByRole("list")).getAllByRole("listitem");
 }
 
-describe("ComingUpCalendar", () => {
+describe("InterviewCalendar", () => {
   it("lists the whole month while it holds five Interviews", () => {
-    render(<ComingUpCalendar interviews={interviewsOn(2, 3, 21, 25, 30)} />);
+    render(<InterviewCalendar interviews={interviewsOn(2, 3, 21, 25, 30)} />);
     expect(screen.getByRole("heading", { name: `Interviews in ${monthName(10)}` })).toBeInTheDocument();
     expect(agendaItems()).toHaveLength(5);
   });
 
   it("narrows to the next 2 weeks at six, leaving out earlier days", () => {
-    render(<ComingUpCalendar interviews={interviewsOn(2, 3, 4, 21, 25, 30)} />);
+    render(<InterviewCalendar interviews={interviewsOn(2, 3, 4, 21, 25, 30)} />);
     expect(screen.getByRole("heading", { name: "Interviews in the next 2 weeks" })).toBeInTheDocument();
     expect(agendaItems().map((li) => li.textContent)).toEqual([
       expect.stringContaining("Company 3"),
@@ -57,7 +57,7 @@ describe("ComingUpCalendar", () => {
 
   it("shows another month whole, and Show upcoming returns from a picked day to the narrowed window", async () => {
     const user = userEvent.setup();
-    render(<ComingUpCalendar interviews={interviewsOn(2, 3, 4, 21, 25, 30)} />);
+    render(<InterviewCalendar interviews={interviewsOn(2, 3, 4, 21, 25, 30)} />);
 
     await user.click(screen.getByRole("button", { name: "Previous month" }));
     expect(screen.getByRole("heading", { name: `Interviews in ${monthName(9)}` })).toBeInTheDocument();
@@ -81,7 +81,7 @@ describe("ComingUpCalendar", () => {
     // Six still to come in the next week, three in the next 2 days. Counting the two completed
     // ones earlier today would list them too.
     const interviews = [...interviewsOn(2, 21, 21, 22, 23, 25), ...interviewsToday(9, 11, 16)];
-    render(<ComingUpCalendar interviews={interviews} />);
+    render(<InterviewCalendar interviews={interviews} />);
     expect(screen.getByRole("heading", { name: "Interviews in the next 2 days" })).toBeInTheDocument();
     expect(agendaItems().map((li) => li.textContent)).toEqual([
       expect.stringContaining("Today 16:00"),
@@ -92,7 +92,7 @@ describe("ComingUpCalendar", () => {
 
   it("shows Bigfoot asleep when every Interview in a narrowed window is completed (BIG-97)", () => {
     const interviews = [...interviewsOn(2, 3, 4, 5, 6), ...interviewsToday(9)];
-    render(<ComingUpCalendar interviews={interviews} />);
+    render(<InterviewCalendar interviews={interviews} />);
     expect(screen.getByRole("heading", { name: "Interviews in the next 2 weeks" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "All quiet in the woods" })).toBeInTheDocument();
     expect(screen.getByText(/No upcoming Interviews, so Bigfoot’s catching some sleep/)).toBeInTheDocument();
@@ -101,7 +101,7 @@ describe("ComingUpCalendar", () => {
 
   it("shows Bigfoot asleep with no dated Interviews, and keeps other months to one line (BIG-97)", async () => {
     const user = userEvent.setup();
-    render(<ComingUpCalendar interviews={[]} />);
+    render(<InterviewCalendar interviews={[]} />);
     expect(screen.getByRole("heading", { name: "All quiet in the woods" })).toBeInTheDocument();
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
 
@@ -112,7 +112,7 @@ describe("ComingUpCalendar", () => {
 
   it("still lists today's completed Interviews, muted, in the month and on the picked day", async () => {
     const user = userEvent.setup();
-    render(<ComingUpCalendar interviews={interviewsToday(9, 16)} />);
+    render(<InterviewCalendar interviews={interviewsToday(9, 16)} />);
     expect(screen.getByRole("heading", { name: `Interviews in ${monthName(10)}` })).toBeInTheDocument();
     expect(agendaItems().map((li) => li.textContent)).toEqual([
       expect.stringContaining("Today 9:00"),
@@ -124,11 +124,11 @@ describe("ComingUpCalendar", () => {
   });
 });
 
-describe("ComingUpCalendarSkeleton", () => {
+describe("InterviewCalendarSkeleton", () => {
   it("draws a five-week month and five agenda items, hidden from assistive tech", () => {
     // Skeleton shapes are aria-hidden, with no role or text, so this checks the DOM itself.
     // eslint-disable-next-line testing-library/no-node-access -- see above
-    const card = render(<ComingUpCalendarSkeleton />).container.firstElementChild!;
+    const card = render(<InterviewCalendarSkeleton />).container.firstElementChild!;
     expect(card).toHaveAttribute("aria-hidden", "true");
     // eslint-disable-next-line testing-library/no-node-access -- see above
     expect(card.querySelectorAll(".rounded-full.skeleton")).toHaveLength(35);
