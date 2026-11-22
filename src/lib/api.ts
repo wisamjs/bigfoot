@@ -118,6 +118,7 @@ export type AccessToken = {
   name: string;
   /** ISO timestamps. */
   created_at: string;
+  last_used_at: string | null;
   expires_at: string;
   /** Derived by the API: `expires_at` has passed, so the token no longer works. */
   expired: boolean;

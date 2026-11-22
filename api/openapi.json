@@ -994,6 +994,22 @@
             "format": "date-time",
             "title": "Created At"
           },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At",
+            "description": "When a request last used the token, to within a minute; null until one does.",
+            "examples": [
+              "2026-11-20T17:00:00Z"
+            ]
+          },
           "expires_at": {
             "type": "string",
             "format": "date-time",
@@ -1017,6 +1033,7 @@
           "id",
           "name",
           "created_at",
+          "last_used_at",
           "expires_at",
           "expired"
         ],
@@ -1838,6 +1855,22 @@
             "format": "date-time",
             "title": "Created At"
           },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At",
+            "description": "When a request last used the token, to within a minute; null until one does.",
+            "examples": [
+              "2026-11-20T17:00:00Z"
+            ]
+          },
           "expires_at": {
             "type": "string",
             "format": "date-time",
@@ -1869,6 +1902,7 @@
           "id",
           "name",
           "created_at",
+          "last_used_at",
           "expires_at",
           "expired",
           "token"

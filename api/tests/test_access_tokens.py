@@ -45,12 +45,13 @@ def test_creating_returns_the_secret_once_and_stores_only_its_hash(settings, cli
     secret = created["token"]
     assert secret.startswith(ACCESS_TOKEN_PREFIX)
     assert len(secret) >= len(ACCESS_TOKEN_PREFIX) + 43  # 32 random bytes, base64url
-    assert set(created) == {"id", "name", "created_at", "expires_at", "expired", "token"}
+    assert set(created) == {"id", "name", "created_at", "last_used_at", "expires_at", "expired", "token"}
     assert created["expired"] is False
     assert created["name"] == "Calendar cron job"
+    assert created["last_used_at"] is None
 
     [token_listed] = listed(client, token())
-    assert set(token_listed) == {"id", "name", "created_at", "expires_at", "expired"}
+    assert set(token_listed) == {"id", "name", "created_at", "last_used_at", "expires_at", "expired"}
     assert token_listed["id"] == created["id"]
 
     rows = query(settings, "select * from access_tokens")
@@ -147,6 +148,33 @@ def test_an_access_token_reaches_nobody_elses_data(client, token):
     assert [i["kind"] for i in unchanged["interviews"]] == ["technical"]
 
 
+def test_using_a_token_updates_last_used(client, token):
+    created = create(client, token())
+    assert listed(client, token())[0]["last_used_at"] is None
+
+    assert client.get("/applications", headers=bearer(created["token"])).status_code == 200
+
+    first = listed(client, token())[0]["last_used_at"]
+    assert first is not None
+    assert first >= created["created_at"]
+
+    # Within a minute, a use isn't written again: parallel requests don't queue on the row.
+    client.get("/applications", headers=bearer(created["token"]))
+    assert listed(client, token())[0]["last_used_at"] == first
+
+
+def test_last_used_updates_again_after_a_minute(settings, client, token):
+    created = create(client, token())
+    client.get("/applications", headers=bearer(created["token"]))
+    query(settings, "update access_tokens set last_used_at = now() - interval '61 seconds'")
+    [(stale,)] = query(settings, "select last_used_at from access_tokens")
+
+    assert client.get("/applications", headers=bearer(created["token"])).status_code == 200
+
+    [(fresh,)] = query(settings, "select last_used_at from access_tokens")
+    assert fresh > stale
+
+
 def test_a_revoked_token_gets_401(client, token):
     created = create(client, token())
     headers = bearer(created["token"])
@@ -168,6 +196,7 @@ def test_an_expired_token_gets_401_and_stays_listed_until_revoked(settings, clie
     assert res.json() == {"detail": "Invalid token"}
     [expired] = listed(client, token())
     assert expired["expired"] is True
+    assert expired["last_used_at"] is None  # a refused request is not a use
     assert client.delete(f"/me/access-tokens/{created['id']}", headers=token()).status_code == 204
 
 
