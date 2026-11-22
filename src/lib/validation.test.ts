@@ -33,7 +33,7 @@ describe("limits", () => {
       posting_url: pythonNumber("POSTING_URL_MAX_LENGTH"),
     });
     expect(INTERVIEW_NOTES_MAX_LENGTH).toBe(pythonNumber("INTERVIEW_NOTES_MAX_LENGTH"));
-    expect(ACCESS_TOKEN_NAME_MAX).toBe(pythonNumber("ACCESS_TOKEN_NAME_MAX", "api/app/main.py"));
+    expect(ACCESS_TOKEN_NAME_MAX).toBe(pythonNumber("ACCESS_TOKEN_NAME_MAX", "api/app/models.py"));
   });
 });
 

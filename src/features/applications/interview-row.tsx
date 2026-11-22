@@ -1,8 +1,8 @@
 "use client";
 
-import { LoaderCircle, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
-import { deleteInterviewAction, updateInterviewAction } from "@/app/applications/actions";
+import { updateInterviewAction } from "@/app/applications/actions";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { RequiredMark } from "@/components/ui/field";
 import { FieldError, invalidProps } from "@/components/ui/field-error";
@@ -21,6 +21,9 @@ import {
 } from "@/lib/applications";
 import { DATE_NEEDED, interviewErrors, isValid, type FieldErrors } from "@/lib/validation";
 
+/** The id of an Interview's delete button, which the list focuses when a neighbour is deleted. */
+export const deleteButtonId = (interviewId: string) => `delete-interview-${interviewId}`;
+
 const fieldLabelClasses = "mb-1 flex min-h-4 flex-wrap items-center justify-between gap-x-2 text-xs font-medium text-body";
 
 /**
@@ -34,16 +37,18 @@ export function InterviewRow({
   app,
   interview,
   position,
+  onDelete,
 }: {
   app: Application;
   interview: Interview;
   /** 1 for the Application's first Interview. */
   position: number;
+  /** Asks to delete this Interview: the list shows the confirmation, because the row goes with it. */
+  onDelete: () => void;
 }) {
   const kindSave = useSaveStatus();
   const atSave = useSaveStatus();
   const notesSave = useSaveStatus();
-  const deleteSave = useSaveStatus();
   // The kind's and date's errors, found before sending or by the API, beside their fields.
   const [errors, setErrors] = useState<FieldErrors>(() => (interview.at ? {} : { at: DATE_NEEDED }));
   const saved = toLocalInput(interview.at);
@@ -135,28 +140,13 @@ export function InterviewRow({
       </div>
       <button
         type="button"
-        disabled={deleteSave.saving}
-        onClick={() => void deleteSave.run(() => deleteInterviewAction(app.id, interview.id))}
+        id={deleteButtonId(interview.id)}
+        onClick={onDelete}
         aria-label={`Delete ${kindLabel} Interview, ${label}`}
-        className="rounded-control p-2.5 text-body transition-colors hover:bg-danger-soft hover:text-fg-danger disabled:cursor-not-allowed disabled:opacity-60"
+        className="rounded-control p-2.5 text-body transition-colors hover:bg-danger-soft hover:text-fg-danger"
       >
-        {deleteSave.saving ? (
-          <LoaderCircle className="size-4 animate-spin" aria-hidden />
-        ) : (
-          <Trash2 className="size-4" aria-hidden />
-        )}
+        <Trash2 className="size-4" aria-hidden />
       </button>
-      {/* Only while deleting or when it failed: once it works, the row is gone. Rendered only
-          then, so an empty status doesn't add a line to every row. */}
-      {(deleteSave.status.phase === "saving" || deleteSave.status.phase === "failed") && (
-        <SaveStatus
-          status={deleteSave.status}
-          label={`Deleting ${label}`}
-          savingText="Deleting…"
-          onRetry={deleteSave.retry}
-          className="w-full justify-end"
-        />
-      )}
       <InterviewNotesForm
         interview={interview}
         label={label}

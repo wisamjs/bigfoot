@@ -1,4 +1,4 @@
-// Checks what a job seeker typed before it is sent, with the API's own rules (api/app/main.py)
+// Checks what a job seeker typed before it is sent, with the API's own rules (api/app/models.py)
 // and limits (APPLICATION_MAX_LENGTHS, INTERVIEW_NOTES_MAX_LENGTH, ACCESS_TOKEN_NAME_MAX): the forms run them to show
 // errors beside each field, and the Server Actions run them again, because anyone can call those
 // with any values. FastAPI and the database still check everything; this only answers sooner.
