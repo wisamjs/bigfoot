@@ -2,14 +2,29 @@
 
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { rememberDashboardView } from "@/features/shell/dashboard-link";
 import { SleepingBigfoot } from "@/features/shell/illustrations";
+import { interviewHref } from "@/features/applications/routes";
 import { useIsClient } from "@/hooks/use-is-client";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { INTERVIEW_TONE } from "@/features/applications/status-tone";
 import { INTERVIEW_OPTIONS, type DatedInterview } from "@/lib/applications";
-import { dayKey, groupByDay, inWindow, monthStart, monthWeeks, monthWindow, upcomingWindow, type CalendarDay } from "@/lib/calendar";
+import {
+  dayKey,
+  groupByDay,
+  inWindow,
+  monthOffset,
+  monthParam,
+  monthStart,
+  monthWeeks,
+  monthWindow,
+  upcomingWindow,
+  type CalendarDay,
+} from "@/lib/calendar";
 
 const monthFormat = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" });
 // On a phone the heading shares a row with three 44px buttons, so it is short ("Nov 2026") and never wraps.
@@ -23,6 +38,45 @@ function interviewCount(n: number) {
   return `${n} ${n === 1 ? "Interview" : "Interviews"}`;
 }
 
+/** The dashboard's search params for the calendar's month (`2026-12`) and picked day (`2026-12-04`). */
+const MONTH_PARAM = "month";
+const DAY_PARAM = "day";
+
+/** The month and day in the URL as a search string, "" for this month with no day picked. */
+function viewSearch(params: URLSearchParams): string {
+  const view = new URLSearchParams();
+  for (const name of [MONTH_PARAM, DAY_PARAM]) {
+    const value = params.get(name);
+    if (value) view.set(name, value);
+  }
+  const search = view.toString();
+  return search ? `?${search}` : "";
+}
+
+/**
+ * The calendar's month and picked day, kept in the dashboard's URL so Back from an Interview page
+ * and a shared link show the same view. Changes replace the history entry rather than add one.
+ */
+function useCalendarView() {
+  const params = useSearchParams();
+  const search = viewSearch(new URLSearchParams(params.toString()));
+
+  // "← Dashboard" on the other pages goes back to this view.
+  useEffect(() => rememberDashboardView(search), [search]);
+
+  function setView(start: Date | null, day: string | null) {
+    const next = new URLSearchParams(window.location.search);
+    if (start) next.set(MONTH_PARAM, monthParam(start));
+    else next.delete(MONTH_PARAM);
+    if (day) next.set(DAY_PARAM, day);
+    else next.delete(DAY_PARAM);
+    const query = next.toString();
+    window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+  }
+
+  return { month: params.get(MONTH_PARAM), selected: params.get(DAY_PARAM), setView };
+}
+
 /**
  * The Interviews calendar: a small month grid beside an agenda (BIG-36): every dated Interview of an In
  * Progress Application, with past ones muted.
@@ -34,8 +88,7 @@ function interviewCount(n: number) {
  */
 export function InterviewCalendar({ interviews }: { interviews: DatedInterview[] }) {
   const isClient = useIsClient();
-  const [offset, setOffset] = useState(0);
-  const [selected, setSelected] = useState<string | null>(null);
+  const { month, selected, setView } = useCalendarView();
   // Below `md` the month grid starts closed so the Interviews list and the Applications come first.
   const [monthOpen, setMonthOpen] = useState(false);
   const agendaHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -47,13 +100,14 @@ export function InterviewCalendar({ interviews }: { interviews: DatedInterview[]
       focusAgendaRef.current = false;
       agendaHeadingRef.current?.focus();
     }
-  }, [selected, offset]);
+  }, [selected, month]);
 
   if (!isClient) return <InterviewCalendarSkeleton />;
 
   // eslint-disable-next-line @eslint-react/purity -- today is read on each render on purpose: the calendar renders only in the browser (isClient above), and a stored date would go stale past midnight.
   const now = new Date();
   const todayKey = dayKey(now);
+  const offset = monthOffset(month, now);
   const start = monthStart(now, offset);
   const weeks = monthWeeks(start);
   const byDay = groupByDay(interviews, (d) => d.interview.at);
@@ -65,13 +119,11 @@ export function InterviewCalendar({ interviews }: { interviews: DatedInterview[]
     ? (byDay.get(selectedDay.key) ?? [])
     : [...byDay.values()].flat().filter((d) => inWindow(d.interview.at, agendaWindow));
 
-  const goTo = (next: number) => {
-    setOffset(next);
-    setSelected(null);
-  };
+  // This month is the default view, so it stays out of the URL.
+  const goTo = (next: number) => setView(next === 0 ? null : monthStart(now, next), null);
   const showAgenda = (key: string | null) => {
     focusAgendaRef.current = true;
-    setSelected(key);
+    setView(offset === 0 ? null : start, key);
   };
   const showUpcoming = () => {
     focusAgendaRef.current = true;
@@ -312,13 +364,14 @@ export function InterviewCalendarSkeleton() {
         </div>
         <ul className="m-0 flex list-none flex-col gap-2 p-0">
           {Array.from({ length: 5 }, (_, i) => (
-            <li key={i} className={agendaItemClasses}>
+            <li key={i} className={`${agendaItemClasses} border border-transparent`}>
               <span className="flex h-9 w-10 shrink-0 flex-col items-center justify-center gap-1">
                 <Skeleton className="h-3 w-6" />
                 <Skeleton className="h-4 w-5" />
               </span>
               <Skeleton className="h-4 max-w-40 flex-1" />
               <Skeleton className="h-4 w-14 shrink-0" />
+              <span className="size-4 shrink-0" />
             </li>
           ))}
         </ul>
@@ -404,21 +457,39 @@ function DayCell({
   );
 }
 
+/**
+ * One Interview in the agenda, past or upcoming: a link to its Interview page, in this tab (a
+ * page of Bigfoot's, so no external-link icon). The chevron says it opens another page.
+ */
 function AgendaItem({ item: { application, interview }, past }: { item: DatedInterview; past: boolean }) {
   const at = new Date(interview.at);
   const kind = INTERVIEW_OPTIONS[interview.kind];
   const tone = past ? "gray" : INTERVIEW_TONE[interview.kind];
   return (
-    <li className={agendaItemClasses}>
-      <time dateTime={interview.at} className="flex w-10 shrink-0 flex-col items-center leading-tight">
-        <span className="text-xs text-body">{weekdayFormat.format(at)}</span>
-        <span className={`text-base font-medium ${past ? "text-body" : "text-heading"}`}>{at.getDate()}</span>
-      </time>
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-        <span className={`min-w-0 break-words font-medium ${past ? "text-body" : "text-heading"}`}>{application.company}</span>
-        <Badge tone={tone}>{kind.label}</Badge>
-      </div>
-      <span className="shrink-0 text-body">{timeFormat.format(at)}</span>
+    <li>
+      <Link
+        href={interviewHref(application.id, interview.id)}
+        className={`${agendaItemClasses} group border border-transparent transition-all duration-200 hover:border-line-medium hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand`}
+      >
+        {/* The link's name, in full; the row below is the same, laid out for the eye (WCAG 2.5.3:
+            a name from the content, not an aria-label that leaves the visible text out). */}
+        <span className="sr-only">
+          {`Open Interview: ${application.company}, ${kind.label}, ${dayFormat.format(at)} at ${timeFormat.format(at)}`}
+        </span>
+        <time aria-hidden dateTime={interview.at} className="flex w-10 shrink-0 flex-col items-center leading-tight">
+          <span className="text-xs text-body">{weekdayFormat.format(at)}</span>
+          <span className={`text-base font-medium ${past ? "text-body" : "text-heading"}`}>{at.getDate()}</span>
+        </time>
+        <span aria-hidden className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+          <span className={`min-w-0 break-words font-medium ${past ? "text-body" : "text-heading"}`}>{application.company}</span>
+          <Badge tone={tone}>{kind.label}</Badge>
+        </span>
+        <span aria-hidden className="shrink-0 text-body">{timeFormat.format(at)}</span>
+        <ChevronRight
+          className="size-4 shrink-0 text-body transition-transform duration-200 group-hover:translate-x-0.5"
+          aria-hidden
+        />
+      </Link>
     </li>
   );
 }

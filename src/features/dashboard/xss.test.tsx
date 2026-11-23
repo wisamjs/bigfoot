@@ -15,7 +15,7 @@ import { NextInterviewStat } from "./next-interview-stat";
 // Everything a job seeker types is shown as text and never runs (BIG-89): each payload goes into
 // every Application field and the Interview notes, then through each display and form.
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("next/navigation", () => import("@/test/navigation"));
 
 vi.mock("@/app/applications/actions", () => ({
   createApplicationAction: vi.fn(),

@@ -18,3 +18,14 @@ export function applicationHref(id: string, { added = false }: { added?: boolean
   const path = `/applications/${encodeURIComponent(id)}`;
   return added ? `${path}?${ADDED_PARAM}=1` : path;
 }
+
+/** An Interview's own page, under its Application's. */
+export function interviewHref(applicationId: string, interviewId: string) {
+  return `${applicationHref(applicationId)}/interviews/${encodeURIComponent(interviewId)}`;
+}
+
+/** The dashboard's search param that says what was just deleted, so it can say so. */
+export const DELETED_PARAM = "deleted";
+
+/** The dashboard, as it opens just after an Interview was deleted from its own page. */
+export const INTERVIEW_DELETED_HREF = `/dashboard?${DELETED_PARAM}=interview`;
