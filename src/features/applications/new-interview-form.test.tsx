@@ -97,7 +97,15 @@ describe("Add Interview", () => {
     expect(actions.createInterviewAction).not.toHaveBeenCalled();
   });
 
-  it("adds the Interview to the chosen Application, then goes back to the dashboard", async () => {
+  it("opened from an Application page, adds the Interview and goes back to that Application page", async () => {
+    const { user, form } = openAdd(undefined, "oak");
+    await pickDate(user, form!, "09:00");
+    await user.click(within(form!).getByRole("button", { name: "Add Interview" }));
+    expect(actions.createInterviewAction).toHaveBeenCalledWith("oak", expect.objectContaining({ kind: "informal_chat" }));
+    expect(push).toHaveBeenCalledExactlyOnceWith("/applications/oak");
+  });
+
+  it("opened from the dashboard, adds the Interview to the chosen Application, then goes back to the dashboard", async () => {
     const { user, form } = openAdd();
     await user.selectOptions(within(form!).getByLabelText("Application"), "cedar");
     await user.selectOptions(within(form!).getByLabelText("Kind"), "technical");

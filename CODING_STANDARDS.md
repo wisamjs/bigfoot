@@ -1,7 +1,7 @@
 # Coding standards
 
 Read when reviewing a PR. These are the judgement calls; anything a check can catch is in
-`npm run check`, `npm run smoke`, `npm run a11y` or CI instead.
+`npm run verify`, `npm run smoke`, `npm run a11y` or CI instead.
 
 ## Every claim about data is backed
 
@@ -23,6 +23,12 @@ without updating the copy and adding a `PRIVACY_CHANGES` entry.
 A PR that changes what a screen shows or does updates every GLOSSARY.md term that describes that
 screen, in the same PR. A definition that names a removed view, column or control is a defect.
 
+## UI works on a phone
+
+Read [`docs/guidelines/mobile.md`](docs/guidelines/mobile.md). `npm run a11y` fails on touch
+targets under 44×44px and on text cut off by an ellipsis. A PR that changes UI attaches
+`npm run capture -- <page> --width 375` images (light and dark) for each page or state it touches.
+
 ## Green CI before approval
 
 Approve only when the PR's latest `CI` and `PR naming` runs succeeded. A cancelled or skipped
@@ -41,6 +47,16 @@ raw HTML off), never `dangerouslySetInnerHTML`, which lint refuses. Forms check 
 `src/features/dashboard/xss.test.tsx` feeds XSS payloads through every display and form: a new
 display or form of typed text joins it.
 
+## Storybook shows the app as it is
+
+A change to a component in `src/components/ui/` or `src/features/` updates its stories in the same PR, so Storybook never shows an older app. `npm run stories` (`scripts/check-stories.mjs`) already fails a component with no stories file and no entry saying where else it is shown; review judges whether the stories cover the change:
+
+- A new component's stories have a story per state it has (default, empty, error, loading, long text, and hover, focus and disabled for controls). A new entry in the check's lists is a piece truly drawn only inside its parent, or a static page part; a component with states of its own gets stories.
+- A changed component gets a new story for each state it gains, and changes or removes stories for the states it changes or loses. A changed prop, label or behaviour updates the args and play functions that use it.
+- A story that saves uses the Server Action spies in `__mocks__/actions.ts`, and its play function checks the call, or the error when a story makes the action fail.
+
+Review sends back a PR that changes a component's behaviour or look without touching its stories.
+
 ## Where code goes
 
 | Folder | Holds |
@@ -52,6 +68,8 @@ display or form of typed text joins it.
 | `src/app/` | Routes: thin files that put features together. |
 | `src/*.ts` | Next.js's root files: `auth.ts`, `proxy.ts`, `instrumentation.ts`. |
 
+Stories (`<name>.stories.tsx`) sit beside the component they show, under the same import rules. Storybook's stand-ins for Server Actions sit in `__mocks__/actions.ts` beside each `actions.ts`.
+
 A "dumb" component is one in `ui/`: it can't reach the domain, a server action or a feature, so
 it can be reused anywhere. Who may import whom, including the few links between features, lives
 in `eslint.config.mjs` ("Architecture"); `scripts/boundaries.test.ts` checks it still bites. A
@@ -61,7 +79,7 @@ piece down into `ui/`.
 ## Lint rule groups
 
 `npm run lint` (`eslint.config.mjs`) fails on any warning. It runs in pre-commit (inside
-`npm run check`) and as its own `lint` job in CI. Every shared config below is raised to errors.
+`npm run verify`) and once in CI, in the `fast-checks` job. Every shared config below is raised to errors.
 `scripts/lint-rules.test.ts` snapshots the rules that are on: a change to its snapshot is a
 change to this table, so the table must say the same.
 
@@ -74,11 +92,13 @@ change to this table, so the table must say the same.
 | Script injection (ESLint React, core, typescript-eslint) | `src/**/*.{ts,tsx}` | Text a job seeker typed running as code: `dangerouslySetInnerHTML` and `javascript:` URLs in JSX (from ESLint React's preset), `eval`, `new Function`, `javascript:` strings, and string timers (`no-implied-eval`). |
 | `jsx-a11y` `strict`, plus every live rule it leaves off | `**/*.{jsx,tsx}` | Semantic HTML and ARIA mistakes: a `role` where a native element exists (`prefer-tag-over-role`: `<fieldset>`, `<section>`, `<output>`), controls with no label, focusable elements hidden with `aria-hidden`, vague link text, missing labels and alt text, invalid roles, click handlers on non-interactive elements, `autoFocus`, `tabIndex` on non-interactive elements. Heading order and landmarks are runtime checks in `npm run a11y`. |
 | `eslint-plugin-boundaries` (`dependencies`, `no-unknown-files`) | `src/**/*.{ts,tsx}` | Imports that cross the layers in "Where code goes": the design system reaching into a feature, the domain, `auth.ts` or a server action; `lib` importing UI; a feature importing a feature the config doesn't link it to, or a route; production code importing test fixtures. Anything not allowed is an error, and a file in a folder no rule covers is an error too. |
+| `complexity` (ESLint core) and Ruff `C90` (mccabe), maximum 10 | all, including tests and scripts; `api/` and `scripts/*.py` for Ruff | A function with more than 10 independent paths through it (each `if`, loop, `case`, `&&`, `||`, `?:` and `catch` adds one). Every path needs a test, and a function with many has more bugs and is slower to change. Split it into smaller functions, or into components in React. |
 | Testing Library (React) and jest-dom | `**/*.test.tsx` | Tests that reach into the DOM instead of querying as a user would, misnamed render results, and assertions with a clearer jest-dom matcher. |
 
 An inline `eslint-disable` names its rule and gives a reason after `--`. Today's exceptions:
 `autoFocus` where a dialog moves focus on purpose, a focusable scrolling region, the calendar
 reading today's date while it renders, and the skeleton tests, which check `aria-hidden` shapes
 that have no role or text to query by, and the axe test, which writes broken markup by hand and clears
-the screen itself before `setup.ts` checks it. The XSS tests list `javascript:` URLs as payloads
+the screen itself before `setup.ts` checks it. The tests' stand-in for `next/navigation`
+(`src/test/navigation.ts`) keeps the name `useRouter` though it calls no Hooks. The XSS tests list `javascript:` URLs as payloads
 (`src/test/xss.ts`) and look for injected tags, which have no role or text to query by.

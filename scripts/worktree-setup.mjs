@@ -2,8 +2,9 @@
 // Readies a fresh git worktree: copies .env.local from the main checkout (untracked, so a new
 // worktree has none) and installs this checkout's own node_modules with `npm ci`. Without them
 // the dev server fails with "Missing environment variables" or "Could not find the Next.js
-// package", and `npm run check` runs on the main checkout's packages, which can lag this branch
-// and fail unrelated tests; the pre-commit hook refuses that case. An existing .env.local is kept.
+// package", and `npm run verify` runs on the main checkout's packages, which can lag this branch
+// and fail unrelated tests; the pre-commit hook refuses that case. It also installs the Chromium
+// Storybook's story tests (`npm run test-storybook`) run in. An existing .env.local is kept.
 import { execFileSync } from "node:child_process";
 import { copyFileSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -27,3 +28,5 @@ if (existsSync(target)) {
 
 execFileSync("npm", ["ci"], { cwd: ROOT, stdio: "inherit" });
 console.log("✓ installed node_modules");
+execFileSync("npx", ["playwright", "install", "chromium"], { cwd: ROOT, stdio: "inherit" });
+console.log("✓ installed Chromium for the story tests");

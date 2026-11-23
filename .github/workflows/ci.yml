@@ -5,63 +5,193 @@ on:
     branches: [main]
   pull_request:
 
-jobs:
-  # ESLint on its own, so a lint failure shows as its own check on the PR, within a minute and
-  # without the database. `check` runs it again inside `npm run check`, as pre-commit does.
-  lint:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      # Type-checked rules see the route types next typegen writes, as in `npm run check`.
-      - run: npx next typegen
-      - run: npm run lint
+# A new push to a pull request cancels its run still in progress. Each run on main has a group of
+# its own, so it is never cancelled or replaced while it waits.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-  check:
+# Jobs sized by cost (BIG-158). A job costs about 22s to start (checkout, Node, npm ci), 35s with
+# Postgres, so a step gets its own job only when it takes longer than that; shorter ones share
+# `fast-checks`, cheapest first. No job waits for another: `ci-passed` gathers them, and it is the
+# check `main` requires. `npm run verify` runs the same steps locally; scripts/ci-steps.test.ts
+# fails when one of them has no job here.
+jobs:
+  # Everything without a database, cheapest first. Each step runs even when an earlier one failed,
+  # so one red run names every problem.
+  fast-checks:
+    name: "fast-checks: spelling, tokens, Python lint, OpenAPI, types, ESLint, build"
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          uv: "true"
+      - run: npm run spell
+        if: success() || failure()
+      - run: npm run tokens
+        if: success() || failure()
+      - run: npm run stories
+        if: success() || failure()
+      - run: npm run lint:api
+        if: success() || failure()
+      - run: npm run openapi -- --check
+        if: success() || failure()
+      # next typegen, then tsc. ESLint's type-checked rules see the route types typegen writes.
+      - run: npm run typecheck
+        if: success() || failure()
+      - run: npm run lint
+        if: success() || failure()
+      # Needs no secrets: only a Vercel Production build checks the environment (next.config.ts).
+      - run: npm run build
+        if: success() || failure()
+
+  unit-tests:
+    name: "unit-tests: Vitest unit and component tests, coverage floor"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: npm run test
+
+  # Storybook (BIG-8): builds it, then renders every story in Chrome (the runner's preinstalled
+  # Google Chrome), failing on a play function or an axe violation. Visual diffs are BIG-25's.
+  storybook:
+    name: "storybook: build, story tests with axe"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: npm run build-storybook
+      - run: npm run test-storybook
+        if: success() || failure()
+
+  # Postgres 17, the major version Supabase runs, on the runner itself: no network distance
+  # (the same tests took 33s next to Supabase and 447s from a far region) and no secret.
+  runtime:
+    name: "runtime: API tests and smoke test on Postgres"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres: &postgres
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env: &database-env
       # Throwaway secrets: only sign the smoke test's fake session and its API tokens.
       AUTH_SECRET: ci-smoke-secret-not-used-in-production
       API_SECRET: ci-api-secret-not-used-in-production
-      # Supabase session-pooler URL. Tests, smoke and a11y only touch this run's own schema.
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # The service container above. The migrations are plain SQL, so no Supabase bootstrap is needed.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
       TEST_SCHEMA: bigfoot_test_${{ github.run_id }}_${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup
         with:
-          node-version: 24
-          cache: npm
-      - uses: astral-sh/setup-uv@v6
-        with:
-          working-directory: api
-      - run: npm ci
-      - run: npm run check
-      # GitHub gives Dependabot's runs no Actions secrets, so its PRs skip every step that needs
-      # DATABASE_URL: test:api, smoke, a11y and dropping the schema. They still run check and build.
-      # On this run's TEST_SCHEMA, which smoke and a11y rebuild again for the API they start.
+          uv: "true"
+      # On this run's TEST_SCHEMA, which smoke rebuilds again for the API it starts.
       - run: npm run test:api
-        if: github.event.pull_request.user.login != 'dependabot[bot]'
-      # Smoke runs before build: dev and build share .next/.
       - run: npm run smoke
-        if: github.event.pull_request.user.login != 'dependabot[bot]'
+        if: success() || failure()
         timeout-minutes: 2
-      # axe-core in the runner's preinstalled Chrome, light and dark.
+
+  # axe-core in the runner's preinstalled Chrome, light and dark, half of the pages on each runner
+  # (scripts/a11y-shard.mjs). Each shard starts its own servers cold.
+  accessibility:
+    name: "accessibility: WCAG 2.2 AA, shard ${{ matrix.shard }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ["1/2", "2/2"]
+    services:
+      postgres: *postgres
+    env: *database-env
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          uv: "true"
       - run: npm run a11y
-        if: github.event.pull_request.user.login != 'dependabot[bot]'
         timeout-minutes: 3
         env:
+          A11Y_SHARD: ${{ matrix.shard }}
           CHROME_PATH: /usr/bin/google-chrome
-      - run: npm run build
-      - name: Drop this run's test schema
-        if: always() && github.event.pull_request.user.login != 'dependabot[bot]'
-        run: npm run db:drop-test-schema
+
+  # The one check `main` requires. Fails when any job above failed or was cancelled; passes when
+  # they succeeded or were skipped.
+  ci-passed:
+    if: always()
+    needs: [fast-checks, unit-tests, storybook, runtime, accessibility]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "A required job failed or was cancelled:"
+          echo "$RESULTS"
+          exit 1
+      - run: echo "Every CI job passed"
+
+  # Decides whether the PR needs the owner's manual approval: every PR except one that changes
+  # only .md files (scripts/review-needed.mjs is the one definition). Read-only token, and the
+  # PR's own code is never run: only its list of file names is read.
+  classify:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      review: ${{ steps.classify.outputs.review }}
+    steps:
+      # The base branch, so the classifier is main's, not the PR's.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+      - id: classify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        # `--name-only` lists a renamed file by its new path only, so the old paths are added from
+        # the diff's `rename from` lines: moving code to a .md name must still need review.
+        # If the base has no classifier yet (the PR that adds it), the PR needs review.
+        run: |
+          if [ ! -f scripts/review-needed.mjs ]; then
+            echo "review=true" >> "$GITHUB_OUTPUT"
+          else
+            {
+              gh pr diff "$PR" --name-only
+              gh pr diff "$PR" | sed -n 's/^rename from //p'
+            } | node scripts/review-needed.mjs >> "$GITHUB_OUTPUT"
+          fi
+          cat "$GITHUB_OUTPUT"
+
+  # Holds every PR that needs review until the owner clicks "Review deployments" (the
+  # `manual-review` environment has a required reviewer). When `classify` says no, this job is
+  # skipped, and a skipped job counts as passing for the required check. Waits for `ci-passed`, so
+  # a red PR never asks for approval. It is skipped on push to main, so merges are never held.
+  review-gate:
+    needs: [classify, ci-passed]
+    if: needs.classify.outputs.review == 'true'
+    runs-on: ubuntu-latest
+    environment: manual-review
+    steps:
+      - run: echo "Approved in the manual-review environment"
 
   # Applies merged migrations to the dev database (applying before merge would break main),
   # then fails if any is still missing. One at a time, so two quick merges never race.

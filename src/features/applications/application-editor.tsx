@@ -1,57 +1,36 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Modal } from "@/components/ui/modal";
-import { useSaveStatus } from "@/hooks/use-save-status";
-import { DeleteConfirmation } from "@/features/applications/application-dialogs";
-import { DetailsForm } from "@/features/applications/details-form";
+import { ApplicationHeader } from "@/features/applications/application-header";
+import { DetailsCard } from "@/features/applications/details-form";
 import { InterviewList } from "@/features/applications/interview-list";
-import { StatusForm } from "@/features/applications/status-form";
-import type { Application } from "@/lib/applications";
+import { InterviewProgress } from "@/features/applications/interview-progress";
+import { NextInterviewCard } from "@/features/applications/next-interview-card";
+import { RememberViewed } from "@/features/applications/recently-viewed";
+import { interviewSections, type Application } from "@/lib/applications";
 
 /**
- * The Application page's body: the whole Application, editable. Status and Outcome, the details,
- * then the Interview list, and Delete application.
- * Interviews save one field at a time through the nested API routes, each one's Interview notes
- * with their own button; Status and Outcome save together, because Done needs an Outcome.
- * Each save shows its own status beside what started it, and disables only that control (BIG-118).
+ * The Application page under its "← Dashboard" link (BIG-174): the heading (company, role,
+ * Progress, Mark done… and ⋯ with Delete application), the Interviews as a strip, then the next
+ * Interview's card and the Interviews card beside the Details card on wide screens, Details last
+ * on narrow ones. Each Interview opens its Interview page, where it is edited.
+ * `justAdded` is set when the page opens straight after adding the Application: the Interviews
+ * card then prompts for its first Interview.
+ * Leaving with a detail typed but not saved asks first: the page puts this inside UnsavedChanges.
  */
-export function ApplicationEditor({ app }: { app: Application }) {
-  // Lives here, not in DetailsForm, so saving the details doesn't hide the salary again. This
-  // component mounts each time the page opens, which does.
-  const [salaryRevealed, setSalaryRevealed] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  // Here too, not in the forms: a form keyed by its saved values remounts when its save lands,
-  // and "Saved" must outlast that.
-  const statusSave = useSaveStatus();
-  const detailsSave = useSaveStatus();
-
+export function ApplicationEditor({ app, justAdded = false }: { app: Application; justAdded?: boolean }) {
+  const { next, later, done } = interviewSections(app);
   return (
-    <div className="flex flex-col gap-6">
-      <StatusForm key={`${app.status}-${app.outcome}`} app={app} tracker={statusSave} />
-
-      <DetailsForm
-        key={`${app.company}-${app.title}-${app.applied_on}-${app.location}-${app.salary}-${app.posting_url}`}
-        app={app}
-        salaryHidden={Boolean(app.salary) && !salaryRevealed}
-        onRevealSalary={() => setSalaryRevealed(true)}
-        tracker={detailsSave}
-      />
-
-      <InterviewList app={app} />
-
-      <div className="flex border-t border-line pt-4">
-        <Button onClick={() => setDeleting(true)} variant="danger">
-          <Trash2 className="size-4" aria-hidden />
-          Delete application
-        </Button>
+    <div className="flex flex-col gap-6 sm:gap-8">
+      <RememberViewed id={app.id} />
+      <ApplicationHeader app={app} />
+      <InterviewProgress app={app} />
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className="flex min-w-0 flex-col gap-6">
+          {next && <NextInterviewCard app={app} interview={next} />}
+          <InterviewList app={app} later={later} done={done} justAdded={justAdded} />
+        </div>
+        <DetailsCard app={app} />
       </div>
-
-      <Modal open={deleting} onClose={() => setDeleting(false)} title="Delete application?">
-        <DeleteConfirmation app={app} onCancel={() => setDeleting(false)} />
-      </Modal>
     </div>
   );
 }

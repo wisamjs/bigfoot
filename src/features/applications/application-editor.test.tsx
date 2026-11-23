@@ -1,10 +1,14 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/applications/actions";
 import type { Application } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
 import { ApplicationEditor } from "./application-editor";
+import { UnsavedChanges } from "./unsaved-changes";
+
+// The page guards leaving it, which needs the router.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 // Server Actions are mocked at their module: what the page sends, not how it reaches the API.
 vi.mock("@/app/applications/actions", () => ({
@@ -13,144 +17,117 @@ vi.mock("@/app/applications/actions", () => ({
   deleteApplicationAction: vi.fn(),
   createInterviewAction: vi.fn(),
   updateInterviewAction: vi.fn(),
-  deleteInterviewAction: vi.fn(),
 }));
+
+/** Whether the window is as wide as a tablet or more, as matchMedia answers. */
+let wide = true;
 
 beforeEach(() => {
   for (const action of Object.values(actions)) {
     if (typeof action === "function") vi.mocked(action).mockReset().mockResolvedValue({ ok: true });
   }
+  wide = true;
+  vi.spyOn(window, "matchMedia").mockImplementation(
+    (query: string) =>
+      ({ matches: query.includes("min-width") && wide, addEventListener: () => {}, removeEventListener: () => {} }) as unknown as MediaQueryList,
+  );
 });
 
-/** What the Application page puts around the editor: a named region, so tests can look inside it. */
-function Editor({ app }: { app: Application }) {
+const DAY = 86_400_000;
+const daysFromNow = (days: number) => new Date(Date.now() + days * DAY).toISOString();
+
+/** What the Application page puts around the editor. */
+function Editor({ app, justAdded = false }: { app: Application; justAdded?: boolean }) {
   return (
-    <section aria-label={app.company}>
-      <ApplicationEditor app={app} />
-    </section>
+    <main>
+      <UnsavedChanges>
+        <ApplicationEditor app={app} justAdded={justAdded} />
+      </UnsavedChanges>
+    </main>
   );
 }
 
-function openEditor(app: Application) {
+function open(app: Application, { justAdded = false } = {}) {
   const user = userEvent.setup();
-  const utils = render(<Editor app={app} />);
+  const utils = render(<Editor app={app} justAdded={justAdded} />);
   return { user, ...utils };
 }
 
-const technical = interview("i1", { application_id: "birch", kind: "technical", completed: true });
-const birch = application("birch", { company: "Birch", location: "Remote", salary: "$150k", interviews: [technical] });
+const birch = application("birch", {
+  company: "Birch",
+  title: "Engineer",
+  location: "remote",
+  salary: "$150k",
+  posting_url: "https://www.birch.test/jobs/1",
+  interviews: [interview("i1", { application_id: "birch", kind: "technical" })],
+});
 
-function openBirch(app = birch) {
-  const opened = openEditor(app);
-  return { ...opened, dialog: screen.getByRole("region", { name: "Birch" }) };
+/** Opens Birch with its details as fields. */
+async function editBirch(app = birch) {
+  const opened = open(app);
+  await opened.user.click(screen.getByRole("button", { name: "Edit details" }));
+  return opened;
 }
 
-describe("the salary", () => {
-  it("is hidden until Reveal is pressed", async () => {
-    const { user, dialog } = openBirch();
-    expect(within(dialog).getByRole("group", { name: "Salary" })).toHaveTextContent("Hidden");
-    expect(dialog).not.toHaveTextContent("$150k");
-    expect(within(dialog).queryByDisplayValue("$150k")).not.toBeInTheDocument();
+const details = () => screen.getByRole("region", { name: /details$/i });
 
-    await user.click(within(dialog).getByRole("button", { name: "Reveal" }));
-    expect(within(dialog).getByLabelText("Salary")).toHaveValue("$150k");
+describe("the heading", () => {
+  it("shows the company, then the role and Location, and where the Application stands", () => {
+    open({ ...birch, interviews: [interview("next", { completed: false, at: daysFromNow(3) })], is_waiting: false });
+    expect(screen.getByRole("heading", { level: 1, name: "Birch" })).toBeInTheDocument();
+    expect(screen.getByText("Engineer · Remote")).toBeInTheDocument();
+    expect(screen.getByText("Interview scheduled")).toBeInTheDocument();
   });
 
-  it("is hidden again each time the page opens", async () => {
-    const { user, unmount } = openBirch();
-    await user.click(screen.getByRole("button", { name: "Reveal" }));
-    unmount();
-    openBirch();
-    expect(screen.getByRole("button", { name: "Reveal" })).toBeInTheDocument();
-    expect(screen.queryByDisplayValue("$150k")).not.toBeInTheDocument();
+  it("says how long a Waiting Application has waited", () => {
+    open({ ...birch, waiting_since: new Date(Date.now() - 5 * DAY).toISOString() });
+    expect(screen.getByText(/^Waiting · 5 days$/)).toBeInTheDocument();
   });
 
-  it("stays revealed after the details are saved", async () => {
-    const { user, rerender } = openBirch();
-    await user.click(screen.getByRole("button", { name: "Reveal" }));
-    // What a saved change does: the page re-renders with the Application as saved.
-    rerender(<Editor app={{ ...birch, salary: "$160k" }} />);
-    expect(screen.getByLabelText("Salary")).toHaveValue("$160k");
-  });
-
-  it("has nothing to hide on an Application without one", () => {
-    openEditor(application("maple", { company: "Maple" }));
-    expect(screen.getByLabelText("Salary")).toHaveValue("");
-    expect(screen.queryByRole("button", { name: "Reveal" })).not.toBeInTheDocument();
+  it("shows a Done Application's Outcome", () => {
+    open({ ...birch, status: "done", outcome: "rejected", is_waiting: false });
+    expect(screen.getByText("Done · Rejected")).toBeInTheDocument();
   });
 });
 
-describe("editing an Application", () => {
-  it("saves an Interview's kind as soon as it changes", async () => {
-    const { user, dialog } = await openBirch();
-    await user.selectOptions(within(dialog).getByLabelText(/^Kind/), "behavioural");
-    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { kind: "behavioural" });
-  });
-
-  it("refuses clearing an Interview's date, and says so beside it", async () => {
-    const { user, dialog } = await openBirch();
-    await user.click(within(dialog).getByRole("button", { name: /^Date/ }));
-    await user.click(screen.getByRole("button", { name: "Clear" }));
-    expect(within(dialog).getByText("Enter the date and time.")).toBeInTheDocument();
-    expect(actions.updateInterviewAction).not.toHaveBeenCalled();
-  });
-
-  it("shows the API's error about the date beside the date", async () => {
-    vi.mocked(actions.updateInterviewAction).mockResolvedValue({
-      ok: false,
-      error: "Interview date is needed",
-      fieldErrors: { at: "Interview date is needed" },
-    });
-    const { user, dialog } = await openBirch();
-    await user.selectOptions(within(dialog).getByLabelText(/^Kind/), "behavioural");
-    await within(dialog).findByRole("alert");
-    expect(within(dialog).getByRole("button", { name: /^Date/ })).toHaveAccessibleDescription(
-      "Interview date is needed",
-    );
-  });
-
-  it("saves only the details that changed, trimmed, with a cleared optional field as empty", async () => {
-    const { user, dialog } = await openBirch();
-    const save = within(dialog).getByRole("button", { name: "Save details" });
-    expect(save).toBeDisabled();
-
-    await user.clear(within(dialog).getByLabelText("Company"));
-    await user.type(within(dialog).getByLabelText("Company"), "  Birch Trees ");
-    await user.clear(within(dialog).getByLabelText("Location"));
-    await user.click(save);
-    expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { company: "Birch Trees", location: null });
-  });
-
-  it("asks for an Outcome before saving Done", async () => {
-    const { user, dialog } = await openBirch();
-    expect(within(dialog).queryByLabelText("Outcome")).not.toBeInTheDocument();
-    await user.selectOptions(within(dialog).getByLabelText("Status"), "done");
-    expect(within(dialog).getByLabelText("Outcome")).toBeRequired();
-
-    await user.selectOptions(within(dialog).getByLabelText("Outcome"), "withdrawn");
-    await user.click(within(dialog).getByRole("button", { name: "Save status" }));
+describe("Mark done…", () => {
+  it("marks the Application Done with the Outcome picked, in one save", async () => {
+    const { user } = open(birch);
+    await user.click(screen.getByRole("button", { name: "Mark done…" }));
+    await user.click(screen.getByRole("menuitem", { name: "Mark Withdrawn" }));
     expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { status: "done", outcome: "withdrawn" });
+    expect(await screen.findByText("Saved")).toBeInTheDocument();
   });
 
-  it("shows why a save failed", async () => {
-    vi.mocked(actions.updateInterviewAction).mockResolvedValue({ ok: false, error: "Interview kind is invalid" });
-    const { user, dialog } = await openBirch();
-    await user.selectOptions(within(dialog).getByLabelText(/^Kind/), "behavioural");
-    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Interview kind is invalid");
+  it("reopens a Done Application, clearing its Outcome", async () => {
+    const { user } = open({ ...birch, status: "done", outcome: "rejected" });
+    await user.click(screen.getByRole("button", { name: "Change Status…" }));
+    expect(screen.queryByRole("menuitem", { name: "Mark Rejected" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("menuitem", { name: "Reopen" }));
+    expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { status: "in_progress", outcome: null });
+  });
+
+  it("moves into ⋯ on a phone", async () => {
+    wide = false;
+    const { user } = open(birch);
+    await user.click(screen.getByRole("button", { name: "More actions, Birch" }));
+    await user.click(screen.getByRole("menuitem", { name: "Mark Offer" }));
+    expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { status: "done", outcome: "offer" });
   });
 });
 
 describe("deleting an Application", () => {
   async function askToDelete() {
-    const { user, dialog } = openBirch();
-    await user.click(within(dialog).getByRole("button", { name: "Delete application" }));
-    return { user, confirm: screen.getByRole("dialog", { name: "Delete application?" }) };
+    const { user } = open(birch);
+    await user.click(screen.getByRole("button", { name: "More actions, Birch" }));
+    expect(screen.queryByRole("menuitem", { name: /^Mark/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("menuitem", { name: "Delete application" }));
+    return { user, confirm: await screen.findByRole("dialog", { name: "Delete application?" }) };
   }
 
   it("asks for confirmation first, and Cancel keeps the Application", async () => {
     const { user, confirm } = await askToDelete();
     expect(confirm).toHaveTextContent("Birch, Engineer will be deleted");
-
     await user.click(within(confirm).getByRole("button", { name: "Cancel" }));
     expect(actions.deleteApplicationAction).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -167,234 +144,210 @@ describe("deleting an Application", () => {
     const { user, confirm } = await askToDelete();
     await user.click(within(confirm).getByRole("button", { name: "Delete" }));
     expect(await within(confirm).findByRole("alert")).toHaveTextContent("Application not found");
-    expect(within(confirm).getByRole("button", { name: "Delete" })).toBeEnabled();
   });
 });
 
-describe("Interview notes", () => {
-  const screenCall = interview("i1", { application_id: "oak", kind: "recruiter_screen" });
-  const technical = interview("i2", { application_id: "oak", kind: "technical", notes: "Asked about caching." });
-  const oak = application("oak", { company: "Oak", interviews: [screenCall, technical] });
+describe("the Interviews", () => {
+  const oak = application("oak", {
+    company: "Oak",
+    is_waiting: false,
+    interviews: [
+      interview("screen", { application_id: "oak", kind: "recruiter_screen", at: daysFromNow(-10), notes: "Friendly.\n\nLead with the decision next time." }),
+      interview("manager", { application_id: "oak", kind: "hiring_manager", at: daysFromNow(-3), notes: "Went long.\n\nAsk about on-call." }),
+      interview("deep", { application_id: "oak", kind: "technical_deep_dive", at: daysFromNow(2), completed: false }),
+      interview("lead", { application_id: "oak", kind: "leadership", at: daysFromNow(9), completed: false }),
+    ],
+  });
+  const rows = () => screen.getAllByRole("link", { name: /^Open Interview: / }).map((row) => row.textContent);
 
-  async function openOak() {
-    const opened = await openEditor(oak);
-    const page = screen.getByRole("region", { name: "Oak" });
-    return {
-      ...opened,
-      page,
-      notes: (n: number) => within(page).getByLabelText(`Interview notes, Interview ${n}`),
-      saveButton: (n: number) => within(page).getByRole("button", { name: `Save notes, Interview ${n}` }),
-    };
-  }
-
-  it("shows each Interview's notes under it, empty when there are none", async () => {
-    const { notes, saveButton } = await openOak();
-    expect(notes(1)).toHaveValue("");
-    expect(notes(2)).toHaveValue("Asked about caching.");
-    expect(saveButton(1)).toBeDisabled();
-    expect(saveButton(2)).toBeDisabled();
+  it("shows the next one first, on its own, with the last paragraph of the last completed one's notes", () => {
+    open(oak);
+    const next = screen.getByRole("region", { name: "Technical Deep-Dive" });
+    expect(next).toHaveTextContent(/Next up · in 2 days/);
+    expect(within(next).getByText("Carried forward from Hiring Manager notes")).toBeInTheDocument();
+    expect(within(next).getByText("Ask about on-call.")).toBeInTheDocument();
+    expect(within(next).getByRole("link", { name: "Add Interview notes" })).toHaveAttribute("href", "/applications/oak/interviews/deep");
   });
 
-  it("adds notes when Save notes is pressed, trimmed, keeping line breaks", async () => {
-    const { user, notes, saveButton } = await openOak();
-    await user.type(notes(1), " Friendly.{Enter}{Enter}Ask about the team. ");
-    expect(actions.updateInterviewAction).not.toHaveBeenCalled();
-    await user.click(saveButton(1));
-    expect(actions.updateInterviewAction).toHaveBeenCalledWith("oak", "i1", {
-      notes: "Friendly.\n\nAsk about the team.",
-    });
+  it("lists the rest under Later, then the completed ones under Done, newest first", () => {
+    open(oak);
+    expect(within(screen.getByRole("list", { name: "Later" })).getAllByRole("listitem")).toHaveLength(1);
+    expect(rows()).toEqual([
+      "Open Interview: Leadership",
+      "Open Interview: Hiring Manager",
+      "Open Interview: Recruiter Screen",
+    ]);
   });
 
-  it("changes notes, and shows them as saved", async () => {
-    const { user, notes, saveButton, rerender } = await openOak();
-    await user.type(notes(2), " Draw the diagram first.");
-    await user.click(saveButton(2));
-    const saved = "Asked about caching. Draw the diagram first.";
-    expect(actions.updateInterviewAction).toHaveBeenCalledWith("oak", "i2", { notes: saved });
-
-    rerender(<Editor app={{ ...oak, interviews: [screenCall, { ...technical, notes: saved }] }} />);
-    expect(notes(2)).toHaveValue(saved);
-    expect(saveButton(2)).toBeDisabled();
+  it("shows a completed Interview's notes in full", () => {
+    open(oak);
+    expect(screen.getByText("Went long.")).toBeInTheDocument();
+    expect(screen.getByText("Ask about on-call.", { selector: "li p" })).toBeInTheDocument();
   });
 
-  it("clears notes when they are emptied, and has nothing to save when only spaces are typed", async () => {
-    const { user, notes, saveButton } = await openOak();
-    await user.clear(notes(2));
-    await user.type(notes(2), "  ");
-    await user.click(saveButton(2));
-    expect(actions.updateInterviewAction).toHaveBeenCalledWith("oak", "i2", { notes: null });
-
-    await user.type(notes(1), "   ");
-    expect(saveButton(1)).toBeDisabled();
+  it("shows the next one's own notes instead of Add Interview notes once it has some", () => {
+    open({ ...oak, interviews: oak.interviews.map((i) => (i.id === "deep" ? { ...i, notes: "Bring the migration story." } : i)) });
+    expect(screen.getByText("Bring the migration story.")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Add Interview notes" })).not.toBeInTheDocument();
   });
 
-  it("keeps notes being written when the Interview's kind is saved", async () => {
-    const { user, page, notes, rerender } = await openOak();
-    await user.type(notes(1), "Half-written");
-    await user.selectOptions(within(page).getAllByLabelText(/^Kind/)[0], "leadership");
-    rerender(
-      <Editor app={{ ...oak, interviews: [{ ...screenCall, kind: "leadership", updated_at: "later" }, technical] }} />,
-    );
-    expect(notes(1)).toHaveValue("Half-written");
-    expect(within(page).getAllByLabelText(/^Kind/)[0]).toHaveValue("leadership");
+  it("strips them by date, counting the completed ones", () => {
+    open(oak);
+    expect(within(screen.getByRole("list", { name: "Interviews by date" })).getAllByRole("listitem")).toHaveLength(4);
+    expect(screen.getByText("2 of 4 Interviews done")).toBeInTheDocument();
   });
 
-  it("keeps what was written and shows why saving failed", async () => {
-    vi.mocked(actions.updateInterviewAction).mockResolvedValue({ ok: false, error: "Interview notes are too long" });
-    const { user, page, notes, saveButton } = await openOak();
-    await user.type(notes(1), "Kept");
-    await user.click(saveButton(1));
-    expect(await within(page).findByRole("alert")).toHaveTextContent("Interview notes are too long");
-    expect(notes(1)).toHaveValue("Kept");
+  it("opens the Add Interview page with this Application chosen", () => {
+    open(oak);
+    expect(screen.getByRole("link", { name: "Add Interview" })).toHaveAttribute("href", "/interviews/new?application=oak");
   });
 
-  it("counts characters only near the limit, and stops at it", async () => {
-    const { user, page, notes } = await openOak();
-    expect(notes(1)).toHaveAttribute("maxlength", "20000");
-    expect(page).not.toHaveTextContent("of 20,000 characters");
-    await user.click(notes(1));
-    await user.paste("x".repeat(18_000));
-    expect(page).toHaveTextContent("18,000 of 20,000 characters");
+  it("shows Bigfoot and a first Add Interview when there are none", () => {
+    open({ ...oak, interviews: [], is_waiting: true });
+    expect(screen.getByRole("heading", { name: "No Interviews yet" })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Add Interview" })).toHaveLength(1);
+    expect(screen.queryByRole("list", { name: "Interviews by date" })).not.toBeInTheDocument();
   });
 });
 
-describe("save status beside each field (BIG-118)", () => {
-  const first = interview("i1", { application_id: "oak", kind: "recruiter_screen" });
-  const second = interview("i2", { application_id: "oak", kind: "technical" });
-  const oak = application("oak", { company: "Oak", interviews: [first, second] });
-
-  async function openOak(apps = [oak]) {
-    const opened = await openEditor(apps[0]);
-    const page = screen.getByRole("region", { name: "Oak" });
-    return {
-      ...opened,
-      page,
-      kind: (n: number) => within(page).getByLabelText(`Kind, Interview ${n}`),
-      at: (n: number) => within(page).getByRole("button", { name: new RegExp(`^Date, Interview ${n}`) }),
-      /** Every status the page shows, as screen readers hear them. */
-      statuses: () =>
-        within(page)
-          .getAllByRole("status")
-          .map((s) => s.textContent)
-          .filter(Boolean),
-    };
-  }
-
-  /** An action that stays in flight until the test settles it. */
-  function inFlight() {
-    let settle!: (result: actions.ActionResult) => void;
-    const promise = new Promise<actions.ActionResult>((resolve) => (settle = resolve));
-    return { promise, settle };
-  }
-
-  it("shows Saving… then Saved beside the kind that changed, and nowhere else", async () => {
-    const save = inFlight();
-    vi.mocked(actions.updateInterviewAction).mockReturnValue(save.promise);
-    const { user, kind, statuses } = await openOak();
-    await user.selectOptions(kind(2), "leadership");
-    expect(statuses()).toEqual(["Interview 2 kind: Saving…"]);
-
-    save.settle({ ok: true });
-    expect(await screen.findByText("Saved")).toBeInTheDocument();
-    expect(statuses()).toEqual(["Interview 2 kind: Saved"]);
+describe("the details", () => {
+  it("show as text, with the salary hidden behind Reveal and the posting's host as a link", async () => {
+    const { user } = open(birch);
+    expect(details()).not.toHaveTextContent("$150k");
+    expect(within(details()).getByRole("link", { name: /birch\.test/ })).toHaveAttribute("target", "_blank");
+    await user.click(within(details()).getByRole("button", { name: "Reveal salary" }));
+    expect(details()).toHaveTextContent("$150k");
   });
 
-  it("disables only the field that is saving", async () => {
-    vi.mocked(actions.updateInterviewAction).mockReturnValue(inFlight().promise);
-    const { user, page, kind, at } = await openOak();
-    await user.selectOptions(kind(1), "leadership");
-
-    expect(kind(1)).toBeDisabled();
-    expect(kind(2)).toBeEnabled();
-    expect(at(1)).toBeEnabled();
-    expect(within(page).getByLabelText("Interview notes, Interview 1")).not.toHaveAttribute("readonly");
-    expect(within(page).getByRole("button", { name: /^Delete .* Interview, Interview 1$/ })).toBeEnabled();
+  it("read Not added when empty", () => {
+    open({ ...birch, salary: null, posting_url: null });
+    expect(within(details()).getAllByText("Not added")).toHaveLength(2);
+    expect(within(details()).queryByRole("button", { name: "Reveal salary" })).not.toBeInTheDocument();
   });
 
-  it("saves a new date with the time it has, and nothing when the time didn't change", async () => {
-    const now = new Date();
-    const booked = { ...first, at: new Date(now.getFullYear(), now.getMonth(), 3, 10, 30).toISOString() };
-    const { user, page, at, statuses } = await openOak([{ ...oak, interviews: [booked, second] }]);
-    const time = within(page).getByLabelText("Time, Interview 1");
-    expect(time).toHaveValue("10:30");
-    await user.click(at(1));
-    await user.click(within(screen.getByRole("grid")).getByText("15"));
+  it("become fields, company and title included, with the salary masked until Show", async () => {
+    const { user } = await editBirch();
+    expect(screen.getByRole("heading", { name: "Edit details" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /^Company/ })).toHaveValue("Birch");
+    expect(screen.getByRole("textbox", { name: /^Title/ })).toHaveValue("Engineer");
+    const salary = screen.getByLabelText("Salary");
+    expect(salary).toHaveAttribute("type", "password");
+    expect(salary).toHaveValue("$150k");
+    await user.click(screen.getByRole("button", { name: "Show salary" }));
+    expect(salary).toHaveAttribute("type", "text");
+  });
 
-    expect(actions.updateInterviewAction).toHaveBeenCalledWith("oak", "i1", {
-      at: new Date(now.getFullYear(), now.getMonth(), 15, 10, 30).toISOString(),
-    });
-    expect(await screen.findByText("Saved")).toBeInTheDocument();
-    expect(statuses()).toEqual(["Interview 1 date and time: Saved"]);
-
-    vi.mocked(actions.updateInterviewAction).mockClear();
-    await user.click(within(page).getByLabelText("Time, Interview 1"));
+  it("save each when it's left, trimmed, with a cleared optional one as empty", async () => {
+    const { user } = await editBirch();
+    const company = screen.getByRole("textbox", { name: /^Company/ });
+    await user.clear(company);
+    await user.type(company, "  Birch Labs ");
+    expect(actions.updateApplicationAction).not.toHaveBeenCalled();
     await user.tab();
-    expect(actions.updateInterviewAction).not.toHaveBeenCalled();
+    expect(actions.updateApplicationAction).toHaveBeenLastCalledWith("birch", { company: "Birch Labs" });
+
+    await user.clear(screen.getByLabelText("Salary"));
+    await user.tab();
+    expect(actions.updateApplicationAction).toHaveBeenLastCalledWith("birch", { salary: null });
   });
 
-  it("shows a failed save beside its field, keeps the pick, and Retry sends it again", async () => {
-    vi.mocked(actions.updateInterviewAction).mockResolvedValueOnce({ ok: false, error: "Interview kind is invalid" });
-    const { user, page, kind } = await openOak();
-    await user.selectOptions(kind(1), "leadership");
-
-    expect(await within(page).findByRole("alert")).toHaveTextContent("Interview 1 kind: Interview kind is invalid");
-    expect(kind(1)).toHaveValue("leadership");
-
-    await user.click(within(page).getByRole("button", { name: "Retry, Interview 1 kind" }));
-    expect(actions.updateInterviewAction).toHaveBeenCalledTimes(2);
-    expect(actions.updateInterviewAction).toHaveBeenLastCalledWith("oak", "i1", { kind: "leadership" });
-    expect(within(page).queryByRole("alert")).not.toBeInTheDocument();
+  it("refuse an empty Company beside it, keep what was typed, send nothing, and stay open on Done", async () => {
+    const { user } = await editBirch();
+    const company = screen.getByRole("textbox", { name: /^Company/ });
+    await user.clear(company);
+    await user.tab();
+    expect(company).toBeInvalid();
+    expect(actions.updateApplicationAction).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Done" }));
+    expect(company).toHaveFocus();
   });
 
-  it("shows Interview notes saving by their own Save button, read-only until they land", async () => {
-    const save = inFlight();
-    vi.mocked(actions.updateInterviewAction).mockReturnValue(save.promise);
-    const { user, page, statuses } = await openOak();
-    const notes = within(page).getByLabelText("Interview notes, Interview 2");
-    await user.type(notes, "Went well");
-    await user.click(within(page).getByRole("button", { name: "Save notes, Interview 2" }));
-
-    expect(notes).toHaveAttribute("readonly");
-    expect(statuses()).toEqual(["Interview 2 notes: Saving…"]);
-    save.settle({ ok: true });
-    expect(await screen.findByText("Saved")).toBeInTheDocument();
-    expect(statuses()).toEqual(["Interview 2 notes: Saved"]);
+  it("go back to text on Done, with focus on the edit button", async () => {
+    const { user } = await editBirch();
+    await user.click(screen.getByRole("button", { name: "Done" }));
+    expect(screen.queryByRole("textbox", { name: /^Company/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit details" })).toHaveFocus();
   });
 
-  it("shows Status and details saving by their own buttons", async () => {
-    const { user, page, statuses } = await openOak();
-    await user.selectOptions(within(page).getByLabelText("Status"), "done");
-    await user.selectOptions(within(page).getByLabelText("Outcome"), "rejected");
-    await user.click(within(page).getByRole("button", { name: "Save status" }));
-    expect(await screen.findByText("Saved")).toBeInTheDocument();
-    expect(statuses()).toEqual(["Status: Saved"]);
-
-    await user.type(within(page).getByLabelText("Location"), "Remote");
-    await user.click(within(page).getByRole("button", { name: "Save details" }));
-    expect(statuses()).toContain("Details: Saved");
+  it("save the Location as soon as it's picked, and clear it when the picked one is picked again", async () => {
+    const { user } = await editBirch();
+    const location = screen.getByRole("radiogroup", { name: "Location" });
+    expect(within(location).getByRole("radio", { name: "Remote" })).toBeChecked();
+    await user.click(within(location).getByRole("radio", { name: "In-Office" }));
+    expect(actions.updateApplicationAction).toHaveBeenLastCalledWith("birch", { location: "in_office" });
+    await user.click(within(location).getByRole("radio", { name: "In-Office" }));
+    expect(actions.updateApplicationAction).toHaveBeenLastCalledWith("birch", { location: null });
   });
 
-  it("opens the Add Interview page with this Application chosen, and creates nothing itself", async () => {
-    const { page } = await openOak();
-    expect(within(page).getByRole("link", { name: "Add Interview" })).toHaveAttribute(
-      "href",
-      "/interviews/new?application=oak",
+  it("ask for days in office only for Hybrid, and save them with it", async () => {
+    const { user } = await editBirch();
+    expect(screen.queryByRole("radiogroup", { name: "Days in office" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: "Hybrid" }));
+    await user.click(screen.getByRole("radio", { name: "3 days a week" }));
+    expect(actions.updateApplicationAction).toHaveBeenLastCalledWith("birch", { location: "hybrid", office_days: 3 });
+  });
+
+  it("send nothing for a detail left unchanged", async () => {
+    const { user } = await editBirch();
+    await user.click(screen.getByLabelText("Job posting URL"));
+    await user.tab();
+    expect(actions.updateApplicationAction).not.toHaveBeenCalled();
+  });
+
+  it("save the applied date when it's picked", async () => {
+    const { user } = await editBirch();
+    await user.click(screen.getByRole("button", { name: /^Applied/ }));
+    await user.click(within(screen.getByRole("grid")).getByText("15"));
+    const now = new Date();
+    const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-15`;
+    expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { applied_on: day });
+  });
+
+  it("refuse a Job posting URL that isn't http or https, and send nothing", async () => {
+    const { user } = await editBirch({ ...birch, posting_url: null });
+    await user.type(screen.getByLabelText("Job posting URL"), "ftp://x.test");
+    await user.tab();
+    expect(screen.getByLabelText("Job posting URL")).toBeInvalid();
+    expect(actions.updateApplicationAction).not.toHaveBeenCalled();
+  });
+
+  it("keep a detail being typed in when another one's save lands", async () => {
+    const { user, rerender } = await editBirch({ ...birch, posting_url: null });
+    await user.type(screen.getByLabelText("Job posting URL"), "https://birch.test");
+    rerender(<Editor app={{ ...birch, posting_url: null, location: "in_office" }} />);
+    expect(screen.getByLabelText("Job posting URL")).toHaveValue("https://birch.test");
+    expect(screen.getByRole("radio", { name: "In-Office" })).toBeChecked();
+  });
+
+  it("show why a save failed, with each detail's status beside it", async () => {
+    vi.mocked(actions.updateApplicationAction).mockResolvedValue({ ok: false, error: "Couldn’t reach Bigfoot’s server." });
+    const { user } = await editBirch();
+    await user.click(screen.getByRole("radio", { name: "In-Office" }));
+    expect(await screen.findByRole("button", { name: "Retry, Location" })).toBeInTheDocument();
+  });
+
+  it("show Saved beside the detail that saved", async () => {
+    const { user } = await editBirch();
+    await user.click(screen.getByRole("radio", { name: "In-Office" }));
+    await waitFor(() =>
+      expect(within(details()).getAllByRole("status").map((s) => s.textContent)).toContain("Location: Saved"),
     );
-    expect(within(page).queryByRole("button", { name: "Add Interview" })).not.toBeInTheDocument();
-    expect(actions.createInterviewAction).not.toHaveBeenCalled();
+  });
+});
+
+describe("just after adding the Application", () => {
+  const fresh = application("fresh", { company: "Fresh", interviews: [] });
+
+  it("focuses Add Interview, prompts for the first Interview and announces the add", async () => {
+    open(fresh, { justAdded: true });
+    await waitFor(() => expect(screen.getByRole("link", { name: "Add Interview" })).toHaveFocus());
+    expect(screen.getByText("Added. Got an Interview lined up? Add it here.")).toBeInTheDocument();
+    expect(screen.getByText("Fresh added")).toBeInTheDocument();
   });
 
-  it("shows deleting an Interview by its row, and why it failed", async () => {
-    const save = inFlight();
-    vi.mocked(actions.deleteInterviewAction).mockReturnValue(save.promise);
-    const { user, page, statuses } = await openOak();
-    const remove = within(page).getByRole("button", { name: "Delete Technical Interview, Interview 2" });
-    await user.click(remove);
-
-    expect(remove).toBeDisabled();
-    expect(statuses()).toEqual(["Deleting Interview 2: Deleting…"]);
-    save.settle({ ok: false, error: "Interview not found" });
-    expect(await within(page).findByRole("alert")).toHaveTextContent("Deleting Interview 2: Interview not found");
-    expect(remove).toBeEnabled();
+  it("shows no prompt when the page is opened any other way", () => {
+    open(fresh);
+    expect(screen.queryByText(/Got an Interview lined up/)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add Interview" })).not.toHaveFocus();
   });
 });

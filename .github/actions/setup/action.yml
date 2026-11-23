@@ -1,0 +1,21 @@
+name: Set up
+description: >-
+  Node from .nvmrc and the npm packages, plus uv when a job runs the API or its Python tools.
+  The job checks the repository out first: a local action can only be read from a checkout.
+inputs:
+  uv:
+    description: Also install uv (for the API, ruff and the OpenAPI check).
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+        cache: npm
+    - if: inputs.uv == 'true'
+      uses: astral-sh/setup-uv@v6
+      with:
+        working-directory: api
+    - run: npm ci
+      shell: bash

@@ -16,6 +16,14 @@ export const OUTCOMES = [
 ] as const;
 export type Outcome = (typeof OUTCOMES)[number];
 
+/** Location: how often the role is in the office (GLOSSARY.md). */
+export const LOCATIONS = ["in_office", "remote", "hybrid"] as const;
+export type Location = (typeof LOCATIONS)[number];
+
+/** For a Hybrid Location: how many days a week in the office. */
+export const OFFICE_DAYS = [1, 2, 3, 4] as const;
+export type OfficeDays = (typeof OFFICE_DAYS)[number];
+
 /** Listed in the order they usually happen in a hiring process. */
 export const INTERVIEW_KINDS = [
   "informal_chat",
@@ -43,7 +51,6 @@ export const INTERVIEW_NOTES_MAX_LENGTH = 20_000;
 export const APPLICATION_MAX_LENGTHS = {
   company: 200,
   title: 200,
-  location: 200,
   salary: 100,
   posting_url: 2_048,
 } as const;
@@ -67,7 +74,9 @@ export type Application = {
   company: string;
   title: string;
   posting_url: string | null;
-  location: string | null;
+  location: Location | null;
+  /** Days a week in the office; only for a Hybrid Location, and optional then. */
+  office_days: number | null;
   salary: string | null;
   /** ISO date, YYYY-MM-DD */
   applied_on: string;
@@ -102,6 +111,19 @@ export const STATUS_OPTIONS: Record<Status, Option> = {
   done: { label: "Done" },
 };
 
+export const LOCATION_OPTIONS: Record<Location, Option> = {
+  in_office: { label: "In-Office" },
+  remote: { label: "Remote" },
+  hybrid: { label: "Hybrid" },
+};
+
+/** The Location as one line of text: "In-Office", "Remote", "Hybrid - 3x a Week", or null when unset. */
+export function locationText({ location, office_days }: Pick<Application, "location" | "office_days">) {
+  if (!location) return null;
+  const label = LOCATION_OPTIONS[location].label;
+  return location === "hybrid" && office_days ? `${label} - ${office_days}x a Week` : label;
+}
+
 export const OUTCOME_OPTIONS: Record<Outcome, Option> = {
   offer: { label: "Offer" },
   rejected: { label: "Rejected" },
@@ -129,7 +151,6 @@ export const INTERVIEW_OPTIONS: Record<InterviewKind, Option> = {
   people_management: { label: "People Management" },
 };
 
-
 export function isDone(app: Application) {
   return app.status === "done";
 }
@@ -150,13 +171,30 @@ export function lastCompletedInterview(app: Application): Interview | null {
 }
 
 /** The dashboard's three numbers: Open, Active, and the Next Interview across In Progress Applications. */
+/** The dashboard's counts: In Progress Applications, Offers, upcoming Interviews, and Applications waiting to hear back. */
 export function getStats(apps: Application[]) {
   const open = apps.filter((a) => !isDone(a));
   return {
-    open: open.length,
-    active: open.filter((a) => nextInterview(a) !== null).length,
-    next: getUpcoming(apps)[0] ?? null,
+    inProgress: open.length,
+    offers: apps.filter((a) => isDone(a) && a.outcome === "offer").length,
+    upcoming: getUpcoming(apps).length,
+    waiting: open.filter((a) => a.is_waiting).length,
   };
+}
+
+function count(n: number, one: string, many: string) {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+/** The line under the dashboard's heading: "5 In Progress · 1 Offer · 4 upcoming Interviews", or "Nothing here yet." */
+export function dashboardSummary(apps: Application[]): string {
+  if (apps.length === 0) return "Nothing here yet.";
+  const stats = getStats(apps);
+  return [
+    `${stats.inProgress} In Progress`,
+    count(stats.offers, "Offer", "Offers"),
+    count(stats.upcoming, "upcoming Interview", "upcoming Interviews"),
+  ].join(" · ");
 }
 
 export type DatedInterview = { application: Application; interview: Interview };
@@ -181,29 +219,100 @@ export function getCalendarInterviews(apps: Application[]): DatedInterview[] {
     .toSorted((a, b) => a.interview.at.localeCompare(b.interview.at));
 }
 
-export type BoardColumn = {
+export type ApplicationGroup = {
   id: "waiting" | "scheduled" | "offer" | "done";
   label: string;
   applications: Application[];
 };
 
-/** Done Applications that ended without an Offer: the board's optional Done column. */
+/** Done Applications that ended without an Offer: the Applications list's optional Done group. */
 export function doneWithoutOffer(apps: Application[]): Application[] {
   return apps.filter((a) => isDone(a) && a.outcome !== "offer");
 }
 
 /**
- * The Pipeline board: Waiting (In Progress, nothing upcoming), Interview scheduled (In Progress,
- * something upcoming) and Offer (Done with Outcome Offer). Other Done Applications appear in a
- * Done column only when showDone is set. Empty columns are left out.
+ * The Applications list's groups: Waiting (In Progress, nothing upcoming), Interview scheduled
+ * (In Progress, something upcoming) and Offer (Done with Outcome Offer). Other Done Applications
+ * appear in a Done group only when showDone is set. Empty groups are left out.
  */
-export function getBoardColumns(apps: Application[], { showDone = false } = {}): BoardColumn[] {
+export function getApplicationGroups(apps: Application[], { showDone = false } = {}): ApplicationGroup[] {
   const open = apps.filter((a) => !isDone(a));
-  const columns: BoardColumn[] = [
+  const groups: ApplicationGroup[] = [
     { id: "waiting", label: "Waiting", applications: open.filter((a) => a.is_waiting) },
     { id: "scheduled", label: "Interview scheduled", applications: open.filter((a) => nextInterview(a)) },
     { id: "offer", label: "Offer", applications: apps.filter((a) => isDone(a) && a.outcome === "offer") },
     { id: "done", label: "Done", applications: showDone ? doneWithoutOffer(apps) : [] },
   ];
-  return columns.filter((c) => c.applications.length > 0);
+  return groups.filter((g) => g.applications.length > 0);
+}
+
+/**
+ * The cache tag of one job seeker's Applications and their Interviews: the read the Dashboard and
+ * the Application page share (`getApplications` in src/lib/api.ts). Every Server Action that
+ * changes either, signing out and deleting the account expire it.
+ */
+export function applicationsTag(jobSeekerId: string) {
+  return `applications:${jobSeekerId}`;
+}
+
+/** The Application page's Interviews (BIG-174): the next one, the others still ahead, and the completed ones, newest first. */
+export type InterviewSections = { next: Interview | null; later: Interview[]; done: Interview[] };
+
+export function interviewSections(app: Application): InterviewSections {
+  const [next = null, ...later] = upcomingInterviews(app);
+  return { next, later, done: app.interviews.filter((i) => i.completed).toReversed() };
+}
+
+/** The paragraphs of some notes: runs of text split by blank lines, trimmed. */
+export function paragraphs(notes: string | null): string[] {
+  return (notes ?? "")
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
+
+/**
+ * What the next Interview carries forward (BIG-174): the last paragraph of the Interview notes of
+ * the latest completed Interview, where the job seeker usually writes what to do differently next
+ * time. Null when there is no next Interview, or the last completed one has no notes.
+ */
+export function carriedForward(app: Application): { from: Interview; text: string } | null {
+  if (!nextInterview(app)) return null;
+  const from = lastCompletedInterview(app);
+  const text = paragraphs(from?.notes ?? null).at(-1);
+  return from && text ? { from, text } : null;
+}
+
+/** Whole calendar days from `from` to `to`, in the viewer's time zone: 0 on the same day, negative before it. */
+export function calendarDaysBetween(from: Date, to: Date): number {
+  const start = Date.UTC(from.getFullYear(), from.getMonth(), from.getDate());
+  const end = Date.UTC(to.getFullYear(), to.getMonth(), to.getDate());
+  return Math.round((end - start) / 86_400_000);
+}
+
+/** A date-only value (YYYY-MM-DD) as that calendar day at local midnight, not UTC midnight; a timestamp as itself. */
+export function parseDay(value: string): Date {
+  return value.length === 10 ? new Date(`${value}T00:00`) : new Date(value);
+}
+
+/** "today", "yesterday", "in 2 days", "26 days ago". */
+export function relativeDays(days: number): string {
+  if (days === 0) return "today";
+  if (days === 1) return "tomorrow";
+  if (days === -1) return "yesterday";
+  return days > 0 ? `in ${days} days` : `${-days} days ago`;
+}
+
+export type Progress = { id: ApplicationGroup["id"]; label: string };
+
+/**
+ * Where an Application stands, as the Applications list groups it: Waiting, Interview scheduled,
+ * Offer, or Done with its Outcome ("Done · Rejected").
+ */
+export function applicationProgress(app: Application): Progress {
+  if (isDone(app)) {
+    if (app.outcome === "offer") return { id: "offer", label: "Offer" };
+    return { id: "done", label: app.outcome ? `Done · ${OUTCOME_OPTIONS[app.outcome].label}` : "Done" };
+  }
+  return nextInterview(app) ? { id: "scheduled", label: "Interview scheduled" } : { id: "waiting", label: "Waiting" };
 }

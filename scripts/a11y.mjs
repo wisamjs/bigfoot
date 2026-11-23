@@ -2,18 +2,24 @@
 // Accessibility check: loads each page in scripts/pages.mjs in headless Chrome, in light and dark colour schemes,
 // runs axe-core's WCAG 2.2 A and AA rules plus its best practices (one h1, no skipped heading levels,
 // landmarks), and fails on any violation. Then, at 320px wide (WCAG reflow, the same as 1280px at
-// 400% zoom), each page must not scroll sideways, and its first Tab must reach the skip link.
+// 400% zoom), each page must not scroll sideways, and its first Tab must reach the skip link. On a
+// phone (375×812, touch), every page and state must have no interactive element under 44×44px
+// (inline text links excepted) and no text cut off by an ellipsis (docs/guidelines/mobile.md).
 // Last, runs axe on each page's `states` (dialogs, toggles), and uses each open dialog by keyboard
 // (focus stays inside, Escape closes it, focus returns to its opener), signed in as its own job
 // seeker holding the Applications from scripts/dev-applications.mjs, emptied again afterwards
 // (or, for states with `applications: "none"`, as one holding none).
 // Uses this checkout's dev server (A11Y_URL, default http://localhost:3300) and API
 // (API_URL, default http://localhost:8000) like smoke does. CHROME_PATH picks Chrome.
+// A11Y_SHARD=1/2 checks only the first of two shards of the pages, with their states
+// (scripts/a11y-shard.mjs), as CI's accessibility jobs do; unset, every page is checked.
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { parseShard, shardPages } from "./a11y-shard.mjs";
 import { dialogKeyboardProblems, enterState, launchChrome, openPage, skipLinkProblems } from "./chrome.mjs";
 import { withNoApplications, withTestApplications } from "./dev-applications.mjs";
 import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
+import { clippedTextProblems, touchTargetProblems, emulateDesktop, emulatePhone } from "./mobile-checks.mjs";
 import { pagePath } from "./page-path.mjs";
 import { PAGES } from "./pages.mjs";
 import { ensureServers } from "./servers.mjs";
@@ -30,10 +36,16 @@ const REFLOW_WIDTH = 320;
 const STATES_JOB_SEEKER_ID = "a11y-user";
 const EMPTY_JOB_SEEKER_ID = "a11y-empty-user";
 const SCHEMES = ["light", "dark"];
+const SHARD = parseShard(process.env.A11Y_SHARD);
 
 // Every page that renders (not redirects), signed out and signed in. A page with an `application` needs
 // the Applications from scripts/dev-applications.mjs, so it is checked with the `states` below.
-const rendered = PAGES.filter((page) => !page.redirect);
+// A shard keeps its share of them, each with its states.
+const rendered = shardPages(
+  PAGES.filter((page) => !page.redirect),
+  SHARD,
+);
+if (SHARD.total > 1) console.log(`Shard ${SHARD.index} of ${SHARD.total}: ${rendered.length} pages\n`);
 const pages = rendered.filter((page) => !page.application);
 const dataPages = rendered.filter((page) => page.application);
 
@@ -73,8 +85,8 @@ async function reflowProblems(chrome) {
   return result.value;
 }
 
-async function setWidth(chrome, { width, height }) {
-  await chrome.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
+async function setWidth(chrome, size) {
+  await emulateDesktop(chrome, size);
 }
 
 let failed = 0;
@@ -100,6 +112,31 @@ async function setScheme(chrome, scheme) {
   await chrome.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: scheme }] });
 }
 
+/** The phone rules on the page as it stands: hit areas and clipped text. */
+async function phoneProblems(chrome) {
+  return [...(await touchTargetProblems(chrome)), ...(await clippedTextProblems(chrome))];
+}
+
+/**
+ * Compiles every route before checking. Each CI shard starts its dev server cold, and a state can
+ * open a page another shard checks (adding an Application opens its page): a first compile inside
+ * a state's 15s wait made `application-added` time out. Requests run together; errors are left to
+ * the checks below.
+ */
+async function warmUp() {
+  const cookie = `${SESSION_COOKIE}=${await createTestSession()}`;
+  const routes = PAGES.filter((page) => !page.redirect && !page.application);
+  await Promise.all(
+    routes.map(async (page) => {
+      const headers = page.signedIn ? { cookie } : {};
+      await fetch(`${base}${await pagePath(page)}`, { headers, signal: AbortSignal.timeout(60_000) })
+        .then((response) => response.text())
+        .catch(() => {});
+    }),
+  );
+}
+
+await warmUp();
 const chrome = await launchChrome();
 try {
   await chrome.send("Page.enable");
@@ -121,6 +158,15 @@ try {
     await openPage(chrome, `${base}${await pagePath(page)}`, page.expect);
     report(`${label} at ${REFLOW_WIDTH}px`, await reflowProblems(chrome));
     report(`${label} skip link`, await skipLinkProblems(chrome));
+  }
+
+  // Layout and hit areas don't depend on the colour scheme either, so check them on a phone once.
+  await setScheme(chrome, SCHEMES[0]);
+  await emulatePhone(chrome);
+  for (const page of pages) {
+    await signIn(chrome, page.signedIn ? undefined : null);
+    await openPage(chrome, `${base}${await pagePath(page)}`, page.expect);
+    report(`${page.path} (${page.signedIn ? "signed in" : "signed out"}) on a phone`, await phoneProblems(chrome));
   }
   await setWidth(chrome, DESKTOP);
 
@@ -146,6 +192,23 @@ try {
     }
   }
 
+  /** The states `pick` keeps on a phone, signed in as `jobSeekerId`. */
+  async function checkPhoneStates(jobSeekerId, pick) {
+    await setScheme(chrome, SCHEMES[0]);
+    await emulatePhone(chrome);
+    for (const page of withStates) {
+      const states = page.states.filter(pick);
+      if (!states.length) continue;
+      await signIn(chrome, page.signedIn ? jobSeekerId : null);
+      for (const state of states) {
+        await openPage(chrome, `${base}${await pagePath(page, jobSeekerId)}`, page.expect);
+        await enterState(chrome, state);
+        report(`${page.path} ${state.name} on a phone`, await phoneProblems(chrome));
+      }
+    }
+    await setWidth(chrome, DESKTOP);
+  }
+
   /** The pages that need Applications, as the pages above are checked: colours, reflow and the skip link. */
   async function checkDataPages(jobSeekerId) {
     for (const scheme of SCHEMES) {
@@ -163,6 +226,12 @@ try {
       report(`${page.path} (signed in) at ${REFLOW_WIDTH}px`, await reflowProblems(chrome));
       report(`${page.path} (signed in) skip link`, await skipLinkProblems(chrome));
     }
+    await emulatePhone(chrome);
+    for (const page of dataPages) {
+      await signIn(chrome, jobSeekerId);
+      await openPage(chrome, `${base}${await pagePath(page, jobSeekerId)}`, page.expect);
+      report(`${page.path} (signed in) on a phone`, await phoneProblems(chrome));
+    }
     await setWidth(chrome, DESKTOP);
   }
 
@@ -171,10 +240,14 @@ try {
     await withTestApplications(STATES_JOB_SEEKER_ID, async () => {
       await checkDataPages(STATES_JOB_SEEKER_ID);
       await checkStates(STATES_JOB_SEEKER_ID, (s) => !empty(s));
+      await checkPhoneStates(STATES_JOB_SEEKER_ID, (s) => !empty(s));
     });
   }
   if (states.some(empty)) {
-    await withNoApplications(EMPTY_JOB_SEEKER_ID, () => checkStates(EMPTY_JOB_SEEKER_ID, empty));
+    await withNoApplications(EMPTY_JOB_SEEKER_ID, async () => {
+      await checkStates(EMPTY_JOB_SEEKER_ID, empty);
+      await checkPhoneStates(EMPTY_JOB_SEEKER_ID, empty);
+    });
   }
 } finally {
   await chrome.close();

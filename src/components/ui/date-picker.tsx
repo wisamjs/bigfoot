@@ -79,13 +79,13 @@ export function DatePicker({
           {...aria}
         >
           <CalendarIcon className="size-4 shrink-0 text-body" aria-hidden />
-          <span className="truncate">{shown ?? placeholder}</span>
+          <span className="min-w-0 break-words">{shown ?? placeholder}</span>
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start" aria-label={label}>
         <Calendar
           mode="single"
-          // Weeks start on Monday, like the dashboard's Coming up calendar.
+          // Weeks start on Monday, like the dashboard's Interviews calendar.
           weekStartsOn={1}
           selected={selected}
           defaultMonth={selected}

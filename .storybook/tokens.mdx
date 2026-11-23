@@ -1,0 +1,31 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+import { ColourTable, Radii, Shadows, Spacing, Typography } from "./tokens";
+
+<Meta title="Design tokens" />
+
+# Design tokens
+
+TypeUI Candy's tokens, read from `src/app/globals.css`, the only file allowed to hold token values
+(`npm run tokens` checks the rest). Components use them through Tailwind utilities such as
+`bg-card`, `text-heading`, `rounded-control` and `shadow-md`. Swatches follow the operating
+system's light or dark mode; the table lists both values.
+
+## Colours
+
+<ColourTable />
+
+## Type
+
+<Typography />
+
+## Spacing
+
+<Spacing />
+
+## Radius
+
+<Radii />
+
+## Shadows
+
+<Shadows />

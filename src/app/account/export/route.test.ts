@@ -42,6 +42,7 @@ function app(id: string, company: string): Application {
     title: "Engineer",
     posting_url: null,
     location: null,
+    office_days: null,
     salary: null,
     applied_on: "2026-11-01",
     status: "in_progress",

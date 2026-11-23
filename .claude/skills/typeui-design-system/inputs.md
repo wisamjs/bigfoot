@@ -5,7 +5,7 @@
 ## Core Specs
 
 - **Display:** block, full width
-- **Radius:** 24px (base)
+- **Radius:** 8px, the `--radius-control` token. This overrides Candy's 24px (see `src/app/globals.css`): fields sit with buttons and nested surfaces, not with cards
 - **Border:** 1px, border-default-medium
 - **Background:** neutral-primary — inputs use a contrasting token (the clean white-tinted neutral) against the pink surface/card they sit on, so fields stay clearly distinct from their background
 - **Shadow:** shadow-xs

@@ -1,12 +1,12 @@
 # Bigfoot
 
-A job search tracker. Job hunting is chasing Bigfoot: Bigfoot keeps every Application in one Pipeline until you find yours, so nothing lives in a spreadsheet or a forgotten email thread.
+A job search tracker. Job hunting is chasing Bigfoot: Bigfoot keeps every Application in one place until you find yours, so nothing lives in a spreadsheet or a forgotten email thread.
 
 ![Bigfoot landing page](docs/screenshots/landing.png)
 
 ## Status
 
-Bigfoot is an early proof of concept, built as a side project. Sign in with Google, add the roles you've applied to, log their Interviews, and follow them on a Pipeline board and a calendar of what's coming up.
+Bigfoot is an early proof of concept, built as a side project. Sign in with Google, add the roles you've applied to, log their Interviews, and follow them on a dashboard with two sections: **Interviews**, a calendar and agenda of what's coming, and **Applications**, a table ordered by what each one is waiting on. Each section has its own Add button.
 
 ![Bigfoot dashboard](docs/screenshots/dashboard.png)
 
@@ -140,24 +140,26 @@ Where the skill and the Next.js docs in `node_modules/next/dist/docs/` disagree,
 
 | Command | What it checks |
 | --- | --- |
-| `npm run check` | Types, lint, that the staged `api/openapi.json` matches the API (if not, it rewrites the file for you to `git add`), that components use design tokens instead of raw colours and corner radii, Canadian spelling (cspell), and `npm test`. The pre-commit hook runs it |
+| `npm run verify` | Canadian spelling (cspell), that components use design tokens instead of raw colours and corner radii, Python lint and format, that the staged `api/openapi.json` matches the API (if not, it rewrites the file for you to `git add`), types, lint, `npm test` and `npm run test-storybook`, cheapest first. The pre-commit hook runs it. The old name, `check`, still runs it with a deprecation line |
 | `npm test` | Vitest unit and component tests (React Testing Library in happy-dom), failing if coverage drops below the floor in `vitest.config.mts`. `npm run test:watch` reruns them on save |
+| `npm run storybook` | Storybook at [localhost:6006](http://localhost:6006): every design-system component in `src/components/ui/` in each of its states, the Applications list and editor on sample data, and the design tokens read from `globals.css`. `npm run build-storybook` builds it to `storybook-static/` |
+| `npm run test-storybook` | Renders every story in Chrome (Vitest browser mode with `@storybook/addon-vitest`) and fails on a story's play function or an axe-core WCAG 2.2 AA violation, colour contrast included |
 | `npm run openapi` | Rewrites [`api/openapi.json`](api/openapi.json) from the API code; browse it at [`/docs`](http://localhost:8000/docs) with the API running ([Try the API](#try-the-api)) |
 | `npm run test:api` | API tests (pytest) against the real database, in a throwaway test schema rebuilt for every test: `bigfoot_test_big<n>` on a BIG ticket branch, `bigfoot_test` elsewhere, one per run in CI. `npm run db:drop-test-schema` drops it |
 | `npm run smoke` | Loads every route signed in and signed out against the running dev server and API (starting either if needed), and fails on any server error |
 | `npm run a11y` | axe-core WCAG 2.2 AA on the same pages and their open dialogs, light and dark, and uses each dialog by keyboard: focus stays inside, Escape closes it, focus returns |
 | `npm run build` | Production build (stop `next dev` first: they share `.next/`) |
 
-[CI](.github/workflows/ci.yml) runs all of these but `npm run openapi` on every push and pull request. It needs a `DATABASE_URL` repository secret.
+[CI](.github/workflows/ci.yml) runs all of these but `npm run openapi` on every push and pull request, as parallel jobs: `fast-checks` (the steps of `npm run verify` but the tests, then the build), `unit-tests`, `storybook` (builds Storybook and runs the story tests), `runtime` (API tests and smoke) and `accessibility` (a11y in two shards, `A11Y_SHARD=1/2`). `ci-passed` fails when any of them fails, and is the check `main` requires. Its tests, smoke and a11y run against a Postgres 17 service container on the runner (no secret, so Dependabot PRs run them too). Only the `migrations-applied` job on pushes to `main` needs the `DATABASE_URL` repository secret, for the dev database. To run the same database locally: `docker run --rm -d -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgres:17`, then `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres npm run test:api`.
 
 ## Databases
 
 Two Supabase projects, both in `us-east-1`:
 
-- **`Bigfoot`** (Free plan) is for local development (`public` schema) and CI (throwaway `bigfoot_test_*` schemas). `.env.local` and the CI `DATABASE_URL` secret point here.
-- **`bigfoot-prod`** (Pro plan: daily backups, never pauses) holds real job seekers' data. Its `DATABASE_URL` is only in Vercel's Production environment and the password manager, never in the repo or CI.
+- **`Bigfoot`** (Free plan) is for local development (`public` schema) and the `migrations-applied` CI job. `.env.local` and the CI `DATABASE_URL` secret point here. Tests, smoke and a11y in CI use a Postgres container instead.
+- **`bigfoot-prod`** (Pro plan: daily backups, never pauses) holds real job seekers' data. Its URLs are only in Vercel's Production environment and the password manager, never in the repo or CI.
 
-[`docs/runbooks/database.md`](docs/runbooks/database.md) covers connecting to prod, applying migrations and restoring from a backup.
+Merged migrations reach both on their own: CI applies them to `Bigfoot` on each push to `main`, and the `bigfoot-api` Vercel build applies them to `bigfoot-prod` before the new API goes live. [`docs/runbooks/database.md`](docs/runbooks/database.md) covers connecting to prod, applying migrations and restoring from a backup.
 
 ## Deployments
 
@@ -167,7 +169,7 @@ Only `main` deploys to Vercel (Production). Branches and PRs get no preview depl
 
 Bigfoot was built with AI coding agents working from the project rules in [`AGENTS.md`](AGENTS.md).
 
-[`GLOSSARY.md`](GLOSSARY.md) defines the product's terms (Application, Status, Outcome, Interview, Pipeline, Access token).
+[`GLOSSARY.md`](GLOSSARY.md) defines the product's terms (Application, Status, Outcome, Interview, Applications list, Access token).
 
 ## License
 

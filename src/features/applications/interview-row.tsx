@@ -1,164 +1,114 @@
 "use client";
 
-import { LoaderCircle, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { deleteInterviewAction, updateInterviewAction } from "@/app/applications/actions";
-import { DateTimePicker } from "@/components/ui/date-time-picker";
-import { RequiredMark } from "@/components/ui/field";
-import { FieldError, invalidProps } from "@/components/ui/field-error";
-import { inputClasses } from "@/components/ui/input";
-import { SaveStatus } from "@/components/ui/save-status";
-import { useSaveStatus, type SaveTracker } from "@/hooks/use-save-status";
-import { InterviewNotesForm } from "@/features/applications/interview-notes-form";
-import { fromLocalInput, toLocalInput } from "@/features/applications/local-datetime";
-import {
-  INTERVIEW_KINDS,
-  INTERVIEW_OPTIONS,
-  type Application,
-  type Interview,
-  type InterviewFields,
-  type InterviewKind,
-} from "@/lib/applications";
-import { interviewErrors, isValid, type FieldErrors } from "@/lib/validation";
+import { Check, ChevronRight, Pencil } from "lucide-react";
+import Link from "next/link";
+import { useId, useState } from "react";
+import { DaysFromToday, InterviewDayTime } from "@/features/applications/application-when";
+import { DateTile } from "@/features/applications/date-tile";
+import { interviewHref } from "@/features/applications/routes";
+import { INTERVIEW_OPTIONS, paragraphs, type Interview } from "@/lib/applications";
 
-const fieldLabelClasses = "mb-1 flex min-h-4 flex-wrap items-center justify-between gap-x-2 text-xs font-medium text-body";
+/** Notes longer than this fold on a phone, behind Show all notes. */
+const FOLD_LENGTH = 140;
 
 /**
- * One Interview: its kind (saved on change), date and time (saved once both are given, on picking
- * a date or leaving the time field), Delete, and its Interview notes. Each has its own save status,
- * kept here because the fields are keyed by their saved values and remount when a save lands; this
- * row is keyed by the Interview.
+ * One Interview in the Application page's Interviews card (BIG-174): a date tile, its kind, its day
+ * and time. One still ahead says how far off it is, and "Add Interview notes" while it has none; a
+ * completed one is marked Done and shows its Interview notes in full, folded to the first paragraph
+ * on a phone behind Show all notes. The kind is a link whose area covers the row, so the whole row
+ * opens the Interview page, where it is edited; the notes sit above that, so their text can be
+ * selected.
  */
-export function InterviewRow({
-  app,
-  interview,
-  position,
-}: {
-  app: Application;
-  interview: Interview;
-  /** 1 for the Application's first Interview. */
-  position: number;
-}) {
-  const kindSave = useSaveStatus();
-  const atSave = useSaveStatus();
-  const notesSave = useSaveStatus();
-  const deleteSave = useSaveStatus();
-  // The kind's and date's errors, found before sending or by the API, beside their fields.
-  const [errors, setErrors] = useState<FieldErrors>({});
-  const saved = toLocalInput(interview.at);
-  const label = `Interview ${position}`;
-  const kindLabel = INTERVIEW_OPTIONS[interview.kind].label;
-
-  /**
-   * Checks one change with the API's rules, then saves it, or shows why not beside its field. Returns the problems found before sending.
-   */
-  function saveChange(tracker: SaveTracker, changes: Partial<InterviewFields>): FieldErrors {
-    const problems = interviewErrors(changes);
-    const checked = Object.fromEntries(Object.keys(changes).map((name) => [name, problems[name]]));
-    setErrors((prev) => ({ ...prev, ...checked }));
-    if (isValid(problems)) {
-      void tracker.run(async () => {
-        const result = await updateInterviewAction(app.id, interview.id, changes);
-        if (!result.ok && result.fieldErrors) setErrors((prev) => ({ ...prev, ...result.fieldErrors }));
-        return result;
-      });
-    }
-    return problems;
-  }
-
+export function InterviewRow({ applicationId, interview }: { applicationId: string; interview: Interview }) {
+  const kind = INTERVIEW_OPTIONS[interview.kind].label;
+  const done = interview.completed;
   return (
-    <li className="flex flex-wrap items-end gap-3 rounded-card border border-line bg-surface p-3">
-      <div className="min-w-44 flex-1">
-        <div className={fieldLabelClasses}>
-          <span>
-            <label htmlFor={`kind-${interview.id}`}>
-              Kind<span className="sr-only">, {label}</span>
-            </label>
-            <RequiredMark />
-          </span>
-          <SaveStatus status={kindSave.status} label={`${label} kind`} onRetry={kindSave.retry} />
-        </div>
-        <select
-          // Keyed by the saved value, like the other fields: a save resets only the field it changed,
-          // so notes being written survive a change of kind or date. A failed save changes no key,
-          // so the field keeps what was picked.
-          key={interview.kind}
-          id={`kind-${interview.id}`}
-          defaultValue={interview.kind}
-          disabled={kindSave.saving}
-          required
-          onChange={(e) => saveChange(kindSave, { kind: e.target.value as InterviewKind })}
-          className={inputClasses}
-          {...invalidProps(`kind-${interview.id}-error`, errors.kind)}
-        >
-          {INTERVIEW_KINDS.map((kind) => (
-            <option key={kind} value={kind}>
-              {INTERVIEW_OPTIONS[kind].label}
-            </option>
-          ))}
-        </select>
-        <FieldError id={`kind-${interview.id}-error`} error={errors.kind} />
-      </div>
-      <div className="min-w-52 flex-1">
-        <div className={fieldLabelClasses}>
-          <span>
-            <span id={`at-${interview.id}-label`}>
-              Date and time<span className="sr-only">, {label}</span>
+    <li className="group relative flex gap-4 border-t border-line py-5 first:border-t-0 first:pt-2">
+      <DateTile at={interview.at} tone={done ? "muted" : "outline"} />
+      <div className="min-w-0 flex-1">
+        <p className="m-0 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+          <Link
+            href={interviewHref(applicationId, interview.id)}
+            className="text-lg font-bold leading-[1.3] text-heading after:absolute after:inset-0 after:rounded-card focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-brand group-hover:text-fg-brand-strong"
+          >
+            <span className="sr-only">Open Interview: </span>
+            {kind}
+          </Link>
+          {done && (
+            <span className="inline-flex items-center gap-1 text-sm font-medium text-fg-success-strong">
+              <Check className="size-4" aria-hidden />
+              Done
             </span>
-            <RequiredMark />
-          </span>
-          <SaveStatus status={atSave.status} label={`${label} date and time`} onRetry={atSave.retry} />
-        </div>
-        <fieldset aria-labelledby={`at-${interview.id}-label`} className="m-0 min-w-0 border-0 p-0">
-          <DateTimePicker
-            key={saved}
-            id={`at-${interview.id}`}
-            dateLabel={`Date, ${label}`}
-            timeLabel={`Time, ${label}`}
-            value={saved}
-            disabled={atSave.saving}
-            // A date with no time yet waits for one; no time is assumed. Clearing the date is refused.
-            onChange={({ date, time }) => {
-              if (!date) saveChange(atSave, { at: null });
-              else if (time) saveChange(atSave, { at: fromLocalInput(`${date}T${time}`) });
-            }}
-            invalid={errors.at ? { date: true, time: true } : undefined}
-            aria-describedby={`at-${interview.id}-error`}
-          />
-        </fieldset>
-        <FieldError id={`at-${interview.id}-error`} error={errors.at} />
+          )}
+        </p>
+        <p className="m-0 mt-1 text-sm text-body">
+          <InterviewDayTime at={interview.at} />
+          {!done && (
+            <>
+              {" · "}
+              <DaysFromToday date={interview.at} />
+            </>
+          )}
+        </p>
+        {done && interview.notes && <Notes notes={interview.notes} />}
       </div>
-      <button
-        type="button"
-        disabled={deleteSave.saving}
-        onClick={() => void deleteSave.run(() => deleteInterviewAction(app.id, interview.id))}
-        aria-label={`Delete ${kindLabel} Interview, ${label}`}
-        className="rounded-control p-2.5 text-body transition-colors hover:bg-danger-soft hover:text-fg-danger disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {deleteSave.saving ? (
-          <LoaderCircle className="size-4 animate-spin" aria-hidden />
-        ) : (
-          <Trash2 className="size-4" aria-hidden />
-        )}
-      </button>
-      {/* Only while deleting or when it failed: once it works, the row is gone. Rendered only
-          then, so an empty status doesn't add a line to every row. */}
-      {(deleteSave.status.phase === "saving" || deleteSave.status.phase === "failed") && (
-        <SaveStatus
-          status={deleteSave.status}
-          label={`Deleting ${label}`}
-          savingText="Deleting…"
-          onRetry={deleteSave.retry}
-          className="w-full justify-end"
-        />
-      )}
-      <InterviewNotesForm
-        key={interview.notes ?? ""}
-        interview={interview}
-        label={label}
-        tracker={notesSave}
-        onSave={(notes) => saveChange(notesSave, { notes }).notes}
-      />
+      <RowEnd done={done} hasNotes={Boolean(interview.notes)} />
     </li>
+  );
+}
+
+/** The row's right edge, for the eye: what opening it is for. The link says it all to screen readers. */
+function RowEnd({ done, hasNotes }: { done: boolean; hasNotes: boolean }) {
+  if (done) return <Pencil aria-hidden className="mt-1 size-5 shrink-0 self-center text-body group-hover:text-heading" />;
+  return (
+    <span aria-hidden className="flex shrink-0 items-center">
+      {!hasNotes && <span className="hidden font-medium text-fg-brand sm:inline">Add Interview notes</span>}
+      <ChevronRight className={`size-5 text-body ${hasNotes ? "" : "sm:hidden"}`} />
+    </span>
+  );
+}
+
+/**
+ * A completed Interview's notes, paragraph by paragraph. On a phone, long ones show the first
+ * paragraph, cut to three lines, and Show all notes; wider screens always show them all.
+ */
+function Notes({ notes }: { notes: string }) {
+  const id = useId();
+  const [expanded, setExpanded] = useState(false);
+  // Keyed by their text, numbered when one repeats.
+  const seen = new Map<string, number>();
+  const parts = paragraphs(notes).map((text) => {
+    const count = (seen.get(text) ?? 0) + 1;
+    seen.set(text, count);
+    return { text, key: `${count}:${text}` };
+  });
+  const folds = parts.length > 1 || notes.length > FOLD_LENGTH;
+  const folded = folds && !expanded;
+  return (
+    <div className="relative z-10 mt-3 flex flex-col items-start gap-3">
+      <div id={id} className="flex flex-col gap-3">
+        {parts.map((part, index) => (
+          <p
+            key={part.key}
+            className={`m-0 whitespace-pre-line break-words text-base leading-[1.6] text-heading ${
+              folded ? (index === 0 ? "max-sm:line-clamp-3" : "max-sm:hidden") : ""
+            }`}
+          >
+            {part.text}
+          </p>
+        ))}
+      </div>
+      {folds && (
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-controls={id}
+          onClick={() => setExpanded(!expanded)}
+          className="touch-target rounded-control text-sm font-medium text-fg-brand hover:text-fg-brand-strong sm:hidden"
+        >
+          {expanded ? "Show less" : "Show all notes"}
+        </button>
+      )}
+    </div>
   );
 }

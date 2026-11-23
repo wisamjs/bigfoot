@@ -1,15 +1,18 @@
 // Every page route, signed out and signed in, for scripts/smoke.mjs and scripts/a11y.mjs.
 // scripts/pages.test.ts fails when a src/app page.tsx has no entry here for either state.
 //   expect    text the page must show
-//   params, application
-//             what fills a dynamic route's [id] (scripts/page-path.mjs); a page with `application`
-//             is opened by a job seeker holding scripts/dev-applications.mjs's Applications
+//   params, application, interview
+//             what fills a dynamic route's [id] and [interviewId] (scripts/page-path.mjs); a page
+//             with `application` is opened by a job seeker holding scripts/dev-applications.mjs's
+//             Applications, and `interview` names the kind of one of that Application's Interviews
 //   redirect  the page must redirect instead (a11y skips it): a path means an HTTP redirect there
-//             (src/proxy.ts); true allows the redirect a page streams while it renders
+//             (src/proxy.ts: signed-out visitors go to /sign-in with `next`); true allows the
+//             redirect a page streams while it renders
 //   states    what a click or typing opens or reveals (a dialog, a toggled column, an error); a11y
 //             checks each one, signed in as a user holding scripts/dev-applications.mjs's
 //             Applications and Access token, and `npm run capture -- --state <name>` captures one. Each step clicks
-//             the first element matching `click` whose text includes `text`, or types `value` into
+//             the first element matching `click` whose text includes `text` (with `pointer: true` it
+//             presses it instead, as a Radix menu opens on pointerdown), or types `value` into
 //             the first element matching `fill`; `expect` is text the state must show.
 //             `applications: "none"` signs in as a job seeker with no Applications instead, for
 //             empty states.
@@ -26,42 +29,51 @@ export const PAGES = [
   { path: "/terms", signedIn: true, expect: "Terms of Service" },
   { path: "/accessibility", signedIn: false, expect: "Report a barrier" },
   { path: "/accessibility", signedIn: true, expect: "Report a barrier" },
-  { path: "/dashboard", signedIn: false, redirect: true },
+  { path: "/dashboard", signedIn: false, redirect: "/sign-in" },
   {
     path: "/dashboard",
     signedIn: true,
     expect: "Add Application",
     states: [
       { name: "show-done", steps: [{ click: "label", text: "Show done" }], expect: "Rejected" },
-      { name: "nothing-coming-up", applications: "none", steps: [], expect: "All quiet in the woods" },
+      { name: "nothing-scheduled", applications: "none", steps: [], expect: "All quiet in the woods" },
+      { name: "account-menu", steps: [{ click: "button", text: "Account menu", pointer: true }], expect: "Sign out" },
     ],
   },
   // A dynamic route's entry fills its [id]: `application` is the company of one of the
   // Applications from scripts/dev-applications.mjs, `params` the value itself (scripts/page-path.mjs).
-  { path: "/applications/[id]", signedIn: false, params: { id: "unknown" }, redirect: true },
+  { path: "/applications/[id]", signedIn: false, params: { id: "unknown" }, redirect: "/sign-in" },
   {
     path: "/applications/[id]",
     signedIn: true,
     application: "Datadog",
-    expect: "Save details",
+    expect: "Open Interview",
     states: [
       {
-        name: "salary-revealed",
-        steps: [{ click: "button", text: "Reveal" }],
-        expect: "Save details",
+        name: "details-editing",
+        steps: [{ click: 'button[aria-label="Edit details"]' }],
+        expect: "Stays hidden while you edit",
+      },
+      { name: "salary-revealed", steps: [{ click: "button", text: "Reveal" }], expect: "Hide" },
+      // ⋯ holds Delete application, and on a phone the Change Status choices too. Mark done…, the
+      // wide-screen menu, is checked by its story (application-editor.stories.tsx, MarkDone).
+      {
+        name: "more-menu",
+        steps: [{ click: 'button[aria-label^="More actions"]', pointer: true }],
+        expect: "Delete application",
       },
       {
         name: "delete-confirmation",
-        steps: [{ click: "button", text: "Delete application" }],
+        steps: [
+          { click: 'button[aria-label^="More actions"]', pointer: true },
+          { click: '[role="menuitem"]', text: "Delete application" },
+        ],
         expect: "This can’t be undone",
-      },
-      {
-        name: "interview-calendar",
-        steps: [{ click: 'button[id^="at-"]' }],
-        expect: "Mo",
       },
     ],
   },
+  // An Application with no Interviews yet: Bigfoot and a first Add Interview (BIG-174).
+  { path: "/applications/[id]", signedIn: true, application: "Stripe", expect: "No Interviews yet" },
   {
     // A deleted Application, a malformed id and another job seeker's Application look the same.
     // The page streams inside Suspense, so the response is 200 with the not-found page and a
@@ -71,7 +83,58 @@ export const PAGES = [
     params: { id: "not-an-application" },
     expect: "Application not found",
   },
-  { path: "/applications/new", signedIn: false, redirect: true },
+  {
+    path: "/applications/[id]/interviews/[interviewId]",
+    signedIn: false,
+    params: { id: "unknown", interviewId: "unknown" },
+    redirect: "/sign-in",
+  },
+  {
+    // A Done Application's Interview (BIG-119): it opens with its Status/Outcome badge, and its
+    // completed Interview has Interview notes.
+    path: "/applications/[id]/interviews/[interviewId]",
+    signedIn: true,
+    application: "Vercel",
+    interview: "technical",
+    expect: "Done · Rejected",
+    states: [
+      {
+        name: "interview-heading-editing",
+        steps: [{ click: 'button[aria-label="Edit kind and date"]' }],
+        expect: "Save",
+      },
+      {
+        name: "interview-heading-calendar",
+        steps: [{ click: 'button[aria-label="Edit kind and date"]' }, { click: 'main form button[aria-label^="Date, "]' }],
+        expect: "Mo",
+      },
+      {
+        name: "delete-interview-page-confirmation",
+        steps: [{ click: "button", text: "Delete Interview" }],
+        expect: "with its Interview notes",
+      },
+      {
+        // Notes over the limit (typed past the field's maxLength, as a paste could) fail their
+        // check and are never sent, so they stay unsaved and leaving asks first. A save that went
+        // through would let the job seeker leave before the prompt could be checked.
+        name: "interview-unsaved-changes-prompt",
+        steps: [
+          { fill: 'textarea[id^="notes-"]', value: "x".repeat(20_001) },
+          // "← Vercel", back to the Interview's Application page (BIG-166).
+          { click: "main a", text: "Vercel" },
+        ],
+        expect: "You have unsaved changes.",
+      },
+    ],
+  },
+  {
+    // A deleted Interview, a malformed id and another job seeker's Interview look the same.
+    path: "/applications/[id]/interviews/[interviewId]",
+    signedIn: true,
+    params: { id: "not-an-application", interviewId: "not-an-interview" },
+    expect: "Interview not found",
+  },
+  { path: "/applications/new", signedIn: false, redirect: "/sign-in" },
   {
     path: "/applications/new",
     signedIn: true,
@@ -93,9 +156,29 @@ export const PAGES = [
         ],
         expect: "Enter the company.",
       },
+      {
+        // Adding opens the new Application's page, which asks for its first Interview (BIG-130).
+        name: "application-added",
+        steps: [
+          { fill: 'input[id$="-company"]', value: "Acme" },
+          { fill: 'input[id$="-title"]', value: "Frontend Engineer" },
+          { click: 'button[type="submit"]', text: "Add Application" },
+        ],
+        expect: "Got an Interview lined up?",
+      },
+      {
+        // Leaving with a detail typed asks first, in the page: Keep editing / Discard (BIG-125).
+        name: "unsaved-changes-prompt",
+        steps: [
+          { fill: 'input[id$="-title"]', value: "Frontend Engineer" },
+          { fill: 'input[id$="-company"]', value: "Acme" },
+          { click: "main a", text: "Dashboard" },
+        ],
+        expect: "You have unsaved changes.",
+      },
     ],
   },
-  { path: "/interviews/new", signedIn: false, redirect: true },
+  { path: "/interviews/new", signedIn: false, redirect: "/sign-in" },
   {
     path: "/interviews/new",
     signedIn: true,
@@ -121,7 +204,7 @@ export const PAGES = [
       },
     ],
   },
-  { path: "/account", signedIn: false, redirect: true },
+  { path: "/account", signedIn: false, redirect: "/sign-in" },
   {
     path: "/account",
     signedIn: true,

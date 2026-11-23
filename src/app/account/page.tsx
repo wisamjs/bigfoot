@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
 import { AppFooter } from "@/features/shell/app-footer";
-import { AppHeader, Avatar } from "@/features/shell/app-header";
+import { AppHeader } from "@/features/shell/app-header";
+import { Avatar } from "@/features/shell/avatar";
 import { AccessTokens } from "@/features/account/access-tokens";
 import { DeleteAccountForm } from "@/features/account/delete-account-form";
 import { Download } from "lucide-react";
@@ -213,7 +214,7 @@ function DeleteAccountFormSkeleton() {
     <div className="flex flex-col gap-4">
       <div>
         <Skeleton className="mb-2 h-4 w-44" />
-        <Skeleton className="h-[42px] max-w-xs rounded-card" />
+        <Skeleton className="h-[42px] max-w-xs rounded-control" />
         <Skeleton className="mt-3 h-4 w-36" />
       </div>
       <Skeleton className="h-11 w-40" />

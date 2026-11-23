@@ -7,6 +7,11 @@ from typing import Literal
 
 Status = Literal["in_progress", "done"]
 
+# Location: how often the role is in the office. Hybrid can say how many days a week.
+Location = Literal["in_office", "remote", "hybrid"]
+OFFICE_DAYS_MIN = 1
+OFFICE_DAYS_MAX = 4
+
 # Required when an Application is Done, and only then.
 Outcome = Literal[
     "offer",
@@ -42,7 +47,6 @@ INTERVIEW_NOTES_MAX_LENGTH = 20_000
 # pasted by hand; they stop a script from storing megabytes per row.
 COMPANY_MAX_LENGTH = 200
 TITLE_MAX_LENGTH = 200
-LOCATION_MAX_LENGTH = 200
 SALARY_MAX_LENGTH = 100
 POSTING_URL_MAX_LENGTH = 2_048
 

@@ -11,6 +11,7 @@ function application(overrides: Partial<Application> = {}): Application {
     title: "Engineer",
     posting_url: null,
     location: null,
+    office_days: null,
     salary: null,
     applied_on: "2026-11-01",
     status: "in_progress",
@@ -31,21 +32,26 @@ function parseCsv(text: string) {
   let row: string[] = [];
   let cell = "";
   let quoted = false;
+  const endCell = () => {
+    row.push(cell);
+    cell = "";
+  };
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
-    if (quoted && c === '"' && text[i + 1] === '"') {
-      cell += '"';
-      i++;
+    if (quoted) {
+      if (c !== '"') cell += c;
+      else if (text[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else quoted = false;
     } else if (c === '"') {
-      quoted = !quoted;
-    } else if (!quoted && c === ",") {
-      row.push(cell);
-      cell = "";
-    } else if (!quoted && c === "\r" && text[i + 1] === "\n") {
-      row.push(cell);
+      quoted = true;
+    } else if (c === ",") {
+      endCell();
+    } else if (c === "\r" && text[i + 1] === "\n") {
+      endCell();
       rows.push(row);
       row = [];
-      cell = "";
       i++;
     } else {
       cell += c;
@@ -109,10 +115,10 @@ describe("applicationsCsv", () => {
   it("neutralizes cells a spreadsheet would run as a formula", () => {
     const rows = parseCsv(
       applicationsCsv([
-        application({ company: "=HYPERLINK(\"http://evil\")", title: "+1", location: "-2", salary: "@SUM(A1)" }),
+        application({ company: "=HYPERLINK(\"http://evil\")", title: "+1", posting_url: "-2", salary: "@SUM(A1)" }),
       ]).slice(1),
     );
-    expect(rows[1].slice(0, 5)).toEqual(["'=HYPERLINK(\"http://evil\")", "'+1", "", "'-2", "'@SUM(A1)"]);
+    expect(rows[1].slice(0, 5)).toEqual(["'=HYPERLINK(\"http://evil\")", "'+1", "'-2", "", "'@SUM(A1)"]);
   });
 });
 

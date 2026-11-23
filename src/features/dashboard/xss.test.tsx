@@ -1,21 +1,21 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/applications/actions";
 import { ApplicationEditor } from "@/features/applications/application-editor";
+import { InterviewEditor } from "@/features/applications/interview-editor";
 import { NewApplicationForm } from "@/features/applications/new-application-form";
 import { NewInterviewForm } from "@/features/applications/new-interview-form";
 import { getUpcoming } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
 import { INJECTED_ELEMENTS, XSS_TEXT, XSS_URLS } from "@/test/xss";
-import { ComingUpCalendar } from "./coming-up-calendar";
-import { DashboardPipeline } from "./dashboard-pipeline";
-import { NextInterviewStat } from "./next-interview-stat";
+import { InterviewCalendar } from "./interview-calendar";
+import { DashboardApplications } from "./dashboard-applications";
 
 // Everything a job seeker types is shown as text and never runs (BIG-89): each payload goes into
 // every Application field and the Interview notes, then through each display and form.
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("next/navigation", () => import("@/test/navigation"));
 
 vi.mock("@/app/applications/actions", () => ({
   createApplicationAction: vi.fn(),
@@ -23,7 +23,7 @@ vi.mock("@/app/applications/actions", () => ({
   deleteApplicationAction: vi.fn(),
   createInterviewAction: vi.fn(),
   updateInterviewAction: vi.fn(),
-  deleteInterviewAction: vi.fn(),
+  deleteInterviewAndLeaveAction: vi.fn(),
 }));
 
 declare global {
@@ -57,7 +57,6 @@ function poisoned(payload: string, url: string) {
   return application("x", {
     company: payload,
     title: payload,
-    location: payload,
     salary: payload,
     posting_url: url,
     is_waiting: false,
@@ -72,8 +71,8 @@ function expectNothingInjected() {
 }
 
 describe.each(XSS_TEXT.map((payload, n) => [payload, XSS_URLS[n]] as const))("%j with Posting link %j", (payload, url) => {
-  it("shows as text on the Pipeline board, with no Posting link", () => {
-    render(<DashboardPipeline applications={[poisoned(payload, url)]} subtitle="1 open" />);
+  it("shows as text in the Applications list, with no Posting link", () => {
+    render(<DashboardApplications applications={[poisoned(payload, url)]} />);
     expect(screen.getAllByText(payload, { exact: false }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: /job posting/ })).not.toBeInTheDocument();
     expectNothingInjected();
@@ -81,24 +80,17 @@ describe.each(XSS_TEXT.map((payload, n) => [payload, XSS_URLS[n]] as const))("%j
 
   it("shows as text on the Application page, with no Posting link", () => {
     render(<ApplicationEditor app={poisoned(payload, url)} />);
-    expect(screen.getByLabelText("Company")).toHaveValue(payload);
-    expect(screen.getByLabelText("Location")).toHaveValue(payload);
-    expect(screen.getByLabelText(/^Interview notes/)).toHaveValue(payload);
-    expect(screen.queryByRole("link", { name: /job posting/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: payload.trim() })).toBeInTheDocument();
+    // The next Interview's notes show on its card; the salary once revealed.
+    expect(screen.getAllByText(payload.trim().split("\n")[0], { exact: false }).length).toBeGreaterThan(1);
+    fireEvent.click(screen.getByRole("button", { name: "Reveal salary" }));
+    expect(screen.queryByRole("link", { name: /new tab/ })).not.toBeInTheDocument();
     expectNothingInjected();
   });
 
-  it("shows as text on the calendar and the Next Interview stat", () => {
+  it("shows as text on the calendar, its picked day and its agenda", () => {
     const apps = [poisoned(payload, url)];
-    render(
-      <>
-        <ComingUpCalendar interviews={getUpcoming(apps)} />
-        {/* The stat is one of the dashboard's list of numbers. */}
-        <ul>
-          <NextInterviewStat next={getUpcoming(apps)[0] ?? null} />
-        </ul>
-      </>,
-    );
+    render(<InterviewCalendar interviews={getUpcoming(apps)} />);
     expect(screen.getAllByText(payload, { exact: false }).length).toBeGreaterThan(0);
     expectNothingInjected();
   });
@@ -140,6 +132,7 @@ describe("the edit forms on the Application page", () => {
   async function openBirch() {
     const user = userEvent.setup();
     render(<ApplicationEditor app={birch} />);
+    await user.click(screen.getByRole("button", { name: "Edit details" }));
     /** Pastes rather than types: user-event reads braces and brackets as key names. */
     async function fill(label: string | RegExp, value: string) {
       const input = screen.getByLabelText(label);
@@ -150,28 +143,12 @@ describe("the edit forms on the Application page", () => {
     return { user, fill };
   }
 
-  it.each(XSS_TEXT)("send %j exactly as typed, from the details and the Interview notes", async (payload) => {
-    const { user, fill } = await openBirch();
-    await fill("Company", payload);
-    await fill("Location", payload);
-    await user.click(screen.getByRole("button", { name: "Save details" }));
-    expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", {
-      company: payload.trim(),
-      location: payload.trim(),
-    });
-
-    await fill(/^Interview notes/, payload);
-    await user.click(screen.getByRole("button", { name: "Save notes, Interview 1" }));
-    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { notes: payload.trim() });
-    expectNothingInjected();
-  });
-
   it.each(XSS_URLS.filter((url) => url.trim() === url))(
     "refuse Posting link %j beside the field, and send nothing",
     async (url) => {
       const { user, fill } = await openBirch();
       await fill("Job posting URL", url);
-      await user.click(screen.getByRole("button", { name: "Save details" }));
+      await user.tab();
 
       const field = screen.getByLabelText("Job posting URL");
       expect(field).toBeInvalid();
@@ -180,6 +157,20 @@ describe("the edit forms on the Application page", () => {
       expect(actions.updateApplicationAction).not.toHaveBeenCalled();
     },
   );
+});
+
+describe("the Interview notes on the Interview page", () => {
+  it.each(XSS_TEXT)("send %j exactly as typed", async (payload) => {
+    const user = userEvent.setup();
+    const current = interview("i1", { application_id: "birch", at: new Date(2026, 10, 20, 10, 0).toISOString(), completed: false });
+    render(<InterviewEditor app={application("birch", { company: "Birch", interviews: [current] })} interview={current} />);
+    const notes = screen.getByLabelText("Interview notes");
+    await user.click(notes);
+    await user.paste(payload);
+    await user.tab();
+    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { notes: payload.trim() });
+    expectNothingInjected();
+  });
 });
 
 describe("the Add form", () => {
@@ -217,7 +208,7 @@ describe("the Add form", () => {
 
   it("names every missing or too-long field at once, and focuses the first", async () => {
     const { user, panel, fill } = await openAdd();
-    await fill("Location", "x".repeat(201));
+    await fill("Job posting URL", `https://example.com/${"x".repeat(2100)}`);
     await user.click(within(panel).getByRole("button", { name: "Add Application" }));
 
     expect(within(panel).getByLabelText("Company")).toHaveFocus();
@@ -248,11 +239,10 @@ describe("the Add form", () => {
     const { user, panel, fill } = await openAdd();
     await fill("Company", payload);
     await fill("Title", payload);
-    await fill("Salary", payload);
     await user.click(within(panel).getByRole("button", { name: "Add Application" }));
 
     expect(actions.createApplicationAction).toHaveBeenCalledWith(
-      expect.objectContaining({ company: payload.trim(), title: payload.trim(), salary: payload.trim() }),
+      expect.objectContaining({ company: payload.trim(), title: payload.trim() }),
     );
     expectNothingInjected();
   });

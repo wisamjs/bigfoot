@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { XSS_TEXT, XSS_URLS } from "@/test/xss";
 import { ACCESS_TOKEN_NAME_MAX } from "./account";
-import { APPLICATION_MAX_LENGTHS, INTERVIEW_NOTES_MAX_LENGTH } from "./applications";
+import { APPLICATION_MAX_LENGTHS, INTERVIEW_NOTES_MAX_LENGTH, OFFICE_DAYS } from "./applications";
 import {
   accessTokenNameError,
   applicationErrors,
@@ -27,18 +27,18 @@ describe("limits", () => {
     expect(APPLICATION_MAX_LENGTHS).toEqual({
       company: pythonNumber("COMPANY_MAX_LENGTH"),
       title: pythonNumber("TITLE_MAX_LENGTH"),
-      location: pythonNumber("LOCATION_MAX_LENGTH"),
       salary: pythonNumber("SALARY_MAX_LENGTH"),
       posting_url: pythonNumber("POSTING_URL_MAX_LENGTH"),
     });
+    expect(OFFICE_DAYS).toEqual([pythonNumber("OFFICE_DAYS_MIN"), 2, 3, pythonNumber("OFFICE_DAYS_MAX")]);
     expect(INTERVIEW_NOTES_MAX_LENGTH).toBe(pythonNumber("INTERVIEW_NOTES_MAX_LENGTH"));
-    expect(ACCESS_TOKEN_NAME_MAX).toBe(pythonNumber("ACCESS_TOKEN_NAME_MAX", "api/app/main.py"));
+    expect(ACCESS_TOKEN_NAME_MAX).toBe(pythonNumber("ACCESS_TOKEN_NAME_MAX", "api/app/models.py"));
   });
 });
 
 describe("applicationErrors", () => {
   it("accepts a whole new Application, and one with only the required fields", () => {
-    const whole = { ...valid, location: "Remote", salary: "$150k", posting_url: "https://jobs.example.com/1" };
+    const whole = { ...valid, location: "hybrid", office_days: 3, salary: "$150k", posting_url: "https://jobs.example.com/1" };
     expect(applicationErrors(whole, { creating: true })).toEqual({});
     expect(applicationErrors({ company: "Birch", title: "Engineer" }, { creating: true })).toEqual({});
   });
@@ -71,7 +71,18 @@ describe("applicationErrors", () => {
   });
 
   it.each(XSS_TEXT)("keeps %j as typed: text is escaped where it's shown, not refused", (text) => {
-    expect(applicationErrors({ ...valid, company: text, location: text }, { creating: true })).toEqual({});
+    expect(applicationErrors({ ...valid, company: text, salary: text }, { creating: true })).toEqual({});
+  });
+
+  it("takes a Location only from its choices, and office days only for Hybrid", () => {
+    expect(applicationErrors({ location: "remote", office_days: null }, { creating: false })).toEqual({});
+    expect(applicationErrors({ location: "Toronto" }, { creating: false })).toEqual({ location: "Choose a Location." });
+    expect(applicationErrors({ location: "hybrid", office_days: 5 }, { creating: false })).toEqual({
+      office_days: "Choose 1 to 4 days in office.",
+    });
+    expect(applicationErrors({ location: "remote", office_days: 2 }, { creating: false })).toEqual({
+      office_days: "Only a Hybrid Location has days in office.",
+    });
   });
 
   it("needs a real applied date", () => {

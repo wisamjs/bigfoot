@@ -8,9 +8,9 @@ export const legalH3 = "m-0 mt-6 mb-2 text-lg font-bold leading-[1.25] text-head
 export const legalList = "my-4 flex list-disc flex-col gap-2 pl-6";
 
 /** typography.md inline link: fg-brand, underlined, underline removed on hover. */
-export function LegalLink({ href, children }: { href: string; children: ReactNode }) {
-  const className =
-    "rounded-control text-fg-brand underline underline-offset-4 transition-colors hover:no-underline";
+export function LegalLink({ href, children, alone = false }: { href: string; children: ReactNode; alone?: boolean }) {
+  // `alone`: the link is the whole list item, not a link in a sentence, so it needs a 44px hit area on touch screens.
+  const className = `${alone ? "touch-target justify-start " : ""}rounded-control text-fg-brand underline underline-offset-4 transition-colors hover:no-underline`;
   if (href.startsWith("/")) {
     return (
       <Link href={href} className={className}>
@@ -50,7 +50,9 @@ export function LegalContents({ sections }: { sections: readonly { id: string; t
       <ol className="m-0 flex list-decimal flex-col gap-2 pl-6">
         {sections.map((s) => (
           <li key={s.id}>
-            <LegalLink href={`#${s.id}`}>{s.title}</LegalLink>
+            <LegalLink href={`#${s.id}`} alone>
+              {s.title}
+            </LegalLink>
           </li>
         ))}
       </ol>

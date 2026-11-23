@@ -4,7 +4,7 @@ Only `main` deploys. Pushing any other branch, or opening or updating a PR, crea
 
 ## Why previews are off
 
-The Hobby plan allows 100 deployments per rolling 24 hours (error code `api-deployments-free-per-day`). Every deployment counts: Preview, Production, CLI and dashboard redeploys. Each push to a PR branch made a Preview deployment, so stacked PRs and parallel branches used the quota up, and then Production could not deploy either. CI (`npm run check`, smoke, a11y) already verifies each PR.
+The Hobby plan allows 100 deployments per rolling 24 hours (error code `api-deployments-free-per-day`). Every deployment counts: Preview, Production, CLI and dashboard redeploys. Each push to a PR branch made a Preview deployment, so stacked PRs and parallel branches used the quota up, and then Production could not deploy either. CI (the steps of `npm run verify`, smoke, a11y) already verifies each PR.
 
 ## How it works
 
@@ -18,7 +18,7 @@ The Hobby plan allows 100 deployments per rolling 24 hours (error code `api-depl
 
 This is not an Ignored Build Step (`ignoreCommand`). Vercel counts builds an Ignored Build Step cancels as full deployments, so they would still use the quota.
 
-Nothing in CI or branch protection waits for Vercel: the required checks are `check` and `pr-naming`.
+Nothing in CI or branch protection waits for Vercel: the required checks are `ci-passed` and `pr-naming`.
 
 ## Turn previews back on
 

@@ -118,14 +118,6 @@
   --border: var(--line);
   --input: var(--line-medium);
   --ring: var(--brand);
-  /* Spot illustrations (src/components/illustrations.tsx) */
-  --art-halo: #efc9dc;
-  --art-outline: #3c0d28;
-  --art-fur: #b5538c;
-  --art-face: #fbeaf2;
-  --art-accent: #d98ab3;
-  --art-paper: #ffffff;
-  --art-cell: #f2d2e2;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -198,14 +190,6 @@
 
     --color-1-400: rgba(255, 255, 255, 0.14);
     --color-1-700: rgba(0, 0, 0, 0.3);
-
-    --art-halo: #4a1632;
-    --art-outline: #1f0714;
-    --art-fur: #b5538c;
-    --art-face: #f2d2e2;
-    --art-accent: #e59cc4;
-    --art-paper: #faebf1;
-    --art-cell: #e3c6d7;
   }
 }
 
@@ -301,6 +285,8 @@
   --color-ring: var(--ring);
 
   --radius-card: 24px;
+  /* Overrides Candy: fields (text inputs, selects, textareas, date pickers) use this 8px radius, not
+     Candy's 24px inputs.md radius, so they sit with buttons and nested surfaces. */
   --radius-control: 8px;
   /* shadcn components round with rounded-md…xl: controls get Candy's 8px, surfaces its 24px. */
   --radius-md: var(--radius-control);
@@ -328,6 +314,32 @@ body {
 }
 
 @layer components {
+  /*
+   * Touch screens: every control's hit area is at least 44×44px (docs/guidelines/mobile.md). Buttons, fields and
+   * selects grow; the icon inside stays its size. A small link or an icon-only button adds .touch-target.
+   * Inside a layer so a utility such as h-11 still wins.
+   */
+  @media (pointer: coarse) {
+    button,
+    .btn,
+    select,
+    textarea,
+    input:not([type="checkbox"], [type="radio"]) {
+      min-height: 44px;
+    }
+    button,
+    .btn {
+      min-width: 44px;
+    }
+    .touch-target {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px;
+      min-height: 44px;
+    }
+  }
+
   /* Buttons (buttons.md): 8px radius, 2px border, medium weight, glint, 0.3s transitions. */
   .btn {
     display: inline-flex;

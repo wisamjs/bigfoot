@@ -1,0 +1,29 @@
+/*
+ * What src/app/layout.tsx adds around every page, for stories: the Allo font (next/font/local
+ * there, a plain @font-face here) on <body>. Tokens come from globals.css, imported in preview.tsx.
+ */
+@font-face {
+  font-family: "Allo";
+  src: url("../node_modules/allo-font/fonts/webfonts/AlloVariable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-allo: "Allo";
+}
+
+/*
+ * Story tests run with reduced motion (vitest.config.mts). globals.css only shortens animations
+ * then, which still leaves a dialog on its first, transparent frame when a play function looks;
+ * in Storybook, reduced motion removes them, so everything opens straight to its final state.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

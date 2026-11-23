@@ -22,14 +22,23 @@ dev = [
 [tool.uv]
 package = false
 
+# The `bigfoot-api` Vercel project's build step (BIG-71): applies merged migrations to prod before
+# this deployment goes live, and fails the build when it can't. See docs/runbooks/database.md.
+[tool.vercel.scripts]
+build = "python ../scripts/db-status.py --deploy"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = ["rebuilds_schema: drops and rebuilds the test schema itself, so conftest restores it afterwards"]
 
 [tool.ruff]
 line-length = 120
 extend-include = ["../scripts/*.py"]
 
 [tool.ruff.lint]
-# pyflakes, pycodestyle, isort, pyupgrade, bugbear
-select = ["F", "E", "W", "I", "UP", "B"]
+# pyflakes, pycodestyle, isort, pyupgrade, bugbear, mccabe (cyclomatic complexity)
+select = ["F", "E", "W", "I", "UP", "B", "C90"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10

@@ -46,6 +46,26 @@ function returnFocusToOpener(event: Event) {
   if (opener?.isConnected) opener.focus();
 }
 
+/** Makes inert what is beside `node`, except scripts and overlays, and returns what it changed. */
+function makeSiblingsInert(node: Element) {
+  const made: Element[] = [];
+  for (const sibling of node.parentElement?.children ?? []) {
+    if (sibling === node || sibling.hasAttribute("inert") || sibling.matches("script, [data-slot$='-overlay']")) continue;
+    sibling.setAttribute("inert", "");
+    made.push(sibling);
+  }
+  return made;
+}
+
+/** Makes everything outside the dialog inert, from its own level up to <body>. */
+function makeOutsideInert(from: HTMLElement | null) {
+  const made: Element[] = [];
+  for (let node = from?.parentElement; node && node !== document.body; node = node.parentElement) {
+    made.push(...makeSiblingsInert(node));
+  }
+  return made;
+}
+
 /**
  * Renders first inside dialog content while it is open. Notes the opener, and makes everything
  * outside the dialog inert, as a native modal <dialog> does. Radix only hides the page with
@@ -61,18 +81,11 @@ function InertOutside() {
     if (active instanceof HTMLElement && active !== document.body && !active.closest(CONTENT)) opener = active;
   }, []);
   useEffect(() => {
-    const made: Element[] = [];
+    let made: Element[] = [];
     let live = true;
     // After this commit's other effects, which add Radix's focus guards to <body>.
     queueMicrotask(() => {
-      if (!live) return;
-      for (let node = ref.current?.parentElement; node && node !== document.body; node = node.parentElement) {
-        for (const sibling of node.parentElement?.children ?? []) {
-          if (sibling === node || sibling.hasAttribute("inert") || sibling.matches("script, [data-slot$='-overlay']")) continue;
-          sibling.setAttribute("inert", "");
-          made.push(sibling);
-        }
-      }
+      if (live) made = makeOutsideInert(ref.current);
     });
     return () => {
       live = false;

@@ -29,6 +29,10 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
 
+  // Complexity: no function with more than 10 independent paths through it (CODING_STANDARDS.md,
+  // "Lint rule groups"). Every linted file, tests and scripts included; Ruff's C901 does the same for Python.
+  { rules: { complexity: ["error", 10] } },
+
   // React: ESLint React's type-checked TypeScript preset.
   {
     ...asErrors(eslintReact.configs["recommended-type-checked"]),
@@ -107,6 +111,7 @@ const eslintConfig = defineConfig([
         // Next.js's root files: auth.ts, proxy.ts, instrumentation.ts and their tests.
         { category: "server", pattern: "src/*.ts" },
         { category: "test", pattern: "src/**/*.test.{ts,tsx}" },
+        { category: "story", pattern: "src/**/*.stories.tsx" },
         { category: "action", pattern: "src/app/**/actions.ts" },
       ],
     },
@@ -135,6 +140,8 @@ const eslintConfig = defineConfig([
             },
             // The only links between features.
             ...Object.entries({
+              // The Application page's empty states use shell's illustrations (BIG-174).
+              applications: ["shell"],
               dashboard: ["applications", "shell"],
               landing: ["applications", "auth", "shell"],
               shell: ["auth"],
@@ -150,6 +157,8 @@ const eslintConfig = defineConfig([
                 { to: { file: { categories: "server" } } },
               ],
             },
+            // Stories keep their component's rules, and may also build their data with the test builders.
+            { from: { file: { categories: "story" } }, allow: { to: { element: { type: "test" } } } },
             // Tests and their shared fixtures may reach anything.
             ...[{ file: { categories: "test" } }, { element: { type: "test" } }].map((from) => ({
               from,
@@ -218,6 +227,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Vitest's HTML coverage report.
     "coverage/**",
+    // npm run build-storybook's output.
+    "storybook-static/**",
     // Claude Code worktrees: other branches' checkouts, linted in their own sessions.
     ".claude/worktrees/**",
   ]),

@@ -1,4 +1,4 @@
-// Checks what a job seeker typed before it is sent, with the API's own rules (api/app/main.py)
+// Checks what a job seeker typed before it is sent, with the API's own rules (api/app/models.py)
 // and limits (APPLICATION_MAX_LENGTHS, INTERVIEW_NOTES_MAX_LENGTH, ACCESS_TOKEN_NAME_MAX): the forms run them to show
 // errors beside each field, and the Server Actions run them again, because anyone can call those
 // with any values. FastAPI and the database still check everything; this only answers sooner.
@@ -8,6 +8,8 @@ import {
   APPLICATION_MAX_LENGTHS,
   INTERVIEW_KINDS,
   INTERVIEW_NOTES_MAX_LENGTH,
+  LOCATIONS,
+  OFFICE_DAYS,
   OUTCOMES,
   STATUSES,
   type ApplicationFields,
@@ -24,12 +26,15 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const STATUS_SET = new Set<unknown>(STATUSES);
 const OUTCOME_SET = new Set<unknown>(OUTCOMES);
 const KIND_SET = new Set<unknown>(INTERVIEW_KINDS);
+const LOCATION_SET = new Set<unknown>(LOCATIONS);
+const OFFICE_DAYS_SET = new Set<unknown>(OFFICE_DAYS);
 
 const APPLICATION_LABELS: Record<keyof ApplicationFields, string> = {
   company: "Company",
   title: "Title",
   posting_url: "Job posting URL",
   location: "Location",
+  office_days: "Days in office",
   salary: "Salary",
   applied_on: "Applied date",
   status: "Status",
@@ -88,40 +93,83 @@ function unknownFields(input: object, known: readonly string[]): FieldErrors {
   );
 }
 
+type ApplicationInput = Partial<Record<keyof ApplicationFields, unknown>>;
+
+/** Company and Title (required) and Salary and Posting link (optional). */
+function applicationTextErrors(fields: ApplicationInput, creating: boolean): FieldErrors {
+  const errors: FieldErrors = {};
+  for (const name of ["company", "title"] as const) {
+    const problem =
+      (creating || name in fields) && requiredText(fields[name], APPLICATION_LABELS[name], APPLICATION_MAX_LENGTHS[name]);
+    if (problem) errors[name] = problem;
+  }
+  const salary = optionalText(fields.salary, APPLICATION_LABELS.salary, APPLICATION_MAX_LENGTHS.salary);
+  if (salary) errors.salary = salary;
+  const url = postingUrl(fields.posting_url);
+  if (url) errors.posting_url = url;
+  return errors;
+}
+
+/**
+ * The Location, one of its choices or none, and its office days: 1 to 4, and only for Hybrid. A
+ * change that sends days without a Location leaves that check to the API, which knows the saved one.
+ */
+function locationErrors(fields: ApplicationInput): FieldErrors {
+  const errors: FieldErrors = {};
+  const { location, office_days: days } = fields;
+  if (location !== undefined && location !== null && !LOCATION_SET.has(location)) errors.location = "Choose a Location.";
+  if (days === undefined || days === null) return errors;
+  if (!OFFICE_DAYS_SET.has(days)) errors.office_days = `Choose ${OFFICE_DAYS[0]} to ${OFFICE_DAYS.at(-1)} days in office.`;
+  else if ("location" in fields && location !== "hybrid") errors.office_days = "Only a Hybrid Location has days in office.";
+  return errors;
+}
+
+/** The Outcome's problem given the Status: only a Done Application has one, and it must. */
+function outcomeError(status: unknown, outcome: unknown) {
+  if (outcome !== null && !OUTCOME_SET.has(outcome)) return "Choose an Outcome.";
+  if (status === "done" && outcome === null) return "Choose an Outcome for a Done Application.";
+  if (status === "in_progress" && outcome !== null) return "Only a Done Application has an Outcome.";
+  return null;
+}
+
+/** Status, and the Outcome that goes with it. */
+function statusErrors(fields: ApplicationInput, creating: boolean): FieldErrors {
+  const errors: FieldErrors = {};
+  const status = "status" in fields ? fields.status : creating ? "in_progress" : undefined;
+  if (status !== undefined && !STATUS_SET.has(status)) errors.status = "Choose a Status.";
+  const outcome = outcomeError(status, fields.outcome ?? null);
+  if (outcome) errors.outcome = outcome;
+  return errors;
+}
+
 /**
  * Problems with an Application's fields. `creating` checks a whole new Application, so Company
  * and Title are required; otherwise only the fields given are checked, as a change.
  */
 export function applicationErrors(input: unknown, { creating }: { creating: boolean }): FieldErrors {
   if (typeof input !== "object" || input === null) return { form: "Nothing to save." };
-  const fields = input as Partial<Record<keyof ApplicationFields, unknown>>;
-  const has = (name: keyof ApplicationFields) => creating || name in fields;
+  const fields = input as ApplicationInput;
   const errors: FieldErrors = unknownFields(input, Object.keys(APPLICATION_LABELS));
-
-  for (const name of ["company", "title"] as const) {
-    const problem = has(name) && requiredText(fields[name], APPLICATION_LABELS[name], APPLICATION_MAX_LENGTHS[name]);
-    if (problem) errors[name] = problem;
-  }
-  for (const name of ["location", "salary"] as const) {
-    const problem = optionalText(fields[name], APPLICATION_LABELS[name], APPLICATION_MAX_LENGTHS[name]);
-    if (problem) errors[name] = problem;
-  }
-  const url = postingUrl(fields.posting_url);
-  if (url) errors.posting_url = url;
-
+  Object.assign(errors, applicationTextErrors(fields, creating), locationErrors(fields));
   // Optional when creating (the API defaults it to today), but never cleared once set.
   if ("applied_on" in fields && (typeof fields.applied_on !== "string" || !isIsoDate(fields.applied_on))) {
     errors.applied_on = "Enter the date you applied.";
   }
+  return Object.assign(errors, statusErrors(fields, creating));
+}
 
-  const status = "status" in fields ? fields.status : creating ? "in_progress" : undefined;
-  if (status !== undefined && !STATUS_SET.has(status)) errors.status = "Choose a Status.";
-  const outcome = fields.outcome ?? null;
-  if (outcome !== null && !OUTCOME_SET.has(outcome)) errors.outcome = "Choose an Outcome.";
-  else if (status === "done" && outcome === null) errors.outcome = "Choose an Outcome for a Done Application.";
-  else if (status === "in_progress" && outcome !== null) errors.outcome = "Only a Done Application has an Outcome.";
+type InterviewInput = Partial<Record<keyof InterviewFields, unknown>>;
 
-  return errors;
+function interviewKindError(fields: InterviewInput, creating: boolean) {
+  return (creating || "kind" in fields) && !KIND_SET.has(fields.kind) ? "Choose an Interview kind." : null;
+}
+
+/** The date and time's problem: required when creating, and never cleared by a change. */
+function interviewDateError(fields: InterviewInput, creating: boolean) {
+  if (!creating && !("at" in fields)) return null;
+  if (fields.at === undefined || fields.at === null || fields.at === "") return "Enter the date and time.";
+  if (typeof fields.at !== "string" || !isTimestamp(fields.at)) return "Enter a date and time.";
+  return null;
 }
 
 /**
@@ -131,15 +179,12 @@ export function applicationErrors(input: unknown, { creating }: { creating: bool
  */
 export function interviewErrors(input: unknown, { creating = false }: { creating?: boolean } = {}): FieldErrors {
   if (typeof input !== "object" || input === null) return { form: "Nothing to save." };
-  const fields = input as Partial<Record<keyof InterviewFields, unknown>>;
-  const has = (name: keyof InterviewFields) => creating || name in fields;
+  const fields = input as InterviewInput;
   const errors: FieldErrors = unknownFields(input, ["kind", "at", "notes"]);
-  if (has("kind") && !KIND_SET.has(fields.kind)) errors.kind = "Choose an Interview kind.";
-  if (has("at") && (fields.at === undefined || fields.at === null || fields.at === "")) {
-    errors.at = "Enter the date and time.";
-  } else if (has("at") && (typeof fields.at !== "string" || !isTimestamp(fields.at))) {
-    errors.at = "Enter a date and time.";
-  }
+  const kind = interviewKindError(fields, creating);
+  if (kind) errors.kind = kind;
+  const at = interviewDateError(fields, creating);
+  if (at) errors.at = at;
   const notes = optionalText(fields.notes, "Interview notes", INTERVIEW_NOTES_MAX_LENGTH);
   if (notes) errors.notes = notes;
   return errors;

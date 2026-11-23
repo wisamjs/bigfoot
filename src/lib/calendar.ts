@@ -1,4 +1,4 @@
-// Month-grid arithmetic for the Coming up calendar. Every function works in the time zone of the
+// Month-grid arithmetic for the Interviews calendar. Every function works in the time zone of the
 // machine it runs on, so call them in the browser: an Interview belongs to the job seeker's day.
 
 export type CalendarDay = {
@@ -39,10 +39,10 @@ export function monthWeeks(start: Date): CalendarDay[][] {
   return weeks;
 }
 
-/** The most Interviews the Coming up agenda lists before it narrows its window. */
+/** The most Interviews the Interviews agenda lists before it narrows its window. */
 export const AGENDA_LIMIT = 5;
 
-/** The days the Coming up agenda lists: local YYYY-MM-DD keys, both ends included. */
+/** The days the Interviews agenda lists: local YYYY-MM-DD keys, both ends included. */
 export type AgendaWindow = {
   /** Completes "Interviews in …" and "Nothing in … yet.", e.g. "November" or "the next week". */
   span: string;
@@ -100,4 +100,19 @@ export function groupByDay<T>(items: T[], at: (item: T) => string): Map<string, 
     else days.set(key, [item]);
   }
   return days;
+}
+
+/** A month as the dashboard's `month` search param, YYYY-MM. */
+export function monthParam(start: Date): string {
+  return dayKey(start).slice(0, 7);
+}
+
+/**
+ * How many months `param` (YYYY-MM) is from the month `today` is in: the calendar's offset. A
+ * missing or malformed one is this month (0).
+ */
+export function monthOffset(param: string | null, today: Date): number {
+  const match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(param ?? "");
+  if (!match) return 0;
+  return (Number(match[1]) - today.getFullYear()) * 12 + (Number(match[2]) - 1 - today.getMonth());
 }

@@ -9,7 +9,9 @@ const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 // Server Actions are mocked at their module: what the form sends, not how it reaches the API.
-vi.mock("@/app/applications/actions", () => ({ createApplicationAction: vi.fn() }));
+vi.mock("@/app/applications/actions", () => ({
+  createApplicationAction: vi.fn(),
+}));
 
 beforeEach(() => {
   push.mockReset();
@@ -31,8 +33,10 @@ describe("Add Application", () => {
   it("starts empty with Applied at today, and no Status, Interviews, Delete or Cancel", () => {
     const { form } = openAdd();
     expect(within(form).getByLabelText("Company")).toHaveValue("");
-    expect(within(form).getByLabelText("Salary")).toHaveValue("");
-    const today = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium" }).format(new Date());
+    expect(within(form).queryByLabelText("Salary")).not.toBeInTheDocument();
+    const today = new Intl.DateTimeFormat("en-CA", {
+      dateStyle: "medium",
+    }).format(new Date());
     expect(within(form).getByRole("button", { name: `Applied, ${today}` })).toBeInTheDocument();
     expect(within(form).queryByLabelText("Status")).not.toBeInTheDocument();
     expect(within(form).queryByRole("button", { name: "Add Interview" })).not.toBeInTheDocument();
@@ -43,29 +47,39 @@ describe("Add Application", () => {
   it("marks Company, Title and Applied required, once with “* Required”, and gives every typed field an example", () => {
     const { form } = openAdd();
     expect(form).toHaveTextContent("* Required");
-    expect(within(form).getAllByText("*", { selector: "div > span" }).map((mark) => mark.previousElementSibling?.textContent)).toEqual([
-      "Company",
-      "Title",
-      "Applied",
-    ]);
+    expect(
+      within(form)
+        .getAllByText("*", { selector: "div > span" })
+        .map((mark) => mark.previousElementSibling?.textContent),
+    ).toEqual(["Company", "Title", "Applied"]);
     expect(within(form).getByLabelText("Company")).toBeRequired();
-    expect(within(form).getByLabelText("Location")).not.toBeRequired();
     for (const [label, example] of [
       ["Company", "Northwind Labs"],
       ["Title", "Frontend Engineer"],
-      ["Location", "Remote"],
-      ["Salary", "$150k–$180k"],
       ["Job posting URL", "https://…"],
     ]) {
       expect(within(form).getByLabelText(label)).toHaveAttribute("placeholder", example);
     }
   });
 
+  it("picks a Location, and for Hybrid its days in office, and sends both", async () => {
+    const { user, form } = openAdd();
+    await user.type(within(form).getByLabelText("Company"), "Birch");
+    await user.type(within(form).getByLabelText("Title"), "Engineer");
+    expect(within(form).queryByRole("radiogroup", { name: "Days in office" })).not.toBeInTheDocument();
+    await user.click(within(form).getByRole("radio", { name: "Hybrid" }));
+    await user.click(within(form).getByRole("radio", { name: "4 days a week" }));
+    await user.click(within(form).getByRole("button", { name: "Add Application" }));
+
+    expect(actions.createApplicationAction).toHaveBeenCalledWith(
+      expect.objectContaining({ location: "hybrid", office_days: 4 }),
+    );
+  });
+
   it("creates the Application from the details, trimmed, and opens its page", async () => {
     const { user, form } = openAdd();
     await user.type(within(form).getByLabelText("Company"), " Birch ");
     await user.type(within(form).getByLabelText("Title"), "Engineer");
-    await user.type(within(form).getByLabelText("Salary"), "$150k");
     await user.click(within(form).getByRole("button", { name: "Add Application" }));
 
     expect(actions.createApplicationAction).toHaveBeenCalledWith({
@@ -73,10 +87,10 @@ describe("Add Application", () => {
       title: "Engineer",
       applied_on: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
       location: null,
-      salary: "$150k",
+      office_days: null,
       posting_url: null,
     });
-    expect(push).toHaveBeenCalledWith("/applications/new-id");
+    expect(push).toHaveBeenCalledWith("/applications/new-id?added=1");
   });
 
   it("sends the applied date picked from the calendar", async () => {
@@ -85,10 +99,14 @@ describe("Add Application", () => {
     await user.type(within(form).getByLabelText("Title"), "Engineer");
     await user.click(within(form).getByRole("button", { name: /^Applied, / }));
     const now = new Date();
-    const firstDay = new Intl.DateTimeFormat("en-CA", { dateStyle: "full" }).format(
-      new Date(now.getFullYear(), now.getMonth(), 1),
+    const firstDay = new Intl.DateTimeFormat("en-CA", {
+      dateStyle: "full",
+    }).format(new Date(now.getFullYear(), now.getMonth(), 1));
+    await user.click(
+      within(screen.getByRole("grid")).getByRole("button", {
+        name: new RegExp(firstDay),
+      }),
     );
-    await user.click(within(screen.getByRole("grid")).getByRole("button", { name: new RegExp(firstDay) }));
     await user.click(within(form).getByRole("button", { name: "Add Application" }));
 
     const first = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
@@ -96,7 +114,10 @@ describe("Add Application", () => {
   });
 
   it("stays on the page and shows why adding failed", async () => {
-    vi.mocked(actions.createApplicationAction).mockResolvedValue({ ok: false, error: "Company is required" });
+    vi.mocked(actions.createApplicationAction).mockResolvedValue({
+      ok: false,
+      error: "Company is required",
+    });
     const { user, form } = openAdd();
     await user.type(within(form).getByLabelText("Company"), "Birch");
     await user.type(within(form).getByLabelText("Title"), "Engineer");
