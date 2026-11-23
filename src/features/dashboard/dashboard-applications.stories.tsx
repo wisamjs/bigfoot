@@ -5,7 +5,6 @@ import { application } from "@/test/applications";
 import { DashboardApplications } from "./dashboard-applications";
 
 // The dashboard's Applications card, for the landing page's sample Applications plus two Done ones.
-// Each row's Change Status menu saves through the spies in src/app/applications/__mocks__/actions.ts.
 
 const done = [
   application("maple", { company: "Maple Health", title: "Engineering Manager, Growth", status: "done", outcome: "rejected", is_waiting: false }),

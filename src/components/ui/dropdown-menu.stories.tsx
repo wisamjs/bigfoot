@@ -15,7 +15,7 @@ import {
 
 const meta = {
   component: DropdownMenu,
-  // Not modal, as Bigfoot uses it (change-status-menu.tsx): a modal menu hides the page with
+  // Not modal, as Bigfoot uses it (account-menu.tsx): a modal menu hides the page with
   // aria-hidden while its trigger, inside the page, still holds focus (axe's aria-hidden-focus).
   args: { modal: false },
   render: (args) => (
