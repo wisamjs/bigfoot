@@ -2,8 +2,11 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/applications/actions";
+import type { Application } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
 import { ApplicationEditor } from "./application-editor";
+import { ApplicationHeading } from "./application-heading";
+import { UnsavedChanges } from "./unsaved-changes";
 import { NewApplicationForm } from "./new-application-form";
 import { NewInterviewForm } from "./new-interview-form";
 
@@ -27,7 +30,10 @@ beforeEach(() => {
   for (const action of Object.values(actions)) {
     if (typeof action === "function") vi.mocked(action).mockReset().mockResolvedValue({ ok: true });
   }
-  vi.mocked(actions.createApplicationAction).mockResolvedValue({ ok: true, id: "new-id" });
+  vi.mocked(actions.createApplicationAction).mockResolvedValue({
+    ok: true,
+    id: "new-id",
+  });
   go = vi.spyOn(window.history, "go").mockImplementation(() => {});
 });
 
@@ -37,22 +43,27 @@ afterEach(() => {
 
 const birch = application("birch", {
   company: "Birch",
+  location: "Remote",
   interviews: [interview("i1", { application_id: "birch", kind: "technical" })],
 });
+
+/** The Application page's guarded body: the heading and the editor under one UnsavedChanges. */
+function Body({ app }: { app: Application }) {
+  return (
+    <UnsavedChanges>
+      <ApplicationHeading app={app} />
+      <ApplicationEditor app={app} />
+    </UnsavedChanges>
+  );
+}
 
 /** The page around a form: the links the guard has to catch. */
 function Page({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <a href="/dashboard">
-        Dashboard
-      </a>
-      <a href="https://example.com/post">
-        Job posting
-      </a>
-      <a href="#top">
-        Top
-      </a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="https://example.com/post">Job posting</a>
+      <a href="#top">Top</a>
       {children}
     </>
   );
@@ -62,7 +73,7 @@ function openEditor() {
   const user = userEvent.setup();
   render(
     <Page>
-      <ApplicationEditor app={birch} />
+      <Body app={birch} />
     </Page>,
   );
   return user;
@@ -103,7 +114,7 @@ describe("leaving the Application page with nothing unsaved", () => {
 describe("leaving the Application page with unsaved changes", () => {
   it("asks when a detail was typed in but not left, and the page stays", async () => {
     const user = openEditor();
-    await user.type(screen.getByLabelText("Company"), "x");
+    await user.type(screen.getByLabelText("Location"), "x");
     expect(clickGoesThrough("Dashboard")).toBe(false);
     expect(screen.getByText(PROMPT)).toBeInTheDocument();
     expect(push).not.toHaveBeenCalled();
@@ -117,7 +128,10 @@ describe("leaving the Application page with unsaved changes", () => {
   });
 
   it("asks when a save failed, since what was typed isn't stored", async () => {
-    vi.mocked(actions.updateInterviewAction).mockResolvedValue({ ok: false, error: "Couldn’t save" });
+    vi.mocked(actions.updateInterviewAction).mockResolvedValue({
+      ok: false,
+      error: "Couldn’t save",
+    });
     const user = openEditor();
     await user.type(screen.getByLabelText(/^Interview notes/), "Went well.");
     await user.tab();
@@ -128,7 +142,7 @@ describe("leaving the Application page with unsaved changes", () => {
 
   it("asks before the browser closes or reloads the tab", async () => {
     const user = openEditor();
-    await user.type(screen.getByLabelText("Company"), "x");
+    await user.type(screen.getByLabelText("Location"), "x");
     const unload = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(unload);
     expect(unload.defaultPrevented).toBe(true);
@@ -136,7 +150,7 @@ describe("leaving the Application page with unsaved changes", () => {
 
   it("leaves new tabs, other sites and the same page alone", async () => {
     const user = openEditor();
-    await user.type(screen.getByLabelText("Company"), "x");
+    await user.type(screen.getByLabelText("Location"), "x");
     expect(clickGoesThrough("Job posting")).toBe(true);
     expect(clickGoesThrough("Top")).toBe(true);
     expect(screen.queryByText(PROMPT)).not.toBeInTheDocument();
@@ -144,22 +158,22 @@ describe("leaving the Application page with unsaved changes", () => {
 
   it("puts Keep editing in focus, keeps what was typed, and returns to the first unsaved field", async () => {
     const user = openEditor();
-    await user.type(screen.getByLabelText("Company"), "x");
+    await user.type(screen.getByLabelText("Location"), "x");
     await user.type(screen.getByLabelText(/^Interview notes/), "Went well.");
     fireEvent.click(screen.getByRole("link", { name: "Dashboard" }));
     expect(screen.getByRole("button", { name: "Keep editing" })).toHaveFocus();
 
     await user.keyboard("{Enter}");
     expect(screen.queryByText(PROMPT)).not.toBeInTheDocument();
-    await waitFor(() => expect(screen.getByLabelText("Company")).toHaveFocus());
-    expect(screen.getByLabelText("Company")).toHaveValue(`${birch.company}x`);
+    await waitFor(() => expect(screen.getByLabelText("Location")).toHaveFocus());
+    expect(screen.getByLabelText("Location")).toHaveValue(`${birch.location}x`);
     expect(screen.getByLabelText(/^Interview notes/)).toHaveValue("Went well.");
     expect(push).not.toHaveBeenCalled();
   });
 
   it("treats Escape as Keep editing", async () => {
     const user = openEditor();
-    await user.type(screen.getByLabelText("Company"), "x");
+    await user.type(screen.getByLabelText("Location"), "x");
     fireEvent.click(screen.getByRole("link", { name: "Dashboard" }));
     await user.keyboard("{Escape}");
     expect(screen.queryByText(PROMPT)).not.toBeInTheDocument();
@@ -168,7 +182,7 @@ describe("leaving the Application page with unsaved changes", () => {
 
   it("goes where the link led when Discard is pressed", async () => {
     const user = openEditor();
-    await user.type(screen.getByLabelText("Company"), "x");
+    await user.type(screen.getByLabelText("Location"), "x");
     fireEvent.click(screen.getByRole("link", { name: "Dashboard" }));
     await user.click(screen.getByRole("button", { name: "Discard" }));
     expect(push).toHaveBeenCalledExactlyOnceWith("/dashboard");
@@ -177,7 +191,7 @@ describe("leaving the Application page with unsaved changes", () => {
 
   it("is keyboard-only: the prompt's buttons are reached and pressed without a mouse", async () => {
     const user = openEditor();
-    await user.type(screen.getByLabelText("Company"), "x");
+    await user.type(screen.getByLabelText("Location"), "x");
     fireEvent.click(screen.getByRole("link", { name: "Dashboard" }));
     await user.tab();
     expect(screen.getByRole("button", { name: "Discard" })).toHaveFocus();
@@ -194,11 +208,11 @@ describe("leaving the Application page with unsaved changes", () => {
     );
     const { rerender } = render(
       <Page>
-        <ApplicationEditor app={birch} />
+        <Body app={birch} />
       </Page>,
     );
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText("Company"), "x");
+    await user.type(screen.getByLabelText("Location"), "x");
     // Clicking the link blurs the field, which starts its save; the click then finds it unsaved.
     await user.click(screen.getByRole("link", { name: "Dashboard" }));
     expect(screen.getByText(PROMPT)).toBeInTheDocument();
@@ -207,7 +221,7 @@ describe("leaving the Application page with unsaved changes", () => {
     await act(async () => finish());
     rerender(
       <Page>
-        <ApplicationEditor app={{ ...birch, company: `${birch.company}x` }} />
+        <Body app={{ ...birch, location: `${birch.location}x` }} />
       </Page>,
     );
     await waitFor(() => expect(push).toHaveBeenCalledExactlyOnceWith("/dashboard"));
@@ -227,7 +241,10 @@ describe("Back with unsaved changes", () => {
   function watchPopState() {
     const reached = vi.fn();
     window.addEventListener("popstate", reached);
-    return { reached, stop: () => window.removeEventListener("popstate", reached) };
+    return {
+      reached,
+      stop: () => window.removeEventListener("popstate", reached),
+    };
   }
 
   it("lets Back through when nothing is unsaved", () => {
@@ -241,7 +258,7 @@ describe("Back with unsaved changes", () => {
 
   it("keeps Next.js from following it, returns to the page and asks", async () => {
     const user = openEditor();
-    await user.type(screen.getByLabelText("Company"), "x");
+    await user.type(screen.getByLabelText("Location"), "x");
     const { reached, stop } = watchPopState();
     pressBack();
     expect(reached).not.toHaveBeenCalled();
@@ -257,7 +274,7 @@ describe("Back with unsaved changes", () => {
 
   it("Keep editing stays on the page, and Discard goes back for real", async () => {
     const user = openEditor();
-    await user.type(screen.getByLabelText("Company"), "x");
+    await user.type(screen.getByLabelText("Location"), "x");
     pressBack();
     pressBack();
     await user.click(screen.getByRole("button", { name: "Keep editing" }));

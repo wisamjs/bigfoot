@@ -8,11 +8,10 @@ import { Field } from "@/components/ui/field";
 import { invalidProps } from "@/components/ui/field-error";
 import { inputClasses } from "@/components/ui/input";
 import { PLACEHOLDERS } from "@/features/applications/placeholders";
-import { SalaryField } from "@/features/applications/salary-field";
 import { APPLICATION_MAX_LENGTHS, type Application } from "@/lib/applications";
 import { applicationErrors, isValid, summarize, type FieldErrors } from "@/lib/validation";
 
-export const DETAIL_FIELDS = ["company", "title", "applied_on", "location", "salary", "posting_url"] as const;
+export const DETAIL_FIELDS = ["company", "title", "applied_on", "location", "posting_url"] as const;
 export type DetailField = (typeof DETAIL_FIELDS)[number];
 export type DetailValues = Record<DetailField, string>;
 
@@ -66,22 +65,32 @@ export function useDetails(initial: DetailValues) {
     setValues((prev) => ({ ...prev, ...changes }));
   }
 
-  return { id, values, set, fieldErrors, setFieldErrors, invalid, check, checkField, adopt };
+  return {
+    id,
+    values,
+    set,
+    fieldErrors,
+    setFieldErrors,
+    invalid,
+    check,
+    checkField,
+    adopt,
+  };
 }
 
 export type Details = ReturnType<typeof useDetails>;
 
 /**
- * An Application's details as fields: company, title, applied date, location, salary and job
- * posting. Company, Title and Applied are required. With `app`, the job posting has a link out.
+ * An Application's details as fields: company, title, applied date, location and job posting.
+ * Company, Title and Applied are required. Without `identity`, Company and Title are left out:
+ * an existing Application edits them in its heading. With `app`, the job posting has a link out.
  * With `onCommit`, each detail reports when it's left (the date, when it's picked), for a form that
  * saves them one by one; `status` then gives each its SaveStatus, shown beside its label.
  */
 export function DetailsFields({
   details,
   app,
-  salaryHidden = false,
-  onRevealSalary,
+  identity = true,
   onCommit,
   status,
 }: {
@@ -89,9 +98,8 @@ export function DetailsFields({
   app?: Application;
   onCommit?: (name: DetailField, value: string) => void;
   status?: (name: DetailField) => ReactNode;
-  /** Shows a Reveal button in place of the salary, against someone looking at the screen. */
-  salaryHidden?: boolean;
-  onRevealSalary?: () => void;
+  /** Whether Company and Title are fields here; the Application page edits them in its heading. */
+  identity?: boolean;
 }) {
   const { id, values, set, fieldErrors } = details;
 
@@ -111,17 +119,25 @@ export function DetailsFields({
 
   /** The props of one detail's Field, matching `input(name)`. */
   function field(name: DetailField) {
-    return { id: `${id}-${name}`, error: fieldErrors[name], status: status?.(name) };
+    return {
+      id: `${id}-${name}`,
+      error: fieldErrors[name],
+      status: status?.(name),
+    };
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <Field label="Company" required {...field("company")}>
-        <input type="text" required {...input("company")} />
-      </Field>
-      <Field label="Title" required {...field("title")}>
-        <input type="text" required {...input("title")} />
-      </Field>
+      {identity && (
+        <>
+          <Field label="Company" required {...field("company")}>
+            <input type="text" required {...input("company")} />
+          </Field>
+          <Field label="Title" required {...field("title")}>
+            <input type="text" required {...input("title")} />
+          </Field>
+        </>
+      )}
       <Field label="Applied" required {...field("applied_on")}>
         <DatePicker
           id={`${id}-applied_on`}
@@ -137,7 +153,6 @@ export function DetailsFields({
       <Field label="Location" {...field("location")}>
         <input type="text" {...input("location")} />
       </Field>
-      <SalaryField hidden={salaryHidden} onReveal={onRevealSalary} {...field("salary")} input={input("salary")} />
       <Field label="Job posting URL" {...field("posting_url")}>
         <div className="flex items-center gap-1">
           <input type="url" {...input("posting_url")} />

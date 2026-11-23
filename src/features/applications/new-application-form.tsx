@@ -28,10 +28,19 @@ export function NewApplicationForm() {
 function NewApplicationFields() {
   const router = useRouter();
   const tracker = useSaveStatus();
-  const typed = useDetails({ company: "", title: "", applied_on: "", location: "", salary: "", posting_url: "" });
+  const typed = useDetails({
+    company: "",
+    title: "",
+    applied_on: "",
+    location: "",
+    posting_url: "",
+  });
   // Today is the viewer's, which the server doesn't know: until hydration, Applied shows no date.
   const isClient = useIsClient();
-  const values = { ...typed.values, applied_on: typed.values.applied_on || (isClient ? todayLocal() : "") };
+  const values = {
+    ...typed.values,
+    applied_on: typed.values.applied_on || (isClient ? todayLocal() : ""),
+  };
   const details = { ...typed, values };
   // Once it's added, the page is on its way to the new Application: nothing is lost by leaving.
   const [added, setAdded] = useState(false);

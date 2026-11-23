@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { ApplicationHeading } from "@/features/applications/application-heading";
 import { ApplicationEditor } from "@/features/applications/application-editor";
 import { AppHeader } from "@/features/shell/app-header";
 import { FormPage } from "@/features/shell/form-page";
+import { UnsavedChanges } from "@/features/applications/unsaved-changes";
 import { ADDED_PARAM } from "@/features/applications/routes";
 import { getApplications } from "@/lib/api";
 import { getCurrentUser } from "@/lib/dal";
@@ -28,7 +30,12 @@ async function Application({ params, searchParams }: Pick<PageProps<"/applicatio
   const app = applications.find((a) => a.id === id);
   if (!app) notFound();
   return (
-    <FormPage header={<AppHeader user={user} current="/dashboard" />} title={app.company} subtitle={app.title}>
+    <FormPage
+      header={<AppHeader user={user} current="/dashboard" />}
+      title={app.company}
+      heading={<ApplicationHeading app={app} />}
+      guard={UnsavedChanges}
+    >
       <ApplicationEditor app={app} justAdded={query[ADDED_PARAM] === "1"} />
     </FormPage>
   );
