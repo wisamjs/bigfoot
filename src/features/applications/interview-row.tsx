@@ -14,17 +14,17 @@ const FOLD_LENGTH = 140;
 /**
  * One Interview in the Application page's Interviews card (BIG-174): a date tile, its kind, its day
  * and time. One still ahead says how far off it is, and "Add Interview notes" while it has none; a
- * completed one is marked Done and shows its Interview notes in full, folded to the first paragraph
+ * completed one is marked Completed and shows its Interview notes in full, folded to the first paragraph
  * on a phone behind Show all notes. The kind is a link whose area covers the row, so the whole row
  * opens the Interview page, where it is edited; the notes sit above that, so their text can be
  * selected.
  */
 export function InterviewRow({ applicationId, interview }: { applicationId: string; interview: Interview }) {
   const kind = INTERVIEW_OPTIONS[interview.kind].label;
-  const done = interview.completed;
+  const completed = interview.completed;
   return (
     <li className="group relative flex gap-4 border-t border-line py-5 first:border-t-0 first:pt-2">
-      <DateTile at={interview.at} tone={done ? "muted" : "outline"} />
+      <DateTile at={interview.at} tone={completed ? "muted" : "outline"} />
       <div className="min-w-0 flex-1">
         <p className="m-0 flex flex-wrap items-center gap-x-2.5 gap-y-1">
           <Link
@@ -34,32 +34,32 @@ export function InterviewRow({ applicationId, interview }: { applicationId: stri
             <span className="sr-only">Open Interview: </span>
             {kind}
           </Link>
-          {done && (
+          {completed && (
             <span className="inline-flex items-center gap-1 text-sm font-medium text-fg-success-strong">
               <Check className="size-4" aria-hidden />
-              Done
+              Completed
             </span>
           )}
         </p>
         <p className="m-0 mt-1 text-sm text-body">
           <InterviewDayTime at={interview.at} />
-          {!done && (
+          {!completed && (
             <>
               {" · "}
               <DaysFromToday date={interview.at} />
             </>
           )}
         </p>
-        {done && interview.notes && <Notes notes={interview.notes} />}
+        {completed && interview.notes && <Notes notes={interview.notes} />}
       </div>
-      <RowEnd done={done} hasNotes={Boolean(interview.notes)} />
+      <RowEnd completed={completed} hasNotes={Boolean(interview.notes)} />
     </li>
   );
 }
 
 /** The row's right edge, for the eye: what opening it is for. The link says it all to screen readers. */
-function RowEnd({ done, hasNotes }: { done: boolean; hasNotes: boolean }) {
-  if (done) return <Pencil aria-hidden className="mt-1 size-5 shrink-0 self-center text-body group-hover:text-heading" />;
+function RowEnd({ completed, hasNotes }: { completed: boolean; hasNotes: boolean }) {
+  if (completed) return <Pencil aria-hidden className="mt-1 size-5 shrink-0 self-center text-body group-hover:text-heading" />;
   return (
     <span aria-hidden className="flex shrink-0 items-center">
       {!hasNotes && <span className="hidden font-medium text-fg-brand sm:inline">Add Interview notes</span>}

@@ -256,11 +256,11 @@ export function applicationsTag(jobSeekerId: string) {
 }
 
 /** The Application page's Interviews (BIG-174): the next one, the others still ahead, and the completed ones, newest first. */
-export type InterviewSections = { next: Interview | null; later: Interview[]; done: Interview[] };
+export type InterviewSections = { next: Interview | null; later: Interview[]; completed: Interview[] };
 
 export function interviewSections(app: Application): InterviewSections {
   const [next = null, ...later] = upcomingInterviews(app);
-  return { next, later, done: app.interviews.filter((i) => i.completed).toReversed() };
+  return { next, later, completed: app.interviews.filter((i) => i.completed).toReversed() };
 }
 
 /** The paragraphs of some notes: runs of text split by blank lines, trimmed. */

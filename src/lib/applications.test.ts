@@ -211,10 +211,10 @@ describe("interviewSections (BIG-174)", () => {
         interview("later", "2026-12-09T10:00:00Z", false),
       ],
     });
-    const { next, later, done } = interviewSections(app);
+    const { next, later, completed } = interviewSections(app);
     expect(next?.id).toBe("next");
     expect(later.map((i) => i.id)).toEqual(["later"]);
-    expect(done.map((i) => i.id)).toEqual(["recent", "old"]);
+    expect(completed.map((i) => i.id)).toEqual(["recent", "old"]);
   });
 
   it("has no next Interview when none is ahead", () => {

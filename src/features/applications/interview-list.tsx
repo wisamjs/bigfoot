@@ -15,18 +15,18 @@ const ADD_INTERVIEW_ID = "add-interview";
 /**
  * The Application page's Interviews card (BIG-174): Add Interview, then the Interviews still ahead
  * after the next one (Later; the next one has its own card above) and the completed ones, newest
- * first (Done). Each row opens its Interview page. With no Interviews, Bigfoot and a first Add
+ * first (Completed). Each row opens its Interview page. With no Interviews, Bigfoot and a first Add
  * Interview instead.
  */
 export function InterviewList({
   app,
   later,
-  done,
+  completed,
   justAdded = false,
 }: {
   app: Application;
   later: Interview[];
-  done: Interview[];
+  completed: Interview[];
   justAdded?: boolean;
 }) {
   const [announcement, setAnnouncement] = useState("");
@@ -63,11 +63,11 @@ export function InterviewList({
         <NoInterviews app={app} />
       ) : (
         <div className="mt-6 flex flex-col">
-          {later.length === 0 && done.length === 0 && (
+          {later.length === 0 && completed.length === 0 && (
             <p className="m-0 mt-4 text-sm text-body">Nothing else booked yet.</p>
           )}
           <Group id="interviews-later" title="Later" interviews={later} applicationId={app.id} />
-          <Group id="interviews-done" title="Done" interviews={done} applicationId={app.id} />
+          <Group id="interviews-completed" title="Completed" interviews={completed} applicationId={app.id} />
         </div>
       )}
       <output className="sr-only">{announcement}</output>
