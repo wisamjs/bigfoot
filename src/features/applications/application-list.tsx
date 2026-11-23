@@ -8,7 +8,6 @@ import {
   progressCellClasses,
   rowBorderClasses,
 } from "@/features/applications/application-row";
-import { useMovedCard } from "@/features/applications/use-moved-card";
 import { getApplicationGroups, type Application, type ApplicationGroup } from "@/lib/applications";
 
 // Also draws the landing page's decorative list (src/features/landing/hero.tsx): after a
@@ -32,7 +31,6 @@ type Props = {
  */
 export function ApplicationList({ applications, showDone = false, linked = false, decorative = false, flush = false }: Props) {
   const groups = getApplicationGroups(applications, { showDone });
-  const { listRef, announcement, onChanged } = useMovedCard(applications, showDone);
   const a11y = decorative ? decorativeProps(groups) : {};
   const look = flush ? FLUSH : FRAMED;
 
@@ -45,21 +43,14 @@ export function ApplicationList({ applications, showDone = false, linked = false
   }
 
   return (
-    <div ref={listRef} className={`flex flex-col gap-3 ${decorative ? "text-left shadow-2xl" : ""}`} {...a11y}>
-      {linked && <Announcement text={announcement} flush={flush} />}
+    <div className={`flex flex-col gap-3 ${decorative ? "text-left shadow-2xl" : ""}`} {...a11y}>
       <div className={look.frame}>
         <table className={look.table}>
           <TableHead flush={flush} />
           <tbody>
             {groups.flatMap((group) =>
               group.applications.map((job) => (
-                <ApplicationRow
-                  key={job.id}
-                  job={job}
-                  group={group.label}
-                  linked={linked}
-                  onChanged={linked ? onChanged : undefined}
-                />
+                <ApplicationRow key={job.id} job={job} group={group.label} linked={linked} />
               )),
             )}
           </tbody>
@@ -86,19 +77,10 @@ function TableHead({ flush = false }: { flush?: boolean }) {
           Location
         </th>
         <th scope="col" className={cellClasses}>
-          <span className="sr-only">Change Status</span>
+          <span className="sr-only">Opens the Application</span>
         </th>
       </tr>
     </thead>
-  );
-}
-
-/** Says what a row's Change Status menu just did, e.g. "Acme marked Rejected"; screen readers hear it politely. */
-function Announcement({ text, flush }: { text: string; flush: boolean }) {
-  return (
-    <output aria-live="polite" className={text ? `text-sm font-medium text-heading ${flush ? "px-4 sm:px-6" : ""}` : "sr-only"}>
-      {text}
-    </output>
   );
 }
 
@@ -131,7 +113,7 @@ export function ApplicationListSkeleton({ flush = false }: { flush?: boolean }) 
                 <Skeleton className="h-4 w-32" />
               </td>
               <td className={cellClasses}>
-                <Skeleton className="size-8" />
+                <Skeleton className="size-4" />
               </td>
             </tr>
           ))}
@@ -142,8 +124,7 @@ export function ApplicationListSkeleton({ flush = false }: { flush?: boolean }) 
 }
 
 // Shared by the table and its skeleton, so the two can't drift apart.
-// No overflow-hidden on the frame: it would clip the Change Status menus, which open inside it. The
-// corner cells round themselves instead (border-separate lets them).
+// No overflow-hidden on the frame: the corner cells round themselves instead (border-separate lets them).
 const frameClasses = "rounded-control border border-line bg-card";
 const tableClasses =
   "w-full border-separate border-spacing-0 text-left [&_th:first-child]:rounded-tl-control [&_th:last-child]:rounded-tr-control [&_tr:last-child>td:first-child]:rounded-bl-control [&_tr:last-child>td:last-child]:rounded-br-control";

@@ -1,10 +1,9 @@
 "use client";
 
-import { NotebookPen } from "lucide-react";
+import { ChevronRight, NotebookPen } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { ApplicationWhen, InterviewWhen } from "@/features/applications/application-when";
-import { ChangeStatusMenu, type StatusChange } from "@/features/applications/change-status-menu";
 import { applicationHref } from "@/features/applications/routes";
 import { SampleBadge } from "@/features/applications/sample-badge";
 import { INTERVIEW_TONE, OUTCOME_TONE } from "@/features/applications/status-tone";
@@ -31,25 +30,22 @@ export const rowBorderClasses = "[&>td]:border-t [&>td]:border-line";
  * One Application in the Applications table, answering "what's next here?": company and role,
  * Progress (its group and a mark per completed Interview), Next (each upcoming Interview's kind,
  * "Waiting since", or its Outcome once Done) and Location. A linked row opens its Application page
- * and has the Change Status menu.
+ * and ends in a chevron saying so.
  */
 export function ApplicationRow({
   job,
   group,
   linked = false,
-  onChanged,
 }: {
   job: Application;
   group: ApplicationGroup["label"];
   linked?: boolean;
-  /** Gives a linked row its Change Status menu; called once a change it made has saved. */
-  onChanged?: (app: Application, change: StatusChange) => void;
 }) {
   return (
     <tr
       data-application-id={job.id}
       // relative: the company link's ::after covers the whole row.
-      className={`relative ${rowBorderClasses} ${linked ? "cursor-pointer transition-colors hover:bg-card-strong" : ""}`}
+      className={`group relative ${rowBorderClasses} ${linked ? "cursor-pointer transition-colors hover:bg-card-strong" : ""}`}
     >
       <td className={cellClasses}>
         <p className="m-0 text-sm font-medium leading-5 text-heading">{linked ? <RowLink job={job} /> : job.company}</p>
@@ -71,7 +67,12 @@ export function ApplicationRow({
         {locationText(job) ?? <span className="text-body-subtle">—</span>}
       </td>
       <td className={`${cellClasses} w-px pl-0 text-right sm:pl-0`}>
-        {linked && onChanged && <ChangeStatusMenu app={job} onChanged={onChanged} />}
+        {linked && (
+          <ChevronRight
+            aria-hidden
+            className="size-4 text-body-subtle transition group-hover:translate-x-0.5 group-hover:text-heading group-focus-within:text-heading"
+          />
+        )}
       </td>
     </tr>
   );
