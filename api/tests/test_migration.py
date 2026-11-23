@@ -61,3 +61,40 @@ def test_existing_rounds_and_stages_become_interviews_status_and_outcome(setting
     assert interviews["waiting"] == [("onsite_loop", None)]  # waiting creates nothing
     assert "fresh" not in interviews
     assert interviews["offer"] == [("onsite_loop", None)]
+
+
+LOCATION_MIGRATION = "20261123000000_make_location_a_choice.sql"
+
+
+@pytest.mark.rebuilds_schema
+def test_free_text_locations_become_a_location_choice_or_nothing(settings):
+    before = [m for m in sorted(MIGRATIONS.glob("*.sql")) if m.name < LOCATION_MIGRATION]
+    schema = sql.Identifier(TEST_SCHEMA)
+    with psycopg.connect(settings.database_url, prepare_threshold=None, autocommit=True) as conn:
+        conn.execute(sql.SQL("drop schema if exists {} cascade").format(schema))
+        conn.execute(sql.SQL("create schema {}").format(schema))
+        conn.execute(sql.SQL("set search_path to {}").format(schema))
+        for migration in before:
+            conn.execute(migration.read_text())
+
+        typed = [" Remote ", "HYBRID", "In Office", "in-office", "Onsite", "on-site", "Toronto, ON", None]
+        for location in typed:
+            conn.execute(
+                "insert into applications (job_seeker_id, company, title, location) values ('alice', %s, 't', %s)",
+                (str(location), location),
+            )
+
+        conn.execute((MIGRATIONS / LOCATION_MIGRATION).read_text())
+
+        locations = dict(conn.execute("select company, location from applications").fetchall())
+
+    assert locations == {
+        " Remote ": "remote",
+        "HYBRID": "hybrid",
+        "In Office": "in_office",
+        "in-office": "in_office",
+        "Onsite": "in_office",
+        "on-site": "in_office",
+        "Toronto, ON": None,
+        "None": None,
+    }

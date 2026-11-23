@@ -113,9 +113,10 @@ describe("ApplicationList", () => {
     expect(within(within(row("Cedar")).getAllByRole("cell")[2]).getByText("—")).toBeInTheDocument();
   });
 
-  it("shows the location, or a dash", () => {
-    render(<ApplicationList applications={[{ ...waiting, location: "Remote" }, offer]} />);
-    expect(within(row("Acme")).getByText("Remote")).toBeInTheDocument();
+  it("shows the Location as text, or a dash", () => {
+    const hybrid = { ...waiting, location: "hybrid" as const, office_days: 3 };
+    render(<ApplicationList applications={[hybrid, offer]} />);
+    expect(within(row("Acme")).getByText("Hybrid - 3x a Week")).toBeInTheDocument();
     expect(within(row("Cedar")).getAllByRole("cell")[3]).toHaveTextContent("—");
   });
 

@@ -11,6 +11,7 @@ function application(overrides: Partial<Application> = {}): Application {
     title: "Engineer",
     posting_url: null,
     location: null,
+    office_days: null,
     salary: null,
     applied_on: "2026-11-01",
     status: "in_progress",
@@ -114,10 +115,10 @@ describe("applicationsCsv", () => {
   it("neutralizes cells a spreadsheet would run as a formula", () => {
     const rows = parseCsv(
       applicationsCsv([
-        application({ company: "=HYPERLINK(\"http://evil\")", title: "+1", location: "-2", salary: "@SUM(A1)" }),
+        application({ company: "=HYPERLINK(\"http://evil\")", title: "+1", posting_url: "-2", salary: "@SUM(A1)" }),
       ]).slice(1),
     );
-    expect(rows[1].slice(0, 5)).toEqual(["'=HYPERLINK(\"http://evil\")", "'+1", "", "'-2", "'@SUM(A1)"]);
+    expect(rows[1].slice(0, 5)).toEqual(["'=HYPERLINK(\"http://evil\")", "'+1", "'-2", "", "'@SUM(A1)"]);
   });
 });
 

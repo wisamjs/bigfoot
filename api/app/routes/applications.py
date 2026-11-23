@@ -5,7 +5,15 @@ from psycopg import sql
 
 from app.auth import JobSeekerId
 from app.domain import APPLICATIONS_MAX
-from app.models import Application, ApplicationCreate, ApplicationId, ApplicationPatch, ErrorMessage, check_outcome
+from app.models import (
+    Application,
+    ApplicationCreate,
+    ApplicationId,
+    ApplicationPatch,
+    ErrorMessage,
+    check_office_days,
+    check_outcome,
+)
 from app.queries import COLUMNS, application_views, pool
 from app.responses import APPLICATION_NOT_FOUND, UNAUTHORIZED
 
@@ -67,7 +75,8 @@ def create_application(request: Request, job_seeker: JobSeekerId, body: Applicat
         422: {
             "description": (
                 "The body is invalid (a list of field errors), or the change would leave a Done "
-                "Application without an Outcome or an In Progress one with an Outcome (a message)."
+                "Application without an Outcome, an In Progress one with an Outcome, or office days "
+                "on a Location that isn't Hybrid (a message)."
             ),
             "content": {
                 "application/json": {
@@ -89,19 +98,26 @@ def update_application(
 
     Only the fields sent change. Setting the status to `in_progress` without an outcome reopens the
     Application and clears its Outcome; setting it to `done` needs an Outcome, sent now or already set.
+    Setting the location to anything but `hybrid` clears its office days.
     """
     changes = body.model_dump(exclude_unset=True)
     with pool(request).connection() as conn, conn.transaction():
         current = conn.execute(
-            "select status, outcome from applications where id = %s and job_seeker_id = %s for update",
+            "select status, outcome, location, office_days from applications"
+            " where id = %s and job_seeker_id = %s for update",
             (application_id, job_seeker),
         ).fetchone()
         if current is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Application not found")
         if changes.get("status") == "in_progress" and "outcome" not in changes:
             changes["outcome"] = None  # reopening
+        if "location" in changes and changes["location"] != "hybrid" and "office_days" not in changes:
+            changes["office_days"] = None  # no longer Hybrid
         try:
             check_outcome(changes.get("status", current["status"]), changes.get("outcome", current["outcome"]))
+            check_office_days(
+                changes.get("location", current["location"]), changes.get("office_days", current["office_days"])
+            )
         except ValueError as error:
             raise HTTPException(422, str(error)) from error
         assignments = [sql.SQL("{} = %s").format(sql.Identifier(name)) for name in changes]

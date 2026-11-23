@@ -39,16 +39,16 @@ function at(days, hour) {
 function applications() {
   const applied_on = at(-14, 9).slice(0, 10);
   return [
-    { company: "Notion", title: "Full-stack Engineer", interviews: [["recruiter_screen", 1, 15]] },
-    { company: "Datadog", title: "Software Engineer", interviews: [["recruiter_screen", -5, 11], ["technical", 2, 14]] },
-    { company: "Figma", title: "Senior Engineer", interviews: [["technical", -3, 10], ["onsite_loop", 5, 10]] },
-    { company: "Linear", title: "Product Engineer", interviews: [["hiring_manager", -4, 13], ["behavioural", 6, 11]] },
+    { company: "Notion", title: "Full-stack Engineer", location: "remote", interviews: [["recruiter_screen", 1, 15]] },
+    { company: "Datadog", title: "Software Engineer", location: "hybrid", office_days: 3, interviews: [["recruiter_screen", -5, 11], ["technical", 2, 14]] },
+    { company: "Figma", title: "Senior Engineer", location: "in_office", interviews: [["technical", -3, 10], ["onsite_loop", 5, 10]] },
+    { company: "Linear", title: "Product Engineer", location: "hybrid", office_days: 2, interviews: [["hiring_manager", -4, 13], ["behavioural", 6, 11]] },
     { company: "Airtable", title: "Frontend Engineer", interviews: [["hiring_manager", 2, 10]] },
     { company: "Asana", title: "Software Engineer", interviews: [["recruiter_screen", -2, 9], ["technical", 2, 16], ["leadership", 9, 16]] },
     // The longest kind, so captures and a11y always see how a label wraps beside its date.
     { company: "Okta", title: "Engineering Manager", interviews: [["cross_functional_interview", 3, 16], ["be_system_design", 4, 11]] },
-    { company: "Stripe", title: "Software Engineer II", interviews: [] },
-    { company: "Shopify", title: "Senior Developer", interviews: [["informal_chat", -1, 12]] },
+    { company: "Stripe", title: "Software Engineer II", location: "remote", interviews: [] },
+    { company: "Shopify", title: "Senior Developer", location: "hybrid", interviews: [["informal_chat", -1, 12]] },
     { company: "Ramp", title: "Staff Engineer", status: "done", outcome: "offer", interviews: [["onsite_loop", -6, 10]] },
     { company: "Vercel", title: "Frontend Engineer", status: "done", outcome: "rejected", interviews: [["technical", -8, 10]] },
     { company: "Plaid", title: "Software Engineer", status: "done", outcome: "withdrawn", interviews: [["recruiter_screen", -10, 10]] },

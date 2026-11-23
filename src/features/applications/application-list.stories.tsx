@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, mocked, screen, waitFor } from "storybook/test";
 import { updateApplicationAction } from "@/app/applications/actions";
-import type { Application, InterviewKind, Outcome } from "@/lib/applications";
+import type { Application, InterviewKind, Location, Outcome } from "@/lib/applications";
 import { previewApplications } from "@/lib/mock-data";
 import { ApplicationList } from "./application-list";
 
@@ -18,7 +18,9 @@ function daysFromNow(days: number, afternoon = false) {
 }
 
 type Plan = {
-  location?: string | null;
+  location?: Location | null;
+  /** Days in office, for a Hybrid Location. */
+  officeDays?: number;
   appliedDaysAgo?: number;
   /** Completed Interviews, oldest first: their kind, and whether they have Interview notes. */
   done?: (InterviewKind | [InterviewKind, "notes"])[];
@@ -74,7 +76,7 @@ function completedInterviews(
 }
 
 const DEFAULT_PLAN = {
-  location: "Remote",
+  location: "remote",
   done: [],
   next: [],
   outcome: null,
@@ -83,7 +85,7 @@ const DEFAULT_PLAN = {
 
 /** One Application as the API returns it, with its derived fields worked out from the plan. */
 function app(company: string, title: string, plan: Plan = {}): Application {
-  const { location, done, next, dateNeeded, outcome, sample, appliedDaysAgo } =
+  const { location, officeDays, done, next, dateNeeded, outcome, sample, appliedDaysAgo } =
     { ...DEFAULT_PLAN, ...plan };
   const id = company.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   const applied = appliedDaysAgo ?? 7 + done.length * 7;
@@ -100,6 +102,7 @@ function app(company: string, title: string, plan: Plan = {}): Application {
     title,
     posting_url: null,
     location,
+    office_days: officeDays ?? null,
     salary: null,
     applied_on: appliedOn,
     status: outcome ? "done" : "in_progress",
@@ -113,34 +116,34 @@ function app(company: string, title: string, plan: Plan = {}): Application {
   };
 }
 
-const HYBRID_2 = "Hybrid - 2 days in Office";
-const HYBRID_3 = "Hybrid - 3 days in Office";
+const HYBRID_2 = { location: "hybrid", officeDays: 2 } as const;
+const HYBRID_3 = { location: "hybrid", officeDays: 3 } as const;
 
 /** About thirty Applications: many waiting, most of the rest with Interviews booked, two Offers, and Done ones. */
 const jobSearch: Application[] = [
   // Waiting: just applied, or heard nothing since the last Interview.
   app("Stripe", "Software Engineer II", {
-    location: HYBRID_2,
+    ...HYBRID_2,
     appliedDaysAgo: 14,
   }),
   app("Shopify", "Senior Developer", {
-    location: HYBRID_3,
+    ...HYBRID_3,
     done: [["recruiter_screen", "notes"]],
   }),
   app("Wealthsimple", "Senior Full-stack Developer", {
-    location: "Toronto, ON",
+    location: "in_office",
     appliedDaysAgo: 3,
   }),
   app("Cohere", "Member of Technical Staff, Frontend", {
-    location: HYBRID_3,
+    ...HYBRID_3,
     appliedDaysAgo: 9,
   }),
   app("Lightspeed Commerce", "Software Developer", {
-    location: "Montréal, QC",
+    location: "in_office",
     appliedDaysAgo: 21,
   }),
   app("Clio", "Senior Software Developer, Platform", {
-    location: "Vancouver, BC",
+    location: "in_office",
     done: ["recruiter_screen", "hiring_manager"],
   }),
   app("1Password", "Developer, Web Experience", { appliedDaysAgo: 1 }),
@@ -149,19 +152,19 @@ const jobSearch: Application[] = [
     appliedDaysAgo: 30,
   }),
   app("Hootsuite", "Intermediate Frontend Developer", {
-    location: HYBRID_2,
+    ...HYBRID_2,
     dateNeeded: "recruiter_screen",
   }),
 
   // Interview scheduled: one or more upcoming, some far along.
   app("Notion", "Full-stack Engineer", { next: [["recruiter_screen", 1]] }),
   app("Datadog", "Software Engineer", {
-    location: HYBRID_2,
+    ...HYBRID_2,
     done: [["recruiter_screen", "notes"]],
     next: [["technical", 2]],
   }),
   app("Figma", "Senior Engineer", {
-    location: HYBRID_3,
+    ...HYBRID_3,
     done: [
       ["recruiter_screen", "notes"],
       "hiring_manager",
@@ -179,12 +182,12 @@ const jobSearch: Application[] = [
     next: [["behavioural", 3]],
   }),
   app("Airtable", "Frontend Engineer", {
-    location: HYBRID_2,
+    ...HYBRID_2,
     done: ["recruiter_screen"],
     next: [["hiring_manager", 5]],
   }),
   app("Asana", "Software Engineer", {
-    location: HYBRID_3,
+    ...HYBRID_3,
     done: [
       "recruiter_screen",
       "hiring_manager",
@@ -216,7 +219,7 @@ const jobSearch: Application[] = [
     next: [["technical_deep_dive", 2]],
   }),
   app("Ada", "Staff Frontend Engineer", {
-    location: "Toronto, ON",
+    location: "in_office",
     done: ["recruiter_screen"],
     next: [
       ["fe_system_design", 7],
@@ -225,11 +228,11 @@ const jobSearch: Application[] = [
     ],
   }),
   app("Benevity", "Software Developer II", {
-    location: "Calgary, AB",
+    location: "in_office",
     next: [["informal_chat", 0]],
   }),
   app("Thinkific", "Senior Developer", {
-    location: "Vancouver, BC",
+    location: "in_office",
     done: ["recruiter_screen"],
     next: [["coding_challenge", 15]],
   }),
@@ -247,7 +250,7 @@ const jobSearch: Application[] = [
     outcome: "offer",
   }),
   app("Wave", "Senior Software Engineer", {
-    location: HYBRID_2,
+    ...HYBRID_2,
     done: ["recruiter_screen", ["technical", "notes"], "behavioural"],
     outcome: "offer",
   }),
@@ -258,7 +261,7 @@ const jobSearch: Application[] = [
     outcome: "rejected",
   }),
   app("Slack", "Software Engineer", {
-    location: HYBRID_3,
+    ...HYBRID_3,
     done: ["recruiter_screen"],
     outcome: "position_filled",
   }),
@@ -275,7 +278,7 @@ const jobSearch: Application[] = [
     outcome: "not_the_right_fit",
   }),
   app("Instacart", "Senior Software Engineer", {
-    location: "Toronto, ON",
+    location: "in_office",
     done: ["recruiter_screen", "onsite_loop"],
     outcome: "rejected",
   }),
@@ -354,7 +357,7 @@ export const ChangeStatusFails: Story = {
   },
 };
 
-/** Long company names, titles and locations wrap inside their cells. */
+/** Long company names and titles wrap inside their cells. */
 export const LongText: Story = {
   args: {
     applications: jobSearch.map((a, i) =>
@@ -365,8 +368,6 @@ export const LongText: Story = {
               "Northern Lights Software Engineering Co-operative of British Columbia",
             title:
               "Senior Staff Software Engineer, Developer Experience and Internal Platform Tooling",
-            location:
-              "Hybrid - 3 days in Office, Vancouver or Victoria, BC (relocation supported)",
           }
         : a,
     ),

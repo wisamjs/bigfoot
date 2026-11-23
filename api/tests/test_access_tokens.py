@@ -110,7 +110,7 @@ def test_an_access_token_reads_and_writes_my_applications_and_interviews(client,
     assert added.status_code == 201, added.text
     application_id = added.json()["id"]
 
-    changed = client.patch(f"/applications/{application_id}", json={"location": "Remote"}, headers=headers)
+    changed = client.patch(f"/applications/{application_id}", json={"location": "remote"}, headers=headers)
     assert changed.status_code == 200, changed.text
 
     interviews = f"/applications/{application_id}/interviews"
@@ -120,7 +120,7 @@ def test_an_access_token_reads_and_writes_my_applications_and_interviews(client,
     assert moved.status_code == 200, moved.text
 
     [application] = client.get("/applications", headers=headers).json()
-    assert application["location"] == "Remote"
+    assert application["location"] == "remote"
     assert [i["kind"] for i in application["interviews"]] == ["onsite_loop"]
     # The web token for the same job seeker sees the same data: both name alice.
     assert client.get("/applications", headers=token("alice")).json() == [application]

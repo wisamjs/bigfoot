@@ -7,13 +7,28 @@ import { ExternalLink } from "@/components/ui/external-link";
 import { Field } from "@/components/ui/field";
 import { invalidProps } from "@/components/ui/field-error";
 import { inputClasses } from "@/components/ui/input";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { PLACEHOLDERS } from "@/features/applications/placeholders";
-import { APPLICATION_MAX_LENGTHS, type Application } from "@/lib/applications";
+import {
+  APPLICATION_MAX_LENGTHS,
+  LOCATION_OPTIONS,
+  LOCATIONS,
+  OFFICE_DAYS,
+  type Application,
+} from "@/lib/applications";
 import { applicationErrors, isValid, summarize, type FieldErrors } from "@/lib/validation";
 
-export const DETAIL_FIELDS = ["company", "title", "applied_on", "location", "posting_url"] as const;
+export const DETAIL_FIELDS = ["company", "title", "applied_on", "location", "office_days", "posting_url"] as const;
 export type DetailField = (typeof DETAIL_FIELDS)[number];
+/** Each detail as the form holds it: text, with "" for none (office days as "1" to "4"). */
 export type DetailValues = Record<DetailField, string>;
+
+/** A detail as the API takes it: trimmed text, office days as a number, and null for none. */
+export function apiValue(name: DetailField, value: string): string | number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return name === "office_days" ? Number(trimmed) : trimmed;
+}
 
 /**
  * What the details form being filled in holds: each detail as typed, the errors beside them, and
@@ -35,7 +50,7 @@ export function useDetails(initial: DetailValues) {
    * Checks `fields` with the API's rules. When something needs fixing, shows each error beside
    * its field, announces the first and focuses that field, and returns false.
    */
-  function check(fields: Record<string, string | null>, { creating }: { creating: boolean }) {
+  function check(fields: Record<string, unknown>, { creating }: { creating: boolean }) {
     const errors = applicationErrors(fields, { creating });
     setFieldErrors(errors);
     if (isValid(errors)) {
@@ -53,7 +68,7 @@ export function useDetails(initial: DetailValues) {
    * error beside it, announces it, and returns false; leaves the other fields and the focus alone,
    * because the job seeker is already on their way to another field.
    */
-  function checkField(name: DetailField, value: string | null) {
+  function checkField(name: DetailField, value: unknown) {
     const problem = applicationErrors({ [name]: value }, { creating: false })[name];
     setFieldErrors((prev) => ({ ...prev, [name]: problem }));
     setInvalid(problem ?? null);
@@ -81,10 +96,11 @@ export function useDetails(initial: DetailValues) {
 export type Details = ReturnType<typeof useDetails>;
 
 /**
- * An Application's details as fields: company, title, applied date, location and job posting.
+ * An Application's details as fields: company, title, applied date, Location (and days in office,
+ * when Hybrid) and job posting.
  * Company, Title and Applied are required. Without `identity`, Company and Title are left out:
  * an existing Application edits them in its heading. With `app`, the job posting has a link out.
- * With `onCommit`, each detail reports when it's left (the date, when it's picked), for a form that
+ * With `onCommit`, each detail reports when it's left (the date and Location, when picked), for a form that
  * saves them one by one; `status` then gives each its SaveStatus, shown beside its label.
  */
 export function DetailsFields({
@@ -104,7 +120,7 @@ export function DetailsFields({
   const { id, values, set, fieldErrors } = details;
 
   /** The props of one typed detail's input. */
-  function input(name: Exclude<DetailField, "applied_on">) {
+  function input(name: "company" | "title" | "posting_url") {
     return {
       id: `${id}-${name}`,
       value: values[name],
@@ -151,8 +167,51 @@ export function DetailsFields({
         />
       </Field>
       <Field label="Location" {...field("location")}>
-        <input type="text" {...input("location")} />
+        <ToggleGroup
+          type="single"
+          id={`${id}-location`}
+          aria-labelledby={`${id}-location-label`}
+          value={values.location}
+          onValueChange={(value) => {
+            set("location", value);
+            // Days in office only go with Hybrid; the API clears them too.
+            if (value !== "hybrid") set("office_days", "");
+            onCommit?.("location", value);
+          }}
+          {...invalidProps(`${id}-location-error`, fieldErrors.location)}
+        >
+          {LOCATIONS.map((location) => (
+            <ToggleGroupItem key={location} value={location}>
+              {LOCATION_OPTIONS[location].label}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
       </Field>
+      {values.location === "hybrid" && (
+        <Field label="Days in office" {...field("office_days")}>
+          <ToggleGroup
+            type="single"
+            id={`${id}-office_days`}
+            aria-labelledby={`${id}-office_days-label`}
+            value={values.office_days}
+            onValueChange={(value) => {
+              set("office_days", value);
+              onCommit?.("office_days", value);
+            }}
+            {...invalidProps(`${id}-office_days-error`, fieldErrors.office_days)}
+          >
+            {OFFICE_DAYS.map((days) => (
+              <ToggleGroupItem
+                key={days}
+                value={String(days)}
+                aria-label={`${days} ${days === 1 ? "day" : "days"} a week`}
+              >
+                {days}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </Field>
+      )}
       <Field label="Job posting URL" {...field("posting_url")}>
         <div className="flex items-center gap-1">
           <input type="url" {...input("posting_url")} />

@@ -478,7 +478,7 @@
           "Applications"
         ],
         "summary": "Edit an Application",
-        "description": "Change some of an Application's fields and return it with its Interviews.\n\nOnly the fields sent change. Setting the status to `in_progress` without an outcome reopens the\nApplication and clears its Outcome; setting it to `done` needs an Outcome, sent now or already set.",
+        "description": "Change some of an Application's fields and return it with its Interviews.\n\nOnly the fields sent change. Setting the status to `in_progress` without an outcome reopens the\nApplication and clears its Outcome; setting it to `done` needs an Outcome, sent now or already set.\nSetting the location to anything but `hybrid` clears its office days.",
         "operationId": "update_application_applications__application_id__patch",
         "security": [
           {
@@ -544,7 +544,7 @@
             }
           },
           "422": {
-            "description": "The body is invalid (a list of field errors), or the change would leave a Done Application without an Outcome or an In Progress one with an Outcome (a message).",
+            "description": "The body is invalid (a list of field errors), or the change would leave a Done Application without an Outcome, an In Progress one with an Outcome, or office days on a Location that isn't Hybrid (a message).",
             "content": {
               "application/json": {
                 "schema": {
@@ -1101,16 +1101,36 @@
           "location": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "in_office",
+                  "remote",
+                  "hybrid"
+                ]
               },
               {
                 "type": "null"
               }
             ],
             "title": "Location",
-            "description": "Where the role is, as the job seeker writes it.",
+            "description": "How often the role is in the office (GLOSSARY.md, Location): in_office, remote or hybrid.",
             "examples": [
-              "Remote"
+              "hybrid"
+            ]
+          },
+          "office_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Office Days",
+            "description": "For a Hybrid role, how many days a week in the office (1–4). Only when the Location is hybrid, and optional then.",
+            "examples": [
+              3
             ]
           },
           "salary": {
@@ -1222,6 +1242,7 @@
           "title",
           "posting_url",
           "location",
+          "office_days",
           "salary",
           "applied_on",
           "status",
@@ -1276,16 +1297,37 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 200
+                "enum": [
+                  "in_office",
+                  "remote",
+                  "hybrid"
+                ]
               },
               {
                 "type": "null"
               }
             ],
             "title": "Location",
-            "description": "Where the role is, as the job seeker writes it.",
+            "description": "How often the role is in the office (GLOSSARY.md, Location): in_office, remote or hybrid.",
             "examples": [
-              "Remote"
+              "hybrid"
+            ]
+          },
+          "office_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 4.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Office Days",
+            "description": "For a Hybrid role, how many days a week in the office (1–4). Only when the Location is hybrid, and optional then.",
+            "examples": [
+              3
             ]
           },
           "salary": {
@@ -1414,16 +1456,37 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 200
+                "enum": [
+                  "in_office",
+                  "remote",
+                  "hybrid"
+                ]
               },
               {
                 "type": "null"
               }
             ],
             "title": "Location",
-            "description": "Where the role is, as the job seeker writes it.",
+            "description": "How often the role is in the office (GLOSSARY.md, Location): in_office, remote or hybrid.",
             "examples": [
-              "Remote"
+              "hybrid"
+            ]
+          },
+          "office_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 4.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Office Days",
+            "description": "For a Hybrid role, how many days a week in the office (1–4). Only when the Location is hybrid, and optional then.",
+            "examples": [
+              3
             ]
           },
           "salary": {
@@ -1504,7 +1567,7 @@
         "additionalProperties": false,
         "type": "object",
         "title": "ApplicationPatch",
-        "description": "Only the fields sent are changed; send null to clear an optional field.\n\nSetting the status to in_progress without an outcome clears the outcome (reopening)."
+        "description": "Only the fields sent are changed; send null to clear an optional field.\n\nSetting the status to in_progress without an outcome clears the outcome (reopening). Setting the\nlocation to anything but hybrid without office_days clears the office days."
       },
       "ErrorMessage": {
         "properties": {

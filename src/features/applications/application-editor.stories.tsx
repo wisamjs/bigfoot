@@ -67,18 +67,32 @@ export const JustAdded: Story = {
   args: { app: { ...datadog, interviews: [] }, justAdded: true },
 };
 
-/** A detail saves when it's left. */
+/** A typed detail saves when it's left. */
 export const SaveDetail: Story = {
   play: async ({ canvas, userEvent }) => {
-    const location = canvas.getByRole("textbox", { name: /^Location/ });
-    await userEvent.clear(location);
-    await userEvent.type(location, "Toronto");
+    const posting = canvas.getByRole("textbox", { name: /^Job posting URL/ });
+    await userEvent.clear(posting);
+    await userEvent.type(posting, "https://careers.example.com/1");
     await userEvent.tab();
     await waitFor(() =>
       expect(actions.updateApplicationAction).toHaveBeenCalledWith(
         "datadog",
-        expect.objectContaining({ location: "Toronto" }),
+        expect.objectContaining({ posting_url: "https://careers.example.com/1" }),
       ),
+    );
+  },
+};
+
+/** Picking Hybrid saves it at once and asks for days in office; picking a day saves it too. */
+export const PickHybrid: Story = {
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("radio", { name: "Hybrid" }));
+    await waitFor(() =>
+      expect(actions.updateApplicationAction).toHaveBeenCalledWith("datadog", { location: "hybrid" }),
+    );
+    await userEvent.click(canvas.getByRole("radio", { name: "3 days a week" }));
+    await waitFor(() =>
+      expect(actions.updateApplicationAction).toHaveBeenCalledWith("datadog", { location: "hybrid", office_days: 3 }),
     );
   },
 };
@@ -101,9 +115,7 @@ export const SaveFails: Story = {
     mocked(actions.updateApplicationAction).mockResolvedValue({ ok: false, error: "Couldn’t reach Bigfoot’s server. Try again." });
   },
   play: async ({ canvas, userEvent }) => {
-    const location = canvas.getByRole("textbox", { name: /^Location/ });
-    await userEvent.type(location, " area");
-    await userEvent.tab();
+    await userEvent.click(canvas.getByRole("radio", { name: "In-Office" }));
     await expect(await canvas.findByRole("button", { name: "Retry, Location" })).toBeVisible();
   },
 };
@@ -114,7 +126,8 @@ export const LongText: Story = {
       ...datadog,
       company: "Northern Lights Software Engineering Co-operative of British Columbia",
       title: "Senior Staff Software Engineer, Developer Experience and Internal Platform Tooling",
-      location: "Remote within Canada, with quarterly visits to the Vancouver, Toronto or Montréal office",
+      location: "hybrid",
+      office_days: 4,
       posting_url: "https://example.com/careers/engineering/platform/senior-staff-software-engineer-developer-experience",
     },
   },
