@@ -36,7 +36,6 @@ export const PAGES = [
     expect: "Add Application",
     states: [
       { name: "show-done", steps: [{ click: "label", text: "Show done" }], expect: "Rejected" },
-      { name: "change-status-menu", steps: [{ click: 'button[aria-label^="Change Status"]', pointer: true }], expect: "Mark Rejected" },
       { name: "nothing-scheduled", applications: "none", steps: [], expect: "All quiet in the woods" },
       { name: "account-menu", steps: [{ click: "button", text: "Account menu", pointer: true }], expect: "Sign out" },
     ],

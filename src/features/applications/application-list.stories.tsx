@@ -1,13 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, mocked, screen, waitFor } from "storybook/test";
-import { updateApplicationAction } from "@/app/applications/actions";
+import { expect } from "storybook/test";
 import type { Application, InterviewKind, Location, Outcome } from "@/lib/applications";
 import { previewApplications } from "@/lib/mock-data";
 import { application, interview as testInterview } from "@/test/applications";
 import { ApplicationList } from "./application-list";
 
-// The dashboard's Applications for a job search a few weeks in. Server Actions are mocked
-// (src/app/applications/__mocks__/actions.ts) and succeed unless a story says otherwise.
+// The dashboard's Applications for a job search a few weeks in.
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -304,59 +302,11 @@ export const Sample: Story = {
   },
 };
 
-/** Marking an Outcome from a row's menu saves it with the Application's id. */
-export const ChangeStatus: Story = {
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Change Status, Stripe" }),
-    );
-    await userEvent.click(
-      await screen.findByRole("menuitem", { name: "Mark Rejected" }),
-    );
-    await waitFor(() =>
-      expect(updateApplicationAction).toHaveBeenCalledWith("stripe", {
-        status: "done",
-        outcome: "rejected",
-      }),
-    );
-  },
-};
-
-/** A save that fails shows its error and a Retry on the row. */
-export const ChangeStatusFails: Story = {
-  beforeEach: () => {
-    mocked(updateApplicationAction).mockResolvedValue({
-      ok: false,
-      error: "Couldn’t reach Bigfoot’s server. Try again.",
-    });
-  },
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Change Status, Stripe" }),
-    );
-    await userEvent.click(
-      await screen.findByRole("menuitem", { name: "Mark Rejected" }),
-    );
-    await expect(
-      await canvas.findByRole("button", { name: "Retry, Status, Stripe" }),
-    ).toBeVisible();
-  },
-};
-
-/** Long company names and titles wrap inside their cells. */
-export const LongText: Story = {
-  args: {
-    applications: jobSearch.map((a, i) =>
-      i === 0
-        ? {
-            ...a,
-            company:
-              "Northern Lights Software Engineering Co-operative of British Columbia",
-            title:
-              "Senior Staff Software Engineer, Developer Experience and Internal Platform Tooling",
-          }
-        : a,
-    ),
+/** Each linked row ends in a quiet chevron, and the whole row opens the Application. */
+export const RowsOpenTheApplication: Story = {
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByRole("button")).not.toBeInTheDocument();
+    await expect(canvas.getAllByRole("link", { name: /^Open Stripe/ })).toHaveLength(1);
   },
 };
 
