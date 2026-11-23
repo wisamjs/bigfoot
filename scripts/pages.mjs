@@ -59,16 +59,6 @@ export const PAGES = [
         steps: [{ click: "button", text: "Delete application" }],
         expect: "This can’t be undone",
       },
-      {
-        name: "delete-interview-confirmation",
-        steps: [{ click: 'button[aria-label^="Delete Technical Interview"]' }],
-        expect: "This can’t be undone",
-      },
-      {
-        name: "interview-calendar",
-        steps: [{ click: 'button[id^="at-"]' }],
-        expect: "Mo",
-      },
     ],
   },
   {
@@ -117,7 +107,8 @@ export const PAGES = [
         name: "interview-unsaved-changes-prompt",
         steps: [
           { fill: 'textarea[id^="notes-"]', value: "x".repeat(20_001) },
-          { click: "main a", text: "Dashboard" },
+          // "← Vercel", back to the Interview's Application page (BIG-166).
+          { click: "main a", text: "Vercel" },
         ],
         expect: "You have unsaved changes.",
       },

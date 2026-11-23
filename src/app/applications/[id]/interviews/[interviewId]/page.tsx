@@ -5,8 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { InterviewEditor } from "@/features/applications/interview-editor";
 import { InterviewHeading } from "@/features/applications/interview-heading";
 import { OUTCOME_TONE } from "@/features/applications/status-tone";
+import { applicationHref } from "@/features/applications/routes";
 import { UnsavedChanges } from "@/features/applications/unsaved-changes";
 import { AppHeader } from "@/features/shell/app-header";
+import { BackLink } from "@/features/shell/dashboard-link";
 import { FormPage } from "@/features/shell/form-page";
 import { getApplications } from "@/lib/api";
 import { OUTCOME_OPTIONS, STATUS_OPTIONS, type Application } from "@/lib/applications";
@@ -38,6 +40,8 @@ async function InterviewPageBody({ params }: Pick<Props, "params">) {
     <FormPage
       header={<AppHeader user={user} current="/dashboard" />}
       title={app.company}
+      // The Interview page belongs to its Application page, so "← <company>" goes there.
+      back={<BackLink href={applicationHref(app.id)}>{app.company}</BackLink>}
       heading={<InterviewHeading app={app} interview={interview} badge={<DoneBadge app={app} />} />}
       guard={UnsavedChanges}
     >

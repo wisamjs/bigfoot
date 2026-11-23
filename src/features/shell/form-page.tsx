@@ -9,6 +9,9 @@ import { DashboardBackLink } from "@/features/shell/dashboard-link";
  * page's heading (with a `subtitle` and a `badge` under it), and the content in a card. Without
  * `children` it is the page's loading state, which mustn't hold a form that would throw away what
  * was typed.
+ * A `back` link replaces "← Dashboard", for a page that belongs to another, such as an Interview
+ * page to its Application page. A `notice` (a status line such as "Interview deleted") sits over
+ * the heading.
  * A `heading` replaces the title, subtitle and badge, for a page that edits them in place. A
  * `guard` (UnsavedChanges) wraps the heading and the content together, so leaving with something
  * typed in either asks first; the page passes it, as shell code can't import from a feature.
@@ -19,6 +22,8 @@ export function FormPage({
   subtitle,
   badge,
   heading,
+  back,
+  notice,
   guard: Guard,
   children,
 }: {
@@ -27,12 +32,15 @@ export function FormPage({
   subtitle?: string;
   badge?: ReactNode;
   heading?: ReactNode;
+  back?: ReactNode;
+  notice?: ReactNode;
   guard?: ComponentType<{ children: ReactNode }>;
   children?: ReactNode;
 }) {
   const column = (
     <>
-      <DashboardBackLink />
+      {back ?? <DashboardBackLink />}
+      {notice}
       {heading ?? (
         <div>
           <h1 className="m-0 text-[32px] font-bold leading-[1.1] text-heading md:text-[40px]">{title}</h1>

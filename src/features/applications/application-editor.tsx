@@ -12,10 +12,10 @@ import type { Application } from "@/lib/applications";
 
 /**
  * The Application page's body: the Application but its heading, editable. Status and Outcome, the details,
- * then the Interview list, and Delete application.
- * Bigfoot autosaves here: each detail saves when it's left, each Interview's fields when they
- * change, and its Interview notes after a pause in typing and when they're left, so closing the
- * page loses nothing typed. Status and Outcome save the moment an Outcome is picked or the
+ * then the Interview list (each Interview a link to its Interview page, where it is edited), and
+ * Delete application.
+ * Bigfoot autosaves here: each detail saves when it's left, so closing the page loses nothing
+ * typed. Status and Outcome save the moment an Outcome is picked or the
  * Application is reopened, together, because Done needs an Outcome. Each save shows its own status
  * beside what started it (BIG-118).
  * `justAdded` is set when the page opens straight after adding the Application: the Interview list

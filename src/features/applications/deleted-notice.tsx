@@ -6,8 +6,8 @@ import { useEffect, useState } from "react";
 import { DELETED_PARAM } from "@/features/applications/routes";
 
 /**
- * "Interview deleted", once the dashboard opens after an Interview was deleted from its own page
- * (INTERVIEW_DELETED_HREF). The status line is on the page from the start, empty, so screen readers
+ * "Interview deleted", once an Application page opens after one of its Interviews was deleted from
+ * its own page (interviewDeletedHref). The status line is on the page from the start, empty, so screen readers
  * announce the text when it arrives. The search param then goes, so a refresh or a shared link
  * doesn't say it again.
  */

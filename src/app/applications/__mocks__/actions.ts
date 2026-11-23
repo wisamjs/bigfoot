@@ -9,4 +9,5 @@ export const updateApplicationAction = fn<typeof actions.updateApplicationAction
 export const deleteApplicationAction = fn<typeof actions.deleteApplicationAction>(() => new Promise(() => {}));
 export const createInterviewAction = fn<typeof actions.createInterviewAction>(async () => ({ ok: true }));
 export const updateInterviewAction = fn<typeof actions.updateInterviewAction>(async () => ({ ok: true }));
-export const deleteInterviewAction = fn<typeof actions.deleteInterviewAction>(async () => ({ ok: true }));
+// Like deleteApplicationAction, the real one redirects (to the Application page) instead of returning.
+export const deleteInterviewAndLeaveAction = fn<typeof actions.deleteInterviewAndLeaveAction>(() => new Promise(() => {}));

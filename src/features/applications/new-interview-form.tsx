@@ -14,7 +14,7 @@ import { AddFormActions } from "@/features/applications/add-form-actions";
 import { FormAlert } from "@/features/applications/details-fields";
 import { fromLocalInput } from "@/features/applications/local-datetime";
 import { PLACEHOLDERS } from "@/features/applications/placeholders";
-import { ADD_APPLICATION_HREF } from "@/features/applications/routes";
+import { ADD_APPLICATION_HREF, applicationHref } from "@/features/applications/routes";
 import { UnsavedChanges, useUnsavedChanges } from "@/features/applications/unsaved-changes";
 import {
   INTERVIEW_KINDS,
@@ -32,7 +32,8 @@ type Control = keyof typeof CONTROLS;
 /**
  * An Interview that doesn't exist yet, on the Add Interview page: the Application it belongs to,
  * its kind, its date and time (both required, no time assumed), and Interview notes. Adding it
- * goes back to the dashboard. With no Applications, it explains that an Interview needs one.
+ * goes back to the Application page it was opened from, or to the dashboard. With no Applications,
+ * it explains that an Interview needs one.
  */
 export function NewInterviewForm(props: {
   applications: Application[];
@@ -140,7 +141,9 @@ function NewInterviewFields({
           setFieldErrors({ ...rest, ...(atError ? { date: atError } : {}) });
         } else {
           setAdded(true);
-          router.push("/dashboard");
+          // Back where it was opened from: an Application page (the Application it was added to,
+          // should another have been chosen), or the dashboard.
+          router.push(chosen ? applicationHref(applicationId) : "/dashboard");
         }
       });
   }

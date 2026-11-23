@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ApplicationHeading } from "@/features/applications/application-heading";
 import { ApplicationEditor } from "@/features/applications/application-editor";
+import { DeletedNotice } from "@/features/applications/deleted-notice";
 import { AppHeader } from "@/features/shell/app-header";
 import { FormPage } from "@/features/shell/form-page";
 import { UnsavedChanges } from "@/features/applications/unsaved-changes";
@@ -34,6 +35,7 @@ async function Application({ params, searchParams }: Pick<PageProps<"/applicatio
       header={<AppHeader user={user} current="/dashboard" />}
       title={app.company}
       heading={<ApplicationHeading app={app} />}
+      notice={<DeletedNotice />}
       guard={UnsavedChanges}
     >
       <ApplicationEditor app={app} justAdded={query[ADDED_PARAM] === "1"} />

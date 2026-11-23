@@ -20,7 +20,6 @@ vi.mock("@/app/applications/actions", () => ({
   deleteApplicationAction: vi.fn(),
   createInterviewAction: vi.fn(),
   updateInterviewAction: vi.fn(),
-  deleteInterviewAction: vi.fn(),
 }));
 
 let go: ReturnType<typeof vi.spyOn>;
@@ -120,20 +119,13 @@ describe("leaving the Application page with unsaved changes", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
-  it("asks when Interview notes are still inside their typing pause", async () => {
-    const user = openEditor();
-    await user.type(screen.getByLabelText(/^Interview notes/), "Went well.");
-    fireEvent.click(screen.getByRole("link", { name: "Dashboard" }));
-    expect(screen.getByText(PROMPT)).toBeInTheDocument();
-  });
-
   it("asks when a save failed, since what was typed isn't stored", async () => {
-    vi.mocked(actions.updateInterviewAction).mockResolvedValue({
+    vi.mocked(actions.updateApplicationAction).mockResolvedValue({
       ok: false,
       error: "Couldn’t save",
     });
     const user = openEditor();
-    await user.type(screen.getByLabelText(/^Interview notes/), "Went well.");
+    await user.type(screen.getByLabelText("Location"), "x");
     await user.tab();
     await screen.findByText("Couldn’t save");
     fireEvent.click(screen.getByRole("link", { name: "Dashboard" }));
@@ -159,7 +151,6 @@ describe("leaving the Application page with unsaved changes", () => {
   it("puts Keep editing in focus, keeps what was typed, and returns to the first unsaved field", async () => {
     const user = openEditor();
     await user.type(screen.getByLabelText("Location"), "x");
-    await user.type(screen.getByLabelText(/^Interview notes/), "Went well.");
     fireEvent.click(screen.getByRole("link", { name: "Dashboard" }));
     expect(screen.getByRole("button", { name: "Keep editing" })).toHaveFocus();
 
@@ -167,7 +158,6 @@ describe("leaving the Application page with unsaved changes", () => {
     expect(screen.queryByText(PROMPT)).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByLabelText("Location")).toHaveFocus());
     expect(screen.getByLabelText("Location")).toHaveValue(`${birch.location}x`);
-    expect(screen.getByLabelText(/^Interview notes/)).toHaveValue("Went well.");
     expect(push).not.toHaveBeenCalled();
   });
 

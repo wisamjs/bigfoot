@@ -16,7 +16,7 @@ export const NOTES_PAUSE_MS = 1000;
 export type NotesSave = { problem: string | undefined; sent: Promise<SaveResult> | null };
 
 /**
- * An Interview's notes: written, read and cleared here, under their Interview. They save by
+ * An Interview's notes, on its Interview page: written, read and cleared here. They save by
  * themselves, as a draft: about a second after typing stops, and when the field is left. Each save
  * replaces the last, so what's stored is exactly what was typed, and a save waits for the one
  * before it, so two are never in flight. Typing carries on while one is. The field isn't
@@ -25,16 +25,13 @@ export type NotesSave = { problem: string | undefined; sent: Promise<SaveResult>
  */
 export function InterviewNotesForm({
   interview,
-  label,
   tracker,
   onSave,
 }: {
   interview: Interview;
-  /** "Interview 2": tells the rows apart for screen readers. The Interview page, with one, has none. */
-  label?: string;
-  /** Owned by the row, so "Saved" outlasts this form re-rendering with the saved notes. */
+  /** Owned by the Interview page's editor, so "Saved" outlasts this form re-rendering with the saved notes. */
   tracker: SaveTracker;
-  /** Checks and saves the notes with the row, which shows a missing date beside it. */
+  /** Checks and saves the notes, or says why not (an Interview with no date yet). */
   onSave: (notes: string | null) => NotesSave;
 }) {
   const [draft, setDraft] = useState(interview.notes ?? "");
@@ -108,7 +105,7 @@ export function InterviewNotesForm({
       <div>
         <div className="mb-1 flex min-h-4 flex-wrap items-center justify-between gap-x-2 text-xs font-medium text-body">
           <label htmlFor={`notes-${interview.id}`}>
-            Interview notes{label && <span className="sr-only">, {label}</span>}
+            Interview notes
           </label>
           <span className="inline-flex flex-wrap items-center gap-3">
             {nearLimit && (
@@ -117,7 +114,7 @@ export function InterviewNotesForm({
                 characters
               </span>
             )}
-            <SaveStatus status={tracker.status} label={label ? `${label} notes` : "Interview notes"} onRetry={tracker.retry} />
+            <SaveStatus status={tracker.status} label="Interview notes" onRetry={tracker.retry} />
           </span>
         </div>
         <textarea
