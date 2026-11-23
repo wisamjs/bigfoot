@@ -82,7 +82,7 @@ export const Revoke: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: "Revoke Calendar cron job" }));
     const dialog = await screen.findByRole("dialog", { name: "Revoke Access token" });
-    await waitFor(() => expect(dialog).toBeVisible());
+    await expect(dialog).toBeVisible();
     await userEvent.click(screen.getByRole("button", { name: "Revoke" }));
     await waitFor(() => expect(revokeAccessTokenAction).toHaveBeenCalledWith("t1"));
   },
@@ -97,8 +97,7 @@ export const RevokeFails: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Revoke Calendar cron job" }));
     await screen.findByRole("dialog", { name: "Revoke Access token" });
     await userEvent.click(screen.getByRole("button", { name: "Revoke" }));
-    const error = await screen.findByText(/Couldn’t reach Bigfoot’s server/);
-    await waitFor(() => expect(error).toBeVisible());
+    await expect(await screen.findByText(/Couldn’t reach Bigfoot’s server/)).toBeVisible();
   },
 };
 

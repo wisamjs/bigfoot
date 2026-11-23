@@ -111,6 +111,7 @@ const eslintConfig = defineConfig([
         // Next.js's root files: auth.ts, proxy.ts, instrumentation.ts and their tests.
         { category: "server", pattern: "src/*.ts" },
         { category: "test", pattern: "src/**/*.test.{ts,tsx}" },
+        { category: "story", pattern: "src/**/*.stories.tsx" },
         { category: "action", pattern: "src/app/**/actions.ts" },
       ],
     },
@@ -154,6 +155,8 @@ const eslintConfig = defineConfig([
                 { to: { file: { categories: "server" } } },
               ],
             },
+            // Stories keep their component's rules, and may also build their data with the test builders.
+            { from: { file: { categories: "story" } }, allow: { to: { element: { type: "test" } } } },
             // Tests and their shared fixtures may reach anything.
             ...[{ file: { categories: "test" } }, { element: { type: "test" } }].map((from) => ({
               from,

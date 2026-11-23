@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, screen, waitFor } from "storybook/test";
+import { expect, screen } from "storybook/test";
 import { Button } from "./button";
 import { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
 
@@ -29,9 +29,7 @@ export const Closed: Story = {};
 export const Open: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: "What’s Waiting?" }));
-    const description = await screen.findByText("An Application with no Interview booked yet.");
-    // After the fade-in.
-    await waitFor(() => expect(description).toBeVisible());
+    await expect(await screen.findByText("An Application with no Interview booked yet.")).toBeVisible();
   },
 };
 

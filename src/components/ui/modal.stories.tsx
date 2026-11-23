@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
-import { expect, fn, screen, waitFor } from "storybook/test";
+import { expect, fn, screen } from "storybook/test";
 import { Button } from "./button";
 import { Modal } from "./modal";
 
@@ -40,7 +40,7 @@ export const FromButton: Story = {
     await userEvent.click(opener);
     const dialog = await screen.findByRole("dialog", { name: "Delete Stripe?" });
     // After the fade-in.
-    await waitFor(() => expect(dialog).toBeVisible());
+    await expect(dialog).toBeVisible();
     await userEvent.keyboard("{Escape}");
     await expect(opener).toHaveFocus();
   },

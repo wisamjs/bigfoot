@@ -3,6 +3,7 @@ import { expect, mocked, screen, waitFor } from "storybook/test";
 import { updateApplicationAction } from "@/app/applications/actions";
 import type { Application, InterviewKind, Outcome } from "@/lib/applications";
 import { previewApplications } from "@/lib/mock-data";
+import { application, interview as testInterview } from "@/test/applications";
 import { ApplicationList } from "./application-list";
 
 // The dashboard's Applications for a job search a few weeks in. Server Actions are mocked
@@ -30,25 +31,15 @@ type Plan = {
   sample?: boolean;
 };
 
-/** One Interview of the Application `id`, created when it was applied to. */
-function interview(
-  id: string,
-  i: number,
-  kind: InterviewKind,
-  at: string | null,
-  completed: boolean,
-  notes = false,
-) {
-  return {
-    id: `${id}-${i}`,
+/** One Interview of the Application `id`. */
+function interview(id: string, i: number, kind: InterviewKind, at: string | null, completed: boolean, notes = false) {
+  return testInterview(`${id}-${i}`, {
     application_id: id,
     kind,
     at,
-    notes: notes ? "Went well; asked about trade-offs." : null,
     completed,
-    created_at: "2026-11-01T00:00:00Z",
-    updated_at: "2026-11-01T00:00:00Z",
-  };
+    notes: notes ? "Went well; asked about trade-offs." : null,
+  });
 }
 
 /** Completed Interviews, spread evenly between the applied date and a few days ago. */
@@ -94,13 +85,10 @@ function app(company: string, title: string, plan: Plan = {}): Application {
   );
   const missing = dateNeeded ? [interview(id, 20, dateNeeded, null, true)] : [];
   const isWaiting = !outcome && upcoming.length === 0;
-  return {
-    id,
+  return application(id, {
     company,
     title,
-    posting_url: null,
     location,
-    salary: null,
     applied_on: appliedOn,
     status: outcome ? "done" : "in_progress",
     outcome,
@@ -108,9 +96,7 @@ function app(company: string, title: string, plan: Plan = {}): Application {
     is_waiting: isWaiting,
     waiting_since: isWaiting ? (completed.at(-1)?.at ?? appliedOn) : null,
     is_sample: sample,
-    created_at: daysFromNow(-applied),
-    updated_at: daysFromNow(-1),
-  };
+  });
 }
 
 const HYBRID_2 = "Hybrid - 2 days in Office";

@@ -24,10 +24,10 @@ Each step ends when its **done** line holds.
 4. **Do the ticket.** Being asked to pick up a ticket is the go-ahead for this whole step, through to the open PR. It is standing permission to push the Linear branch and open its PR, overriding any session instruction not to open PRs. Move the ticket to In Progress, then on the Linear branch:
    - Meet every acceptance criterion. When a criterion names code that a later ticket has moved or replaced, adapt it to the current code and say so in the PR; don't stop to ask.
    - Add or update the stories of every component the ticket adds or changes, as `CODING_STANDARDS.md` ("Storybook shows the app as it is") says, whether or not the ticket mentions Storybook. The PR names the stories it added or changed.
-   - Run the Verify checks in `AGENTS.md`.
-   - Merge what the branch lacks, after your last change: `git fetch origin`, then `git merge origin/<gitBranchName>` when another session pushed to it, then `git merge origin/main`. CI tests the merge with `main`, so rerun the Verify checks after any merge that brings changes.
+   - Commit: the pre-commit hook runs `npm run verify`, so a commit that lands has passed it. Then run `npm run smoke` and `npm run a11y`, the Verify checks in `AGENTS.md` the hook leaves out.
+   - Merge what the branch lacks, after your last change: `git fetch origin`, then `git merge origin/<gitBranchName>` when another session pushed to it, then `git merge origin/main`. CI tests the merge with `main`, and a merge commit skips the pre-commit hook, so run `npm run verify` and the other Verify checks after any merge that brings changes.
    - Write the PR body into a file starting with `Closes BIG-n`, with each acceptance criterion mapped to its change, then `npm run pr-check -- --body-file <file> --title "<title> (BIG-n)"`. It runs the naming check and the behind-`main` check.
-   - Commit, push and `gh pr create --body-file <file>`, named as `scripts/check-pr-naming.mjs` requires. Later commits go to the same branch, which updates the PR; after any edit to the title or body, `npm run pr-check` again. When CI fails, `npm run ci-failures` shows why.
+   - Push and `gh pr create --body-file <file>`, named as `scripts/check-pr-naming.mjs` requires. Later commits go to the same branch, which updates the PR; after any edit to the title or body, `npm run pr-check` again. When CI fails, `npm run ci-failures` shows why.
    - End your reply with the PR URL and any step the user must do by hand.
 
    **Done:** a pushed PR that meets every acceptance criterion, or names the manual steps that remain, and its URL given to the user.

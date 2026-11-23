@@ -76,7 +76,7 @@ export const Delete: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: "Delete Interview" }));
     const dialog = await screen.findByRole("dialog");
-    await waitFor(() => expect(dialog).toBeVisible());
+    await expect(dialog).toBeVisible();
     await expect(deleteInterviewAndLeaveAction).not.toHaveBeenCalled();
   },
 };
