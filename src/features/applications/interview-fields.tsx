@@ -29,8 +29,9 @@ const fieldLabelClasses = "mb-1 flex min-h-4 flex-wrap items-center justify-betw
  * the kind and date are keyed by their saved values and remount when a save lands, so the caller
  * keys this by the Interview. An Interview saved before dates were required shows "Date needed"
  * beside its date, and no other change saves until it has one (docs/adr/0005).
- * The Application page's rows and the Interview page both show it. `label` ("Interview 2") tells a
- * row's fields apart for screen readers; `actions` (a row's Delete) sit after the date.
+ * The Application page's Interview rows show it; the Interview page edits the kind and date in its
+ * heading instead (InterviewHeading). `label` ("Interview 2") tells a row's fields apart for screen
+ * readers; `actions` (a row's Delete) sit after the date.
  */
 export function InterviewFields({
   app,
