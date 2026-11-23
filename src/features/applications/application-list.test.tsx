@@ -57,6 +57,18 @@ describe("ApplicationList", () => {
     expect(rows().at(-1)).toEqual(["Umbrella", "Done"]);
   });
 
+  it("marks completed Interviews green while In Progress and grey once Done (BIG-177)", () => {
+    const past = interview("u-past", { at: "2026-11-02T15:00:00Z", completed: true, kind: "recruiter_screen" });
+    render(<ApplicationList applications={[scheduled, { ...rejected, interviews: [past] }]} showDone />);
+    // Each row draws Progress twice: under the role on a phone, and in its own column.
+    // eslint-disable-next-line testing-library/no-node-access -- the marks are decoration (aria-hidden), with no role or text to query by.
+    const marks = (company: string) => [...row(company).querySelectorAll("span.rounded-full")].map((mark) => mark.className);
+    expect(marks("Birch")).toHaveLength(2);
+    expect(marks("Birch").every((mark) => mark.includes("bg-fg-success-strong"))).toBe(true);
+    expect(marks("Umbrella")).toHaveLength(2);
+    expect(marks("Umbrella").every((mark) => mark.includes("bg-tone-gray-fg"))).toBe(true);
+  });
+
   it("explains the list when there's nothing to show", () => {
     render(<ApplicationList applications={[rejected]} />);
     expect(screen.queryByRole("table")).not.toBeInTheDocument();

@@ -216,10 +216,10 @@ describe("interviewSections (BIG-174)", () => {
         interview("undated", null, true),
       ],
     });
-    const { next, later, done } = interviewSections(app);
+    const { next, later, completed } = interviewSections(app);
     expect(next?.id).toBe("next");
     expect(later.map((i) => i.id)).toEqual(["later"]);
-    expect(done.map((i) => i.id)).toEqual(["recent", "old", "undated"]);
+    expect(completed.map((i) => i.id)).toEqual(["recent", "old", "undated"]);
   });
 
   it("has no next Interview when none is ahead", () => {

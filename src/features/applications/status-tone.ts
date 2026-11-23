@@ -35,3 +35,12 @@ export const INTERVIEW_TONE: Record<InterviewKind, Tone> = {
   strategy_and_values_alignment: "yellow",
   people_management: "yellow",
 };
+
+/**
+ * The colour of a completed Interview's mark, on the strip and in the dashboard's Progress: green
+ * while its Application is In Progress, grey once it is Done and the hiring process is over (BIG-177).
+ */
+export const COMPLETED_MARK: Record<Status, string> = {
+  in_progress: "bg-fg-success-strong",
+  done: "bg-tone-gray-fg",
+};

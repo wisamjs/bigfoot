@@ -170,9 +170,11 @@ describe("the Interviews", () => {
     expect(within(next).getByRole("link", { name: "Add Interview notes" })).toHaveAttribute("href", "/applications/oak/interviews/deep");
   });
 
-  it("lists the rest under Later, then the completed ones under Done, newest first, undated last", () => {
+  it("lists the rest under Later, then the completed ones under Completed, newest first, undated last", () => {
     open(oak);
     expect(within(screen.getByRole("list", { name: "Later" })).getAllByRole("listitem")).toHaveLength(1);
+    expect(within(screen.getByRole("list", { name: "Completed" })).getAllByRole("listitem")).toHaveLength(3);
+    expect(screen.queryByRole("list", { name: "Done" })).not.toBeInTheDocument();
     expect(rows()).toEqual([
       "Open Interview: Leadership",
       "Open Interview: Hiring Manager",
@@ -197,7 +199,22 @@ describe("the Interviews", () => {
   it("strips them by date, counting the completed ones", () => {
     open(oak);
     expect(within(screen.getByRole("list", { name: "Interviews by date" })).getAllByRole("listitem")).toHaveLength(5);
-    expect(screen.getByText("3 of 5 Interviews done")).toBeInTheDocument();
+    expect(screen.getByText("3 of 5 Interviews completed")).toBeInTheDocument();
+  });
+
+  it("strips completed Interviews green while In Progress and grey once Done (BIG-177)", () => {
+    const bars = () =>
+      within(screen.getByRole("list", { name: "Interviews by date" }))
+        .getAllByRole("listitem")
+        // eslint-disable-next-line testing-library/no-node-access -- the bar is decoration (aria-hidden), with no role or text to query by.
+        .map((segment) => segment.firstElementChild);
+    const { unmount } = open(oak);
+    expect(bars().filter((bar) => bar?.classList.contains("bg-fg-success-strong"))).toHaveLength(3);
+    expect(bars().filter((bar) => bar?.classList.contains("bg-tone-gray-fg"))).toHaveLength(0);
+    unmount();
+    open({ ...oak, status: "done", outcome: "rejected" });
+    expect(bars().filter((bar) => bar?.classList.contains("bg-tone-gray-fg"))).toHaveLength(3);
+    expect(bars().filter((bar) => bar?.classList.contains("bg-fg-success-strong"))).toHaveLength(0);
   });
 
   it("opens the Add Interview page with this Application chosen", () => {

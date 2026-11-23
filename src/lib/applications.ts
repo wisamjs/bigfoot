@@ -258,14 +258,14 @@ export function applicationsTag(jobSeekerId: string) {
 }
 
 /** The Application page's Interviews (BIG-174): the next one, the others still ahead, and the completed ones, newest first. */
-export type InterviewSections = { next: Interview | null; later: Interview[]; done: Interview[] };
+export type InterviewSections = { next: Interview | null; later: Interview[]; completed: Interview[] };
 
 export function interviewSections(app: Application): InterviewSections {
   const [next = null, ...later] = upcomingInterviews(app);
   // Completed ones come by date; any saved with no date (docs/adr/0005) come last there, and stay last.
   const dated = app.interviews.filter((i) => i.completed && i.at !== null).toReversed();
   const undated = app.interviews.filter((i) => i.at === null);
-  return { next, later, done: [...dated, ...undated] };
+  return { next, later, completed: [...dated, ...undated] };
 }
 
 /** The paragraphs of some notes: runs of text split by blank lines, trimmed. */
