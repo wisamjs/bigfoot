@@ -11,7 +11,7 @@ import { ApplicationListSkeleton } from "@/features/applications/application-lis
 import { StatCard } from "@/components/ui/stat-card";
 import { Container } from "@/components/ui/container";
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton";
-import { listApplications, onboard } from "@/lib/api";
+import { getApplications } from "@/lib/api";
 import { getCalendarInterviews, getStats } from "@/lib/applications";
 import { getCurrentUser } from "@/lib/dal";
 
@@ -29,8 +29,7 @@ export default function DashboardPage() {
 
 async function Dashboard() {
   const user = await getCurrentUser();
-  await onboard(user.id);
-  const applications = await listApplications(user.id);
+  const applications = await getApplications(user.id);
   const stats = getStats(applications);
 
   return (
