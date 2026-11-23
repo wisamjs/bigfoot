@@ -210,3 +210,12 @@ export function getApplicationGroups(apps: Application[], { showDone = false } =
   ];
   return groups.filter((g) => g.applications.length > 0);
 }
+
+/**
+ * The cache tag of one job seeker's Applications and their Interviews: the read the Dashboard and
+ * the Application page share (`getApplications` in src/lib/api.ts). Every Server Action that
+ * changes either, signing out and deleting the account expire it.
+ */
+export function applicationsTag(jobSeekerId: string) {
+  return `applications:${jobSeekerId}`;
+}

@@ -6,6 +6,13 @@ import { assertEnv, inProduction } from "./src/lib/env";
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
+  experimental: {
+    // The browser keeps a visited page for 5 minutes (the length of getApplications's cacheLife
+    // `stale`), so going back to it shows it at once instead of waiting on the server. Changes the job
+    // seeker makes through a Server Action drop it sooner. Without this, a page that reads the session
+    // is never reused (dynamic defaults to 0), and the Dashboard shows its skeleton on every visit.
+    staleTimes: { dynamic: 300 },
+  },
   images: {
     // Google profile photos
     remotePatterns: [{ protocol: "https", hostname: "lh3.googleusercontent.com" }],

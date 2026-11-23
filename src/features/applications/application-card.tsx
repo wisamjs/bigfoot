@@ -64,6 +64,8 @@ function CardLink({ job }: { job: Application }) {
   return (
     <Link
       href={applicationHref(job.id)}
+      // The Application page depends on the URL, so only a link that asks is prefetched (BIG-161).
+      prefetch
       className="after:absolute after:inset-0 after:rounded-control focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-brand"
     >
       <span className="sr-only">Open </span>
