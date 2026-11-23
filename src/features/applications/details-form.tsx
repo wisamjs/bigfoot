@@ -7,6 +7,7 @@ import { SaveStatus } from "@/components/ui/save-status";
 import { useSaveStatus } from "@/hooks/use-save-status";
 import { useUnsavedChanges } from "@/features/applications/unsaved-changes";
 import {
+  apiValue,
   DETAIL_FIELDS,
   DetailsFields,
   FormAlert,
@@ -25,6 +26,7 @@ const LABELS: Record<DetailField, string> = {
   title: "Title",
   applied_on: "Applied date",
   location: "Location",
+  office_days: "Days in office",
   posting_url: "Job posting URL",
 };
 
@@ -35,13 +37,14 @@ function savedDetails(app: Application): DetailValues {
     title: app.title,
     applied_on: app.applied_on,
     location: app.location ?? "",
+    office_days: app.office_days ? String(app.office_days) : "",
     posting_url: app.posting_url ?? "",
   };
 }
 
 /**
  * An Application's details but its Company and Title, to edit on the Application page. Each detail saves by itself when it's
- * left (the applied date, when it's picked), and only if it changed, so every value saved was
+ * left (the applied date and Location, when picked), and only if it changed, so every value saved was
  * checked first and nothing typed waits on a button. A detail that fails its check shows why beside
  * it, keeps what was typed, and isn't sent. Each has its own save status, beside its label.
  *
@@ -58,6 +61,7 @@ export function DetailsForm({ app }: { app: Application }) {
     title: useSaveStatus(),
     applied_on: useSaveStatus(),
     location: useSaveStatus(),
+    office_days: useSaveStatus(),
     posting_url: useSaveStatus(),
   };
 
@@ -77,13 +81,13 @@ export function DetailsForm({ app }: { app: Application }) {
   });
 
   function commit(name: DetailField, value: string) {
-    const next = value.trim();
-    if (next === saved[name]) return;
-    if (!details.checkField(name, next || null)) return;
+    if (value.trim() === saved[name]) return;
+    const next = apiValue(name, value);
+    if (!details.checkField(name, next)) return;
+    // Days in office are picked under Hybrid: sending it too keeps them valid however saves interleave.
+    const changes = name === "office_days" ? { location: "hybrid" as const, office_days: next as number | null } : { [name]: next };
     void saves[name].run(async () => {
-      const result = await updateApplicationAction(app.id, {
-        [name]: next || null,
-      });
+      const result = await updateApplicationAction(app.id, changes);
       if (!result.ok && result.fieldErrors) details.setFieldErrors((prev) => ({ ...prev, ...result.fieldErrors }));
       return result;
     });

@@ -16,6 +16,14 @@ export const OUTCOMES = [
 ] as const;
 export type Outcome = (typeof OUTCOMES)[number];
 
+/** Location: how often the role is in the office (GLOSSARY.md). */
+export const LOCATIONS = ["in_office", "remote", "hybrid"] as const;
+export type Location = (typeof LOCATIONS)[number];
+
+/** For a Hybrid Location: how many days a week in the office. */
+export const OFFICE_DAYS = [1, 2, 3, 4] as const;
+export type OfficeDays = (typeof OFFICE_DAYS)[number];
+
 /** Listed in the order they usually happen in a hiring process. */
 export const INTERVIEW_KINDS = [
   "informal_chat",
@@ -43,7 +51,6 @@ export const INTERVIEW_NOTES_MAX_LENGTH = 20_000;
 export const APPLICATION_MAX_LENGTHS = {
   company: 200,
   title: 200,
-  location: 200,
   salary: 100,
   posting_url: 2_048,
 } as const;
@@ -70,7 +77,9 @@ export type Application = {
   company: string;
   title: string;
   posting_url: string | null;
-  location: string | null;
+  location: Location | null;
+  /** Days a week in the office; only for a Hybrid Location, and optional then. */
+  office_days: number | null;
   salary: string | null;
   /** ISO date, YYYY-MM-DD */
   applied_on: string;
@@ -104,6 +113,19 @@ export const STATUS_OPTIONS: Record<Status, Option> = {
   done: { label: "Done" },
 };
 
+export const LOCATION_OPTIONS: Record<Location, Option> = {
+  in_office: { label: "In-Office" },
+  remote: { label: "Remote" },
+  hybrid: { label: "Hybrid" },
+};
+
+/** The Location as one line of text: "In-Office", "Remote", "Hybrid - 3x a Week", or null when unset. */
+export function locationText({ location, office_days }: Pick<Application, "location" | "office_days">) {
+  if (!location) return null;
+  const label = LOCATION_OPTIONS[location].label;
+  return location === "hybrid" && office_days ? `${label} - ${office_days}x a Week` : label;
+}
+
 export const OUTCOME_OPTIONS: Record<Outcome, Option> = {
   offer: { label: "Offer" },
   rejected: { label: "Rejected" },
@@ -130,7 +152,6 @@ export const INTERVIEW_OPTIONS: Record<InterviewKind, Option> = {
   strategy_and_values_alignment: { label: "Strategy & Values Alignment" },
   people_management: { label: "People Management" },
 };
-
 
 export function isDone(app: Application) {
   return app.status === "done";

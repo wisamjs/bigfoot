@@ -51,7 +51,7 @@ const technical = interview("i1", {
 });
 const birch = application("birch", {
   company: "Birch",
-  location: "Remote",
+  location: "remote",
   salary: "$150k",
   interviews: [technical],
 });
@@ -238,29 +238,63 @@ describe("the Interviews", () => {
 
 describe("editing an Application", () => {
   it("saves each detail when it's left, trimmed, with a cleared optional field as empty", async () => {
-    const { user, dialog } = await openBirch();
-    await user.clear(within(dialog).getByLabelText("Location"));
-    await user.type(within(dialog).getByLabelText("Location"), "  Toronto ");
+    const { user, dialog } = await openBirch({ ...birch, posting_url: "https://old.test" });
+    await user.clear(within(dialog).getByLabelText("Job posting URL"));
+    await user.type(within(dialog).getByLabelText("Job posting URL"), "  https://birch.test/1 ");
     expect(actions.updateApplicationAction).not.toHaveBeenCalled();
     await user.tab();
     expect(actions.updateApplicationAction).toHaveBeenCalledTimes(1);
     expect(actions.updateApplicationAction).toHaveBeenLastCalledWith("birch", {
-      location: "Toronto",
+      posting_url: "https://birch.test/1",
     });
 
-    await user.clear(within(dialog).getByLabelText("Location"));
+    await user.clear(within(dialog).getByLabelText("Job posting URL"));
     await user.tab();
     expect(actions.updateApplicationAction).toHaveBeenCalledTimes(2);
     expect(actions.updateApplicationAction).toHaveBeenLastCalledWith("birch", {
-      location: null,
+      posting_url: null,
     });
+  });
+
+  it("saves the Location as soon as it's picked, and clears it when the picked one is picked again", async () => {
+    const { user, dialog } = await openBirch();
+    const location = within(dialog).getByRole("radiogroup", { name: "Location" });
+    expect(within(location).getByRole("radio", { name: "Remote" })).toBeChecked();
+
+    await user.click(within(location).getByRole("radio", { name: "In-Office" }));
+    expect(actions.updateApplicationAction).toHaveBeenLastCalledWith("birch", { location: "in_office" });
+
+    await user.click(within(location).getByRole("radio", { name: "In-Office" }));
+    expect(actions.updateApplicationAction).toHaveBeenLastCalledWith("birch", { location: null });
+  });
+
+  it("asks for days in office only for Hybrid, and saves them with it", async () => {
+    const { user, dialog } = await openBirch();
+    expect(within(dialog).queryByRole("radiogroup", { name: "Days in office" })).not.toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("radio", { name: "Hybrid" }));
+    expect(actions.updateApplicationAction).toHaveBeenLastCalledWith("birch", { location: "hybrid" });
+    const days = within(dialog).getByRole("radiogroup", { name: "Days in office" });
+    expect(within(days).getAllByRole("radio").map((r) => r.textContent)).toEqual(["1", "2", "3", "4"]);
+
+    await user.click(within(days).getByRole("radio", { name: "3 days a week" }));
+    expect(actions.updateApplicationAction).toHaveBeenLastCalledWith("birch", { location: "hybrid", office_days: 3 });
+
+    await user.click(within(dialog).getByRole("radio", { name: "Remote" }));
+    expect(within(dialog).queryByRole("radiogroup", { name: "Days in office" })).not.toBeInTheDocument();
+  });
+
+  it("shows a Hybrid Application's days in office as picked", async () => {
+    const { dialog } = await openBirch({ ...birch, location: "hybrid", office_days: 2 });
+    const days = within(dialog).getByRole("radiogroup", { name: "Days in office" });
+    expect(within(days).getByRole("radio", { name: "2 days a week" })).toBeChecked();
   });
 
   it("sends nothing for a detail that was left unchanged", async () => {
     const { user, dialog } = await openBirch();
     await user.click(within(dialog).getByLabelText("Job posting URL"));
     await user.tab();
-    await user.type(within(dialog).getByLabelText("Location"), "x{Backspace}");
+    await user.type(within(dialog).getByLabelText("Job posting URL"), "x{Backspace}");
     await user.tab();
     expect(actions.updateApplicationAction).not.toHaveBeenCalled();
   });
@@ -286,10 +320,10 @@ describe("editing an Application", () => {
 
   it("keeps a detail being typed in when another one's save lands", async () => {
     const { user, dialog, rerender } = await openBirch();
-    await user.type(within(dialog).getByLabelText("Location"), " II");
-    rerender(<Editor app={{ ...birch, posting_url: "https://toronto.test" }} />);
-    expect(within(dialog).getByLabelText("Location")).toHaveValue("Remote II");
-    expect(within(dialog).getByLabelText("Job posting URL")).toHaveValue("https://toronto.test");
+    await user.type(within(dialog).getByLabelText("Job posting URL"), "https://birch.test");
+    rerender(<Editor app={{ ...birch, location: "in_office" }} />);
+    expect(within(dialog).getByLabelText("Job posting URL")).toHaveValue("https://birch.test");
+    expect(within(dialog).getByRole("radio", { name: "In-Office" })).toBeChecked();
   });
 
   it("has no Save details button", async () => {
@@ -344,12 +378,12 @@ describe("editing an Application", () => {
   it("shows why a save failed", async () => {
     vi.mocked(actions.updateApplicationAction).mockResolvedValue({
       ok: false,
-      error: "Location is too long",
+      error: "Job posting URL is too long",
     });
     const { user, dialog } = await openBirch();
-    await user.type(within(dialog).getByLabelText("Location"), "x");
+    await user.type(within(dialog).getByLabelText("Job posting URL"), "https://x.test");
     await user.tab();
-    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Location is too long");
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Job posting URL is too long");
   });
 });
 
@@ -418,9 +452,8 @@ describe("save status beside each field (BIG-118)", () => {
     expect(await screen.findByText("Saved")).toBeInTheDocument();
     expect(statuses()).toEqual(["Status: Saved"]);
 
-    await user.type(within(page).getByLabelText("Location"), "Remote");
-    await user.tab();
-    expect(statuses()).toContain("Location: Saved");
+    await user.click(within(page).getByRole("radio", { name: "Remote" }));
+    await waitFor(() => expect(statuses()).toContain("Location: Saved"));
   });
 
   it("opens the Add Interview page with this Application chosen, and creates nothing itself", async () => {

@@ -58,7 +58,6 @@ function poisoned(payload: string, url: string) {
   return application("x", {
     company: payload,
     title: payload,
-    location: payload,
     salary: payload,
     posting_url: url,
     is_waiting: false,
@@ -88,7 +87,6 @@ describe.each(XSS_TEXT.map((payload, n) => [payload, XSS_URLS[n]] as const))("%j
       </>,
     );
     expect(screen.getByRole("heading", { level: 1, name: payload.trim() })).toBeInTheDocument();
-    expect(screen.getByLabelText("Location")).toHaveValue(payload);
     // Interview notes show as the first line of the Interview's row, which opens its Interview page.
     expect(screen.getByRole("link", { name: /^Open Interview: / })).toHaveTextContent(payload.trim().split("\n")[0]);
     expect(screen.queryByRole("link", { name: /job posting/ })).not.toBeInTheDocument();
@@ -148,14 +146,6 @@ describe("the edit forms on the Application page", () => {
     }
     return { user, fill };
   }
-
-  it.each(XSS_TEXT)("send %j exactly as typed, from the details", async (payload) => {
-    const { user, fill } = await openBirch();
-    await fill("Location", payload);
-    await user.tab();
-    expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { location: payload.trim() });
-    expectNothingInjected();
-  });
 
   it.each(XSS_URLS.filter((url) => url.trim() === url))(
     "refuse Posting link %j beside the field, and send nothing",
@@ -222,7 +212,7 @@ describe("the Add form", () => {
 
   it("names every missing or too-long field at once, and focuses the first", async () => {
     const { user, panel, fill } = await openAdd();
-    await fill("Location", "x".repeat(201));
+    await fill("Job posting URL", `https://example.com/${"x".repeat(2100)}`);
     await user.click(within(panel).getByRole("button", { name: "Add Application" }));
 
     expect(within(panel).getByLabelText("Company")).toHaveFocus();

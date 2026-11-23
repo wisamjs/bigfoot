@@ -21,11 +21,11 @@ export const Add: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.type(canvas.getByRole("textbox", { name: /^Company/ }), " Shopify ");
     await userEvent.type(canvas.getByRole("textbox", { name: /^Title/ }), "Senior Developer");
-    await userEvent.type(canvas.getByRole("textbox", { name: /^Location/ }), "Ottawa");
+    await userEvent.click(canvas.getByRole("radio", { name: "Remote" }));
     await userEvent.click(canvas.getByRole("button", { name: "Add Application" }));
     await waitFor(() =>
       expect(createApplicationAction).toHaveBeenCalledWith(
-        expect.objectContaining({ company: "Shopify", title: "Senior Developer", location: "Ottawa" }),
+        expect.objectContaining({ company: "Shopify", title: "Senior Developer", location: "remote" }),
       ),
     );
   },

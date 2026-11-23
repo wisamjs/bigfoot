@@ -28,6 +28,7 @@ function sample(
     title,
     posting_url: null,
     location: null,
+    office_days: null,
     salary: null,
     applied_on: "2026-11-01",
     status: options.offer ? "done" : "in_progress",
