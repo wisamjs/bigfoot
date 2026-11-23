@@ -51,6 +51,7 @@ __pycache__/
 __pycache__/
 .venv/
 .pytest_cache/
+.coverage
 
 # Storybook (npm run build-storybook)
 /storybook-static/

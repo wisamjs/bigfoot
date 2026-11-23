@@ -227,6 +227,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Vitest's HTML coverage report.
     "coverage/**",
+    // The API's installed packages: pytest-cov's coverage package ships JavaScript.
+    "api/.venv/**",
     // npm run build-storybook's output.
     "storybook-static/**",
     // Claude Code worktrees: other branches' checkouts, linted in their own sessions.
