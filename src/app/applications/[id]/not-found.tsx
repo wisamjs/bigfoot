@@ -1,19 +1,20 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { Container } from "@/components/ui/container";
+import { ApplicationNotFound, NOT_FOUND_TITLE } from "@/features/applications/application-not-found";
+import { AppFooter } from "@/features/shell/app-footer";
 import { AppHeader } from "@/features/shell/app-header";
-import { FormPage } from "@/features/shell/form-page";
+import { getApplications } from "@/lib/api";
 import { getCurrentUser } from "@/lib/dal";
 
-const TITLE = "Application not found";
-
 export const metadata: Metadata = {
-  title: `${TITLE} · Bigfoot`,
+  title: `${NOT_FOUND_TITLE} · Bigfoot`,
 };
 
 /** Shown for a deleted Application, a malformed id and another job seeker's Application alike. */
-export default function ApplicationNotFound() {
+export default function ApplicationNotFoundPage() {
   return (
-    <Suspense fallback={<FormPage header={<AppHeader current="/dashboard" />} title={TITLE} />}>
+    <Suspense fallback={<Layout header={<AppHeader current="/dashboard" />} applications={[]} />}>
       <NotFound />
     </Suspense>
   );
@@ -21,11 +22,25 @@ export default function ApplicationNotFound() {
 
 async function NotFound() {
   const user = await getCurrentUser();
+  const applications = await getApplications(user.id);
   return (
-    <FormPage header={<AppHeader user={user} current="/dashboard" />} title={TITLE}>
-      <p className="m-0 text-base leading-[1.625] text-body">
-        It may have been deleted, or the link may be wrong. Go back to the Dashboard to find it.
-      </p>
-    </FormPage>
+    <Layout
+      header={<AppHeader user={user} current="/dashboard" />}
+      applications={applications.map(({ id, company, title }) => ({ id, company, title }))}
+    />
+  );
+}
+
+function Layout({ header, applications }: { header: React.ReactNode; applications: { id: string; company: string; title: string }[] }) {
+  return (
+    <>
+      {header}
+      <main id="main" className="py-12">
+        <Container>
+          <ApplicationNotFound applications={applications} />
+        </Container>
+      </main>
+      <AppFooter />
+    </>
   );
 }

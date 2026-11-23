@@ -15,6 +15,8 @@ import { DashboardBackLink } from "@/features/shell/dashboard-link";
  * A `heading` replaces the title, subtitle and badge, for a page that edits them in place. A
  * `guard` (UnsavedChanges) wraps the heading and the content together, so leaving with something
  * typed in either asks first; the page passes it, as shell code can't import from a feature.
+ * A `wide` page, such as an Application's (BIG-174), lays out its own heading and cards: it uses
+ * the container's full width, and its content, once loaded, replaces the heading and the card.
  */
 export function FormPage({
   header,
@@ -25,6 +27,7 @@ export function FormPage({
   back,
   notice,
   guard: Guard,
+  wide = false,
   children,
 }: {
   header: ReactNode;
@@ -35,37 +38,44 @@ export function FormPage({
   back?: ReactNode;
   notice?: ReactNode;
   guard?: ComponentType<{ children: ReactNode }>;
+  wide?: boolean;
   children?: ReactNode;
 }) {
   const column = (
     <>
       {back ?? <DashboardBackLink />}
       {notice}
-      {heading ?? (
-        <div>
-          <h1 className="m-0 text-[32px] font-bold leading-[1.1] text-heading md:text-[40px]">{title}</h1>
-          {Boolean(subtitle || badge) && (
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-              {subtitle && <p className="m-0 text-base leading-[1.7] text-body">{subtitle}</p>}
-              {badge}
-            </div>
-          )}
-        </div>
-      )}
-      <div className="card p-6">{children}</div>
+      {wide && children ? children : (heading ?? <TitleBlock title={title} subtitle={subtitle} badge={badge} />)}
+      {!wide && <div className="card p-6">{children}</div>}
     </>
   );
+
   return (
     <>
       {header}
       <main id="main" className="py-12">
         <Container>
-          <div className="mx-auto flex max-w-[768px] flex-col gap-6">
+          <div className={`mx-auto flex flex-col gap-6 ${wide ? "" : "max-w-[768px]"}`}>
             {Guard ? <Guard>{column}</Guard> : column}
           </div>
         </Container>
       </main>
       <AppFooter />
     </>
+  );
+}
+
+/** The page's title, with its subtitle and badge under it. */
+function TitleBlock({ title, subtitle, badge }: { title: string; subtitle?: string; badge?: ReactNode }) {
+  return (
+    <div>
+      <h1 className="m-0 text-[32px] font-bold leading-[1.1] text-heading md:text-[40px]">{title}</h1>
+      {Boolean(subtitle || badge) && (
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+          {subtitle && <p className="m-0 text-base leading-[1.7] text-body">{subtitle}</p>}
+          {badge}
+        </div>
+      )}
+    </div>
   );
 }

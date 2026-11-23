@@ -34,6 +34,7 @@ function NewApplicationFields() {
     applied_on: "",
     location: "",
     office_days: "",
+    salary: "",
     posting_url: "",
   });
   // Today is the viewer's, which the server doesn't know: until hydration, Applied shows no date.
@@ -54,7 +55,10 @@ function NewApplicationFields() {
     e.preventDefault();
     // The submit button is only aria-disabled while saving, so it keeps focus; refuse a second submit here.
     if (tracker.saving) return;
-    const fields = Object.fromEntries(DETAIL_FIELDS.map((name) => [name, apiValue(name, values[name])]));
+    // Salary is the Application page's to fill in, not this form's (BIG-163).
+    const fields = Object.fromEntries(
+      DETAIL_FIELDS.filter((name) => name !== "salary").map((name) => [name, apiValue(name, values[name])]),
+    );
     if (!details.check(fields, { creating: true })) return;
     void tracker
       .run(() => createApplicationAction(fields))
