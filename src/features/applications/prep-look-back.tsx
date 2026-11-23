@@ -105,7 +105,7 @@ export function TakeawayShowsOn({ showsOn }: { showsOn: PrepTakeaway[] }) {
   const today = useToday();
   if (showsOn.length === 0) return null;
   return (
-    <ul aria-label="Shows on the prep for" className="m-0 mt-3 flex list-none flex-col gap-1 p-0">
+    <ul aria-label="Shows on the prep for" className="m-0 mt-3 flex list-none flex-col gap-1 p-0 text-sm leading-[1.4]">
       {showsOn.map(({ rule, application, interview }) => {
         const kind = INTERVIEW_OPTIONS[interview.kind].label;
         const when = today ? relativeDays(calendarDaysBetween(today, new Date(interview.at))) : null;
@@ -113,14 +113,15 @@ export function TakeawayShowsOn({ showsOn }: { showsOn: PrepTakeaway[] }) {
           <li key={rule}>
             <Link
               href={interviewHref(application.id, interview.id)}
-              className="touch-target inline-flex items-center gap-1.5 rounded-control text-sm font-medium text-fg-brand transition-colors hover:text-fg-brand-strong"
+              // Left-aligned, the arrow inline after the last word, however the text wraps.
+              className="touch-target justify-start rounded-control text-left text-sm font-medium text-fg-brand transition-colors hover:text-fg-brand-strong"
             >
-              <span>
+              <span className="break-words">
                 {rule === "same_application"
                   ? `Shows on the prep for ${kind}${when ? ` · ${when}` : ""}`
                   : `Shows on the prep for your next ${kind} · ${application.company}${when ? `, ${when}` : ""}`}
+                <ArrowRight className="ml-1 inline size-4 align-[-0.2em]" aria-hidden />
               </span>
-              <ArrowRight className="size-4 shrink-0" aria-hidden />
             </Link>
           </li>
         );
