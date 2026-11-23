@@ -1,7 +1,8 @@
 import "server-only";
 import * as Sentry from "@sentry/nextjs";
 import { SignJWT } from "jose";
-import type { Application, ApplicationFields, Interview, InterviewFields } from "@/lib/applications";
+import { cacheLife, cacheTag } from "next/cache";
+import { applicationsTag, type Application, type ApplicationFields, type Interview, type InterviewFields } from "@/lib/applications";
 import { jobSeekerTag } from "@/lib/sentry";
 
 // Client for the FastAPI service (api/). Every request carries a short-lived token naming the
@@ -34,10 +35,20 @@ async function token(jobSeekerId: string) {
     .sign(new TextEncoder().encode(secret));
 }
 
+/** Names the job seeker to Sentry (a hash only) so errors in the requests that follow carry it. */
+async function identify(jobSeekerId: string) {
+  Sentry.setUser({ id: await jobSeekerTag(jobSeekerId) });
+}
+
 async function request<T>(jobSeekerId: string, path: string, init: { method?: string; body?: unknown } = {}) {
   // Errors in this request name the job seeker by a hash only. Sentry's fetch instrumentation
   // adds the sentry-trace and baggage headers, so the API's spans join this trace.
-  Sentry.setUser({ id: await jobSeekerTag(jobSeekerId) });
+  await identify(jobSeekerId);
+  return send<T>(jobSeekerId, path, init);
+}
+
+/** `request` without the Sentry call, for code that runs inside a cache (`use cache`) and so only on a miss. */
+async function send<T>(jobSeekerId: string, path: string, init: { method?: string; body?: unknown } = {}) {
   const res = await fetch(`${API_URL}${path}`, {
     method: init.method ?? "GET",
     headers: {
@@ -151,6 +162,30 @@ export function revokeAccessToken(jobSeekerId: string, id: string) {
 
 export function listApplications(jobSeekerId: string) {
   return request<Application[]>(jobSeekerId, "/applications");
+}
+
+/**
+ * The job seeker's Applications, kept for a few minutes so going back to a page doesn't wait on the
+ * API again (docs/adr/0006). Their changes through the Server Actions expire it at once. Changes made
+ * with an Access token (docs/adr/0003, such as the calendar cron) go straight to the API, so they show
+ * once the lifetime below runs out. Use this for pages; `listApplications` always asks the API.
+ */
+export async function getApplications(jobSeekerId: string) {
+  // Outside the cached function: inside it, the call would run only on a miss.
+  await identify(jobSeekerId);
+  return cachedApplications(jobSeekerId);
+}
+
+// Not exported, so no caller can read another job seeker's Applications by passing their id; the
+// id is part of the cache key and of the tag.
+async function cachedApplications(jobSeekerId: string) {
+  "use cache";
+  cacheTag(applicationsTag(jobSeekerId));
+  // stale: the browser reuses a page it already holds, with no request, for 5 minutes, so going back
+  // shows it at once. revalidate: after a minute the server refreshes the read in the background on
+  // the next visit. expire: after an hour unused, the next visit waits for the API.
+  cacheLife({ stale: 300, revalidate: 60, expire: 3600 });
+  return send<Application[]>(jobSeekerId, "/applications");
 }
 
 export function createApplication(jobSeekerId: string, fields: Partial<ApplicationFields>) {

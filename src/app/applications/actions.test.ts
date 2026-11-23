@@ -1,4 +1,4 @@
-import { refresh } from "next/cache";
+import { refresh, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "@/lib/api";
@@ -25,7 +25,7 @@ vi.mock("@/lib/api", async () => {
   };
 });
 vi.mock("@/lib/dal", () => ({ findCurrentUser: vi.fn() }));
-vi.mock("next/cache", () => ({ refresh: vi.fn() }));
+vi.mock("next/cache", () => ({ refresh: vi.fn(), updateTag: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 // @/lib/api imports server-only, which throws outside a React Server Components build.
 vi.mock("server-only", () => ({}));
@@ -42,6 +42,8 @@ describe("dashboard Server Actions", () => {
     expect(await updateApplicationAction("app-1", { company: "Birch" })).toEqual({ ok: true });
     expect(api.updateApplication).toHaveBeenCalledWith("seeker-1", "app-1", { company: "Birch" });
     expect(refresh).toHaveBeenCalledOnce();
+    // The cached read the Dashboard and Application page share is expired, for this job seeker only.
+    expect(updateTag).toHaveBeenCalledExactlyOnceWith("applications:seeker-1");
 
     await deleteInterviewAction("app-1", "int-1");
     expect(api.deleteInterview).toHaveBeenCalledWith("seeker-1", "app-1", "int-1");
@@ -116,11 +118,14 @@ describe("adding and deleting an Application", () => {
     expect(api.deleteApplication).toHaveBeenCalledWith("seeker-1", "app-1");
     expect(redirect).toHaveBeenCalledWith("/dashboard");
     expect(refresh).not.toHaveBeenCalled();
+    // The Dashboard it goes to must not list the deleted Application from the cache.
+    expect(updateTag).toHaveBeenCalledExactlyOnceWith("applications:seeker-1");
   });
 
   it("stay on the page and say why when deleting fails", async () => {
     vi.mocked(api.deleteApplication).mockRejectedValue(new api.ApiError(404, "Application not found"));
     expect(await deleteApplicationAction("app-1")).toEqual({ ok: false, error: "Application not found" });
     expect(redirect).not.toHaveBeenCalled();
+    expect(updateTag).not.toHaveBeenCalled();
   });
 });

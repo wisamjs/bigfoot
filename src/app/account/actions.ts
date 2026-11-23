@@ -1,10 +1,11 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { refresh, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { signOut } from "@/auth";
 import { ACCOUNT_DELETED_PATH, DELETE_CONFIRMATION } from "@/lib/account";
 import * as api from "@/lib/api";
+import { applicationsTag } from "@/lib/applications";
 import { findCurrentUser } from "@/lib/dal";
 import { accessTokenNameError } from "@/lib/validation";
 
@@ -73,6 +74,7 @@ export async function deleteAccountAction(_: DeleteAccountState, form: FormData)
     console.error(error);
     return { error: "Couldn’t reach Bigfoot’s server. Nothing was deleted. Try again." };
   }
+  updateTag(applicationsTag(user.id));
   await signOut({ redirectTo: ACCOUNT_DELETED_PATH });
   return { error: null };
 }

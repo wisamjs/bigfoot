@@ -1,16 +1,17 @@
-import { refresh } from "next/cache";
+import { refresh, updateTag } from "next/cache";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "@/lib/api";
+import { signOut } from "@/auth";
 import { findCurrentUser } from "@/lib/dal";
-import { createAccessTokenAction, revokeAccessTokenAction } from "./actions";
+import { createAccessTokenAction, deleteAccountAction, revokeAccessTokenAction } from "./actions";
 
 // The API client is mocked at its module, keeping ApiError real so actions can tell it apart.
 vi.mock("@/lib/api", async () => {
   const { ApiError } = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
-  return { ApiError, createAccessToken: vi.fn(), revokeAccessToken: vi.fn() };
+  return { ApiError, createAccessToken: vi.fn(), revokeAccessToken: vi.fn(), deleteAccount: vi.fn() };
 });
 vi.mock("@/lib/dal", () => ({ findCurrentUser: vi.fn() }));
-vi.mock("next/cache", () => ({ refresh: vi.fn() }));
+vi.mock("next/cache", () => ({ refresh: vi.fn(), updateTag: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 // actions.ts imports Auth.js for signing out, which needs a Next.js server.
 vi.mock("@/auth", () => ({ signOut: vi.fn() }));
@@ -118,5 +119,26 @@ describe("revokeAccessTokenAction", () => {
 
     vi.mocked(api.revokeAccessToken).mockRejectedValue(new api.ApiError(500, "Request failed (500)"));
     expect(await revokeAccessTokenAction("t1")).toEqual({ ok: false, error: "Request failed (500)" });
+  });
+});
+
+describe("deleteAccountAction", () => {
+  function confirmation(text: string) {
+    const data = new FormData();
+    data.set("confirmation", text);
+    return data;
+  }
+
+  it("deletes the account, drops the job seeker's cached Applications and signs them out", async () => {
+    await deleteAccountAction({ error: null }, confirmation("DELETE"));
+    expect(api.deleteAccount).toHaveBeenCalledWith("seeker-1");
+    expect(updateTag).toHaveBeenCalledExactlyOnceWith("applications:seeker-1");
+    expect(signOut).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the cache when the account isn't deleted", async () => {
+    await deleteAccountAction({ error: null }, confirmation("nope"));
+    expect(api.deleteAccount).not.toHaveBeenCalled();
+    expect(updateTag).not.toHaveBeenCalled();
   });
 });
