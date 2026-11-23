@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayKey, groupByDay, inWindow, monthStart, monthWeeks, monthWindow, upcomingWindow } from "./calendar";
+import { dayKey, groupByDay, inWindow, monthOffset, monthParam, monthStart, monthWeeks, monthWindow, upcomingWindow } from "./calendar";
 
 const monthName = (month: number) => new Intl.DateTimeFormat(undefined, { month: "long" }).format(new Date(2026, month, 1));
 
@@ -135,5 +135,25 @@ describe("groupByDay", () => {
     );
     expect([...days.keys()]).toEqual(["2026-11-16", "2026-11-17"]);
     expect(days.get("2026-11-16")?.map((a) => a.id)).toEqual(["early", "late"]);
+  });
+});
+
+describe("monthParam and monthOffset", () => {
+  const today = new Date(2026, 10, 22); // 22 November 2026
+
+  it("writes a month as YYYY-MM", () => {
+    expect(monthParam(monthStart(today, 1))).toBe("2026-12");
+    expect(monthParam(monthStart(today, -11))).toBe("2025-12");
+  });
+
+  it("reads it back as an offset from this month, across years", () => {
+    expect(monthOffset("2026-11", today)).toBe(0);
+    expect(monthOffset("2026-12", today)).toBe(1);
+    expect(monthOffset("2027-02", today)).toBe(3);
+    expect(monthOffset("2025-12", today)).toBe(-11);
+  });
+
+  it.each([null, "", "2026-13", "2026-1", "november", "2026-12-04"])("reads %s as this month", (param) => {
+    expect(monthOffset(param, today)).toBe(0);
   });
 });

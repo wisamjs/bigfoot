@@ -8,6 +8,7 @@ import {
   createApplicationAction,
   deleteApplicationAction,
   deleteInterviewAction,
+  deleteInterviewAndLeaveAction,
   updateApplicationAction,
   updateInterviewAction,
 } from "./actions";
@@ -127,5 +128,21 @@ describe("adding and deleting an Application", () => {
     expect(await deleteApplicationAction("app-1")).toEqual({ ok: false, error: "Application not found" });
     expect(redirect).not.toHaveBeenCalled();
     expect(updateTag).not.toHaveBeenCalled();
+  });
+});
+
+describe("deleting an Interview from its own page", () => {
+  it("deletes it and goes to the dashboard, which says so, without refreshing the page it was on", async () => {
+    await deleteInterviewAndLeaveAction("app-1", "int-1");
+    expect(api.deleteInterview).toHaveBeenCalledWith("seeker-1", "app-1", "int-1");
+    expect(redirect).toHaveBeenCalledWith("/dashboard?deleted=interview");
+    expect(refresh).not.toHaveBeenCalled();
+    expect(updateTag).toHaveBeenCalledExactlyOnceWith("applications:seeker-1");
+  });
+
+  it("stays on the page and says why when deleting fails", async () => {
+    vi.mocked(api.deleteInterview).mockRejectedValue(new api.ApiError(404, "Interview not found"));
+    expect(await deleteInterviewAndLeaveAction("app-1", "int-1")).toEqual({ ok: false, error: "Interview not found" });
+    expect(redirect).not.toHaveBeenCalled();
   });
 });

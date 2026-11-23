@@ -101,3 +101,18 @@ export function groupByDay<T>(items: T[], at: (item: T) => string): Map<string, 
   }
   return days;
 }
+
+/** A month as the dashboard's `month` search param, YYYY-MM. */
+export function monthParam(start: Date): string {
+  return dayKey(start).slice(0, 7);
+}
+
+/**
+ * How many months `param` (YYYY-MM) is from the month `today` is in: the calendar's offset. A
+ * missing or malformed one is this month (0).
+ */
+export function monthOffset(param: string | null, today: Date): number {
+  const match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(param ?? "");
+  if (!match) return 0;
+  return (Number(match[1]) - today.getFullYear()) * 12 + (Number(match[2]) - 1 - today.getMonth());
+}

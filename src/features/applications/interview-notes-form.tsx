@@ -30,8 +30,8 @@ export function InterviewNotesForm({
   onSave,
 }: {
   interview: Interview;
-  /** "Interview 2": tells the rows apart for screen readers. */
-  label: string;
+  /** "Interview 2": tells the rows apart for screen readers. The Interview page, with one, has none. */
+  label?: string;
   /** Owned by the row, so "Saved" outlasts this form re-rendering with the saved notes. */
   tracker: SaveTracker;
   /** Checks and saves the notes with the row, which shows a missing date beside it. */
@@ -108,7 +108,7 @@ export function InterviewNotesForm({
       <div>
         <div className="mb-1 flex min-h-4 flex-wrap items-center justify-between gap-x-2 text-xs font-medium text-body">
           <label htmlFor={`notes-${interview.id}`}>
-            Interview notes<span className="sr-only">, {label}</span>
+            Interview notes{label && <span className="sr-only">, {label}</span>}
           </label>
           <span className="inline-flex flex-wrap items-center gap-3">
             {nearLimit && (
@@ -117,7 +117,7 @@ export function InterviewNotesForm({
                 characters
               </span>
             )}
-            <SaveStatus status={tracker.status} label={`${label} notes`} onRetry={tracker.retry} />
+            <SaveStatus status={tracker.status} label={label ? `${label} notes` : "Interview notes"} onRetry={tracker.retry} />
           </span>
         </div>
         <textarea

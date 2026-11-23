@@ -1,11 +1,13 @@
 // Every page route, signed out and signed in, for scripts/smoke.mjs and scripts/a11y.mjs.
 // scripts/pages.test.ts fails when a src/app page.tsx has no entry here for either state.
 //   expect    text the page must show
-//   params, application
-//             what fills a dynamic route's [id] (scripts/page-path.mjs); a page with `application`
-//             is opened by a job seeker holding scripts/dev-applications.mjs's Applications
+//   params, application, interview
+//             what fills a dynamic route's [id] and [interviewId] (scripts/page-path.mjs); a page
+//             with `application` is opened by a job seeker holding scripts/dev-applications.mjs's
+//             Applications, and `interview` names the kind of one of that Application's Interviews
 //   redirect  the page must redirect instead (a11y skips it): a path means an HTTP redirect there
-//             (src/proxy.ts); true allows the redirect a page streams while it renders
+//             (src/proxy.ts: signed-out visitors go to /sign-in with `next`); true allows the
+//             redirect a page streams while it renders
 //   states    what a click or typing opens or reveals (a dialog, a toggled column, an error); a11y
 //             checks each one, signed in as a user holding scripts/dev-applications.mjs's
 //             Applications and Access token, and `npm run capture -- --state <name>` captures one. Each step clicks
@@ -27,7 +29,7 @@ export const PAGES = [
   { path: "/terms", signedIn: true, expect: "Terms of Service" },
   { path: "/accessibility", signedIn: false, expect: "Report a barrier" },
   { path: "/accessibility", signedIn: true, expect: "Report a barrier" },
-  { path: "/dashboard", signedIn: false, redirect: true },
+  { path: "/dashboard", signedIn: false, redirect: "/sign-in" },
   {
     path: "/dashboard",
     signedIn: true,
@@ -40,7 +42,7 @@ export const PAGES = [
   },
   // A dynamic route's entry fills its [id]: `application` is the company of one of the
   // Applications from scripts/dev-applications.mjs, `params` the value itself (scripts/page-path.mjs).
-  { path: "/applications/[id]", signedIn: false, params: { id: "unknown" }, redirect: true },
+  { path: "/applications/[id]", signedIn: false, params: { id: "unknown" }, redirect: "/sign-in" },
   {
     path: "/applications/[id]",
     signedIn: true,
@@ -78,7 +80,47 @@ export const PAGES = [
     params: { id: "not-an-application" },
     expect: "Application not found",
   },
-  { path: "/applications/new", signedIn: false, redirect: true },
+  {
+    path: "/applications/[id]/interviews/[interviewId]",
+    signedIn: false,
+    params: { id: "unknown", interviewId: "unknown" },
+    redirect: "/sign-in",
+  },
+  {
+    // A Done Application's Interview (BIG-119): it opens with its Status/Outcome badge, and its
+    // completed Interview has Interview notes.
+    path: "/applications/[id]/interviews/[interviewId]",
+    signedIn: true,
+    application: "Vercel",
+    interview: "technical",
+    expect: "Done · Rejected",
+    states: [
+      {
+        name: "delete-interview-page-confirmation",
+        steps: [{ click: "button", text: "Delete Interview" }],
+        expect: "with its Interview notes",
+      },
+      {
+        // Notes over the limit (typed past the field's maxLength, as a paste could) fail their
+        // check and are never sent, so they stay unsaved and leaving asks first. A save that went
+        // through would let the job seeker leave before the prompt could be checked.
+        name: "interview-unsaved-changes-prompt",
+        steps: [
+          { fill: 'textarea[id^="notes-"]', value: "x".repeat(20_001) },
+          { click: "main a", text: "Dashboard" },
+        ],
+        expect: "You have unsaved changes.",
+      },
+    ],
+  },
+  {
+    // A deleted Interview, a malformed id and another job seeker's Interview look the same.
+    path: "/applications/[id]/interviews/[interviewId]",
+    signedIn: true,
+    params: { id: "not-an-application", interviewId: "not-an-interview" },
+    expect: "Interview not found",
+  },
+  { path: "/applications/new", signedIn: false, redirect: "/sign-in" },
   {
     path: "/applications/new",
     signedIn: true,
@@ -122,7 +164,7 @@ export const PAGES = [
       },
     ],
   },
-  { path: "/interviews/new", signedIn: false, redirect: true },
+  { path: "/interviews/new", signedIn: false, redirect: "/sign-in" },
   {
     path: "/interviews/new",
     signedIn: true,
@@ -148,7 +190,7 @@ export const PAGES = [
       },
     ],
   },
-  { path: "/account", signedIn: false, redirect: true },
+  { path: "/account", signedIn: false, redirect: "/sign-in" },
   {
     path: "/account",
     signedIn: true,

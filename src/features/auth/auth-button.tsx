@@ -7,6 +7,8 @@ type Props = {
   variant?: "brand" | "secondary" | "tertiary";
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
+  /** Where to go once signed in, as `/sign-in?next=` gave it; the action checks it again. */
+  next?: string;
 };
 
 /**
@@ -39,9 +41,10 @@ function GoogleLogo() {
 }
 
 /** Sign up / Sign in: both start the Google OAuth flow via a server action. */
-export function GoogleAuthButton({ children, variant = "brand", size = "md", className = "" }: Props) {
+export function GoogleAuthButton({ children, variant = "brand", size = "md", className = "", next }: Props) {
   return (
     <form action={signInWithGoogle} className={className}>
+      {next && <input type="hidden" name="next" value={next} />}
       <Button type="submit" variant={variant} size={size} className="w-full">
         <GoogleLogo />
         {children}

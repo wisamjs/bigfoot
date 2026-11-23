@@ -89,5 +89,6 @@ An inline `eslint-disable` names its rule and gives a reason after `--`. Today's
 `autoFocus` where a dialog moves focus on purpose, a focusable scrolling region, the calendar
 reading today's date while it renders, and the skeleton tests, which check `aria-hidden` shapes
 that have no role or text to query by, and the axe test, which writes broken markup by hand and clears
-the screen itself before `setup.ts` checks it. The XSS tests list `javascript:` URLs as payloads
+the screen itself before `setup.ts` checks it. The tests' stand-in for `next/navigation`
+(`src/test/navigation.ts`) keeps the name `useRouter` though it calls no Hooks. The XSS tests list `javascript:` URLs as payloads
 (`src/test/xss.ts`) and look for injected tags, which have no role or text to query by.

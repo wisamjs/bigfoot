@@ -5,6 +5,8 @@ import type { DatedInterview } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
 import { InterviewCalendar, InterviewCalendarSkeleton } from "./interview-calendar";
 
+vi.mock("next/navigation", () => import("@/test/navigation"));
+
 const monthName = (month: number) => new Intl.DateTimeFormat(undefined, { month: "long" }).format(new Date(2026, month, 1));
 
 beforeEach(() => {
@@ -15,6 +17,8 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  window.history.replaceState(null, "", "/dashboard");
+  sessionStorage.clear();
 });
 
 /** One Interview at 10:00 on each given day of November, with its own company. */
@@ -131,6 +135,50 @@ describe("InterviewCalendar", () => {
 
     await user.click(screen.getByRole("button", { name: /, 2 Interviews$/ }));
     expect(agendaItems()).toHaveLength(2);
+  });
+
+  it("links every agenda item, past or upcoming, to its Interview page", () => {
+    render(<InterviewCalendar interviews={[...interviewsOn(2), ...interviewsToday(16)]} />);
+    const links = within(screen.getByRole("list")).getAllByRole("link");
+    expect(links).toHaveLength(2);
+    // 2 November is past, and still opens.
+    expect(links[0]).toHaveAttribute("href", "/applications/a0/interviews/i0");
+    expect(links[0]).toHaveAccessibleName(/^Open Interview: Company 0, Technical, Monday, November 2 at /);
+    expect(links[1]).toHaveAttribute("href", "/applications/today-16/interviews/today-16");
+  });
+
+  it("keeps the month and picked day in the URL, and remembers them for ← Dashboard", async () => {
+    const user = userEvent.setup();
+    render(<InterviewCalendar interviews={interviewsOn(2, 25)} />);
+
+    await user.click(screen.getByRole("button", { name: "Next month" }));
+    expect(window.location.search).toBe("?month=2026-12");
+    expect(sessionStorage.getItem("bigfoot:dashboard-view")).toBe("?month=2026-12");
+
+    await user.click(screen.getByRole("button", { name: "Today" }));
+    expect(window.location.search).toBe("");
+    await user.click(screen.getAllByRole("button", { name: /, 1 Interview$/ })[1]);
+    expect(window.location.search).toBe("?day=2026-11-25");
+    expect(sessionStorage.getItem("bigfoot:dashboard-view")).toBe("?day=2026-11-25");
+  });
+
+  it("opens on the month and day the URL gives, as Back from an Interview page does", () => {
+    window.history.replaceState(null, "", "/dashboard?month=2026-12&day=2026-12-04");
+    const at = new Date(2026, 11, 4, 10, 0).toISOString();
+    render(
+      <InterviewCalendar
+        interviews={[{ application: application("dec", { company: "December Co" }), interview: { ...interview("dec-1", { at }), at } }]}
+      />,
+    );
+    expect(screen.getAllByText("December 2026")[0]).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /December 4/ })).toBeInTheDocument();
+    expect(agendaItems().map((li) => li.textContent)).toEqual([expect.stringContaining("December Co")]);
+  });
+
+  it("opens this month for a malformed month", () => {
+    window.history.replaceState(null, "", "/dashboard?month=soon");
+    render(<InterviewCalendar interviews={interviewsOn(25)} />);
+    expect(screen.getByRole("heading", { name: `Interviews in ${monthName(10)}` })).toBeInTheDocument();
   });
 });
 
