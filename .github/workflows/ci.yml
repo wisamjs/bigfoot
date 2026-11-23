@@ -32,6 +32,8 @@ jobs:
         if: success() || failure()
       - run: npm run tokens
         if: success() || failure()
+      - run: npm run stories
+        if: success() || failure()
       - run: npm run lint:api
         if: success() || failure()
       - run: npm run openapi -- --check

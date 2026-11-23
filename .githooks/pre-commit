@@ -1,5 +1,5 @@
 #!/bin/sh
-# npm run verify (spelling, design tokens, Python lint, the staged OpenAPI schema, types, lint,
+# npm run verify (spelling, design tokens, stories present, Python lint, the staged OpenAPI schema, types, lint,
 # then every Vitest test with the coverage floor, then the story tests in Chrome) before every commit; a failing test blocks it.
 # Committing is the verify run: AGENTS.md and the pick-up-ticket skill rely on it.
 # A commit of only .md files runs just the spelling check, as CI's review gate skips them too

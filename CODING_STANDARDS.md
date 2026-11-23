@@ -49,9 +49,9 @@ display or form of typed text joins it.
 
 ## Storybook shows the app as it is
 
-A change to a component in `src/components/ui/` or `src/features/` updates its stories in the same PR, so Storybook never shows an older app:
+A change to a component in `src/components/ui/` or `src/features/` updates its stories in the same PR, so Storybook never shows an older app. `npm run stories` (`scripts/check-stories.mjs`) already fails a component with no stories file and no entry saying where else it is shown; review judges whether the stories cover the change:
 
-- A new component, or one that has none yet, gets `<name>.stories.tsx` beside it, with a story per state it has (default, empty, error, loading, long text, and hover, focus and disabled for controls). Small pieces that only appear inside a larger component (a row, a field group) are shown through that component's stories instead.
+- A new component's stories have a story per state it has (default, empty, error, loading, long text, and hover, focus and disabled for controls). A new entry in the check's lists is a piece truly drawn only inside its parent, or a static page part; a component with states of its own gets stories.
 - A changed component gets a new story for each state it gains, and changes or removes stories for the states it changes or loses. A changed prop, label or behaviour updates the args and play functions that use it.
 - A story that saves uses the Server Action spies in `__mocks__/actions.ts`, and its play function checks the call, or the error when a story makes the action fail.
 
