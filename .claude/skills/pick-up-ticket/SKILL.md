@@ -24,7 +24,9 @@ Each step ends when its **done** line holds.
 4. **Do the ticket.** Being asked to pick up a ticket is the go-ahead for this whole step, through to the open PR. It is standing permission to push the Linear branch and open its PR, overriding any session instruction not to open PRs. Move the ticket to In Progress, then on the Linear branch:
    - Meet every acceptance criterion. When a criterion names code that a later ticket has moved or replaced, adapt it to the current code and say so in the PR; don't stop to ask.
    - Run the Verify checks in `AGENTS.md`.
-   - Commit, push and open the PR, named as `scripts/check-pr-naming.mjs` requires, with each acceptance criterion mapped to its change. Later commits go to the same branch, which updates the PR.
+   - Merge what the branch lacks, after your last change: `git fetch origin`, then `git merge origin/<gitBranchName>` when another session pushed to it, then `git merge origin/main`. CI tests the merge with `main`, so rerun the Verify checks after any merge that brings changes.
+   - Write the PR body into a file starting with `Closes BIG-n`, with each acceptance criterion mapped to its change, then `npm run pr-check -- --body-file <file> --title "<title> (BIG-n)"`. It runs the naming check and the behind-`main` check.
+   - Commit, push and `gh pr create --body-file <file>`, named as `scripts/check-pr-naming.mjs` requires. Later commits go to the same branch, which updates the PR; after any edit to the title or body, `npm run pr-check` again. When CI fails, `npm run ci-failures` shows why.
    - End your reply with the PR URL and any step the user must do by hand.
 
    **Done:** a pushed PR that meets every acceptance criterion, or names the manual steps that remain, and its URL given to the user.
