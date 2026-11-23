@@ -1,6 +1,7 @@
 import type { StorybookConfig } from "@storybook/nextjs-vite";
 
-// Storybook for the design system (src/components/ui) and a few feature components (BIG-8).
+// Storybook for the design system (src/components/ui) and the feature components (BIG-8, BIG-169).
+// Every change to a component updates its stories (CODING_STANDARDS.md, "Storybook shows the app as it is").
 // Stories sit beside their component as <name>.stories.tsx; the token page is .storybook/tokens.mdx.
 const config: StorybookConfig = {
   framework: "@storybook/nextjs-vite",

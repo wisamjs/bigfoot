@@ -47,6 +47,16 @@ raw HTML off), never `dangerouslySetInnerHTML`, which lint refuses. Forms check 
 `src/features/dashboard/xss.test.tsx` feeds XSS payloads through every display and form: a new
 display or form of typed text joins it.
 
+## Storybook shows the app as it is
+
+A change to a component in `src/components/ui/` or `src/features/` updates its stories in the same PR, so Storybook never shows an older app:
+
+- A new component, or one that has none yet, gets `<name>.stories.tsx` beside it, with a story per state it has (default, empty, error, loading, long text, and hover, focus and disabled for controls). Small pieces that only appear inside a larger component (a row, a field group) are shown through that component's stories instead.
+- A changed component gets a new story for each state it gains, and changes or removes stories for the states it changes or loses. A changed prop, label or behaviour updates the args and play functions that use it.
+- A story that saves uses the Server Action spies in `__mocks__/actions.ts`, and its play function checks the call, or the error when a story makes the action fail.
+
+Review sends back a PR that changes a component's behaviour or look without touching its stories.
+
 ## Where code goes
 
 | Folder | Holds |
