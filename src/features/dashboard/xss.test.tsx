@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/applications/actions";
 import { ApplicationEditor } from "@/features/applications/application-editor";
+import { ApplicationHeading } from "@/features/applications/application-heading";
 import { NewApplicationForm } from "@/features/applications/new-application-form";
 import { NewInterviewForm } from "@/features/applications/new-interview-form";
 import { getUpcoming } from "@/lib/applications";
@@ -80,8 +81,13 @@ describe.each(XSS_TEXT.map((payload, n) => [payload, XSS_URLS[n]] as const))("%j
   });
 
   it("shows as text on the Application page, with no Posting link", () => {
-    render(<ApplicationEditor app={poisoned(payload, url)} />);
-    expect(screen.getByLabelText("Company")).toHaveValue(payload);
+    render(
+      <>
+        <ApplicationHeading app={poisoned(payload, url)} />
+        <ApplicationEditor app={poisoned(payload, url)} />
+      </>,
+    );
+    expect(screen.getByRole("heading", { level: 1, name: payload.trim() })).toBeInTheDocument();
     expect(screen.getByLabelText("Location")).toHaveValue(payload);
     expect(screen.getByLabelText(/^Interview notes/)).toHaveValue(payload);
     expect(screen.queryByRole("link", { name: /job posting/ })).not.toBeInTheDocument();
@@ -152,10 +158,8 @@ describe("the edit forms on the Application page", () => {
 
   it.each(XSS_TEXT)("send %j exactly as typed, from the details and the Interview notes", async (payload) => {
     const { user, fill } = await openBirch();
-    await fill("Company", payload);
     await fill("Location", payload);
     await user.tab();
-    expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { company: payload.trim() });
     expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { location: payload.trim() });
 
     await fill(/^Interview notes/, payload);
@@ -246,11 +250,10 @@ describe("the Add form", () => {
     const { user, panel, fill } = await openAdd();
     await fill("Company", payload);
     await fill("Title", payload);
-    await fill("Salary", payload);
     await user.click(within(panel).getByRole("button", { name: "Add Application" }));
 
     expect(actions.createApplicationAction).toHaveBeenCalledWith(
-      expect.objectContaining({ company: payload.trim(), title: payload.trim(), salary: payload.trim() }),
+      expect.objectContaining({ company: payload.trim(), title: payload.trim() }),
     );
     expectNothingInjected();
   });

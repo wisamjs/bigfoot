@@ -39,26 +39,27 @@ export const JustAdded: Story = {
 /** A detail saves when it's left. */
 export const SaveDetail: Story = {
   play: async ({ canvas, userEvent }) => {
-    const title = canvas.getByRole("textbox", { name: /^Title/ });
-    await userEvent.clear(title);
-    await userEvent.type(title, "Senior Software Engineer");
+    const location = canvas.getByRole("textbox", { name: /^Location/ });
+    await userEvent.clear(location);
+    await userEvent.type(location, "Toronto");
     await userEvent.tab();
     await waitFor(() =>
       expect(actions.updateApplicationAction).toHaveBeenCalledWith(
         "datadog",
-        expect.objectContaining({ title: "Senior Software Engineer" }),
+        expect.objectContaining({ location: "Toronto" }),
       ),
     );
   },
 };
 
-/** A required detail left blank shows its error and isn't sent. */
+/** A detail that isn't valid shows its error and isn't sent. */
 export const DetailError: Story = {
   play: async ({ canvas, userEvent }) => {
-    const company = canvas.getByRole("textbox", { name: /^Company/ });
-    await userEvent.clear(company);
+    const posting = canvas.getByRole("textbox", { name: /^Job posting URL/ });
+    await userEvent.clear(posting);
+    await userEvent.type(posting, "not a link");
     await userEvent.tab();
-    await expect(company).toHaveAttribute("aria-invalid", "true");
+    await expect(posting).toHaveAttribute("aria-invalid", "true");
     await expect(actions.updateApplicationAction).not.toHaveBeenCalled();
   },
 };
@@ -69,10 +70,10 @@ export const SaveFails: Story = {
     mocked(actions.updateApplicationAction).mockResolvedValue({ ok: false, error: "Couldn’t reach Bigfoot’s server. Try again." });
   },
   play: async ({ canvas, userEvent }) => {
-    const title = canvas.getByRole("textbox", { name: /^Title/ });
-    await userEvent.type(title, " II");
+    const location = canvas.getByRole("textbox", { name: /^Location/ });
+    await userEvent.type(location, " area");
     await userEvent.tab();
-    await expect(await canvas.findByRole("button", { name: "Retry, Title" })).toBeVisible();
+    await expect(await canvas.findByRole("button", { name: "Retry, Location" })).toBeVisible();
   },
 };
 

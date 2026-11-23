@@ -50,9 +50,9 @@ export const PAGES = [
     expect: "Job posting URL",
     states: [
       {
-        name: "salary-revealed",
-        steps: [{ click: "button", text: "Reveal" }],
-        expect: "Job posting URL",
+        name: "heading-editing",
+        steps: [{ click: 'button[aria-label="Edit company and title"]' }],
+        expect: "Save",
       },
       {
         name: "delete-confirmation",
