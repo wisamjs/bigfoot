@@ -49,6 +49,24 @@ const lumen = application("lumen", {
   ],
 });
 
+/** Lumen Bio, Rejected the day before yesterday: its two completed Interviews, the screen with a takeaway too. */
+const rejected = {
+  ...lumen,
+  status: "done" as const,
+  outcome: "rejected" as const,
+  done_on: appliedDaysAgo(2),
+  outcome_note: "They went with an internal candidate.",
+  interviews: lumen.interviews
+    .filter((i) => i.completed)
+    .map((i) => (i.id === "screen" ? { ...i, takeaway: "Ask the recruiter about internal candidates early." } : i)),
+};
+
+/** Today in the viewer's time zone, as the Done date a pick of Mark <Outcome> sends. */
+function todayLocal() {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+}
+
 const quillon = application("quillon", {
   company: "Quillon Learning",
   title: "Senior Engineering Manager",
@@ -116,6 +134,9 @@ export const Default: Story = {
     await expect(within(completed).getByRole("list", { name: "They asked" })).toBeVisible();
     await expect(within(completed).getByText(/Lead with the decision, then the trade-off, then what I would measure/)).toBeVisible();
     await expect(canvas.queryByText("$210k–$240k")).not.toBeInTheDocument();
+    // In Progress: no Outcome card, and no Ended in the Details card.
+    await expect(canvas.queryByRole("heading", { name: "Rejected" })).not.toBeInTheDocument();
+    await expect(canvas.queryByText("Ended")).not.toBeInTheDocument();
     const rows = canvas.getAllByRole("link", { name: /^Open Interview: / });
     await expect(rows.map((row) => row.textContent)).toEqual([
       "Open Interview: Leadership",
@@ -143,19 +164,124 @@ export const JustAdded: Story = {
   },
 };
 
-/** Done with an Offer, its Interviews all completed and grey on the strip: the hiring process is over. */
+/**
+ * Done with an Offer, marked before Bigfoot recorded when: its Interviews all completed and grey on
+ * the strip (the hiring process is over), and the Outcome card and Ended with no Done date.
+ */
 export const Offer: Story = {
   args: {
     app: {
       ...lumen,
       status: "done",
       outcome: "offer",
+      is_waiting: false,
       interviews: lumen.interviews.map((i) => ({ ...i, at: i.completed ? i.at : daysFromNow(-3), completed: true })),
     },
   },
   play: async ({ canvas }) => {
     await expect(completedBars(canvas, "bg-tone-gray-fg")).toHaveLength(4);
     await expect(completedBars(canvas, "bg-fg-success-strong")).toHaveLength(0);
+    await expect(canvas.getByRole("heading", { level: 2, name: "Offer" })).toBeVisible();
+    await expect(canvas.getByText("After 4 Interviews.")).toBeVisible();
+    await expect(canvas.getByText("Ended").nextElementSibling).toHaveTextContent("Not added · Offer");
+  },
+};
+
+/**
+ * Rejected, with a Done date and an Outcome note: the Outcome card above the Interviews card, with
+ * the takeaways of both Interviews, newest first, and Ended (the Done date and Outcome) in Details.
+ */
+export const Done: Story = {
+  args: { app: rejected },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("heading", { level: 2, name: "Rejected" })).toBeVisible();
+    await expect(canvas.getByText(/^After 2 Interviews, 24 days from applying\./)).toBeVisible();
+    await expect(canvas.getByText("They went with an internal candidate.")).toBeVisible();
+    await expect(canvas.getByText("What you’re taking from it")).toBeVisible();
+    await expect(canvas.getByText("From Hiring Manager", { exact: false })).toBeVisible();
+    const ended = canvas.getByText("Ended").nextElementSibling;
+    await expect(ended).toHaveTextContent(/ · Rejected$/);
+    await expect(ended).not.toHaveTextContent("Not added");
+    // The Outcome card comes before the Interviews card.
+    const outcome = canvas.getByRole("region", { name: "Rejected" });
+    const interviews = canvas.getByRole("region", { name: "Interviews" });
+    await expect(outcome.compareDocumentPosition(interviews) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  },
+};
+
+/** Done without a Done date, Outcome note or takeaways: the card has only the Outcome and the Interviews counted. */
+export const DoneWithNothingAdded: Story = {
+  args: {
+    app: {
+      ...rejected,
+      done_on: null,
+      outcome_note: null,
+      interviews: rejected.interviews.map((i) => ({ ...i, takeaway: null })),
+    },
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("After 2 Interviews.")).toBeVisible();
+    await expect(canvas.queryByText("What you’re taking from it")).not.toBeInTheDocument();
+    await expect(canvas.getByText("Ended").nextElementSibling).toHaveTextContent("Not added · Rejected");
+  },
+};
+
+/** A Done Application's details add its Done date and Outcome note as fields; the note saves when it's left. */
+export const EditDoneDetails: Story = {
+  args: { app: rejected },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Edit details" }));
+    await expect(canvas.getByRole("button", { name: /^Done date, / })).toBeVisible();
+    const note = canvas.getByRole("textbox", { name: /^Outcome note/ });
+    await expect(note).toHaveValue("They went with an internal candidate.");
+    await userEvent.clear(note);
+    await userEvent.type(note, "The role was reshaped.");
+    await userEvent.tab();
+    await waitFor(() =>
+      expect(actions.updateApplicationAction).toHaveBeenCalledWith("lumen", { outcome_note: "The role was reshaped." }),
+    );
+  },
+};
+
+/** A Done date before the applied date is refused beside the field and never sent. */
+export const DoneDateBeforeApplied: Story = {
+  args: { app: { ...rejected, done_on: rejected.applied_on } },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Edit details" }));
+    await userEvent.click(canvas.getByRole("button", { name: /^Done date, / }));
+    // The calendar opens on the picked day: pick the day before it.
+    await userEvent.keyboard("{ArrowLeft}{Enter}");
+    await expect((await canvas.findAllByText("The Done date can’t be before the applied date."))[0]).toBeVisible();
+    await expect(actions.updateApplicationAction).not.toHaveBeenCalled();
+  },
+};
+
+/** Change Status… once Done holds Reopen, which clears the Outcome, Done date and Outcome note. */
+export const Reopen: Story = {
+  args: { app: rejected },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Change Status…" }));
+    await userEvent.click(await canvas.findByRole("menuitem", { name: "Reopen" }));
+    await waitFor(() =>
+      expect(actions.updateApplicationAction).toHaveBeenCalledWith("lumen", {
+        status: "in_progress",
+        outcome: null,
+        done_on: null,
+        outcome_note: null,
+      }),
+    );
+  },
+};
+
+/** Picking another Outcome once Done keeps the Done date: only the Outcome is sent. */
+export const ChangeOutcome: Story = {
+  args: { app: rejected },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Change Status…" }));
+    await userEvent.click(await canvas.findByRole("menuitem", { name: "Mark Position Filled" }));
+    await waitFor(() =>
+      expect(actions.updateApplicationAction).toHaveBeenCalledWith("lumen", { status: "done", outcome: "position_filled" }),
+    );
   },
 };
 
@@ -260,13 +386,17 @@ export const SaveFails: Story = {
   },
 };
 
-/** Mark done… holds the Change Status choices; picking one saves at once. */
+/** Mark done… holds the Change Status choices; picking one saves at once, with today as the Done date. */
 export const MarkDone: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: "Mark done…" }));
     await userEvent.click(await canvas.findByRole("menuitem", { name: "Mark Rejected" }));
     await waitFor(() =>
-      expect(actions.updateApplicationAction).toHaveBeenCalledWith("lumen", { status: "done", outcome: "rejected" }),
+      expect(actions.updateApplicationAction).toHaveBeenCalledWith("lumen", {
+        status: "done",
+        outcome: "rejected",
+        done_on: todayLocal(),
+      }),
     );
   },
 };

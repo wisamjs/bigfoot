@@ -408,7 +408,7 @@
           "Applications"
         ],
         "summary": "Add an Application",
-        "description": "Add an Application for the job seeker. It starts In Progress with no Interviews unless the body\nsays otherwise; a Done Application needs an Outcome. The number of Applications is capped (409).",
+        "description": "Add an Application for the job seeker. It starts In Progress with no Interviews unless the body\nsays otherwise; a Done Application needs an Outcome, and its Done date is today unless one is sent. The\nnumber of Applications is capped (409).",
         "operationId": "create_application_applications_post",
         "requestBody": {
           "content": {
@@ -478,7 +478,7 @@
           "Applications"
         ],
         "summary": "Edit an Application",
-        "description": "Change some of an Application's fields and return it with its Interviews.\n\nOnly the fields sent change. Setting the status to `in_progress` without an outcome reopens the\nApplication and clears its Outcome; setting it to `done` needs an Outcome, sent now or already set.\nSetting the location to anything but `hybrid` clears its office days.",
+        "description": "Change some of an Application's fields and return it with its Interviews.\n\nOnly the fields sent change. Setting the status to `in_progress` reopens the Application and clears\nits Outcome, Done date and Outcome note; setting it to `done` needs an Outcome, sent now or already\nset, and from `in_progress` sets the Done date to today unless one is sent. Setting the location to\nanything but `hybrid` clears its office days.",
         "operationId": "update_application_applications__application_id__patch",
         "security": [
           {
@@ -544,7 +544,7 @@
             }
           },
           "422": {
-            "description": "The body is invalid (a list of field errors), or the change would leave a Done Application without an Outcome, an In Progress one with an Outcome, or office days on a Location that isn't Hybrid (a message).",
+            "description": "The body is invalid (a list of field errors), or the change would leave a Done Application without an Outcome, an In Progress one with an Outcome, a Done date or an Outcome note, a Done date before the applied date, or office days on a Location that isn't Hybrid (a message).",
             "content": {
               "application/json": {
                 "schema": {
@@ -1186,6 +1186,37 @@
             "title": "Outcome",
             "description": "How a Done Application ended. Required when the status is `done`, and only then."
           },
+          "done_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done On",
+            "description": "Done date (GLOSSARY.md): the day the Application was marked Done. Only for a Done Application, never before `applied_on` nor in the future. Set to today when it is marked Done without one, and cleared when it is reopened. Null for an Application marked Done before Bigfoot recorded the date.",
+            "examples": [
+              "2026-11-16"
+            ]
+          },
+          "outcome_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome Note",
+            "description": "Outcome note (GLOSSARY.md): what the company said when the Application ended, as plain text of at most 2,000 characters. Only for a Done Application; cleared when it is reopened. Null when there is none.",
+            "examples": [
+              "They went with an internal candidate."
+            ]
+          },
           "interviews": {
             "items": {
               "$ref": "#/components/schemas/Interview"
@@ -1247,6 +1278,8 @@
           "applied_on",
           "status",
           "outcome",
+          "done_on",
+          "outcome_note",
           "interviews",
           "is_waiting",
           "waiting_since",
@@ -1391,6 +1424,38 @@
             ],
             "title": "Outcome",
             "description": "How a Done Application ended. Required when the status is `done`, and only then."
+          },
+          "done_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done On",
+            "description": "Done date (GLOSSARY.md): the day the Application was marked Done. Only for a Done Application, never before `applied_on` nor in the future. Set to today when it is marked Done without one, and cleared when it is reopened. Null for an Application marked Done before Bigfoot recorded the date.",
+            "examples": [
+              "2026-11-16"
+            ]
+          },
+          "outcome_note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome Note",
+            "description": "Outcome note (GLOSSARY.md): what the company said when the Application ended, as plain text of at most 2,000 characters. Only for a Done Application; cleared when it is reopened. Null when there is none. Blank is stored as null.",
+            "examples": [
+              "They went with an internal candidate."
+            ]
           }
         },
         "additionalProperties": false,
@@ -1562,12 +1627,44 @@
             "examples": [
               "offer"
             ]
+          },
+          "done_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done On",
+            "description": "Done date (GLOSSARY.md): the day the Application was marked Done. Only for a Done Application, never before `applied_on` nor in the future. Set to today when it is marked Done without one, and cleared when it is reopened. Null for an Application marked Done before Bigfoot recorded the date.",
+            "examples": [
+              "2026-11-16"
+            ]
+          },
+          "outcome_note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome Note",
+            "description": "Outcome note (GLOSSARY.md): what the company said when the Application ended, as plain text of at most 2,000 characters. Only for a Done Application; cleared when it is reopened. Null when there is none. Blank is stored as null.",
+            "examples": [
+              "They went with an internal candidate."
+            ]
           }
         },
         "additionalProperties": false,
         "type": "object",
         "title": "ApplicationPatch",
-        "description": "Only the fields sent are changed; send null to clear an optional field.\n\nSetting the status to in_progress without an outcome clears the outcome (reopening). Setting the\nlocation to anything but hybrid without office_days clears the office days."
+        "description": "Only the fields sent are changed; send null to clear an optional field.\n\nSetting the status to in_progress without an outcome clears the outcome, Done date and Outcome note\n(reopening); setting it to done from in_progress without a done_on sets the Done date to today. Setting the\nlocation to anything but hybrid without office_days clears the office days."
       },
       "ErrorMessage": {
         "properties": {

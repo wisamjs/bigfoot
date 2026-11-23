@@ -71,6 +71,8 @@ export const APPLICATION_MAX_LENGTHS = {
   title: 200,
   salary: 100,
   posting_url: 2_048,
+  /** The Outcome note: what the company said when the Application ended. */
+  outcome_note: 2_000,
 } as const;
 
 export type Interview = {
@@ -107,6 +109,13 @@ export type Application = {
   status: Status;
   /** Set exactly when the status is done. */
   outcome: Outcome | null;
+  /**
+   * Done date: ISO date (YYYY-MM-DD) the Application was marked Done, set then and cleared on
+   * Reopen; null while In Progress and for one marked Done before Bigfoot recorded it.
+   */
+  done_on: string | null;
+  /** Outcome note: what the company said when it ended; only while Done, and null when there is none. */
+  outcome_note: string | null;
   /** Ordered by date. */
   interviews: Interview[];
   /** Derived by the API: In Progress with no upcoming Interview, including a new Application. */
@@ -443,6 +452,26 @@ export function takeawayShowsOn(apps: Application[], app: Application, interview
       target.application.id !== app.id && target.interview.kind === interview.kind && showsOn(target, "same_kind"),
   );
   return linked(own, elsewhere);
+}
+
+/** The Takeaways for next time of an Application's Interviews, newest Interview first: what a Done one's Outcome card lists. */
+export function takeaways(app: Application): { from: Interview; text: string }[] {
+  return app.interviews
+    .filter((i) => i.takeaway?.trim())
+    .map((from) => ({ from, text: (from.takeaway ?? "").trim() }))
+    .toReversed();
+}
+
+/**
+ * How a Done Application got there, for its Outcome card: "After 2 Interviews, 27 days from
+ * applying." It counts completed Interviews, and the days part needs a Done date.
+ */
+export function outcomeSummary(app: Pick<Application, "interviews" | "applied_on" | "done_on">): string {
+  const completed = app.interviews.filter((i) => i.completed).length;
+  const after = completed === 0 ? "Before any Interview" : `After ${count(completed, "Interview", "Interviews")}`;
+  if (!app.done_on) return `${after}.`;
+  const days = calendarDaysBetween(parseDay(app.applied_on), parseDay(app.done_on));
+  return days === 0 ? `${after}, on the day you applied.` : `${after}, ${count(days, "day", "days")} from applying.`;
 }
 
 /** Whole calendar days from `from` to `to`, in the viewer's time zone: 0 on the same day, negative before it. */

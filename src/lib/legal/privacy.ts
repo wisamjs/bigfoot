@@ -9,7 +9,7 @@ export const PRIVACY_CHANGES: readonly { date: string; summary: string }[] = [
   {
     date: "2026-11-23",
     summary:
-      "You can also write Prep notes on each Interview, to get ready for it. We store what you write there as we do Interview notes: it is included in your data download, and deleted with the Interview or your account.",
+      "You can also write Prep notes on each Interview, to get ready for it. We store what you write there as we do Interview notes: it is included in your data download, and deleted with the Interview or your account. When you mark an Application Done, we also store the date it ended (its Done date) and, if you write one, an Outcome note: what the company said. Both are included in your data download, cleared when you reopen the Application, and deleted with it or your account.",
   },
   {
     date: "2026-11-21",

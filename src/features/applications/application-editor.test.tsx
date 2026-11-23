@@ -5,6 +5,7 @@ import * as actions from "@/app/applications/actions";
 import { prepLookBack, type Application, type PrepLookBack } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
 import { ApplicationEditor } from "./application-editor";
+import { todayLocal } from "./local-datetime";
 import { UnsavedChanges } from "./unsaved-changes";
 
 // The page guards leaving it, which needs the router.
@@ -91,20 +92,29 @@ describe("the heading", () => {
 });
 
 describe("Mark done…", () => {
-  it("marks the Application Done with the Outcome picked, in one save", async () => {
+  it("marks the Application Done with the Outcome picked and today as its Done date, in one save", async () => {
     const { user } = open(birch);
     await user.click(screen.getByRole("button", { name: "Mark done…" }));
     await user.click(screen.getByRole("menuitem", { name: "Mark Withdrawn" }));
-    expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { status: "done", outcome: "withdrawn" });
+    expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", {
+      status: "done",
+      outcome: "withdrawn",
+      done_on: todayLocal(),
+    });
     expect(await screen.findByText("Saved")).toBeInTheDocument();
   });
 
-  it("reopens a Done Application, clearing its Outcome", async () => {
-    const { user } = open({ ...birch, status: "done", outcome: "rejected" });
+  it("reopens a Done Application, clearing its Outcome, Done date and Outcome note", async () => {
+    const { user } = open({ ...birch, status: "done", outcome: "rejected", done_on: "2026-11-16", outcome_note: "Not now." });
     await user.click(screen.getByRole("button", { name: "Change Status…" }));
     expect(screen.queryByRole("menuitem", { name: "Mark Rejected" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("menuitem", { name: "Reopen" }));
-    expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { status: "in_progress", outcome: null });
+    expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", {
+      status: "in_progress",
+      outcome: null,
+      done_on: null,
+      outcome_note: null,
+    });
   });
 
   it("moves into ⋯ on a phone", async () => {
@@ -112,7 +122,7 @@ describe("Mark done…", () => {
     const { user } = open(birch);
     await user.click(screen.getByRole("button", { name: "More actions, Birch" }));
     await user.click(screen.getByRole("menuitem", { name: "Mark Offer" }));
-    expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { status: "done", outcome: "offer" });
+    expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { status: "done", outcome: "offer", done_on: todayLocal() });
   });
 });
 

@@ -47,6 +47,8 @@ function app(id: string, company: string): Application {
     applied_on: "2026-11-01",
     status: "in_progress",
     outcome: null,
+    done_on: null,
+    outcome_note: null,
     interviews: [],
     is_waiting: true,
     waiting_since: "2026-11-01",

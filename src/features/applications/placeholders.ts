@@ -7,6 +7,8 @@ export const PLACEHOLDERS = {
   title: "Frontend Engineer",
   salary: "$150k–$180k",
   posting_url: "https://…",
+  // What the company said when the Application ended (BIG-182).
+  outcome_note: "They went with an internal candidate.",
   // Interview notes: the words of the BIG-179 designs.
   what_they_asked: "One question per line",
   how_it_went: "What landed, what didn't",

@@ -5,13 +5,14 @@ import { DetailsCard } from "@/features/applications/details-form";
 import { InterviewList } from "@/features/applications/interview-list";
 import { InterviewProgress } from "@/features/applications/interview-progress";
 import { NextInterviewCard } from "@/features/applications/next-interview-card";
+import { OutcomeCard } from "@/features/applications/outcome-card";
 import { RememberViewed } from "@/features/applications/recently-viewed";
-import { interviewSections, type Application, type PrepLookBack } from "@/lib/applications";
+import { interviewSections, isDone, type Application, type PrepLookBack } from "@/lib/applications";
 
 /**
  * The Application page under its "← Dashboard" link (BIG-174): the heading (company, role,
  * Progress, Mark done… and ⋯ with Delete application), the Interviews as a strip, then the next
- * Interview's card and the Interviews card beside the Details card on wide screens, Details last
+ * Interview's card, a Done Application's Outcome card and the Interviews card beside the Details card on wide screens, Details last
  * on narrow ones. Each Interview opens its Interview page, where it is edited.
  * `justAdded` is set when the page opens straight after adding the Application: the Interviews
  * card then prompts for its first Interview.
@@ -37,6 +38,7 @@ export function ApplicationEditor({
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex min-w-0 flex-col gap-6">
           {next && <NextInterviewCard app={app} interview={next} lookBack={lookBack} />}
+          {isDone(app) && <OutcomeCard app={app} />}
           <InterviewList app={app} later={later} completed={completed} justAdded={justAdded} />
         </div>
         <DetailsCard app={app} />

@@ -2,7 +2,7 @@
 
 import re
 import unicodedata
-from datetime import date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
@@ -16,6 +16,7 @@ from app.domain import (
     INTERVIEW_PREP_NOTES_MAX_LENGTH,
     OFFICE_DAYS_MAX,
     OFFICE_DAYS_MIN,
+    OUTCOME_NOTE_MAX_LENGTH,
     POSTING_URL_MAX_LENGTH,
     SALARY_MAX_LENGTH,
     TAKEAWAY_MAX_LENGTH,
@@ -72,6 +73,7 @@ WhatTheyAsked = Annotated[str | None, Field(max_length=WHAT_THEY_ASKED_MAX_LENGT
 HowItWent = Annotated[str | None, Field(max_length=HOW_IT_WENT_MAX_LENGTH), AfterValidator(_optional_text)]
 Takeaway = Annotated[str | None, Field(max_length=TAKEAWAY_MAX_LENGTH), AfterValidator(_optional_text)]
 PrepNotes = Annotated[str | None, Field(max_length=INTERVIEW_PREP_NOTES_MAX_LENGTH), AfterValidator(_optional_text)]
+OutcomeNote = Annotated[str | None, Field(max_length=OUTCOME_NOTE_MAX_LENGTH), AfterValidator(_optional_text)]
 
 
 def _has_a_time(value: Any) -> Any:
@@ -109,6 +111,17 @@ OFFICE_DAYS = Field(
 SALARY = Field(default=None, description="The pay range, as the job seeker writes it.", examples=["$120k–$140k"])
 STATUS = "Whether the Application is still going (GLOSSARY.md, Status)."
 OUTCOME = "How a Done Application ended. Required when the status is `done`, and only then."
+DONE_ON = (
+    "Done date (GLOSSARY.md): the day the Application was marked Done. Only for a Done Application, never before "
+    "`applied_on` nor in the future. Set to today when it is marked Done without one, and cleared when it is "
+    "reopened. Null for an Application marked Done before Bigfoot recorded the date."
+)
+OUTCOME_NOTE = (
+    "Outcome note (GLOSSARY.md): what the company said when the Application ended, as plain text of at most "
+    f"{OUTCOME_NOTE_MAX_LENGTH:,} characters. Only for a Done Application; cleared when it is reopened. Null when "
+    "there is none."
+)
+EXAMPLE_OUTCOME_NOTE = "They went with an internal candidate."
 KIND = "What sort of conversation the Interview is (GLOSSARY.md, Interview kind)."
 AT = "When the Interview happens: a date and time, with a time zone. Required (docs/adr/0005)."
 # Interview notes (GLOSSARY.md) are these three fields together.
@@ -161,18 +174,24 @@ class ApplicationCreate(BaseModel):
     )
     status: Status = Field(default="in_progress", description=STATUS)
     outcome: Outcome | None = Field(default=None, description=OUTCOME)
+    done_on: date | None = Field(default=None, description=DONE_ON, examples=["2026-11-16"])
+    outcome_note: OutcomeNote = Field(
+        default=None, description=f"{OUTCOME_NOTE} Blank is stored as null.", examples=[EXAMPLE_OUTCOME_NOTE]
+    )
 
     @model_validator(mode="after")
     def _outcome_matches_status(self) -> "ApplicationCreate":
         check_outcome(self.status, self.outcome)
         check_office_days(self.location, self.office_days)
+        check_done(self.status, self.done_on, self.outcome_note, self.applied_on)
         return self
 
 
 class ApplicationPatch(BaseModel):
     """Only the fields sent are changed; send null to clear an optional field.
 
-    Setting the status to in_progress without an outcome clears the outcome (reopening). Setting the
+    Setting the status to in_progress without an outcome clears the outcome, Done date and Outcome note
+    (reopening); setting it to done from in_progress without a done_on sets the Done date to today. Setting the
     location to anything but hybrid without office_days clears the office days.
     """
 
@@ -189,6 +208,10 @@ class ApplicationPatch(BaseModel):
     )
     status: Status | None = Field(default=None, description=f"{STATUS} Cannot be cleared.", examples=["done"])
     outcome: Outcome | None = Field(default=None, description=OUTCOME, examples=["offer"])
+    done_on: date | None = Field(default=None, description=DONE_ON, examples=["2026-11-16"])
+    outcome_note: OutcomeNote = Field(
+        default=None, description=f"{OUTCOME_NOTE} Blank is stored as null.", examples=[EXAMPLE_OUTCOME_NOTE]
+    )
 
     @model_validator(mode="after")
     def _required_fields_not_cleared(self) -> "ApplicationPatch":
@@ -203,6 +226,27 @@ def check_outcome(status: str, outcome: str | None) -> None:
         raise ValueError("outcome is required when the status is done")
     if status == "in_progress" and outcome is not None:
         raise ValueError("outcome is only for a done application")
+
+
+def latest_done_on() -> date:
+    """The latest Done date allowed: tomorrow in UTC, which is already today in the time zones ahead of it."""
+    return datetime.now(UTC).date() + timedelta(days=1)
+
+
+def check_done(status: str, done_on: date | None, outcome_note: str | None, applied_on: date | None) -> None:
+    """The Done date and Outcome note are only for a Done Application; the date is between applying and today."""
+    if status != "done":
+        if done_on is not None:
+            raise ValueError("done_on is only for a done application")
+        if outcome_note is not None:
+            raise ValueError("outcome_note is only for a done application")
+        return
+    if done_on is None:
+        return
+    if applied_on is not None and done_on < applied_on:
+        raise ValueError("done_on cannot be before applied_on")
+    if done_on > latest_done_on():
+        raise ValueError("done_on cannot be in the future")
 
 
 def check_office_days(location: str | None, office_days: int | None) -> None:
@@ -299,6 +343,8 @@ class Application(BaseModel):
     applied_on: date = Field(description="When the job seeker applied.", examples=["2026-11-02"])
     status: Status = Field(description=STATUS)
     outcome: Outcome | None = Field(description=OUTCOME)
+    done_on: date | None = Field(description=DONE_ON, examples=["2026-11-16"])
+    outcome_note: str | None = Field(description=OUTCOME_NOTE, examples=[EXAMPLE_OUTCOME_NOTE])
     interviews: list[Interview] = Field(description=INTERVIEW_ORDER_DESCRIPTION)
     is_waiting: bool = Field(
         description="Derived (GLOSSARY.md, Waiting): In Progress with no upcoming Interview, including a new one."

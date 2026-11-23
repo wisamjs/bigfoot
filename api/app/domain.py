@@ -54,6 +54,8 @@ COMPANY_MAX_LENGTH = 200
 TITLE_MAX_LENGTH = 200
 SALARY_MAX_LENGTH = 100
 POSTING_URL_MAX_LENGTH = 2_048
+# The Outcome note: what the company said when the Application ended, a few sentences at most.
+OUTCOME_NOTE_MAX_LENGTH = 2_000
 
 # The most a job seeker can have, so one account can't fill the database: far more than a job
 # search needs.

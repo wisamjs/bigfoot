@@ -42,6 +42,8 @@ const APPLICATION_LABELS: Record<keyof ApplicationFields, string> = {
   applied_on: "Applied date",
   status: "Status",
   outcome: "Outcome",
+  done_on: "Done date",
+  outcome_note: "Outcome note",
 };
 
 /** True for an http or https URL, the only kind the API stores. */
@@ -98,7 +100,7 @@ function unknownFields(input: object, known: readonly string[]): FieldErrors {
 
 type ApplicationInput = Partial<Record<keyof ApplicationFields, unknown>>;
 
-/** Company and Title (required) and Salary and Posting link (optional). */
+/** Company and Title (required), and Salary, Posting link and Outcome note (optional). */
 function applicationTextErrors(fields: ApplicationInput, creating: boolean): FieldErrors {
   const errors: FieldErrors = {};
   for (const name of ["company", "title"] as const) {
@@ -110,6 +112,8 @@ function applicationTextErrors(fields: ApplicationInput, creating: boolean): Fie
   if (salary) errors.salary = salary;
   const url = postingUrl(fields.posting_url);
   if (url) errors.posting_url = url;
+  const note = optionalText(fields.outcome_note, APPLICATION_LABELS.outcome_note, APPLICATION_MAX_LENGTHS.outcome_note);
+  if (note) errors.outcome_note = note;
   return errors;
 }
 
@@ -158,7 +162,31 @@ export function applicationErrors(input: unknown, { creating }: { creating: bool
   if ("applied_on" in fields && (typeof fields.applied_on !== "string" || !isIsoDate(fields.applied_on))) {
     errors.applied_on = "Enter the date you applied.";
   }
+  // Optional, and only for a Done Application: the API checks that against the saved Status.
+  const doneOn = fields.done_on;
+  if (doneOn !== undefined && doneOn !== null && (typeof doneOn !== "string" || !isIsoDate(doneOn))) {
+    errors.done_on = "Enter the date it ended.";
+  }
   return Object.assign(errors, statusErrors(fields, creating));
+}
+
+/**
+ * What's wrong with the order of an Application's dates, as the API checks it: the Done date is
+ * never before the applied date nor after `today` (the viewer's, YYYY-MM-DD). `changes` holds the
+ * dates being saved; the others come from `saved`. Null when they're in order.
+ */
+export function dateOrderError(
+  changes: { applied_on?: string; done_on?: string | null },
+  saved: { applied_on: string; done_on: string | null },
+  today: string,
+): string | null {
+  const appliedOn = changes.applied_on ?? saved.applied_on;
+  const doneOn = changes.done_on === undefined ? saved.done_on : changes.done_on;
+  if (!doneOn) return null;
+  if (doneOn < appliedOn) {
+    return "done_on" in changes ? "The Done date can’t be before the applied date." : "The applied date can’t be after the Done date.";
+  }
+  return "done_on" in changes && doneOn > today ? "The Done date can’t be in the future." : null;
 }
 
 type InterviewInput = Partial<Record<keyof InterviewFields, unknown>>;

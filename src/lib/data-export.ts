@@ -62,6 +62,8 @@ const CSV_COLUMNS: {
     header: "Outcome",
     value: (a) => (a.outcome ? OUTCOME_OPTIONS[a.outcome].label : null),
   },
+  { header: "Done date", value: (a) => a.done_on },
+  { header: "Outcome note", value: (a) => a.outcome_note },
   {
     header: "Interviews",
     value: (a) => a.interviews.map(interviewName).join("; "),
