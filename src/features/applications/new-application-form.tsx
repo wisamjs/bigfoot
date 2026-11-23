@@ -7,7 +7,7 @@ import { RequiredNote } from "@/components/ui/field";
 import { useIsClient } from "@/hooks/use-is-client";
 import { useSaveStatus } from "@/hooks/use-save-status";
 import { AddFormActions } from "@/features/applications/add-form-actions";
-import { apiValue, DETAIL_FIELDS, DetailsFields, FormAlert, useDetails } from "@/features/applications/details-fields";
+import { apiValue, DETAIL_FIELDS, DetailsFields, DONE_FIELDS, FormAlert, useDetails } from "@/features/applications/details-fields";
 import { todayLocal } from "@/features/applications/local-datetime";
 import { applicationHref } from "@/features/applications/routes";
 import { UnsavedChanges, useUnsavedChanges } from "@/features/applications/unsaved-changes";
@@ -32,6 +32,8 @@ function NewApplicationFields() {
     company: "",
     title: "",
     applied_on: "",
+    done_on: "",
+    outcome_note: "",
     location: "",
     office_days: "",
     salary: "",
@@ -55,9 +57,13 @@ function NewApplicationFields() {
     e.preventDefault();
     // The submit button is only aria-disabled while saving, so it keeps focus; refuse a second submit here.
     if (tracker.saving) return;
-    // Salary is the Application page's to fill in, not this form's (BIG-163).
+    // Salary is the Application page's to fill in, not this form's (BIG-163), and a new
+    // Application is In Progress, with no Done date or Outcome note.
     const fields = Object.fromEntries(
-      DETAIL_FIELDS.filter((name) => name !== "salary").map((name) => [name, apiValue(name, values[name])]),
+      DETAIL_FIELDS.filter((name) => name !== "salary" && !DONE_FIELDS.has(name)).map((name) => [
+        name,
+        apiValue(name, values[name]),
+      ]),
     );
     if (!details.check(fields, { creating: true })) return;
     void tracker

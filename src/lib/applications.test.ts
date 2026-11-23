@@ -24,6 +24,8 @@ import {
   locationText,
   nextInterview,
   OUTCOME_OPTIONS,
+  outcomeSummary,
+  takeaways,
   OUTCOMES,
   STATUS_OPTIONS,
   STATUSES,
@@ -47,6 +49,8 @@ function application(id: string, overrides: Partial<Application>): Application {
     applied_on: "2026-11-01",
     status: "in_progress",
     outcome: null,
+    done_on: null,
+    outcome_note: null,
     interviews: [],
     is_waiting: true,
     waiting_since: "2026-11-01",
@@ -316,5 +320,33 @@ describe("applicationProgress", () => {
     expect(applicationProgress(application("a", { interviews: [interview("n", "2099-01-01T00:00:00Z", false)] })).label).toBe("Interview scheduled");
     expect(applicationProgress(application("a", { status: "done", outcome: "offer" })).label).toBe("Offer");
     expect(applicationProgress(application("a", { status: "done", outcome: "withdrawn" })).label).toBe("Done · Withdrawn");
+  });
+});
+
+describe("Outcome card (BIG-182)", () => {
+  const screen = { ...interview("screen", "2026-11-03T15:00:00Z", true), takeaway: "Ask about internal candidates." };
+  const manager = { ...interview("manager", "2026-11-12T15:00:00Z", true), takeaway: " Lead with the decision. " };
+  const blank = { ...interview("blank", "2026-11-14T15:00:00Z", true), takeaway: "   " };
+  const ended = application("ended", { status: "done", outcome: "rejected", applied_on: "2026-10-20", done_on: "2026-11-16", interviews: [screen, manager, blank] });
+
+  it("lists the takeaways, trimmed, newest Interview first, leaving out blank ones", () => {
+    expect(takeaways(ended).map(({ from, text }) => [from.id, text])).toEqual([
+      ["manager", "Lead with the decision."],
+      ["screen", "Ask about internal candidates."],
+    ]);
+    expect(takeaways(application("none", {}))).toEqual([]);
+  });
+
+  it("counts the completed Interviews and the days from applying to the Done date", () => {
+    expect(outcomeSummary(ended)).toBe("After 3 Interviews, 27 days from applying.");
+    const upcoming = interview("later", "2026-12-01T15:00:00Z", false);
+    expect(outcomeSummary({ ...ended, done_on: "2026-10-21", interviews: [screen, upcoming] })).toBe(
+      "After 1 Interview, 1 day from applying.",
+    );
+  });
+
+  it("leaves out the days without a Done date, and says when it ended before any Interview or the same day", () => {
+    expect(outcomeSummary({ ...ended, done_on: null })).toBe("After 3 Interviews.");
+    expect(outcomeSummary({ ...ended, done_on: "2026-10-20", interviews: [] })).toBe("Before any Interview, on the day you applied.");
   });
 });

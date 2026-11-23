@@ -72,6 +72,21 @@ export const PAGES = [
       },
     ],
   },
+  // A Done Application (BIG-182): its Outcome card with the Outcome note and a takeaway, and Ended in
+  // Details, whose fields add the Done date and Outcome note.
+  {
+    path: "/applications/[id]",
+    signedIn: true,
+    application: "Vercel",
+    expect: "What you’re taking from it",
+    states: [
+      {
+        name: "done-details-editing",
+        steps: [{ click: 'button[aria-label="Edit details"]' }],
+        expect: "Outcome note",
+      },
+    ],
+  },
   // An Application with no Interviews yet: Bigfoot and a first Add Interview (BIG-174).
   { path: "/applications/[id]", signedIn: true, application: "Stripe", expect: "No Interviews yet" },
   {

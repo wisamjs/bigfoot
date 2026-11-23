@@ -1,5 +1,5 @@
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import psycopg
 import pytest
@@ -86,6 +86,10 @@ def test_create_trims_text_and_blanks_become_null(client, token):
         {"location": "hybrid", "office_days": 5},
         {"location": "hybrid", "office_days": 0},
         {"office_days": 3},
+        {"done_on": "2026-11-16"},  # a Done date only goes with Done
+        {"outcome_note": "They went with an internal candidate."},  # and so does an Outcome note
+        {"status": "done", "outcome": "rejected", "applied_on": "2026-11-10", "done_on": "2026-11-09"},
+        {"status": "done", "outcome": "rejected", "outcome_note": "x" * 2001},
         {"stage": "offer"},  # replaced by status and outcome
         {"next_round": "technical"},  # replaced by Interviews
         {"job_seeker_id": "mallory"},
@@ -268,3 +272,105 @@ def test_delete_someone_elses_application_is_not_found(client, token):
 def test_the_api_has_no_stage_or_rounds(client, token):
     app = create(client, token())
     assert not {"stage", "previous_round", "next_round", "next_round_at"} & app.keys()
+
+
+# Done date and Outcome note (BIG-182)
+
+
+def utc_today():
+    return datetime.now(UTC).date()
+
+
+def test_create_done_dates_it_today_unless_a_done_date_is_sent(client, token):
+    done = create(client, token(), status="done", outcome="rejected")
+    assert done["done_on"] == utc_today().isoformat()
+    dated = create(
+        client,
+        token(),
+        applied_on="2026-10-20",
+        status="done",
+        outcome="rejected",
+        done_on="2026-11-16",
+        outcome_note="  They went with an internal candidate.  ",
+    )
+    assert (dated["done_on"], dated["outcome_note"]) == ("2026-11-16", "They went with an internal candidate.")
+    # Applied for after today (in UTC), so today can't be its Done date: it gets none.
+    ahead = create(
+        client, token(), applied_on=(utc_today() + timedelta(days=1)).isoformat(), status="done", outcome="offer"
+    )
+    assert ahead["done_on"] is None
+    assert create(client, token())["done_on"] is None
+
+
+def test_marking_done_sets_the_done_date_and_reopening_clears_it_with_the_outcome_note(client, token):
+    app = create(client, token(), applied_on="2026-10-20")
+    url = f"/applications/{app['id']}"
+    done = client.patch(url, json={"status": "done", "outcome": "rejected"}, headers=token()).json()
+    assert done["done_on"] == utc_today().isoformat()
+    noted = client.patch(
+        url, json={"done_on": "2026-11-16", "outcome_note": "They went with an internal candidate."}, headers=token()
+    ).json()
+    assert (noted["done_on"], noted["outcome_note"]) == ("2026-11-16", "They went with an internal candidate.")
+    # Changing the Outcome while Done keeps the Done date.
+    assert client.patch(url, json={"outcome": "withdrawn"}, headers=token()).json()["done_on"] == "2026-11-16"
+    reopened = client.patch(url, json={"status": "in_progress"}, headers=token()).json()
+    assert (reopened["outcome"], reopened["done_on"], reopened["outcome_note"]) == (None, None, None)
+
+
+def test_marking_done_keeps_a_done_date_sent_with_it(client, token):
+    app = create(client, token(), applied_on="2026-10-20")
+    res = client.patch(
+        f"/applications/{app['id']}",
+        json={"status": "done", "outcome": "offer", "done_on": "2026-11-02"},
+        headers=token(),
+    )
+    assert res.json()["done_on"] == "2026-11-02"
+
+
+def test_the_done_date_can_be_cleared_and_the_outcome_note_blanked(client, token):
+    app = create(client, token(), status="done", outcome="rejected", outcome_note="Not now.")
+    url = f"/applications/{app['id']}"
+    cleared = client.patch(url, json={"done_on": None, "outcome_note": "   "}, headers=token()).json()
+    assert (cleared["done_on"], cleared["outcome_note"]) == (None, None)
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"done_on": "2026-10-19"},  # before applying
+        {"done_on": (datetime.now(UTC).date() + timedelta(days=2)).isoformat()},  # in the future everywhere
+        {"applied_on": "2026-11-17"},  # applying after it ended
+        {"outcome_note": "x" * 2001},
+    ],
+)
+def test_patch_keeps_the_done_date_between_applying_and_today(client, token, changes):
+    app = create(client, token(), applied_on="2026-10-20", status="done", outcome="rejected", done_on="2026-11-16")
+    res = client.patch(f"/applications/{app['id']}", json=changes, headers=token())
+    assert res.status_code == 422
+
+
+def test_tomorrow_in_utc_is_a_done_date_for_time_zones_ahead_of_it(client, token):
+    app = create(client, token(), status="done", outcome="rejected")
+    tomorrow = (utc_today() + timedelta(days=1)).isoformat()
+    assert client.patch(f"/applications/{app['id']}", json={"done_on": tomorrow}, headers=token()).status_code == 200
+
+
+@pytest.mark.parametrize("changes", [{"done_on": "2026-11-16"}, {"outcome_note": "Not now."}])
+def test_patch_refuses_a_done_date_or_outcome_note_on_an_in_progress_application(client, token, changes):
+    app = create(client, token(), applied_on="2026-10-20")
+    res = client.patch(f"/applications/{app['id']}", json=changes, headers=token())
+    assert res.status_code == 422
+    assert "only for a done application" in res.json()["detail"]
+
+
+@pytest.mark.parametrize(
+    "columns",
+    [
+        "status, done_on) values ('alice', 'c', 't', 'in_progress', '2026-11-16'",
+        "status, outcome_note) values ('alice', 'c', 't', 'in_progress', 'Not now.'",
+        "applied_on, status, outcome, done_on) values ('alice', 'c', 't', '2026-11-10', 'done', 'offer', '2026-11-09'",
+    ],
+)
+def test_the_database_keeps_the_done_date_and_outcome_note_to_done_applications(settings, columns):
+    with connect(settings) as conn, pytest.raises(psycopg.errors.CheckViolation):
+        conn.execute(f"insert into applications (job_seeker_id, company, title, {columns})")

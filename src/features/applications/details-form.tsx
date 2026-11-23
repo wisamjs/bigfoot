@@ -20,13 +20,17 @@ import {
   type DetailValues,
   useDetails,
 } from "@/features/applications/details-fields";
-import { parseDay, type Application } from "@/lib/applications";
+import { todayLocal } from "@/features/applications/local-datetime";
+import { OUTCOME_OPTIONS, parseDay, type Application } from "@/lib/applications";
+import { dateOrderError } from "@/lib/validation";
 
 /** What screen readers hear before each detail's save status. */
 const LABELS: Record<DetailField, string> = {
   company: "Company",
   title: "Title",
   applied_on: "Applied date",
+  done_on: "Done date",
+  outcome_note: "Outcome note",
   location: "Location",
   office_days: "Days in office",
   salary: "Salary",
@@ -39,6 +43,8 @@ function savedDetails(app: Application): DetailValues {
     company: app.company,
     title: app.title,
     applied_on: app.applied_on,
+    done_on: app.done_on ?? "",
+    outcome_note: app.outcome_note ?? "",
     location: app.location ?? "",
     office_days: app.office_days ? String(app.office_days) : "",
     salary: app.salary ?? "",
@@ -47,9 +53,10 @@ function savedDetails(app: Application): DetailValues {
 }
 
 /**
- * The Application page's Details card (BIG-174). It shows the applied date, the salary (hidden
- * behind Reveal each time the page opens) and the job posting as text, and its edit button turns
- * every detail, company and title included, into fields. Each field saves by itself when it's left
+ * The Application page's Details card (BIG-174). It shows the applied date, once Done when it
+ * ended ("Ended": the Done date and the Outcome), the salary (hidden behind Reveal each time the
+ * page opens) and the job posting as text, and its edit button turns every detail, company and
+ * title included, and for a Done Application the Done date and Outcome note, into fields. Each field saves by itself when it's left
  * (the applied date and Location, when picked), and only if it changed, so every value saved was
  * checked first. A field that fails its check shows why beside it, keeps what was typed, and isn't
  * sent. Done goes back to the text, unless a field still needs fixing: then focus goes there.
@@ -70,6 +77,8 @@ export function DetailsCard({ app }: { app: Application }) {
     company: useSaveStatus(),
     title: useSaveStatus(),
     applied_on: useSaveStatus(),
+    done_on: useSaveStatus(),
+    outcome_note: useSaveStatus(),
     location: useSaveStatus(),
     office_days: useSaveStatus(),
     salary: useSaveStatus(),
@@ -101,7 +110,12 @@ export function DetailsCard({ app }: { app: Application }) {
   function commit(name: DetailField, value: string) {
     if (value.trim() === saved[name]) return;
     const next = apiValue(name, value);
-    if (!details.checkField(name, next)) return;
+    // The Done date stays between the applied date and today, in the viewer's time zone.
+    const order =
+      name === "applied_on" || name === "done_on"
+        ? dateOrderError({ [name]: next as string | null }, app, todayLocal())
+        : null;
+    if (!details.checkField(name, next, order)) return;
     // Days in office are picked under Hybrid: sending it too keeps them valid however saves interleave.
     const changes = name === "office_days" ? { location: "hybrid" as const, office_days: next as number | null } : { [name]: next };
     void saves[name].run(async () => {
@@ -153,13 +167,21 @@ export function DetailsCard({ app }: { app: Application }) {
   );
 }
 
-/** The details as text: the applied date and how long ago, the salary behind Reveal, and the job posting. */
+/**
+ * The details as text: the applied date and how long ago, when a Done Application ended, the salary
+ * behind Reveal, and the job posting.
+ */
 function DetailsText({ app }: { app: Application }) {
   return (
     <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-5 lg:grid-cols-1">
       <Detail term="Applied">
         <AppliedOn date={app.applied_on} />
       </Detail>
+      {app.status === "done" && (
+        <Detail term="Ended">
+          <Ended app={app} />
+        </Detail>
+      )}
       <Detail term="Salary" className="order-last col-span-2 lg:order-none lg:col-span-1">
         <Salary salary={app.salary} />
       </Detail>
@@ -192,6 +214,21 @@ function AppliedOn({ date }: { date: string }) {
         {" · "}
         <DaysFromToday date={date} />
       </span>
+    </>
+  );
+}
+
+/** "Nov 16, 2026 · Rejected": the Done date ("Not added" without one) and the Outcome. */
+function Ended({ app }: { app: Application }) {
+  const isClient = useIsClient();
+  return (
+    <>
+      {app.done_on ? (
+        <time dateTime={app.done_on}>{isClient ? appliedFormat.format(parseDay(app.done_on)) : app.done_on}</time>
+      ) : (
+        <NotAdded />
+      )}
+      {app.outcome && ` · ${OUTCOME_OPTIONS[app.outcome].label}`}
     </>
   );
 }

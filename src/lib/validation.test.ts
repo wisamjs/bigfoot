@@ -6,6 +6,7 @@ import { APPLICATION_MAX_LENGTHS, INTERVIEW_NOTES_MAX_LENGTHS, OFFICE_DAYS } fro
 import {
   accessTokenNameError,
   applicationErrors,
+  dateOrderError,
   interviewErrors,
   isHttpUrl,
   isValid,
@@ -29,6 +30,7 @@ describe("limits", () => {
       title: pythonNumber("TITLE_MAX_LENGTH"),
       salary: pythonNumber("SALARY_MAX_LENGTH"),
       posting_url: pythonNumber("POSTING_URL_MAX_LENGTH"),
+      outcome_note: pythonNumber("OUTCOME_NOTE_MAX_LENGTH"),
     });
     expect(OFFICE_DAYS).toEqual([pythonNumber("OFFICE_DAYS_MIN"), 2, 3, pythonNumber("OFFICE_DAYS_MAX")]);
     expect(INTERVIEW_NOTES_MAX_LENGTHS).toEqual({
@@ -94,6 +96,14 @@ describe("applicationErrors", () => {
       expect(applicationErrors({ applied_on: date }, { creating: false })).toEqual({
         applied_on: "Enter the date you applied.",
       });
+    }
+  });
+
+  it("takes a Done date that is a real date, or none", () => {
+    expect(applicationErrors({ done_on: "2026-11-16" }, { creating: false })).toEqual({});
+    expect(applicationErrors({ done_on: null }, { creating: false })).toEqual({});
+    for (const date of ["2026-02-30", "16/11/2026", "", 20261116]) {
+      expect(applicationErrors({ done_on: date }, { creating: false })).toEqual({ done_on: "Enter the date it ended." });
     }
   });
 
@@ -206,5 +216,24 @@ describe("summarize", () => {
       "Enter the company. 1 more field needs fixing.",
     );
     expect(summarize({ company: "A.", title: "B.", salary: "C." })).toBe("A. 2 more fields need fixing.");
+  });
+});
+
+describe("dateOrderError", () => {
+  const saved = { applied_on: "2026-10-20", done_on: "2026-11-16" };
+  const today = "2026-11-23";
+
+  it("keeps the Done date between the applied date and today", () => {
+    expect(dateOrderError({ done_on: "2026-10-20" }, saved, today)).toBeNull();
+    expect(dateOrderError({ done_on: today }, saved, today)).toBeNull();
+    expect(dateOrderError({ done_on: null }, saved, today)).toBeNull();
+    expect(dateOrderError({ done_on: "2026-10-19" }, saved, today)).toBe("The Done date can’t be before the applied date.");
+    expect(dateOrderError({ done_on: "2026-11-24" }, saved, today)).toBe("The Done date can’t be in the future.");
+  });
+
+  it("keeps the applied date on or before a saved Done date, and any applied date without one", () => {
+    expect(dateOrderError({ applied_on: "2026-11-16" }, saved, today)).toBeNull();
+    expect(dateOrderError({ applied_on: "2026-11-17" }, saved, today)).toBe("The applied date can’t be after the Done date.");
+    expect(dateOrderError({ applied_on: "2026-11-30" }, { ...saved, done_on: null }, today)).toBeNull();
   });
 });
