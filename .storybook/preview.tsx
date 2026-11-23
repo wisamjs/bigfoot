@@ -6,6 +6,9 @@ import "./preview.css";
 // Server Actions run on the server, so stories use the spies in each module's __mocks__ folder
 // instead, which succeed. A story that needs another answer sets it in `beforeEach`:
 // `mocked(updateApplicationAction).mockResolvedValue({ ok: false, error: "…" })`.
+// State a component keeps in the URL (the Interview calendar's month and day) is set with
+// `parameters.nextjs.navigation.query`: Storybook's router doesn't follow history.replaceState, so
+// a click that changes the URL renders nothing new. interview-calendar.stories.tsx shows how.
 sb.mock(import("../src/app/actions.ts"));
 sb.mock(import("../src/app/applications/actions.ts"));
 sb.mock(import("../src/app/account/actions.ts"));

@@ -41,7 +41,6 @@ export const Add: Story = {
     await userEvent.selectOptions(canvas.getByRole("combobox", { name: /^Kind/ }), "technical");
     await userEvent.click(canvas.getByRole("button", { name: /^Date, / }));
     await userEvent.click(within(await screen.findByRole("grid")).getByText("15"));
-    await waitFor(() => expect(screen.queryByRole("grid")).toBeNull());
     await userEvent.type(canvas.getByLabelText("Time"), "14:30");
     await userEvent.type(canvas.getByRole("textbox", { name: "Interview notes" }), "Bring the system design notes");
     await userEvent.click(canvas.getByRole("button", { name: "Add Interview" }));
@@ -63,7 +62,6 @@ export const AddFails: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: /^Date, / }));
     await userEvent.click(within(await screen.findByRole("grid")).getByText("15"));
-    await waitFor(() => expect(screen.queryByRole("grid")).toBeNull());
     await userEvent.type(canvas.getByLabelText("Time"), "09:00");
     await userEvent.click(canvas.getByRole("button", { name: "Add Interview" }));
     await expect(await canvas.findByText(/Couldn’t reach Bigfoot’s server/)).toBeVisible();

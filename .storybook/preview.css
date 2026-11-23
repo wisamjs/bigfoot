@@ -13,3 +13,17 @@
 :root {
   --font-allo: "Allo";
 }
+
+/*
+ * Story tests run with reduced motion (vitest.config.mts). globals.css only shortens animations
+ * then, which still leaves a dialog on its first, transparent frame when a play function looks;
+ * in Storybook, reduced motion removes them, so everything opens straight to its final state.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
