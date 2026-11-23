@@ -8,6 +8,8 @@ import {
   APPLICATION_MAX_LENGTHS,
   INTERVIEW_KINDS,
   INTERVIEW_NOTES_MAX_LENGTH,
+  LOCATIONS,
+  OFFICE_DAYS,
   OUTCOMES,
   STATUSES,
   type ApplicationFields,
@@ -24,12 +26,15 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const STATUS_SET = new Set<unknown>(STATUSES);
 const OUTCOME_SET = new Set<unknown>(OUTCOMES);
 const KIND_SET = new Set<unknown>(INTERVIEW_KINDS);
+const LOCATION_SET = new Set<unknown>(LOCATIONS);
+const OFFICE_DAYS_SET = new Set<unknown>(OFFICE_DAYS);
 
 const APPLICATION_LABELS: Record<keyof ApplicationFields, string> = {
   company: "Company",
   title: "Title",
   posting_url: "Job posting URL",
   location: "Location",
+  office_days: "Days in office",
   salary: "Salary",
   applied_on: "Applied date",
   status: "Status",
@@ -90,7 +95,7 @@ function unknownFields(input: object, known: readonly string[]): FieldErrors {
 
 type ApplicationInput = Partial<Record<keyof ApplicationFields, unknown>>;
 
-/** Company and Title (required) and Location, Salary and Posting link (optional). */
+/** Company and Title (required) and Salary and Posting link (optional). */
 function applicationTextErrors(fields: ApplicationInput, creating: boolean): FieldErrors {
   const errors: FieldErrors = {};
   for (const name of ["company", "title"] as const) {
@@ -98,12 +103,24 @@ function applicationTextErrors(fields: ApplicationInput, creating: boolean): Fie
       (creating || name in fields) && requiredText(fields[name], APPLICATION_LABELS[name], APPLICATION_MAX_LENGTHS[name]);
     if (problem) errors[name] = problem;
   }
-  for (const name of ["location", "salary"] as const) {
-    const problem = optionalText(fields[name], APPLICATION_LABELS[name], APPLICATION_MAX_LENGTHS[name]);
-    if (problem) errors[name] = problem;
-  }
+  const salary = optionalText(fields.salary, APPLICATION_LABELS.salary, APPLICATION_MAX_LENGTHS.salary);
+  if (salary) errors.salary = salary;
   const url = postingUrl(fields.posting_url);
   if (url) errors.posting_url = url;
+  return errors;
+}
+
+/**
+ * The Location, one of its choices or none, and its office days: 1 to 4, and only for Hybrid. A
+ * change that sends days without a Location leaves that check to the API, which knows the saved one.
+ */
+function locationErrors(fields: ApplicationInput): FieldErrors {
+  const errors: FieldErrors = {};
+  const { location, office_days: days } = fields;
+  if (location !== undefined && location !== null && !LOCATION_SET.has(location)) errors.location = "Choose a Location.";
+  if (days === undefined || days === null) return errors;
+  if (!OFFICE_DAYS_SET.has(days)) errors.office_days = `Choose ${OFFICE_DAYS[0]} to ${OFFICE_DAYS.at(-1)} days in office.`;
+  else if ("location" in fields && location !== "hybrid") errors.office_days = "Only a Hybrid Location has days in office.";
   return errors;
 }
 
@@ -133,7 +150,7 @@ export function applicationErrors(input: unknown, { creating }: { creating: bool
   if (typeof input !== "object" || input === null) return { form: "Nothing to save." };
   const fields = input as ApplicationInput;
   const errors: FieldErrors = unknownFields(input, Object.keys(APPLICATION_LABELS));
-  Object.assign(errors, applicationTextErrors(fields, creating));
+  Object.assign(errors, applicationTextErrors(fields, creating), locationErrors(fields));
   // Optional when creating (the API defaults it to today), but never cleared once set.
   if ("applied_on" in fields && (typeof fields.applied_on !== "string" || !isIsoDate(fields.applied_on))) {
     errors.applied_on = "Enter the date you applied.";

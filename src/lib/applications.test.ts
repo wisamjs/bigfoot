@@ -8,6 +8,9 @@ import {
   INTERVIEW_KINDS,
   INTERVIEW_OPTIONS,
   lastCompletedInterview,
+  LOCATION_OPTIONS,
+  LOCATIONS,
+  locationText,
   nextInterview,
   OUTCOME_OPTIONS,
   OUTCOMES,
@@ -28,6 +31,7 @@ function application(id: string, overrides: Partial<Application>): Application {
     title: "Engineer",
     posting_url: null,
     location: null,
+    office_days: null,
     salary: null,
     applied_on: "2026-11-01",
     status: "in_progress",
@@ -157,6 +161,7 @@ function pythonLiteral(name: string) {
 describe.each([
   ["Status", STATUSES, STATUS_OPTIONS],
   ["Outcome", OUTCOMES, OUTCOME_OPTIONS],
+  ["Location", LOCATIONS, LOCATION_OPTIONS],
   ["InterviewKind", INTERVIEW_KINDS, INTERVIEW_OPTIONS],
 ] as const)("%s options", (name, values, options) => {
   it("match the API's allowed values, in order", () => {
@@ -168,5 +173,18 @@ describe.each([
     const labels = Object.values(options).map((o) => o.label);
     expect(new Set(labels).size).toBe(labels.length);
     expect(labels.every((label) => label.trim() !== "")).toBe(true);
+  });
+});
+
+describe("locationText", () => {
+  it("reads as one line: In-Office, Remote, Hybrid, or Hybrid with its days", () => {
+    expect(locationText({ location: "in_office", office_days: null })).toBe("In-Office");
+    expect(locationText({ location: "remote", office_days: null })).toBe("Remote");
+    expect(locationText({ location: "hybrid", office_days: null })).toBe("Hybrid");
+    expect(locationText({ location: "hybrid", office_days: 3 })).toBe("Hybrid - 3x a Week");
+  });
+
+  it("is null when no Location is set", () => {
+    expect(locationText({ location: null, office_days: null })).toBeNull();
   });
 });

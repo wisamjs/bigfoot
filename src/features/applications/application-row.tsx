@@ -11,6 +11,7 @@ import { INTERVIEW_TONE, OUTCOME_TONE } from "@/features/applications/status-ton
 import { useIsClient } from "@/hooks/use-is-client";
 import {
   INTERVIEW_OPTIONS,
+  locationText,
   OUTCOME_OPTIONS,
   upcomingInterviews,
   type Application,
@@ -67,7 +68,7 @@ export function ApplicationRow({
         <Next job={job} />
       </td>
       <td className={`${cellClasses} ${locationCellClasses} text-sm text-heading`}>
-        {job.location || <span className="text-body-subtle">—</span>}
+        {locationText(job) ?? <span className="text-body-subtle">—</span>}
       </td>
       <td className={`${cellClasses} w-px pl-0 text-right sm:pl-0`}>
         {linked && onChanged && <ChangeStatusMenu app={job} onChanged={onChanged} />}

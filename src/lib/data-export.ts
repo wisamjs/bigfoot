@@ -2,6 +2,7 @@
 // JSON with everything Bigfoot holds about them. Served by src/app/account/export/route.ts.
 
 import {
+  locationText,
   INTERVIEW_OPTIONS,
   OUTCOME_OPTIONS,
   STATUS_OPTIONS,
@@ -48,7 +49,7 @@ const CSV_COLUMNS: { header: string; value: (app: Application) => string | null 
   { header: "Company", value: (a) => a.company },
   { header: "Title", value: (a) => a.title },
   { header: "Job posting URL", value: (a) => a.posting_url },
-  { header: "Location", value: (a) => a.location },
+  { header: "Location", value: locationText },
   { header: "Salary", value: (a) => a.salary },
   { header: "Applied date", value: (a) => a.applied_on },
   { header: "Status", value: (a) => STATUS_OPTIONS[a.status].label },

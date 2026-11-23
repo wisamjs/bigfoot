@@ -7,7 +7,7 @@ import { RequiredNote } from "@/components/ui/field";
 import { useIsClient } from "@/hooks/use-is-client";
 import { useSaveStatus } from "@/hooks/use-save-status";
 import { AddFormActions } from "@/features/applications/add-form-actions";
-import { DETAIL_FIELDS, DetailsFields, FormAlert, useDetails } from "@/features/applications/details-fields";
+import { apiValue, DETAIL_FIELDS, DetailsFields, FormAlert, useDetails } from "@/features/applications/details-fields";
 import { todayLocal } from "@/features/applications/local-datetime";
 import { applicationHref } from "@/features/applications/routes";
 import { UnsavedChanges, useUnsavedChanges } from "@/features/applications/unsaved-changes";
@@ -33,6 +33,7 @@ function NewApplicationFields() {
     title: "",
     applied_on: "",
     location: "",
+    office_days: "",
     posting_url: "",
   });
   // Today is the viewer's, which the server doesn't know: until hydration, Applied shows no date.
@@ -53,7 +54,7 @@ function NewApplicationFields() {
     e.preventDefault();
     // The submit button is only aria-disabled while saving, so it keeps focus; refuse a second submit here.
     if (tracker.saving) return;
-    const fields = Object.fromEntries(DETAIL_FIELDS.map((name) => [name, values[name].trim() || null]));
+    const fields = Object.fromEntries(DETAIL_FIELDS.map((name) => [name, apiValue(name, values[name])]));
     if (!details.check(fields, { creating: true })) return;
     void tracker
       .run(() => createApplicationAction(fields))

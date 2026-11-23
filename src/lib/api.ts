@@ -70,6 +70,7 @@ const FIELD_LABELS: Record<string, string> = {
   title: "Title",
   posting_url: "Job posting URL",
   location: "Location",
+  office_days: "Days in office",
   salary: "Salary",
   applied_on: "Applied date",
   status: "Status",

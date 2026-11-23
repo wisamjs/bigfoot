@@ -53,15 +53,27 @@ describe("Add Application", () => {
         .map((mark) => mark.previousElementSibling?.textContent),
     ).toEqual(["Company", "Title", "Applied"]);
     expect(within(form).getByLabelText("Company")).toBeRequired();
-    expect(within(form).getByLabelText("Location")).not.toBeRequired();
     for (const [label, example] of [
       ["Company", "Northwind Labs"],
       ["Title", "Frontend Engineer"],
-      ["Location", "Remote"],
       ["Job posting URL", "https://…"],
     ]) {
       expect(within(form).getByLabelText(label)).toHaveAttribute("placeholder", example);
     }
+  });
+
+  it("picks a Location, and for Hybrid its days in office, and sends both", async () => {
+    const { user, form } = openAdd();
+    await user.type(within(form).getByLabelText("Company"), "Birch");
+    await user.type(within(form).getByLabelText("Title"), "Engineer");
+    expect(within(form).queryByRole("radiogroup", { name: "Days in office" })).not.toBeInTheDocument();
+    await user.click(within(form).getByRole("radio", { name: "Hybrid" }));
+    await user.click(within(form).getByRole("radio", { name: "4 days a week" }));
+    await user.click(within(form).getByRole("button", { name: "Add Application" }));
+
+    expect(actions.createApplicationAction).toHaveBeenCalledWith(
+      expect.objectContaining({ location: "hybrid", office_days: 4 }),
+    );
   });
 
   it("creates the Application from the details, trimmed, and opens its page", async () => {
@@ -75,6 +87,7 @@ describe("Add Application", () => {
       title: "Engineer",
       applied_on: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
       location: null,
+      office_days: null,
       posting_url: null,
     });
     expect(push).toHaveBeenCalledWith("/applications/new-id?added=1");

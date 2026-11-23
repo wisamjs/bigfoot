@@ -36,6 +36,7 @@ export function RequiredNote({ className }: { className?: string }) {
  * under it. The control takes `id`, and `invalidProps(`${id}-error`, error)` so the error is read
  * with the label. A `required` field shows a RequiredMark; the control still needs `required`.
  * A field that saves itself passes its SaveStatus as `status`, shown at the end of the label's line.
+ * The label's id is `${id}-label`, for a control a label can't name, such as a ToggleGroup.
  */
 export function Field({
   id,
@@ -62,14 +63,18 @@ export function Field({
       {status ? (
         <div className={fieldRowClasses}>
           <span>
-            <label htmlFor={id}>{label}</label>
+            <label id={`${id}-label`} htmlFor={id}>
+              {label}
+            </label>
             {required && <RequiredMark />}
           </span>
           {status}
         </div>
       ) : (
         <div className={fieldLabelClasses}>
-          <label htmlFor={id}>{label}</label>
+          <label id={`${id}-label`} htmlFor={id}>
+            {label}
+          </label>
           {required && <RequiredMark />}
         </div>
       )}

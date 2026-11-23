@@ -13,11 +13,13 @@ from app.auth import ACCESS_TOKEN_PREFIX
 from app.domain import (
     COMPANY_MAX_LENGTH,
     INTERVIEW_NOTES_MAX_LENGTH,
-    LOCATION_MAX_LENGTH,
+    OFFICE_DAYS_MAX,
+    OFFICE_DAYS_MIN,
     POSTING_URL_MAX_LENGTH,
     SALARY_MAX_LENGTH,
     TITLE_MAX_LENGTH,
     InterviewKind,
+    Location,
     Outcome,
     Status,
 )
@@ -60,7 +62,7 @@ RequiredText = Annotated[str, AfterValidator(_required_text)]
 # Lengths are checked as sent, before the ends are trimmed. The database checks them too.
 Company = Annotated[str, Field(max_length=COMPANY_MAX_LENGTH), AfterValidator(_required_text)]
 Title = Annotated[str, Field(max_length=TITLE_MAX_LENGTH), AfterValidator(_required_text)]
-Location = Annotated[str | None, Field(max_length=LOCATION_MAX_LENGTH), AfterValidator(_optional_text)]
+OfficeDays = Annotated[int, Field(ge=OFFICE_DAYS_MIN, le=OFFICE_DAYS_MAX)]
 Salary = Annotated[str | None, Field(max_length=SALARY_MAX_LENGTH), AfterValidator(_optional_text)]
 PostingUrl = Annotated[str | None, Field(max_length=POSTING_URL_MAX_LENGTH), AfterValidator(_posting_url)]
 InterviewNotes = Annotated[str | None, Field(max_length=INTERVIEW_NOTES_MAX_LENGTH), AfterValidator(_optional_text)]
@@ -85,7 +87,19 @@ EXAMPLE_URL = "https://jobs.example.com/northwind/frontend-engineer"
 COMPANY = Field(description="The company the job seeker applied to.", examples=[EXAMPLE_COMPANY])
 TITLE = Field(description="The role's job title.", examples=[EXAMPLE_TITLE])
 POSTING_URL = Field(default=None, description="The job posting, as an http(s) URL.", examples=[EXAMPLE_URL])
-LOCATION = Field(default=None, description="Where the role is, as the job seeker writes it.", examples=["Remote"])
+LOCATION = Field(
+    default=None,
+    description="How often the role is in the office (GLOSSARY.md, Location): in_office, remote or hybrid.",
+    examples=["hybrid"],
+)
+OFFICE_DAYS = Field(
+    default=None,
+    description=(
+        f"For a Hybrid role, how many days a week in the office ({OFFICE_DAYS_MIN}–{OFFICE_DAYS_MAX}). "
+        "Only when the Location is hybrid, and optional then."
+    ),
+    examples=[3],
+)
 SALARY = Field(default=None, description="The pay range, as the job seeker writes it.", examples=["$120k–$140k"])
 STATUS = "Whether the Application is still going (GLOSSARY.md, Status)."
 OUTCOME = "How a Done Application ended. Required when the status is `done`, and only then."
@@ -119,7 +133,8 @@ class ApplicationCreate(BaseModel):
     company: Company = COMPANY
     title: Title = TITLE
     posting_url: PostingUrl = POSTING_URL
-    location: Location = LOCATION
+    location: Location | None = LOCATION
+    office_days: OfficeDays | None = OFFICE_DAYS
     salary: Salary = SALARY
     applied_on: date | None = Field(
         default=None, description="When the job seeker applied. Defaults to today.", examples=["2026-11-02"]
@@ -130,13 +145,15 @@ class ApplicationCreate(BaseModel):
     @model_validator(mode="after")
     def _outcome_matches_status(self) -> "ApplicationCreate":
         check_outcome(self.status, self.outcome)
+        check_office_days(self.location, self.office_days)
         return self
 
 
 class ApplicationPatch(BaseModel):
     """Only the fields sent are changed; send null to clear an optional field.
 
-    Setting the status to in_progress without an outcome clears the outcome (reopening).
+    Setting the status to in_progress without an outcome clears the outcome (reopening). Setting the
+    location to anything but hybrid without office_days clears the office days.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -144,7 +161,8 @@ class ApplicationPatch(BaseModel):
     company: Company | None = Field(default=None, description=COMPANY.description, examples=COMPANY.examples)
     title: Title | None = Field(default=None, description=TITLE.description, examples=TITLE.examples)
     posting_url: PostingUrl = POSTING_URL
-    location: Location = LOCATION
+    location: Location | None = LOCATION
+    office_days: OfficeDays | None = OFFICE_DAYS
     salary: Salary = SALARY
     applied_on: date | None = Field(
         default=None, description="When the job seeker applied. Cannot be cleared.", examples=["2026-11-02"]
@@ -165,6 +183,11 @@ def check_outcome(status: str, outcome: str | None) -> None:
         raise ValueError("outcome is required when the status is done")
     if status == "in_progress" and outcome is not None:
         raise ValueError("outcome is only for a done application")
+
+
+def check_office_days(location: str | None, office_days: int | None) -> None:
+    if office_days is not None and location != "hybrid":
+        raise ValueError("office_days is only for a hybrid location")
 
 
 class InterviewCreate(BaseModel):
@@ -232,7 +255,8 @@ class Application(BaseModel):
     company: str = COMPANY
     title: str = TITLE
     posting_url: str | None = Field(description=POSTING_URL.description, examples=POSTING_URL.examples)
-    location: str | None = Field(description=LOCATION.description, examples=LOCATION.examples)
+    location: Location | None = Field(description=LOCATION.description, examples=LOCATION.examples)
+    office_days: int | None = Field(description=OFFICE_DAYS.description, examples=OFFICE_DAYS.examples)
     salary: str | None = Field(description=SALARY.description, examples=SALARY.examples)
     applied_on: date = Field(description="When the job seeker applied.", examples=["2026-11-02"])
     status: Status = Field(description=STATUS)

@@ -19,7 +19,7 @@ A secret a job seeker creates on the Account page and gives a script, such as a 
 _Avoid_: API key, personal access token, PAT, credential; delete (a token is revoked)
 
 **Application**:
-One role at one company that the job seeker has applied to. It is added on the Add Application page, opened by the dashboard's Add Application button: company, title and applied date are required (the applied date starts at today), location, salary and job posting are optional. Adding it opens its Application page, which asks "Got an Interview lined up? Add it here." and puts focus on Add Interview.
+One role at one company that the job seeker has applied to. It is added on the Add Application page, opened by the dashboard's Add Application button: company, title and applied date are required (the applied date starts at today), Location, salary and job posting are optional. Adding it opens its Application page, which asks "Got an Interview lined up? Add it here." and puts focus on Add Interview.
 _Avoid_: job, opportunity, lead
 
 **Application page**:
@@ -29,6 +29,10 @@ _Avoid_: panel, side panel, detail view
 **Sample Application**:
 An Application that Bigfoot creates for a new job seeker, to show how Bigfoot works before they add their own. A job seeker receives sample Applications once. They can be edited or deleted like any other Application, and are always marked as samples.
 _Avoid_: demo, example, placeholder, seed data
+
+**Location**:
+How often an Application's role is in the office: In-Office, Remote or Hybrid, picked from a toggle group rather than typed; none is picked until the job seeker picks one, and picking the picked one again clears it. Picking Hybrid asks "Days in office": 1, 2, 3 or 4 a week, also optional. It reads as one line of text wherever it is shown: "In-Office", "Remote", "Hybrid", or "Hybrid - 3x a Week". It is not a city.
+_Avoid_: work arrangement, work mode, office policy
 
 **Status**:
 Whether an Application is still going: In Progress or Done. A new Application is In Progress. Waiting and Scheduled are not Statuses.
