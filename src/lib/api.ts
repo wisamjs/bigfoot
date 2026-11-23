@@ -78,6 +78,7 @@ const FIELD_LABELS: Record<string, string> = {
   kind: "Interview kind",
   at: "Interview date",
   notes: "Interview notes",
+  prep_notes: "Prep notes",
   name: "Name",
 };
 

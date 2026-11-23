@@ -111,7 +111,18 @@ export const PAGES = [
       {
         name: "delete-interview-page-confirmation",
         steps: [{ click: 'button[aria-label^="More actions"]', pointer: true }, { click: '[role="menuitem"]', text: "Delete Interview" }],
-        expect: "with its Interview notes",
+        expect: "with its Interview notes and Prep notes",
+      },
+      {
+        // A completed Interview's Prep notes are folded to their first lines (BIG-180).
+        name: "interview-prep-notes-open",
+        steps: [{ click: "button", text: "Show Prep notes" }],
+        expect: "Hide Prep notes",
+      },
+      {
+        name: "interview-prep-notes-editing",
+        steps: [{ click: "button", text: "Show Prep notes" }, { click: 'button[aria-label="Edit Prep notes"]' }],
+        expect: "Done",
       },
       {
         // Notes over the limit (typed past the field's maxLength, as a paste could) fail their
@@ -125,6 +136,22 @@ export const PAGES = [
           { click: "main a", text: "Vercel" },
         ],
         expect: "You have unsaved changes.",
+      },
+    ],
+  },
+  {
+    // An upcoming Interview (BIG-180): the Before card with its Prep notes, and the After card
+    // waiting for how it went.
+    path: "/applications/[id]/interviews/[interviewId]",
+    signedIn: true,
+    application: "Datadog",
+    interview: "technical",
+    expect: "Nothing yet, that’s expected",
+    states: [
+      {
+        name: "interview-add-interview-notes",
+        steps: [{ click: "button", text: "Add Interview notes" }],
+        expect: "Done",
       },
     ],
   },

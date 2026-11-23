@@ -79,3 +79,19 @@ export function DaysFromToday({ date }: { date: string }) {
   if (!today) return null;
   return <>{relativeDays(calendarDaysBetween(today, parseDay(date)))}</>;
 }
+
+const readyDayFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
+const weekdayFormat = new Intl.DateTimeFormat(undefined, { weekday: "long" });
+
+/**
+ * "Get ready for Wednesday" when the Interview is within the next 7 days, otherwise "Get ready for
+ * Dec 2" (BIG-180). Just "Get ready" until hydration, which can't know the viewer's time zone.
+ */
+export function GetReadyFor({ at }: { at: string }) {
+  const today = useToday();
+  if (!today) return <>Get ready</>;
+  const date = new Date(at);
+  const days = calendarDaysBetween(today, date);
+  const day = days >= 0 && days < 7 ? weekdayFormat.format(date) : readyDayFormat.format(date);
+  return <>Get ready for {day}</>;
+}

@@ -7,5 +7,6 @@ export const PLACEHOLDERS = {
   title: "Frontend Engineer",
   salary: "$150k–$180k",
   posting_url: "https://…",
+  prep_notes: "Review the caching chapter. Ask about the on-call rotation.",
   notes: "Talked through a past project; they asked about testing. Follow up Friday.",
 } as const;

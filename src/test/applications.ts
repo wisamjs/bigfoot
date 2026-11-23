@@ -10,6 +10,7 @@ export function interview(id: string, overrides: Partial<Interview> = {}): Inter
     kind: "technical",
     at: "2026-11-01T15:00:00Z",
     notes: null,
+    prep_notes: null,
     completed: true,
     created_at: "",
     updated_at: "",
