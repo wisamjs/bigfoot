@@ -138,7 +138,7 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
 
   const kind = INTERVIEW_OPTIONS[shown.kind].label;
   const display = (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
         <p className="m-0 break-words text-base leading-[1.6] text-body">
           {app.company} · {app.title}

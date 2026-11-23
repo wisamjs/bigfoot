@@ -212,7 +212,7 @@ describe("the Interviews", () => {
       within(screen.getByRole("list", { name: "Interviews by date" }))
         .getAllByRole("listitem")
         // eslint-disable-next-line testing-library/no-node-access -- the bar is decoration (aria-hidden) inside the segment's link, with no role or text to query by.
-        .map((segment) => segment.firstElementChild?.firstElementChild);
+        .map((segment) => segment.firstElementChild?.firstElementChild?.firstElementChild);
     const { unmount } = open(oak);
     expect(bars().filter((bar) => bar?.classList.contains("bg-fg-success-strong"))).toHaveLength(2);
     expect(bars().filter((bar) => bar?.classList.contains("bg-tone-gray-fg"))).toHaveLength(0);

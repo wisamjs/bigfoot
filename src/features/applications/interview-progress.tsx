@@ -85,21 +85,21 @@ function Segment({
   const kind = INTERVIEW_OPTIONS[interview.kind].label;
   return (
     <li className="min-w-0">
-      {/* The padding gives the outline of the current Interview, and the focus ring, room around the segment, and a phone's thin bar a target of at least 24px. */}
+      {/* A phone's thin bar gets a touch target of 44px from the link's own padding; the outline of the current Interview is drawn on the inner box, close around the segment. */}
       <Link
         href={interviewHref(applicationId, interview.id)}
         aria-current={current ? "page" : undefined}
-        className={`-my-3 block rounded-control py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:-m-1.5 sm:p-1.5 ${
-          current ? "ring-2 ring-brand" : ""
-        }`}
+        className="-my-[19px] block rounded-control py-[19px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:my-0 sm:py-0"
       >
-        <span aria-hidden className={`block h-1.5 rounded-full ${bar}`} />
-        <span className="sr-only sm:hidden">{kind}</span>
-        <span className="hidden sm:block">
-          <span className={`mt-2.5 block text-xs ${current ? "font-medium text-heading" : next ? "font-medium text-fg-brand" : "text-body"}`}>
-            <SegmentWhen interview={interview} next={next} current={current} />
+        <span className={`-m-1.5 block rounded-control p-1.5 ${current ? "ring-2 ring-brand" : ""}`}>
+          <span aria-hidden className={`block h-1.5 rounded-full ${bar}`} />
+          <span className="sr-only sm:hidden">{kind}</span>
+          <span className="hidden sm:block">
+            <span className={`mt-2.5 block text-xs ${current ? "font-medium text-heading" : next ? "font-medium text-fg-brand" : "text-body"}`}>
+              <SegmentWhen interview={interview} next={next} current={current} />
+            </span>
+            <span className="mt-1 block truncate text-sm font-bold text-heading">{kind}</span>
           </span>
-          <span className="mt-1 block truncate text-sm font-bold text-heading">{kind}</span>
         </span>
       </Link>
     </li>
