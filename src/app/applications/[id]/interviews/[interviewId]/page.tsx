@@ -3,11 +3,13 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Badge } from "@/components/ui/badge";
 import { InterviewEditor } from "@/features/applications/interview-editor";
+import { InterviewHeading } from "@/features/applications/interview-heading";
 import { OUTCOME_TONE } from "@/features/applications/status-tone";
+import { UnsavedChanges } from "@/features/applications/unsaved-changes";
 import { AppHeader } from "@/features/shell/app-header";
 import { FormPage } from "@/features/shell/form-page";
 import { getApplications } from "@/lib/api";
-import { INTERVIEW_OPTIONS, OUTCOME_OPTIONS, STATUS_OPTIONS, type Application } from "@/lib/applications";
+import { OUTCOME_OPTIONS, STATUS_OPTIONS, type Application } from "@/lib/applications";
 import { getCurrentUser } from "@/lib/dal";
 
 type Props = PageProps<"/applications/[id]/interviews/[interviewId]">;
@@ -36,8 +38,8 @@ async function InterviewPageBody({ params }: Pick<Props, "params">) {
     <FormPage
       header={<AppHeader user={user} current="/dashboard" />}
       title={app.company}
-      subtitle={`${app.title} · ${INTERVIEW_OPTIONS[interview.kind].label} Interview`}
-      badge={<DoneBadge app={app} />}
+      heading={<InterviewHeading app={app} interview={interview} badge={<DoneBadge app={app} />} />}
+      guard={UnsavedChanges}
     >
       <InterviewEditor app={app} interview={interview} />
     </FormPage>

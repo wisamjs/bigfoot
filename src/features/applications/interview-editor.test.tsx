@@ -4,7 +4,9 @@ import Link from "next/link";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/applications/actions";
 import { application, interview } from "@/test/applications";
+import { DATE_NEEDED } from "@/lib/validation";
 import { InterviewEditor } from "./interview-editor";
+import { UnsavedChanges } from "./unsaved-changes";
 
 // The editor guards leaving the page, which needs the router.
 vi.mock("next/navigation", () => import("@/test/navigation"));
@@ -24,34 +26,46 @@ beforeEach(() => {
 const technical = interview("i1", { application_id: "birch", kind: "technical", notes: "Asked about caching" });
 const birch = application("birch", { company: "Birch", interviews: [technical] });
 
+/** The page puts the editor inside UnsavedChanges, with the heading. */
 function openPage(app = birch, current = technical) {
   const user = userEvent.setup();
   render(
-    <>
+    <UnsavedChanges>
       <Link href="/dashboard">Dashboard</Link>
       <InterviewEditor app={app} interview={current} />
-    </>,
+    </UnsavedChanges>,
   );
   return { user };
 }
 
 describe("the Interview page", () => {
-  it("edits the kind, date and time, and Interview notes, each named without a row number", async () => {
+  it("holds the Interview notes, named without a row number, and no kind or date (they're in the heading)", async () => {
     const { user } = openPage();
-    expect(screen.getByLabelText("Kind")).toHaveValue("technical");
-    expect(screen.getByRole("group", { name: "Date and time" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Kind")).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Date and time" })).not.toBeInTheDocument();
     expect(screen.getByLabelText("Interview notes")).toHaveValue("Asked about caching");
 
-    await user.selectOptions(screen.getByLabelText("Kind"), "behavioural");
-    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { kind: "behavioural" });
+    await user.type(screen.getByLabelText("Interview notes"), " and queues");
+    await user.tab();
+    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { notes: "Asked about caching and queues" });
     expect(await screen.findByText("Saved")).toBeInTheDocument();
   });
 
   it("works the same for an Interview of a Done Application", async () => {
     const done = { ...birch, status: "done" as const, outcome: "rejected" as const };
     const { user } = openPage(done);
-    await user.selectOptions(screen.getByLabelText("Kind"), "leadership");
-    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { kind: "leadership" });
+    await user.type(screen.getByLabelText("Interview notes"), "!");
+    await user.tab();
+    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { notes: "Asked about caching!" });
+  });
+
+  it("won't save notes on an Interview with no date, and says to set one", async () => {
+    const undated = interview("i1", { application_id: "birch", at: null });
+    const { user } = openPage(application("birch", { company: "Birch", interviews: [undated] }), undated);
+    await user.type(screen.getByLabelText("Interview notes"), "Went well");
+    await user.tab();
+    expect(actions.updateInterviewAction).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Interview notes")).toHaveAccessibleDescription(DATE_NEEDED);
   });
 
   it("asks before deleting, warning about the Interview notes, then deletes and leaves", async () => {
