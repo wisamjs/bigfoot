@@ -11,8 +11,11 @@
 // (or, for states with `applications: "none"`, as one holding none).
 // Uses this checkout's dev server (A11Y_URL, default http://localhost:3300) and API
 // (API_URL, default http://localhost:8000) like smoke does. CHROME_PATH picks Chrome.
+// A11Y_SHARD=1/2 checks only the first of two shards of the pages, with their states
+// (scripts/a11y-shard.mjs), as CI's accessibility jobs do; unset, every page is checked.
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { parseShard, shardPages } from "./a11y-shard.mjs";
 import { dialogKeyboardProblems, enterState, launchChrome, openPage, skipLinkProblems } from "./chrome.mjs";
 import { withNoApplications, withTestApplications } from "./dev-applications.mjs";
 import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
@@ -33,10 +36,16 @@ const REFLOW_WIDTH = 320;
 const STATES_JOB_SEEKER_ID = "a11y-user";
 const EMPTY_JOB_SEEKER_ID = "a11y-empty-user";
 const SCHEMES = ["light", "dark"];
+const SHARD = parseShard(process.env.A11Y_SHARD);
 
 // Every page that renders (not redirects), signed out and signed in. A page with an `application` needs
 // the Applications from scripts/dev-applications.mjs, so it is checked with the `states` below.
-const rendered = PAGES.filter((page) => !page.redirect);
+// A shard keeps its share of them, each with its states.
+const rendered = shardPages(
+  PAGES.filter((page) => !page.redirect),
+  SHARD,
+);
+if (SHARD.total > 1) console.log(`Shard ${SHARD.index} of ${SHARD.total}: ${rendered.length} pages\n`);
 const pages = rendered.filter((page) => !page.application);
 const dataPages = rendered.filter((page) => page.application);
 
@@ -108,6 +117,26 @@ async function phoneProblems(chrome) {
   return [...(await touchTargetProblems(chrome)), ...(await clippedTextProblems(chrome))];
 }
 
+/**
+ * Compiles every route before checking. Each CI shard starts its dev server cold, and a state can
+ * open a page another shard checks (adding an Application opens its page): a first compile inside
+ * a state's 15s wait made `application-added` time out. Requests run together; errors are left to
+ * the checks below.
+ */
+async function warmUp() {
+  const cookie = `${SESSION_COOKIE}=${await createTestSession()}`;
+  const routes = PAGES.filter((page) => !page.redirect && !page.application);
+  await Promise.all(
+    routes.map(async (page) => {
+      const headers = page.signedIn ? { cookie } : {};
+      await fetch(`${base}${await pagePath(page)}`, { headers, signal: AbortSignal.timeout(60_000) })
+        .then((response) => response.text())
+        .catch(() => {});
+    }),
+  );
+}
+
+await warmUp();
 const chrome = await launchChrome();
 try {
   await chrome.send("Page.enable");

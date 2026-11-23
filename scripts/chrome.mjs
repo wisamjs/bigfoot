@@ -69,9 +69,25 @@ async function expectText(chrome, expect, where, timeoutMs = 0) {
  * waits for the page to show the state's `expect`, failing if it never does.
  */
 export async function enterState(chrome, state) {
+  const filled = [];
   for (const step of state.steps) {
-    const expression = step.fill
-      ? `(() => {
+    // Before a click (say a submit), the values typed so far must still be React's: one typed while
+    // the page hydrates can be lost to the controlled input's state (application-added on a cold
+    // dev server).
+    if (!step.fill) await refillLost(chrome, state, filled);
+    await runStep(chrome, state, step);
+    if (step.fill) filled.push(step);
+    await sleep(400);
+  }
+  // Waits, not just checks: some states show text only once client components render, which a cold
+  // server (CI) is slow to do.
+  await expectText(chrome, state.expect, `State "${state.name}"`, PAGE_TEXT_TIMEOUT_MS);
+}
+
+/** The expression that runs one step, true when it matched an element. */
+function stepExpression(step) {
+  if (step.fill) {
+    return `(() => {
         const el = document.querySelector(${JSON.stringify(step.fill)});
         // Not until React has hydrated the input: a value typed before then is lost to it.
         if (!el || !Object.keys(el).some((key) => key.startsWith("__reactProps$"))) return false;
@@ -79,8 +95,9 @@ export async function enterState(chrome, state) {
         Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), "value").set.call(el, ${JSON.stringify(step.value)});
         el.dispatchEvent(new Event("input", { bubbles: true }));
         return true;
-      })()`
-      : `(() => {
+      })()`;
+  }
+  return `(() => {
         const el = [...document.querySelectorAll(${JSON.stringify(step.click)})]
           .find((e) => e.textContent.includes(${JSON.stringify(step.text ?? "")}));
         el?.focus();
@@ -88,19 +105,32 @@ export async function enterState(chrome, state) {
         (window.__clicked ??= []).push(el);
         return Boolean(el);
       })()`;
-    // A fill step retries while the page hydrates; a click matches or doesn't.
-    const attempts = step.fill ? PAGE_TEXT_TIMEOUT_MS / 250 : 1;
-    let matched = false;
-    for (let attempt = 0; attempt < attempts && !matched; attempt++) {
-      if (attempt) await sleep(250);
-      matched = (await chrome.send("Runtime.evaluate", { returnByValue: true, expression })).result.value;
-    }
-    if (!matched) throw new Error(`State "${state.name}": nothing matches ${JSON.stringify(step)}`);
+}
+
+async function runStep(chrome, state, step) {
+  const expression = stepExpression(step);
+  // A fill step retries while the page hydrates; a click matches or doesn't.
+  const attempts = step.fill ? PAGE_TEXT_TIMEOUT_MS / 250 : 1;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    if (attempt) await sleep(250);
+    if ((await chrome.send("Runtime.evaluate", { returnByValue: true, expression })).result.value) return;
+  }
+  throw new Error(`State "${state.name}": nothing matches ${JSON.stringify(step)}`);
+}
+
+/** Types each of `filled` again whose input no longer holds its value. */
+async function refillLost(chrome, state, filled) {
+  for (const step of filled) {
+    // React's own props, so a value the input shows but React's state never took counts as lost.
+    const expression = `(() => {
+      const el = document.querySelector(${JSON.stringify(step.fill)});
+      const props = el && el[Object.keys(el).find((key) => key.startsWith("__reactProps$"))];
+      return (props && "value" in props ? props.value : el?.value) === ${JSON.stringify(step.value)};
+    })()`;
+    if ((await chrome.send("Runtime.evaluate", { returnByValue: true, expression })).result.value) continue;
+    await runStep(chrome, state, step);
     await sleep(400);
   }
-  // Waits, not just checks: some states show text only once client components render, which a cold
-  // server (CI) is slow to do.
-  await expectText(chrome, state.expect, `State "${state.name}"`, PAGE_TEXT_TIMEOUT_MS);
 }
 
 async function press(chrome, key, keyCode) {
