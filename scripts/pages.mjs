@@ -96,6 +96,16 @@ export const PAGES = [
     expect: "Done · Rejected",
     states: [
       {
+        name: "interview-heading-editing",
+        steps: [{ click: 'button[aria-label="Edit kind and date"]' }],
+        expect: "Save",
+      },
+      {
+        name: "interview-heading-calendar",
+        steps: [{ click: 'button[aria-label="Edit kind and date"]' }, { click: 'main form button[aria-label^="Date, "]' }],
+        expect: "Mo",
+      },
+      {
         name: "delete-interview-page-confirmation",
         steps: [{ click: "button", text: "Delete Interview" }],
         expect: "with its Interview notes",

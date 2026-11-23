@@ -17,6 +17,7 @@ export function splitDateTime(value: string): DateAndTime {
  * shadcn/ui's date picker with a time field beside it. No time is assumed: the time field starts
  * empty, and stays disabled until there's a date. `onChange` runs when a date is picked or
  * cleared (Clearing the date clears the time too), and when the time field is left with a new time.
+ * `onInput` runs on every edit, the time's keystrokes too, for a form that saves them itself.
  * Mount it again (with a `key`) to reset it to a new `value`.
  */
 export function DateTimePicker({
@@ -25,6 +26,7 @@ export function DateTimePicker({
   timeLabel,
   value,
   onChange,
+  onInput,
   disabled,
   invalid,
   "aria-describedby": describedBy,
@@ -37,7 +39,8 @@ export function DateTimePicker({
   timeLabel: string;
   /** The starting value, `yyyy-mm-ddThh:mm` or "". */
   value: string;
-  onChange: (value: DateAndTime) => void;
+  onChange?: (value: DateAndTime) => void;
+  onInput?: (value: DateAndTime) => void;
   disabled?: boolean;
   /** Which part needs fixing, if any; it is marked invalid and described by `aria-describedby`. */
   invalid?: { date?: boolean; time?: boolean };
@@ -53,7 +56,8 @@ export function DateTimePicker({
     const nextTime = next ? time : "";
     setTime(nextTime);
     setSentTime(nextTime);
-    onChange({ date: next, time: nextTime });
+    onInput?.({ date: next, time: nextTime });
+    onChange?.({ date: next, time: nextTime });
   }
 
   const describe = (part: boolean | undefined) =>
@@ -77,11 +81,14 @@ export function DateTimePicker({
         aria-label={timeLabel}
         value={time}
         disabled={disabled || !date}
-        onChange={(e) => setTime(e.target.value)}
+        onChange={(e) => {
+          setTime(e.target.value);
+          onInput?.({ date, time: e.target.value });
+        }}
         onBlur={() => {
           if (time === sentTime) return;
           setSentTime(time);
-          onChange({ date, time });
+          onChange?.({ date, time });
         }}
         className={cn(
           inputClasses,

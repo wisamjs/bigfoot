@@ -38,6 +38,18 @@ export function InterviewWhen({ at }: { at: string | null }) {
   return <InterviewDate at={at} />;
 }
 
+/**
+ * One Interview's date and time with the year, as its own page's heading shows it; "Date needed"
+ * for one saved before dates were required (docs/adr/0005).
+ */
+export function InterviewWhenLong({ at }: { at: string | null }) {
+  const isClient = useIsClient();
+  if (!at) return <span className="font-medium text-fg-danger">Date needed</span>;
+  // The server can't know the viewer's time zone, so the date renders after hydration.
+  if (!isClient) return <span className="inline-block h-5 w-32 align-middle" />;
+  return <time dateTime={at}>{whenFormat.format(new Date(at))}</time>;
+}
+
 function InterviewDate({ at }: { at: string }) {
   const isClient = useIsClient();
   if (!isClient) return <span className="block h-5" />;
