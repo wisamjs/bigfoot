@@ -54,6 +54,19 @@ jobs:
       - uses: ./.github/actions/setup
       - run: npm run test
 
+  # Storybook (BIG-8): builds it, then renders every story in Chrome (the runner's preinstalled
+  # Google Chrome), failing on a play function or an axe violation. Visual diffs are BIG-25's.
+  storybook:
+    name: "storybook: build, story tests with axe"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: npm run build-storybook
+      - run: npm run test-storybook
+        if: success() || failure()
+
   # Postgres 17, the major version Supabase runs, on the runner itself: no network distance
   # (the same tests took 33s next to Supabase and 447s from a far region) and no secret.
   runtime:
@@ -118,7 +131,7 @@ jobs:
   # they succeeded or were skipped.
   ci-passed:
     if: always()
-    needs: [fast-checks, unit-tests, runtime, accessibility]
+    needs: [fast-checks, unit-tests, storybook, runtime, accessibility]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
