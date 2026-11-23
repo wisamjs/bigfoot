@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ApplicationWhen, InterviewWhen } from "@/features/applications/application-when";
 import { applicationHref } from "@/features/applications/routes";
 import { SampleBadge } from "@/features/applications/sample-badge";
-import { INTERVIEW_TONE, OUTCOME_TONE } from "@/features/applications/status-tone";
+import { COMPLETED_MARK, INTERVIEW_TONE, OUTCOME_TONE } from "@/features/applications/status-tone";
 import { useIsClient } from "@/hooks/use-is-client";
 import {
   INTERVIEW_OPTIONS,
@@ -94,7 +94,10 @@ function RowLink({ job }: { job: Application }) {
   );
 }
 
-/** The row's group ("Interview scheduled"), with one mark per completed Interview under it. */
+/**
+ * The row's group ("Interview scheduled"), with one mark per completed Interview under it: green
+ * while the Application is In Progress, grey once it is Done (BIG-177).
+ */
 function Progress({ job, group }: { job: Application; group: string }) {
   const completed = job.interviews.filter((interview) => interview.completed && interview.at !== null);
   const withNotes = completed.filter((interview) => interview.notes).length;
@@ -104,7 +107,7 @@ function Progress({ job, group }: { job: Application; group: string }) {
       {completed.length > 0 && (
         <p className="m-0 mt-1 flex flex-wrap items-center gap-1">
           {completed.map((interview) => (
-            <span key={interview.id} aria-hidden className="h-1 w-4 rounded-full bg-brand" />
+            <span key={interview.id} aria-hidden className={`h-1 w-4 rounded-full ${COMPLETED_MARK[job.status]}`} />
           ))}
           {withNotes > 0 && <NotebookPen className="ml-0.5 size-3" aria-hidden />}
           <span className="sr-only">

@@ -18,7 +18,7 @@ import { interviewSections, type Application } from "@/lib/applications";
  * Leaving with a detail typed but not saved asks first: the page puts this inside UnsavedChanges.
  */
 export function ApplicationEditor({ app, justAdded = false }: { app: Application; justAdded?: boolean }) {
-  const { next, later, done } = interviewSections(app);
+  const { next, later, completed } = interviewSections(app);
   return (
     <div className="flex flex-col gap-6 sm:gap-8">
       <RememberViewed id={app.id} />
@@ -27,7 +27,7 @@ export function ApplicationEditor({ app, justAdded = false }: { app: Application
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex min-w-0 flex-col gap-6">
           {next && <NextInterviewCard app={app} interview={next} />}
-          <InterviewList app={app} later={later} done={done} justAdded={justAdded} />
+          <InterviewList app={app} later={later} completed={completed} justAdded={justAdded} />
         </div>
         <DetailsCard app={app} />
       </div>

@@ -55,6 +55,13 @@ const quillon = application("quillon", {
   waiting_since: appliedDaysAgo(5),
 });
 
+/** The strip's segments drawn in a colour: a completed Interview's is green, or grey once Done. */
+function completedBars(canvas: ReturnType<typeof within>, colour: string) {
+  return within(canvas.getByRole("list", { name: "Interviews by date" }))
+    .getAllByRole("listitem")
+    .filter((segment) => segment.firstElementChild?.classList.contains(colour));
+}
+
 const meta = {
   component: ApplicationEditor,
   args: { app: lumen },
@@ -65,11 +72,14 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * An Interview scheduled: the strip, the next Interview with what the last one's notes carry
- * forward, Later and Done, and the Details card with the salary hidden.
+ * An Interview scheduled: the strip (completed Interviews green), the next Interview with what the
+ * last one's notes carry forward, Later and Completed, and the Details card with the salary hidden.
  */
 export const Default: Story = {
   play: async ({ canvas }) => {
+    await expect(canvas.getByRole("list", { name: "Completed" })).toBeVisible();
+    await expect(await canvas.findAllByText(/ · Completed$/)).toHaveLength(2);
+    await expect(completedBars(canvas, "bg-fg-success-strong")).toHaveLength(2);
     await expect(canvas.getByRole("heading", { level: 2, name: "Technical Deep-Dive" })).toBeVisible();
     await expect(canvas.getByText("Rambled on the roadmap question. Next time: lead with the decision, then the trade-off.", { selector: ".rounded-card p" })).toBeVisible();
     await expect(canvas.getByText("Interview scheduled")).toBeVisible();
@@ -101,7 +111,7 @@ export const JustAdded: Story = {
   },
 };
 
-/** Done with an Offer, its Interviews all completed. */
+/** Done with an Offer, its Interviews all completed and grey on the strip: the hiring process is over. */
 export const Offer: Story = {
   args: {
     app: {
@@ -110,6 +120,10 @@ export const Offer: Story = {
       outcome: "offer",
       interviews: lumen.interviews.map((i) => ({ ...i, at: i.completed ? i.at : daysFromNow(-3), completed: true })),
     },
+  },
+  play: async ({ canvas }) => {
+    await expect(completedBars(canvas, "bg-tone-gray-fg")).toHaveLength(4);
+    await expect(completedBars(canvas, "bg-fg-success-strong")).toHaveLength(0);
   },
 };
 
@@ -129,7 +143,7 @@ export const NextHasNotes: Story = {
   },
 };
 
-/** An Interview saved before dates were required shows Date needed, and comes last under Done. */
+/** An Interview saved before dates were required shows Date needed, and comes last under Completed. */
 export const DateNeeded: Story = {
   args: {
     app: {
