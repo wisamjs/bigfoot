@@ -1,5 +1,5 @@
 """Migrations that change what job seekers already recorded: Interviews (BIG-38), Locations, requiring an
-Interview's date (BIG-139) and splitting Interview notes (BIG-179)."""
+Interview's date (BIG-139), splitting Interview notes (BIG-179) and the Done date and Outcome note (BIG-182)."""
 
 from datetime import UTC
 
@@ -193,3 +193,37 @@ def test_splitting_interview_notes_moves_existing_notes_unchanged_into_how_it_we
         ("recruiter_screen", None, None, None),
         ("technical", None, written, None),
     ]
+
+
+DONE_DATE = "20261126000000_add_done_date_and_outcome_note.sql"
+
+
+@pytest.mark.rebuilds_schema
+def test_the_done_date_migration_leaves_existing_done_applications_without_one(settings):
+    before = [m for m in sorted(MIGRATIONS.glob("*.sql")) if m.name < DONE_DATE]
+    schema = sql.Identifier(TEST_SCHEMA)
+    with psycopg.connect(settings.database_url, prepare_threshold=None, autocommit=True) as conn:
+        conn.execute(sql.SQL("drop schema if exists {} cascade").format(schema))
+        conn.execute(sql.SQL("create schema {}").format(schema))
+        conn.execute(sql.SQL("set search_path to {}").format(schema))
+        for migration in before:
+            conn.execute(migration.read_text())
+
+        conn.execute(
+            "insert into applications (job_seeker_id, company, title, status, outcome)"
+            " values ('alice', 'Ended', 't', 'done', 'rejected'), ('alice', 'Going', 't', 'in_progress', null)"
+        )
+
+        conn.execute((MIGRATIONS / DONE_DATE).read_text())
+
+        rows = conn.execute(
+            "select company, status, done_on, outcome_note from applications order by company"
+        ).fetchall()
+        # No date is invented, and the new columns keep their rules.
+        with pytest.raises(psycopg.errors.CheckViolation):
+            conn.execute("update applications set outcome_note = %s where company = 'Ended'", ("x" * 2001,))
+        with pytest.raises(psycopg.errors.CheckViolation):
+            conn.execute("update applications set done_on = applied_on where company = 'Going'")
+        conn.execute("update applications set done_on = applied_on, outcome_note = 'Not now.' where company = 'Ended'")
+
+    assert rows == [("Ended", "done", None, None), ("Going", "in_progress", None, None)]

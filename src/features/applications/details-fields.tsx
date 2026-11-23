@@ -19,7 +19,19 @@ import {
 } from "@/lib/applications";
 import { applicationErrors, isValid, summarize, type FieldErrors } from "@/lib/validation";
 
-export const DETAIL_FIELDS = ["company", "title", "applied_on", "location", "office_days", "salary", "posting_url"] as const;
+export const DETAIL_FIELDS = [
+  "company",
+  "title",
+  "applied_on",
+  "done_on",
+  "outcome_note",
+  "location",
+  "office_days",
+  "salary",
+  "posting_url",
+] as const;
+/** The details only a Done Application has, which Add Application never sends. */
+export const DONE_FIELDS: ReadonlySet<DetailField> = new Set(["done_on", "outcome_note"]);
 export type DetailField = (typeof DETAIL_FIELDS)[number];
 /** Each detail as the form holds it: text, with "" for none (office days as "1" to "4"). */
 export type DetailValues = Record<DetailField, string>;
@@ -65,12 +77,13 @@ export function useDetails(initial: DetailValues) {
   }
 
   /**
-   * Checks one detail with the API's rules, for a form that saves each as it's left. Shows its
-   * error beside it, announces it, and returns false; leaves the other fields and the focus alone,
-   * because the job seeker is already on their way to another field.
+   * Checks one detail with the API's rules, for a form that saves each as it's left, plus `other`, a
+   * problem found by checking it against the other details. Shows its error beside it, announces
+   * it, and returns false; leaves the other fields and the focus alone, because the job seeker is
+   * already on their way to another field.
    */
-  function checkField(name: DetailField, value: unknown) {
-    const problem = applicationErrors({ [name]: value }, { creating: false })[name];
+  function checkField(name: DetailField, value: unknown, other: string | null = null) {
+    const problem = applicationErrors({ [name]: value }, { creating: false })[name] ?? other ?? undefined;
     setFieldErrors((prev) => ({ ...prev, [name]: problem }));
     setInvalid(problem ?? null);
     return !problem;
@@ -97,8 +110,8 @@ export function useDetails(initial: DetailValues) {
 export type Details = ReturnType<typeof useDetails>;
 
 /**
- * An Application's details as fields: company, title, applied date, Location (and days in office,
- * when Hybrid), salary (with `salary`) and job posting.
+ * An Application's details as fields: company, title, applied date, for a Done `app` its Done date
+ * and Outcome note, Location (and days in office, when Hybrid), salary (with `salary`) and job posting.
  * Company, Title and Applied are required. Without `identity`, Company and Title are left out.
  * With `salary`, the salary is a field too, masked until Show is pressed (SalaryInput); Add
  * Application leaves it out. With `app`, the job posting has a link out.
@@ -171,6 +184,37 @@ export function DetailsFields({
           {...invalidProps(`${id}-applied_on-error`, fieldErrors.applied_on)}
         />
       </Field>
+      {app?.status === "done" && (
+        <>
+          <Field label="Done date" {...field("done_on")}>
+            <DatePicker
+              id={`${id}-done_on`}
+              label="Done date"
+              value={values.done_on}
+              clearable
+              placeholder="Not added"
+              onChange={(value) => {
+                set("done_on", value);
+                onCommit?.("done_on", value);
+              }}
+              {...invalidProps(`${id}-done_on-error`, fieldErrors.done_on)}
+            />
+          </Field>
+          <Field label="Outcome note" {...field("outcome_note")}>
+            <textarea
+              id={`${id}-outcome_note`}
+              value={values.outcome_note}
+              rows={2}
+              maxLength={APPLICATION_MAX_LENGTHS.outcome_note}
+              placeholder={PLACEHOLDERS.outcome_note}
+              onChange={(e) => set("outcome_note", e.target.value)}
+              onBlur={onCommit && ((e) => onCommit("outcome_note", e.target.value))}
+              {...invalidProps(`${id}-outcome_note-error`, fieldErrors.outcome_note)}
+              className={`${inputClasses} field-sizing-content max-h-60 min-h-16 resize-y`}
+            />
+          </Field>
+        </>
+      )}
       <Field label="Location" {...field("location")}>
         <ToggleGroup
           type="single"

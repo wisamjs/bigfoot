@@ -88,6 +88,17 @@ describe.each(XSS_TEXT.map((payload, n) => [payload, XSS_URLS[n]] as const))("%j
     expectNothingInjected();
   });
 
+  it("shows as text in a Done Application's Outcome card and Details", () => {
+    const app = poisoned(payload, url);
+    const done = { ...app, status: "done" as const, outcome: "rejected" as const, done_on: "2026-11-02", outcome_note: payload,
+      interviews: [{ ...app.interviews[0], completed: true, takeaway: payload }] };
+    render(<ApplicationEditor app={done} />);
+    // The Outcome note in quotes and the takeaway, both under the Outcome card.
+    const outcome = screen.getByRole("region", { name: "Rejected" });
+    expect(within(outcome).getAllByText(payload.trim().split("\n")[0], { exact: false })).toHaveLength(2);
+    expectNothingInjected();
+  });
+
   it("shows as text on the calendar, its picked day and its agenda", () => {
     const apps = [poisoned(payload, url)];
     render(<InterviewCalendar interviews={getUpcoming(apps)} />);
@@ -157,6 +168,21 @@ describe("the edit forms on the Application page", () => {
       expect(actions.updateApplicationAction).not.toHaveBeenCalled();
     },
   );
+});
+
+describe("the Outcome note on a Done Application's page", () => {
+  it.each(XSS_TEXT)("sends %j exactly as typed", async (payload) => {
+    const user = userEvent.setup();
+    const past = interview("i1", { application_id: "birch", at: new Date(2026, 9, 20, 10, 0).toISOString() });
+    const birch = application("birch", { company: "Birch", status: "done", outcome: "rejected", is_waiting: false, interviews: [past] });
+    render(<ApplicationEditor app={birch} />);
+    await user.click(screen.getByRole("button", { name: "Edit details" }));
+    await user.click(screen.getByLabelText("Outcome note"));
+    await user.paste(payload);
+    await user.tab();
+    expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { outcome_note: payload.trim() });
+    expectNothingInjected();
+  });
 });
 
 describe("the Interview notes on the Interview page", () => {

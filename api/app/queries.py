@@ -16,8 +16,8 @@ def pool(request: Request) -> ConnectionPool:
 
 
 APPLICATION_COLUMNS = (
-    "id, company, title, posting_url, location, office_days, salary, applied_on, status, outcome, is_sample,"
-    " created_at, updated_at"
+    "id, company, title, posting_url, location, office_days, salary, applied_on, status, outcome, done_on,"
+    " outcome_note, is_sample, created_at, updated_at"
 )
 COLUMNS = sql.SQL(APPLICATION_COLUMNS)
 # `expired` is derived on every read, never stored, like an Interview's `completed`.

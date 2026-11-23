@@ -16,6 +16,8 @@ function application(overrides: Partial<Application> = {}): Application {
     applied_on: "2026-11-01",
     status: "in_progress",
     outcome: null,
+    done_on: null,
+    outcome_note: null,
     interviews: [],
     is_waiting: true,
     waiting_since: "2026-11-01",
@@ -74,6 +76,8 @@ describe("applicationsCsv", () => {
           company: "Café, Inc.",
           status: "done",
           outcome: "not_the_right_fit",
+          done_on: "2026-11-16",
+          outcome_note: "They went with an internal candidate.",
           is_sample: true,
           interviews: [
             { id: "i1", application_id: "a1", kind: "recruiter_screen", at: ts, what_they_asked: "Why us?\nSalary range?", how_it_went: "Friendly, asked about salary.", takeaway: null, prep_notes: "Know the salary range.", completed: true, created_at: ts, updated_at: ts },
@@ -96,6 +100,8 @@ describe("applicationsCsv", () => {
       "Applied date": "2026-11-01",
       Status: "Done",
       Outcome: "Not the Right Fit",
+      "Done date": "2026-11-16",
+      "Outcome note": "They went with an internal candidate.",
       Interviews: "Recruiter Screen (2026-11-02T15:00:00Z); Technical (2026-11-02T15:00:00Z); FE System Design (2026-11-02T15:00:00Z)",
       "What they asked": "Recruiter Screen (2026-11-02T15:00:00Z): Why us?\nSalary range?",
       "How it went":
@@ -148,9 +154,16 @@ describe("dataExportJson", () => {
     expired: false,
   };
 
-  it("holds the profile, every Application field (is_sample, Interview notes and Prep notes included) and Access token names and dates", () => {
+  it("holds the profile, every Application field (is_sample, the Done date, the Outcome note, Interview notes and Prep notes included) and Access token names and dates", () => {
     const noted = { id: "i1", application_id: "a1", kind: "technical", at: ts, what_they_asked: "Why us?", how_it_went: "Went well.", takeaway: "Smile.", prep_notes: "Review caching.", completed: true, created_at: ts, updated_at: ts } as const;
-    const app = application({ is_sample: true, interviews: [noted] });
+    const app = application({
+      is_sample: true,
+      status: "done",
+      outcome: "rejected",
+      done_on: "2026-11-16",
+      outcome_note: "They went with an internal candidate.",
+      interviews: [noted],
+    });
     const record = {
       job_seeker_id: "google-123",
       created_at: "2026-11-10T12:00:00Z",
@@ -179,6 +192,7 @@ describe("dataExportJson", () => {
         },
       ],
     });
+    expect(data.applications[0]).toMatchObject({ done_on: "2026-11-16", outcome_note: "They went with an internal candidate." });
     expect(data.applications[0].interviews[0]).toMatchObject({
       what_they_asked: "Why us?",
       how_it_went: "Went well.",

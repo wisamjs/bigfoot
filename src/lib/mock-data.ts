@@ -36,6 +36,8 @@ function sample(
     applied_on: "2026-11-01",
     status: options.offer ? "done" : "in_progress",
     outcome: options.offer ? "offer" : null,
+    done_on: null,
+    outcome_note: null,
     interviews,
     is_waiting: !options.offer && !options.next,
     waiting_since: !options.offer && !options.next ? "2026-11-01" : null,
