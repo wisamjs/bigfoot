@@ -140,6 +140,8 @@ const eslintConfig = defineConfig([
             },
             // The only links between features.
             ...Object.entries({
+              // The Application page's empty states use shell's illustrations (BIG-174).
+              applications: ["shell"],
               dashboard: ["applications", "shell"],
               landing: ["applications", "auth", "shell"],
               shell: ["auth"],

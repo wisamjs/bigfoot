@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ApplicationHeading } from "@/features/applications/application-heading";
 import { ApplicationEditor } from "@/features/applications/application-editor";
 import { DeletedNotice } from "@/features/applications/deleted-notice";
 import { AppHeader } from "@/features/shell/app-header";
@@ -17,7 +16,7 @@ export const metadata: Metadata = {
 
 export default function ApplicationPage({ params, searchParams }: PageProps<"/applications/[id]">) {
   return (
-    <Suspense fallback={<FormPage header={<AppHeader current="/dashboard" />} title="Application" />}>
+    <Suspense fallback={<FormPage header={<AppHeader current="/dashboard" />} title="Application" wide />}>
       <Application params={params} searchParams={searchParams} />
     </Suspense>
   );
@@ -34,9 +33,9 @@ async function Application({ params, searchParams }: Pick<PageProps<"/applicatio
     <FormPage
       header={<AppHeader user={user} current="/dashboard" />}
       title={app.company}
-      heading={<ApplicationHeading app={app} />}
       notice={<DeletedNotice />}
       guard={UnsavedChanges}
+      wide
     >
       <ApplicationEditor app={app} justAdded={query[ADDED_PARAM] === "1"} />
     </FormPage>

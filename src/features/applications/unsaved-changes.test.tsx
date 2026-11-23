@@ -5,7 +5,6 @@ import * as actions from "@/app/applications/actions";
 import type { Application } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
 import { ApplicationEditor } from "./application-editor";
-import { ApplicationHeading } from "./application-heading";
 import { UnsavedChanges } from "./unsaved-changes";
 import { NewApplicationForm } from "./new-application-form";
 import { NewInterviewForm } from "./new-interview-form";
@@ -49,11 +48,10 @@ const birch = application("birch", {
 /** A valid detail to type: the Job posting URL, which Birch has none of. */
 const TYPED = "https://birch.test";
 
-/** The Application page's guarded body: the heading and the editor under one UnsavedChanges. */
+/** The Application page's guarded body: the editor under UnsavedChanges. */
 function Body({ app }: { app: Application }) {
   return (
     <UnsavedChanges>
-      <ApplicationHeading app={app} />
       <ApplicationEditor app={app} />
     </UnsavedChanges>
   );
@@ -78,7 +76,13 @@ function openEditor() {
       <Body app={birch} />
     </Page>,
   );
+  openDetails();
   return user;
+}
+
+/** Turns the Details card's text into fields, where details are typed. */
+function openDetails() {
+  fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
 }
 
 const PROMPT = /You have unsaved changes/;
@@ -204,6 +208,7 @@ describe("leaving the Application page with unsaved changes", () => {
         <Body app={birch} />
       </Page>,
     );
+    openDetails();
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("Job posting URL"), TYPED);
     // Clicking the link blurs the field, which starts its save; the click then finds it unsaved.

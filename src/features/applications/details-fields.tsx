@@ -1,7 +1,8 @@
 "use client";
 
-import { ExternalLink as ExternalLinkIcon } from "lucide-react";
-import { useId, useState, type ChangeEvent, type FocusEvent, type ReactNode } from "react";
+import { ExternalLink as ExternalLinkIcon, Eye, EyeOff } from "lucide-react";
+import { useId, useState, type ChangeEvent, type FocusEvent, type InputHTMLAttributes, type ReactNode } from "react";
+import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { ExternalLink } from "@/components/ui/external-link";
 import { Field } from "@/components/ui/field";
@@ -18,7 +19,7 @@ import {
 } from "@/lib/applications";
 import { applicationErrors, isValid, summarize, type FieldErrors } from "@/lib/validation";
 
-export const DETAIL_FIELDS = ["company", "title", "applied_on", "location", "office_days", "posting_url"] as const;
+export const DETAIL_FIELDS = ["company", "title", "applied_on", "location", "office_days", "salary", "posting_url"] as const;
 export type DetailField = (typeof DETAIL_FIELDS)[number];
 /** Each detail as the form holds it: text, with "" for none (office days as "1" to "4"). */
 export type DetailValues = Record<DetailField, string>;
@@ -97,9 +98,10 @@ export type Details = ReturnType<typeof useDetails>;
 
 /**
  * An Application's details as fields: company, title, applied date, Location (and days in office,
- * when Hybrid) and job posting.
- * Company, Title and Applied are required. Without `identity`, Company and Title are left out:
- * an existing Application edits them in its heading. With `app`, the job posting has a link out.
+ * when Hybrid), salary (with `salary`) and job posting.
+ * Company, Title and Applied are required. Without `identity`, Company and Title are left out.
+ * With `salary`, the salary is a field too, masked until Show is pressed (SalaryInput); Add
+ * Application leaves it out. With `app`, the job posting has a link out.
  * With `onCommit`, each detail reports when it's left (the date and Location, when picked), for a form that
  * saves them one by one; `status` then gives each its SaveStatus, shown beside its label.
  */
@@ -107,6 +109,7 @@ export function DetailsFields({
   details,
   app,
   identity = true,
+  salary = false,
   onCommit,
   status,
 }: {
@@ -114,13 +117,15 @@ export function DetailsFields({
   app?: Application;
   onCommit?: (name: DetailField, value: string) => void;
   status?: (name: DetailField) => ReactNode;
-  /** Whether Company and Title are fields here; the Application page edits them in its heading. */
+  /** Whether Company and Title are fields here. */
   identity?: boolean;
+  /** Whether the salary is a field here, as on the Application page. */
+  salary?: boolean;
 }) {
   const { id, values, set, fieldErrors } = details;
 
   /** The props of one typed detail's input. */
-  function input(name: "company" | "title" | "posting_url") {
+  function input(name: "company" | "title" | "salary" | "posting_url") {
     return {
       id: `${id}-${name}`,
       value: values[name],
@@ -212,6 +217,11 @@ export function DetailsFields({
           </ToggleGroup>
         </Field>
       )}
+      {salary && (
+        <Field label="Salary" {...field("salary")}>
+          <SalaryInput {...input("salary")} hintId={`${id}-salary-hint`} />
+        </Field>
+      )}
       <Field label="Job posting URL" {...field("posting_url")}>
         <div className="flex items-center gap-1">
           <input type="url" {...input("posting_url")} />
@@ -227,6 +237,42 @@ export function DetailsFields({
         </div>
       </Field>
     </div>
+  );
+}
+
+/**
+ * The salary as a field that keeps it masked, as dots, until Show is pressed: safe to edit on a
+ * shared screen. Password managers are told to leave it alone; it is no password.
+ */
+function SalaryInput({ hintId, ...props }: InputHTMLAttributes<HTMLInputElement> & { hintId: string }) {
+  const [shown, setShown] = useState(false);
+  const describedBy = [props["aria-describedby"], hintId].filter(Boolean).join(" ");
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <input
+          {...props}
+          type={shown ? "text" : "password"}
+          autoComplete="off"
+          data-1p-ignore
+          data-lpignore="true"
+          data-bwignore
+          aria-describedby={describedBy}
+        />
+        <Button
+          variant="secondary"
+          className="shrink-0"
+          onClick={() => setShown(!shown)}
+        >
+          {shown ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+          {shown ? "Hide" : "Show"}
+          <span className="sr-only"> salary</span>
+        </Button>
+      </div>
+      <p id={hintId} className="m-0 mt-1.5 text-xs leading-[1.5] text-body">
+        Stays hidden while you edit, so it’s safe on a shared screen.
+      </p>
+    </>
   );
 }
 

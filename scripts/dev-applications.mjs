@@ -52,7 +52,7 @@ function applications() {
     { company: "Ramp", title: "Staff Engineer", status: "done", outcome: "offer", interviews: [["onsite_loop", -6, 10]] },
     { company: "Vercel", title: "Frontend Engineer", status: "done", outcome: "rejected", interviews: [["technical", -8, 10]] },
     { company: "Plaid", title: "Software Engineer", status: "done", outcome: "withdrawn", interviews: [["recruiter_screen", -10, 10]] },
-      // Each has a salary, which no screen shows: the API still stores it.
+      // Each has a salary, which the Application page hides behind Reveal.
   ].map((a) => ({ applied_on, salary: "$150k–$180k", ...a }));
 }
 

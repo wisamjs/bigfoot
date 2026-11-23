@@ -256,3 +256,68 @@ export function getApplicationGroups(apps: Application[], { showDone = false } =
 export function applicationsTag(jobSeekerId: string) {
   return `applications:${jobSeekerId}`;
 }
+
+/** The Application page's Interviews (BIG-174): the next one, the others still ahead, and the completed ones, newest first. */
+export type InterviewSections = { next: Interview | null; later: Interview[]; done: Interview[] };
+
+export function interviewSections(app: Application): InterviewSections {
+  const [next = null, ...later] = upcomingInterviews(app);
+  // Completed ones come by date; any saved with no date (docs/adr/0005) come last there, and stay last.
+  const dated = app.interviews.filter((i) => i.completed && i.at !== null).toReversed();
+  const undated = app.interviews.filter((i) => i.at === null);
+  return { next, later, done: [...dated, ...undated] };
+}
+
+/** The paragraphs of some notes: runs of text split by blank lines, trimmed. */
+export function paragraphs(notes: string | null): string[] {
+  return (notes ?? "")
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
+
+/**
+ * What the next Interview carries forward (BIG-174): the last paragraph of the Interview notes of
+ * the latest completed Interview, where the job seeker usually writes what to do differently next
+ * time. Null when there is no next Interview, or the last completed one has no notes.
+ */
+export function carriedForward(app: Application): { from: Interview; text: string } | null {
+  if (!nextInterview(app)) return null;
+  const from = lastCompletedInterview(app);
+  const text = paragraphs(from?.notes ?? null).at(-1);
+  return from && text ? { from, text } : null;
+}
+
+/** Whole calendar days from `from` to `to`, in the viewer's time zone: 0 on the same day, negative before it. */
+export function calendarDaysBetween(from: Date, to: Date): number {
+  const start = Date.UTC(from.getFullYear(), from.getMonth(), from.getDate());
+  const end = Date.UTC(to.getFullYear(), to.getMonth(), to.getDate());
+  return Math.round((end - start) / 86_400_000);
+}
+
+/** A date-only value (YYYY-MM-DD) as that calendar day at local midnight, not UTC midnight; a timestamp as itself. */
+export function parseDay(value: string): Date {
+  return value.length === 10 ? new Date(`${value}T00:00`) : new Date(value);
+}
+
+/** "today", "yesterday", "in 2 days", "26 days ago". */
+export function relativeDays(days: number): string {
+  if (days === 0) return "today";
+  if (days === 1) return "tomorrow";
+  if (days === -1) return "yesterday";
+  return days > 0 ? `in ${days} days` : `${-days} days ago`;
+}
+
+export type Progress = { id: ApplicationGroup["id"]; label: string };
+
+/**
+ * Where an Application stands, as the Applications list groups it: Waiting, Interview scheduled,
+ * Offer, or Done with its Outcome ("Done · Rejected").
+ */
+export function applicationProgress(app: Application): Progress {
+  if (isDone(app)) {
+    if (app.outcome === "offer") return { id: "offer", label: "Offer" };
+    return { id: "done", label: app.outcome ? `Done · ${OUTCOME_OPTIONS[app.outcome].label}` : "Done" };
+  }
+  return nextInterview(app) ? { id: "scheduled", label: "Interview scheduled" } : { id: "waiting", label: "Waiting" };
+}
