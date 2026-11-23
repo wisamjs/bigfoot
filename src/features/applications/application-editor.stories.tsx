@@ -59,7 +59,7 @@ const quillon = application("quillon", {
 function completedBars(canvas: ReturnType<typeof within>, colour: string) {
   return within(canvas.getByRole("list", { name: "Interviews by date" }))
     .getAllByRole("listitem")
-    .filter((segment) => segment.firstElementChild?.classList.contains(colour));
+    .filter((segment) => segment.firstElementChild?.firstElementChild?.classList.contains(colour));
 }
 
 const meta = {

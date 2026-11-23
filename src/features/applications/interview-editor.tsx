@@ -1,50 +1,38 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
-import { useState } from "react";
-import { deleteInterviewAndLeaveAction, updateInterviewAction } from "@/app/applications/actions";
-import { Button } from "@/components/ui/button";
+import { updateInterviewAction } from "@/app/applications/actions";
 import { useSaveStatus } from "@/hooks/use-save-status";
-import { DeleteInterviewDialog } from "@/features/applications/application-dialogs";
+import { InterviewHeading } from "@/features/applications/interview-heading";
 import { InterviewNotesForm } from "@/features/applications/interview-notes-form";
+import { InterviewProgress } from "@/features/applications/interview-progress";
 import type { Application, Interview } from "@/lib/applications";
 import { interviewErrors, isValid } from "@/lib/validation";
 
 /**
- * The Interview page's body, under its heading (InterviewHeading), which edits the kind and the
- * date: the Interview notes, saving by themselves with their own save status, then Delete
- * Interview. Deleting asks first, then goes to the dashboard, which says "Interview deleted".
- * Leaving with Interview notes not yet saved asks first: the page puts this inside UnsavedChanges
- * with the heading.
+ * The Interview page under its "← <company>" link (BIG-178): the heading (kind, date, badges, Edit
+ * details and ⋯ with Delete Interview), the Application's Interviews as a strip with this one
+ * outlined, then the Interview notes card, which reads as text until edited and saves by itself
+ * with its own save status. Leaving with the kind, the date or Interview notes not yet saved asks
+ * first: the page puts this inside UnsavedChanges.
  */
 export function InterviewEditor({ app, interview }: { app: Application; interview: Interview }) {
-  const [deleting, setDeleting] = useState<Interview | null>(null);
   const notesSave = useSaveStatus();
   return (
-    <div className="flex flex-col gap-6">
-      <InterviewNotesForm
-        key={interview.id}
-        interview={interview}
-        tracker={notesSave}
-        onSave={(notes) => {
-          const problems = interviewErrors({ notes });
-          if (!isValid(problems)) return { problem: problems.notes, sent: null };
-          return { problem: undefined, sent: notesSave.run(() => updateInterviewAction(app.id, interview.id, { notes })) };
-        }}
-      />
-      <div className="flex border-t border-line pt-4">
-        <Button onClick={() => setDeleting(interview)} variant="danger">
-          <Trash2 className="size-4" aria-hidden />
-          Delete Interview
-        </Button>
+    <div className="flex flex-col gap-6 sm:gap-8">
+      <InterviewHeading app={app} interview={interview} />
+      <InterviewProgress app={app} current={interview.id} />
+      <div className="max-w-[768px]">
+        <InterviewNotesForm
+          key={interview.id}
+          interview={interview}
+          tracker={notesSave}
+          onSave={(notes) => {
+            const problems = interviewErrors({ notes });
+            if (!isValid(problems)) return { problem: problems.notes, sent: null };
+            return { problem: undefined, sent: notesSave.run(() => updateInterviewAction(app.id, interview.id, { notes })) };
+          }}
+        />
       </div>
-      <DeleteInterviewDialog
-        interview={deleting}
-        onConfirm={(gone) => deleteInterviewAndLeaveAction(app.id, gone.id)}
-        onClose={() => setDeleting(null)}
-        // The action goes to the dashboard once it has deleted, so nothing is left to do here.
-        onDeleted={() => {}}
-      />
     </div>
   );
 }
