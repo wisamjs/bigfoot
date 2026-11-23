@@ -106,14 +106,22 @@ function clickGoesThrough(name: string) {
   return reached && !stopped;
 }
 
+/**
+ * Whether the guard is up: closing the tab would be questioned. A cancellable `beforeunload` has
+ * no side effects, unlike a click, so it can be polled while a state update is still rendering.
+ */
+function guardIsUp() {
+  const unload = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(unload);
+  return unload.defaultPrevented;
+}
+
 describe("leaving the Application page with nothing unsaved", () => {
   it("goes straight through, and closing the tab isn't questioned", () => {
     openEditor();
     expect(clickGoesThrough("Dashboard")).toBe(true);
     expect(screen.queryByText(PROMPT)).not.toBeInTheDocument();
-    const unload = new Event("beforeunload", { cancelable: true });
-    window.dispatchEvent(unload);
-    expect(unload.defaultPrevented).toBe(false);
+    expect(guardIsUp()).toBe(false);
   });
 });
 
@@ -142,9 +150,7 @@ describe("leaving the Application page with unsaved changes", () => {
   it("asks before the browser closes or reloads the tab", async () => {
     const user = openEditor();
     await user.type(screen.getByLabelText("Job posting URL"), TYPED);
-    const unload = new Event("beforeunload", { cancelable: true });
-    window.dispatchEvent(unload);
-    expect(unload.defaultPrevented).toBe(true);
+    expect(guardIsUp()).toBe(true);
   });
 
   it("leaves new tabs, other sites and the same page alone", async () => {
@@ -329,6 +335,8 @@ describe("Add Application", () => {
     await user.type(screen.getByLabelText("Title"), "Engineer");
     await user.click(screen.getByRole("button", { name: "Add Application" }));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/applications/new-id?added=1"));
+    // `push` is called in the same tick as the form marks itself added; the guard drops a render later.
+    await waitFor(() => expect(guardIsUp()).toBe(false));
     expect(clickGoesThrough("Dashboard")).toBe(true);
   });
 });
