@@ -58,6 +58,8 @@ display or form of typed text joins it.
 | `src/app/` | Routes: thin files that put features together. |
 | `src/*.ts` | Next.js's root files: `auth.ts`, `proxy.ts`, `instrumentation.ts`. |
 
+Stories (`<name>.stories.tsx`) sit beside the component they show, under the same import rules. Storybook's stand-ins for Server Actions sit in `__mocks__/actions.ts` beside each `actions.ts`.
+
 A "dumb" component is one in `ui/`: it can't reach the domain, a server action or a feature, so
 it can be reused anywhere. Who may import whom, including the few links between features, lives
 in `eslint.config.mjs` ("Architecture"); `scripts/boundaries.test.ts` checks it still bites. A
