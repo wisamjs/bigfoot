@@ -101,7 +101,7 @@ export default function PrivacyPage() {
         <p>
           Your Applications: the company, job title, posting link, location, salary, the date you
           applied, its Status and Outcome, and each Interview: its kind and, if you give them, its
-          date and your Interview notes, which hold whatever you write there.
+          date, your Interview notes and your Prep notes, which hold whatever you write there.
         </p>
         <h3 className={h3}>Access tokens, if you create any</h3>
         <p>

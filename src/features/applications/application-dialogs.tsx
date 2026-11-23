@@ -84,9 +84,15 @@ export function DeleteApplicationDialog({
 
 const dayFormat = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" });
 
+/** ", with its Interview notes", ", with its Prep notes" or both; nothing when it has neither. */
+function withNotes({ notes, prep_notes }: Interview) {
+  const held = [notes && "Interview notes", prep_notes && "Prep notes"].filter(Boolean);
+  return held.length ? `, with its ${held.join(" and ")}` : "";
+}
+
 /**
  * The Delete Interview? dialog, for the Interview being deleted (null while closed). It names the
- * Interview by kind and date, and warns about its Interview notes when it has any.
+ * Interview by kind and date, and warns about its Interview notes and Prep notes when it has any.
  */
 export function DeleteInterviewDialog({
   interview,
@@ -111,7 +117,7 @@ export function DeleteInterviewDialog({
             {INTERVIEW_OPTIONS[interview.kind].label}
             {` on ${dayFormat.format(new Date(interview.at))}`}
           </span>{" "}
-          will be deleted{interview.notes ? ", with its Interview notes" : ""}. This can’t be undone.
+          will be deleted{withNotes(interview)}. This can’t be undone.
         </DeleteConfirmation>
       )}
     </Modal>

@@ -76,9 +76,9 @@ describe("applicationsCsv", () => {
           outcome: "not_the_right_fit",
           is_sample: true,
           interviews: [
-            { id: "i1", application_id: "a1", kind: "recruiter_screen", at: ts, notes: "Friendly, asked about salary.", completed: true, created_at: ts, updated_at: ts },
-            { id: "i2", application_id: "a1", kind: "technical", at: ts, notes: null, completed: true, created_at: ts, updated_at: ts },
-            { id: "i3", application_id: "a1", kind: "fe_system_design", at: ts, notes: "Drew the cache late.\nStart with the diagram.", completed: true, created_at: ts, updated_at: ts },
+            { id: "i1", application_id: "a1", kind: "recruiter_screen", at: ts, notes: "Friendly, asked about salary.", prep_notes: "Know the salary range.", completed: true, created_at: ts, updated_at: ts },
+            { id: "i2", application_id: "a1", kind: "technical", at: ts, notes: null, prep_notes: null, completed: true, created_at: ts, updated_at: ts },
+            { id: "i3", application_id: "a1", kind: "fe_system_design", at: ts, notes: "Drew the cache late.\nStart with the diagram.", prep_notes: null, completed: true, created_at: ts, updated_at: ts },
           ],
         }),
         application({ company: "Second" }),
@@ -100,6 +100,7 @@ describe("applicationsCsv", () => {
       "Interview notes":
         "Recruiter Screen (2026-11-02T15:00:00Z): Friendly, asked about salary.\n\n" +
         "FE System Design (2026-11-02T15:00:00Z): Drew the cache late.\nStart with the diagram.",
+      "Prep notes": "Recruiter Screen (2026-11-02T15:00:00Z): Know the salary range.",
       "Sample Application": "Yes",
       Created: "2026-11-02T15:00:00Z",
       Updated: "2026-11-02T15:00:00Z",
@@ -145,8 +146,8 @@ describe("dataExportJson", () => {
     expired: false,
   };
 
-  it("holds the profile, every Application field (is_sample and Interview notes included) and Access token names and dates", () => {
-    const noted = { id: "i1", application_id: "a1", kind: "technical", at: ts, notes: "Went well.", completed: true, created_at: ts, updated_at: ts } as const;
+  it("holds the profile, every Application field (is_sample, Interview notes and Prep notes included) and Access token names and dates", () => {
+    const noted = { id: "i1", application_id: "a1", kind: "technical", at: ts, notes: "Went well.", prep_notes: "Review caching.", completed: true, created_at: ts, updated_at: ts } as const;
     const app = application({ is_sample: true, interviews: [noted] });
     const record = {
       job_seeker_id: "google-123",
@@ -177,6 +178,7 @@ describe("dataExportJson", () => {
       ],
     });
     expect(data.applications[0].interviews[0].notes).toBe("Went well.");
+    expect(data.applications[0].interviews[0].prep_notes).toBe("Review caching.");
   });
 
   it("never exports an Access token's secret or hash, even if the API sent one", () => {

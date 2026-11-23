@@ -6,7 +6,7 @@ import { InterviewEditor } from "./interview-editor";
 import { UnsavedChanges } from "./unsaved-changes";
 
 // The Interview page under its "← <company>" link (BIG-178): the heading, the strip with this
-// Interview outlined, and the Interview notes. Dates are counted from today. Server Actions are
+// Interview outlined, and the Prep notes and Interview notes (BIG-180). Dates are counted from today. Server Actions are
 // mocked (src/app/applications/__mocks__/actions.ts) and succeed unless a story says otherwise.
 const DAY = 86_400_000;
 const daysFromNow = (days: number, hour = 15) => {
@@ -60,12 +60,87 @@ export const Completed: Story = {
   },
 };
 
-/** Coming up: "Upcoming · in 2 days", and Add Interview notes while it has none. */
+/**
+ * Coming up, with no Prep notes: "Upcoming · in 2 days", the Before card offering Add Prep notes
+ * ("Get ready for <weekday>") and the After card waiting for how it went.
+ */
 export const Upcoming: Story = {
   args: { interview: upcoming },
   play: async ({ canvas }) => {
     await expect(await canvas.findByText("Upcoming · in 2 days")).toBeVisible();
-    await expect(canvas.getByText("No Interview notes yet.")).toBeVisible();
+    await expect(canvas.getByText(/^Get ready for /)).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "Add Prep notes" })).toBeVisible();
+    await expect(canvas.getByText("Nothing yet, that’s expected")).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "Add Interview notes" })).toBeVisible();
+  },
+};
+
+/** Coming up with Prep notes written: they show first, with Edit, above the After card. */
+export const UpcomingWithPrepNotes: Story = {
+  args: { interview: { ...upcoming, prep_notes: "Review the caching chapter.\n\n- Draw the diagram first\n- Ask about the on-call rotation" } },
+  play: async ({ canvas }) => {
+    const headings = canvas.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
+    await expect(headings).toEqual(["Prep notes", "Interview notes"]);
+    await expect(within(canvas.getByRole("region", { name: "Prep notes" })).getAllByRole("listitem")).toHaveLength(2);
+    await expect(canvas.getByRole("button", { name: "Edit Prep notes" })).toBeVisible();
+  },
+};
+
+/** A week or more away, the Before card says the date, not the weekday. */
+export const UpcomingLater: Story = {
+  args: { interview: lumen.interviews[3] },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText(/^Get ready for [A-Z][a-z]{2} \d+$/)).toBeVisible();
+  },
+};
+
+/** Add Prep notes opens the field, which saves by itself with its own "Saved". */
+export const WritingPrepNotes: Story = {
+  args: { interview: upcoming },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Add Prep notes" }));
+    const field = canvas.getByRole("textbox", { name: "Prep notes" });
+    await expect(field).toHaveFocus();
+    await userEvent.type(field, "Review caching.");
+    await userEvent.tab();
+    await waitFor(() =>
+      expect(updateInterviewAction).toHaveBeenCalledWith("lumen", upcoming.id, { prep_notes: "Review caching." }),
+    );
+    await expect(await canvas.findByText("Saved")).toBeVisible();
+  },
+};
+
+/** Done: Interview notes first, then the Prep notes folded to their first lines behind Show Prep notes. */
+export const CompletedWithPrepNotes: Story = {
+  args: { interview: { ...completed, prep_notes: "Review the caching chapter.\nDraw the diagram first.\nAsk about the on-call rotation.\nBring the take-home." } },
+  play: async ({ canvas, userEvent }) => {
+    const headings = canvas.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
+    await expect(headings).toEqual(["Interview notes", "Prep notes"]);
+    const prep = canvas.getByRole("region", { name: "Prep notes" });
+    await expect(prep).not.toHaveTextContent("on-call");
+    await userEvent.click(within(prep).getByRole("button", { name: "Show Prep notes" }));
+    await expect(prep).toHaveTextContent("Bring the take-home.");
+    await expect(within(prep).getByRole("button", { name: "Hide Prep notes" })).toHaveAttribute("aria-expanded", "true");
+  },
+};
+
+/** Done with no Prep notes: the card isn't shown empty. */
+export const CompletedWithoutPrepNotes: Story = {
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByRole("region", { name: "Prep notes" })).not.toBeInTheDocument();
+  },
+};
+
+/** Opened Prep notes of a completed Interview edit like any notes: Edit, the field, Done. */
+export const EditingPrepNotes: Story = {
+  args: { interview: { ...completed, prep_notes: "Review the caching chapter." } },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Show Prep notes" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Edit Prep notes" }));
+    await expect(canvas.getByRole("textbox", { name: "Prep notes" })).toHaveFocus();
+    await userEvent.click(canvas.getByRole("button", { name: "Done" }));
+    await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
+    await waitFor(() => expect(canvas.getByRole("button", { name: "Edit Prep notes" })).toHaveFocus());
   },
 };
 

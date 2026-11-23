@@ -14,6 +14,7 @@ function sample(
     kind,
     at: completed ? `2026-11-0${i + 2}T17:00:00Z` : "2099-01-01T17:00:00Z",
     notes: null,
+    prep_notes: null,
     completed,
     created_at: "2026-11-01T00:00:00Z",
     updated_at: "2026-11-01T00:00:00Z",

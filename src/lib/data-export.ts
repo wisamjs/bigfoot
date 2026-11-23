@@ -73,6 +73,15 @@ const CSV_COLUMNS: {
         .map((i) => `${interviewName(i)}: ${i.notes}`)
         .join("\n\n"),
   },
+  {
+    // Likewise: one paragraph per Interview that has Prep notes.
+    header: "Prep notes",
+    value: (a) =>
+      a.interviews
+        .filter((i) => i.prep_notes)
+        .map((i) => `${interviewName(i)}: ${i.prep_notes}`)
+        .join("\n\n"),
+  },
   { header: "Sample Application", value: (a) => (a.is_sample ? "Yes" : "No") },
   { header: "Created", value: (a) => isoUtc(a.created_at) },
   { header: "Updated", value: (a) => isoUtc(a.updated_at) },
@@ -99,7 +108,7 @@ export function applicationsCsv(applications: Application[]) {
 
 /**
  * Everything Bigfoot holds about the job seeker: their profile, every Application field (each
- * Interview's notes included), and their Access tokens' names and dates. Never a token's secret:
+ * Interview's Interview notes and Prep notes included), and their Access tokens' names and dates. Never a token's secret:
  * Bigfoot stores only a hash of it.
  */
 export function dataExportJson(

@@ -13,6 +13,7 @@ from app.auth import ACCESS_TOKEN_PREFIX
 from app.domain import (
     COMPANY_MAX_LENGTH,
     INTERVIEW_NOTES_MAX_LENGTH,
+    INTERVIEW_PREP_NOTES_MAX_LENGTH,
     OFFICE_DAYS_MAX,
     OFFICE_DAYS_MIN,
     POSTING_URL_MAX_LENGTH,
@@ -66,6 +67,7 @@ OfficeDays = Annotated[int, Field(ge=OFFICE_DAYS_MIN, le=OFFICE_DAYS_MAX)]
 Salary = Annotated[str | None, Field(max_length=SALARY_MAX_LENGTH), AfterValidator(_optional_text)]
 PostingUrl = Annotated[str | None, Field(max_length=POSTING_URL_MAX_LENGTH), AfterValidator(_posting_url)]
 InterviewNotes = Annotated[str | None, Field(max_length=INTERVIEW_NOTES_MAX_LENGTH), AfterValidator(_optional_text)]
+PrepNotes = Annotated[str | None, Field(max_length=INTERVIEW_PREP_NOTES_MAX_LENGTH), AfterValidator(_optional_text)]
 
 
 def _has_a_time(value: Any) -> Any:
@@ -110,6 +112,12 @@ NOTES = (
     f"{INTERVIEW_NOTES_MAX_LENGTH:,} characters. Null when there are none."
 )
 EXAMPLE_NOTES = "Asked about caching trade-offs. Next time, draw the diagram first."
+PREP_NOTES = (
+    "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its "
+    f"Interview notes, as plain text of at most {INTERVIEW_PREP_NOTES_MAX_LENGTH:,} characters. "
+    "Null when there are none."
+)
+EXAMPLE_PREP_NOTES = "Review the caching chapter. Ask about the on-call rotation."
 INTERVIEW_ORDER_DESCRIPTION = "Ordered by date."
 
 
@@ -195,10 +203,16 @@ class InterviewCreate(BaseModel):
     kind: InterviewKind = Field(description=KIND, examples=["technical"])
     at: InterviewAt = Field(description=AT, examples=["2026-11-20T17:00:00Z"])
     notes: InterviewNotes = Field(default=None, description=f"{NOTES} Blank is stored as null.", examples=[None])
+    prep_notes: PrepNotes = Field(
+        default=None, description=f"{PREP_NOTES} Blank is stored as null.", examples=[EXAMPLE_PREP_NOTES]
+    )
 
 
 class InterviewPatch(BaseModel):
-    """Only the fields sent are changed; send null for `notes` to clear them. The date can't be cleared."""
+    """Only the fields sent are changed; send null for `notes` or `prep_notes` to clear them.
+
+    The date can't be cleared.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -208,6 +222,9 @@ class InterviewPatch(BaseModel):
     )
     notes: InterviewNotes = Field(
         default=None, description=f"{NOTES} Blank is stored as null.", examples=[EXAMPLE_NOTES]
+    )
+    prep_notes: PrepNotes = Field(
+        default=None, description=f"{PREP_NOTES} Blank is stored as null.", examples=[EXAMPLE_PREP_NOTES]
     )
 
     @field_validator("at")
@@ -233,6 +250,7 @@ class Interview(BaseModel):
     kind: InterviewKind = Field(description=KIND, examples=["technical"])
     at: datetime = Field(description=AT, examples=["2026-11-20T17:00:00Z"])
     notes: str | None = Field(description=NOTES, examples=[EXAMPLE_NOTES])
+    prep_notes: str | None = Field(description=PREP_NOTES, examples=[EXAMPLE_PREP_NOTES])
     completed: bool = Field(
         description="Derived, never stored: the date is in the past.",
         examples=[False],

@@ -47,6 +47,9 @@ export type InterviewKind = (typeof INTERVIEW_KINDS)[number];
 /** The longest Interview notes the API stores, in characters. */
 export const INTERVIEW_NOTES_MAX_LENGTH = 20_000;
 
+/** The longest Prep notes the API stores, in characters: the same as Interview notes. */
+export const INTERVIEW_PREP_NOTES_MAX_LENGTH = 20_000;
+
 /** The longest text each Application field stores, in characters; the API and database enforce them too. */
 export const APPLICATION_MAX_LENGTHS = {
   company: 200,
@@ -63,6 +66,8 @@ export type Interview = {
   at: string;
   /** Interview notes: plain text the job seeker wrote about this Interview; null when there are none. */
   notes: string | null;
+  /** Prep notes: plain text the job seeker wrote to get ready for this Interview; null when there are none. */
+  prep_notes: string | null;
   /** Derived by the API: the date is in the past. */
   completed: boolean;
   created_at: string;
@@ -102,7 +107,7 @@ export type ApplicationFields = Omit<
 >;
 
 /** What a form sends: `at` is null while no date and time has been given, and validation refuses it. */
-export type InterviewFields = Pick<Interview, "kind" | "notes"> & { at: string | null };
+export type InterviewFields = Pick<Interview, "kind" | "notes" | "prep_notes"> & { at: string | null };
 
 type Option = { label: string };
 
