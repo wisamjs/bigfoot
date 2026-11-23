@@ -278,11 +278,34 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** A job search a few weeks in: one table, ordered by what each Application is waiting on. */
-export const Default: Story = {};
+/**
+ * A job search a few weeks in: one table, ordered by what each Application is waiting on. An In
+ * Progress row marks each completed Interview in green.
+ */
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    await expect(progressMarks(canvasElement, "Clio")).not.toHaveLength(0);
+    await expect(progressMarks(canvasElement, "Clio").every((mark) => mark.classList.contains("bg-fg-success-strong"))).toBe(true);
+  },
+};
 
-/** With "Show done" on, the Done Applications follow, each showing its Outcome. */
-export const ShowDone: Story = { args: { showDone: true } };
+/**
+ * With "Show done" on, the Done Applications follow, each showing its Outcome, their completed
+ * Interviews marked in grey: the hiring process is over.
+ */
+export const ShowDone: Story = {
+  args: { showDone: true },
+  play: async ({ canvasElement }) => {
+    await expect(progressMarks(canvasElement, "Instacart")).not.toHaveLength(0);
+    await expect(progressMarks(canvasElement, "Instacart").every((mark) => mark.classList.contains("bg-tone-gray-fg"))).toBe(true);
+  },
+};
+
+/** A row's completed-Interview marks in its Progress. */
+function progressMarks(canvasElement: HTMLElement, company: string) {
+  const row = canvasElement.querySelector(`tr[data-application-id="${company.toLowerCase()}"]`);
+  return [...(row?.querySelectorAll("span.rounded-full") ?? [])];
+}
 
 /** A new job seeker's first few Applications. */
 export const Few: Story = {
