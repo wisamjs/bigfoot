@@ -7,7 +7,7 @@ const features: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: ListTodo,
     title: "Applications",
-    body: "See every Application grouped by what it’s waiting on: a reply, an Interview or your answer to an Offer.",
+    body: "See every Application in one table, ordered by what it’s waiting on: a reply, an Interview or your answer to an Offer.",
   },
   {
     icon: ListChecks,

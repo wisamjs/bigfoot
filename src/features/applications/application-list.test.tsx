@@ -24,69 +24,74 @@ const offer = application("Cedar", { status: "done", outcome: "offer", is_waitin
 const rejected = application("Umbrella", { status: "done", outcome: "rejected", is_waiting: false });
 const all = [waiting, scheduled, offer, rejected];
 
-/** Each group's label and the companies on its cards. */
-function groups() {
-  return screen.getAllByRole("region").map((section) => [
-    section.getAttribute("aria-label"),
-    within(section)
-      .getAllByRole("listitem")
-      .filter((li) => li.parentElement?.parentElement === section)
-      .map((li) => li.querySelector("p")?.textContent),
-  ]);
+/** Each body row's company and Progress group, in order. */
+function rows() {
+  return screen
+    .getAllByRole("row")
+    .slice(1)
+    .map((row) => {
+      const cells = within(row).getAllByRole("cell");
+      return [cells[0].querySelector("p")?.textContent, cells[1].querySelector("p")?.textContent];
+    });
 }
 
-/** Matches a card's next-Interview row by its kind. */
-function nextInterview(kind: string) {
-  return (_: string, element: Element | null) =>
-    element?.tagName === "P" && (element.textContent ?? "").startsWith(`Next Interview: ${kind}`);
+/** A row by its company. */
+function row(company: string) {
+  return screen.getAllByRole("row").find((r) => r.querySelector("p")?.textContent?.includes(company))!;
 }
 
 describe("ApplicationList", () => {
-  it("groups Applications into Waiting, Interview scheduled and Offer, leaving other Done ones off", () => {
-    render(<ApplicationList applications={all} />);
-    expect(groups()).toEqual([
-      ["Waiting", ["Acme"]],
-      ["Interview scheduled", ["Birch"]],
-      ["Offer", ["Cedar"]],
+  it("is one table: Application, Progress, Next, Location", () => {
+    render(<ApplicationList applications={all} linked />);
+    expect(screen.getAllByRole("columnheader").map((th) => th.textContent)).toEqual([
+      "Application",
+      "Progress",
+      "Next",
+      "Location",
+      "Change Status",
     ]);
   });
 
-  it("adds a Done group when asked", () => {
+  it("orders rows Waiting, Interview scheduled and Offer, leaving other Done ones off", () => {
+    render(<ApplicationList applications={all} />);
+    expect(rows()).toEqual([
+      ["Acme", "Waiting"],
+      ["Birch", "Interview scheduled"],
+      ["Cedar", "Offer"],
+    ]);
+  });
+
+  it("adds Done rows last when asked", () => {
     render(<ApplicationList applications={all} showDone />);
-    expect(groups().at(-1)).toEqual(["Done", ["Umbrella"]]);
+    expect(rows().at(-1)).toEqual(["Umbrella", "Done"]);
   });
 
   it("explains the list when there's nothing to show", () => {
     render(<ApplicationList applications={[rejected]} />);
-    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(screen.getByText(/Open Applications show up here/)).toBeInTheDocument();
   });
 
-  it("shows a card's next Interview and how many are completed, not every Interview", () => {
-    render(<ApplicationList applications={[scheduled]} />);
-    const card = screen.getByRole("listitem");
-    expect(within(card).getByText(nextInterview("Technical"))).toBeInTheDocument();
-    expect(within(card).queryByText("Recruiter Screen")).not.toBeInTheDocument();
-    expect(within(card).getByText("1 completed Interview")).toBeInTheDocument();
-    expect(within(card).queryByText(/more upcoming/)).not.toBeInTheDocument();
-  });
-
-  it("shows the soonest of two upcoming Interviews on the same day, plus how many more", () => {
+  it("shows each upcoming Interview's kind, soonest first, with its date for screen readers", () => {
     const app = application("Birch", {
       is_waiting: false,
       interviews: [
+        interview("past", { at: "2026-11-02T15:00:00Z", completed: true, kind: "recruiter_screen" }),
         interview("am", { at: "2027-01-05T15:00:00Z", completed: false, kind: "hiring_manager" }),
         interview("pm", { at: "2027-01-05T19:00:00Z", completed: false, kind: "technical" }),
       ],
     });
     render(<ApplicationList applications={[app]} />);
-    expect(screen.getByText(nextInterview("Hiring Manager"))).toBeInTheDocument();
-    expect(screen.queryByText("Technical")).not.toBeInTheDocument();
-    expect(screen.getByText("+1 more upcoming")).toBeInTheDocument();
-    expect(screen.queryByText(/completed/)).not.toBeInTheDocument();
+    const upcoming = within(screen.getByRole("list", { name: "Upcoming Interviews" })).getAllByRole("listitem");
+    expect(upcoming.map((li) => li.textContent)).toEqual([
+      expect.stringMatching(/^Hiring Manager, Jan 5/),
+      expect.stringMatching(/^Technical, Jan 5/),
+    ]);
+    expect(upcoming[0]).toHaveAttribute("title", expect.stringMatching(/Jan 5, 2027/));
+    expect(screen.queryByText("Recruiter Screen")).not.toBeInTheDocument();
   });
 
-  it("says how many completed Interviews have Interview notes, without showing them", () => {
+  it("marks each completed Interview and says how many have Interview notes, without showing them", () => {
     const app = application("Birch", {
       is_waiting: true,
       interviews: [
@@ -96,22 +101,30 @@ describe("ApplicationList", () => {
       ],
     });
     render(<ApplicationList applications={[app]} />);
-    expect(screen.getByText("3 completed Interviews, 2 with notes")).toBeInTheDocument();
+    // The Progress column and its phone-width copy under the role.
+    expect(screen.getAllByText("3 completed Interviews, 2 with notes")).toHaveLength(2);
     expect(screen.queryByText(/Asked about caching/)).not.toBeInTheDocument();
-    expect(screen.queryByText("Next Interview:")).not.toBeInTheDocument();
+    expect(within(row("Birch")).getByText(/Waiting since/)).toBeInTheDocument();
   });
 
-  it("shows a Done card's Outcome", () => {
-    render(<ApplicationList applications={[offer]} />);
-    expect(within(screen.getByRole("listitem")).getByText("Offer")).toBeInTheDocument();
+  it("shows a Done row's Outcome in Next, but not an Offer's, which Progress already says", () => {
+    render(<ApplicationList applications={[offer, rejected]} showDone />);
+    expect(within(row("Umbrella")).getByText("Rejected")).toBeInTheDocument();
+    expect(within(within(row("Cedar")).getAllByRole("cell")[2]).getByText("—")).toBeInTheDocument();
   });
 
-  it("links a card to its Application's page", () => {
+  it("shows the location, or a dash", () => {
+    render(<ApplicationList applications={[{ ...waiting, location: "Remote" }, offer]} />);
+    expect(within(row("Acme")).getByText("Remote")).toBeInTheDocument();
+    expect(within(row("Cedar")).getAllByRole("cell")[3]).toHaveTextContent("—");
+  });
+
+  it("links a row to its Application's page", () => {
     render(<ApplicationList applications={all} linked />);
     expect(screen.getByRole("link", { name: /^Open Birch\b/ })).toHaveAttribute("href", "/applications/Birch");
   });
 
-  it("has no controls on a card besides its link and its Change Status menu", () => {
+  it("has no controls on a row besides its link and its Change Status menu", () => {
     render(<ApplicationList applications={all} linked />);
     expect(screen.getAllByRole("button").map((button) => button.getAttribute("aria-label"))).toEqual([
       "Change Status, Acme",
@@ -125,27 +138,11 @@ describe("ApplicationList", () => {
     ]);
   });
 
-  it("has a chip for each group that jumps to it, with its count", () => {
-    render(<ApplicationList applications={all} linked />);
-    const chips = within(screen.getByRole("navigation", { name: "Jump to a group" })).getAllByRole("link");
-    expect(chips.map((chip) => chip.textContent)).toEqual(["Waiting1", "Scheduled1", "Offer1"]);
-    expect(chips[1]).toHaveAttribute("href", "#applications-scheduled");
-    expect(screen.getByRole("region", { name: "Interview scheduled" })).toHaveAttribute("id", "applications-scheduled");
-  });
-
-  it("has no chips for one group, or when decorative", () => {
-    const { rerender } = render(<ApplicationList applications={[offer]} linked />);
-    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
-    rerender(<ApplicationList applications={all} decorative />);
-    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
-  });
-
   it("is a single labelled picture when decorative", () => {
     render(<ApplicationList applications={all} decorative />);
     expect(
-      screen.getByRole("img", { name: "Applications grouped as Waiting, Interview scheduled, Offer" }),
+      screen.getByRole("img", { name: "Applications ordered as Waiting, Interview scheduled, Offer" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("region")).not.toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });
@@ -156,15 +153,15 @@ describe("ApplicationListSkeleton", () => {
     // eslint-disable-next-line testing-library/no-node-access -- see above
     const list = render(<ApplicationListSkeleton />).container.querySelector("[aria-hidden='true']")!;
     // eslint-disable-next-line testing-library/no-node-access -- see above
-    expect(list.children).toHaveLength(2);
-    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+    expect(list.querySelectorAll("tbody tr")).toHaveLength(4);
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
   });
 });
 
-describe("a card's Change Status menu", () => {
+describe("a row's Change Status menu", () => {
   const menuButton = (company: string) => screen.getByRole("button", { name: `Change Status, ${company}` });
 
-  it("is one button per linked card, named with its company, and none on a decorative list", () => {
+  it("is one button per linked row, named with its company, and none on a decorative list", () => {
     const { rerender } = render(<ApplicationList applications={all} showDone linked />);
     expect(screen.getAllByRole("button", { name: /^Change Status, / })).toHaveLength(4);
     expect(menuButton("Acme")).toBeInTheDocument();
@@ -172,7 +169,7 @@ describe("a card's Change Status menu", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
-  it("lists every Outcome on an In Progress card, and no Reopen", async () => {
+  it("lists every Outcome on an In Progress row, and no Reopen", async () => {
     const user = userEvent.setup();
     render(<ApplicationList applications={[waiting]} linked />);
     await user.click(menuButton("Acme"));
@@ -187,7 +184,7 @@ describe("a card's Change Status menu", () => {
     await user.keyboard("{Escape}");
   });
 
-  it("lists the other Outcomes and Reopen on a Done card", async () => {
+  it("lists the other Outcomes and Reopen on a Done row", async () => {
     const user = userEvent.setup();
     render(<ApplicationList applications={[rejected]} showDone linked />);
     await user.click(menuButton("Umbrella"));
@@ -207,7 +204,7 @@ describe("a card's Change Status menu", () => {
     expect(screen.getByText(/Show done/)).toBeInTheDocument();
   });
 
-  it("reopens a Done card, clearing its Outcome", async () => {
+  it("reopens a Done row, clearing its Outcome", async () => {
     const user = userEvent.setup();
     render(<ApplicationList applications={[rejected]} showDone linked />);
     await user.click(menuButton("Umbrella"));
@@ -216,7 +213,7 @@ describe("a card's Change Status menu", () => {
     expect(await screen.findByText("Umbrella reopened")).toBeInTheDocument();
   });
 
-  it("moves focus to the card once its change reaches the list", async () => {
+  it("moves focus to the row once its change reaches the list", async () => {
     const user = userEvent.setup();
     const { rerender } = render(<ApplicationList applications={[waiting, offer]} linked />);
     await user.click(menuButton("Acme"));
@@ -226,7 +223,7 @@ describe("a card's Change Status menu", () => {
     expect(screen.getByRole("link", { name: /^Open Acme/ })).toHaveFocus();
   });
 
-  it("shows why a save failed beside the button, and the card stays where it is", async () => {
+  it("shows why a save failed beside the button, and the row stays where it is", async () => {
     vi.mocked(actions.updateApplicationAction).mockResolvedValue({ ok: false, error: "Couldn’t save" });
     const user = userEvent.setup();
     render(<ApplicationList applications={[waiting]} linked />);

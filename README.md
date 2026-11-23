@@ -6,7 +6,7 @@ A job search tracker. Job hunting is chasing Bigfoot: Bigfoot keeps every Applic
 
 ## Status
 
-Bigfoot is an early proof of concept, built as a side project. Sign in with Google, add the roles you've applied to, log their Interviews, and follow them on a dashboard with two sections: **Interviews**, a calendar and agenda of what's coming, and **Applications**, a list grouped by what each one is waiting on. Each section has its own Add button.
+Bigfoot is an early proof of concept, built as a side project. Sign in with Google, add the roles you've applied to, log their Interviews, and follow them on a dashboard with two sections: **Interviews**, a calendar and agenda of what's coming, and **Applications**, a table ordered by what each one is waiting on. Each section has its own Add button.
 
 ![Bigfoot dashboard](docs/screenshots/dashboard.png)
 

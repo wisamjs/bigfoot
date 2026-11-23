@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { application } from "@/test/applications";
 import { DashboardApplications } from "./dashboard-applications";
 
-// Each card's Change Status menu saves through a Server Action, which needs a request.
+// Each row's Change Status menu saves through a Server Action, which needs a request.
 vi.mock("@/app/applications/actions", () => ({ updateApplicationAction: vi.fn() }));
 
 const birch = application("birch", { company: "Birch", title: "Engineer" });
@@ -19,12 +19,13 @@ function setUpDashboard() {
 describe("Dashboard Applications", () => {
   it("shows Done Applications only after Show done", async () => {
     const user = setUpDashboard();
-    expect(screen.queryByRole("region", { name: "Done" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Umbrella")).not.toBeInTheDocument();
     await user.click(screen.getByRole("checkbox", { name: "Show done (1)" }));
-    expect(within(screen.getByRole("region", { name: "Done" })).getByText("Umbrella")).toBeInTheDocument();
+    const umbrella = screen.getAllByRole("row").find((row) => row.textContent?.includes("Umbrella"))!;
+    expect(within(umbrella).getAllByText("Done")[0]).toBeInTheDocument();
   });
 
-  it("links each card to its Application's page, so ⌘-click opens it in a new tab", async () => {
+  it("links each row to its Application's page, so ⌘-click opens it in a new tab", async () => {
     const user = setUpDashboard();
     expect(screen.getByRole("link", { name: /^Open Birch\b/ })).toHaveAttribute("href", "/applications/birch");
 
