@@ -1,9 +1,8 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/applications/actions";
 import { ApplicationEditor } from "@/features/applications/application-editor";
-import { ApplicationHeading } from "@/features/applications/application-heading";
 import { InterviewEditor } from "@/features/applications/interview-editor";
 import { NewApplicationForm } from "@/features/applications/new-application-form";
 import { NewInterviewForm } from "@/features/applications/new-interview-form";
@@ -80,16 +79,12 @@ describe.each(XSS_TEXT.map((payload, n) => [payload, XSS_URLS[n]] as const))("%j
   });
 
   it("shows as text on the Application page, with no Posting link", () => {
-    render(
-      <>
-        <ApplicationHeading app={poisoned(payload, url)} />
-        <ApplicationEditor app={poisoned(payload, url)} />
-      </>,
-    );
+    render(<ApplicationEditor app={poisoned(payload, url)} />);
     expect(screen.getByRole("heading", { level: 1, name: payload.trim() })).toBeInTheDocument();
-    // Interview notes show as the first line of the Interview's row, which opens its Interview page.
-    expect(screen.getByRole("link", { name: /^Open Interview: / })).toHaveTextContent(payload.trim().split("\n")[0]);
-    expect(screen.queryByRole("link", { name: /job posting/ })).not.toBeInTheDocument();
+    // The next Interview's notes show on its card; the salary once revealed.
+    expect(screen.getAllByText(payload.trim().split("\n")[0], { exact: false }).length).toBeGreaterThan(1);
+    fireEvent.click(screen.getByRole("button", { name: "Reveal salary" }));
+    expect(screen.queryByRole("link", { name: /new tab/ })).not.toBeInTheDocument();
     expectNothingInjected();
   });
 
@@ -137,6 +132,7 @@ describe("the edit forms on the Application page", () => {
   async function openBirch() {
     const user = userEvent.setup();
     render(<ApplicationEditor app={birch} />);
+    await user.click(screen.getByRole("button", { name: "Edit details" }));
     /** Pastes rather than types: user-event reads braces and brackets as key names. */
     async function fill(label: string | RegExp, value: string) {
       const input = screen.getByLabelText(label);

@@ -52,22 +52,32 @@ export function ChangeStatusMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" container={container}>
-          {OUTCOMES.filter((outcome) => outcome !== app.outcome).map((outcome) => (
-            <DropdownMenuItem key={outcome} onSelect={() => void change({ status: "done", outcome })}>
-              Mark {OUTCOME_OPTIONS[outcome].label}
-            </DropdownMenuItem>
-          ))}
-          {app.status === "done" && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => void change({ status: "in_progress", outcome: null })}>
-                Reopen
-              </DropdownMenuItem>
-            </>
-          )}
+          <StatusMenuItems app={app} onPick={(picked) => void change(picked)} />
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
+  );
+}
+
+/**
+ * The Change Status choices, for a menu that holds them: "Mark <Outcome>" for each Outcome the
+ * Application doesn't already have and, once it's Done, "Reopen".
+ */
+export function StatusMenuItems({ app, onPick }: { app: Application; onPick: (change: StatusChange) => void }) {
+  return (
+    <>
+      {OUTCOMES.filter((outcome) => outcome !== app.outcome).map((outcome) => (
+        <DropdownMenuItem key={outcome} onSelect={() => onPick({ status: "done", outcome })}>
+          Mark {OUTCOME_OPTIONS[outcome].label}
+        </DropdownMenuItem>
+      ))}
+      {app.status === "done" && (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => onPick({ status: "in_progress", outcome: null })}>Reopen</DropdownMenuItem>
+        </>
+      )}
+    </>
   );
 }
 

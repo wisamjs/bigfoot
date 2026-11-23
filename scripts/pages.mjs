@@ -48,20 +48,31 @@ export const PAGES = [
     path: "/applications/[id]",
     signedIn: true,
     application: "Datadog",
-    expect: "Job posting URL",
+    expect: "Open Interview",
     states: [
       {
-        name: "heading-editing",
-        steps: [{ click: 'button[aria-label="Edit company and title"]' }],
-        expect: "Save",
+        name: "details-editing",
+        steps: [{ click: 'button[aria-label="Edit details"]' }],
+        expect: "Stays hidden while you edit",
+      },
+      { name: "salary-revealed", steps: [{ click: "button", text: "Reveal" }], expect: "Hide" },
+      {
+        name: "mark-done-menu",
+        steps: [{ click: "button", text: "Mark done", pointer: true }],
+        expect: "Mark Rejected",
       },
       {
         name: "delete-confirmation",
-        steps: [{ click: "button", text: "Delete application" }],
+        steps: [
+          { click: 'button[aria-label^="More actions"]', pointer: true },
+          { click: '[role="menuitem"]', text: "Delete application" },
+        ],
         expect: "This can’t be undone",
       },
     ],
   },
+  // An Application with no Interviews yet: Bigfoot and a first Add Interview (BIG-174).
+  { path: "/applications/[id]", signedIn: true, application: "Stripe", expect: "No Interviews yet" },
   {
     // A deleted Application, a malformed id and another job seeker's Application look the same.
     // The page streams inside Suspense, so the response is 200 with the not-found page and a

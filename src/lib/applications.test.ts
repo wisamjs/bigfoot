@@ -1,7 +1,14 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  applicationProgress,
+  calendarDaysBetween,
+  carriedForward,
   getApplicationGroups,
+  interviewSections,
+  paragraphs,
+  parseDay,
+  relativeDays,
   getCalendarInterviews,
   dashboardSummary,
   getStats,
@@ -195,5 +202,82 @@ describe("locationText", () => {
 
   it("is null when no Location is set", () => {
     expect(locationText({ location: null, office_days: null })).toBeNull();
+  });
+});
+
+describe("interviewSections (BIG-174)", () => {
+  it("splits the next Interview from the later ones, and puts the completed ones newest first, undated last", () => {
+    const app = application("a", {
+      interviews: [
+        interview("old", "2026-11-01T10:00:00Z", true),
+        interview("recent", "2026-11-05T10:00:00Z", true),
+        interview("next", "2026-12-01T10:00:00Z", false),
+        interview("later", "2026-12-09T10:00:00Z", false),
+        interview("undated", null, true),
+      ],
+    });
+    const { next, later, done } = interviewSections(app);
+    expect(next?.id).toBe("next");
+    expect(later.map((i) => i.id)).toEqual(["later"]);
+    expect(done.map((i) => i.id)).toEqual(["recent", "old", "undated"]);
+  });
+
+  it("has no next Interview when none is ahead", () => {
+    expect(interviewSections(application("a", { interviews: [interview("old", "2026-11-01T10:00:00Z", true)] })).next).toBeNull();
+  });
+});
+
+describe("paragraphs", () => {
+  it("splits notes at blank lines, trimmed, dropping empty ones", () => {
+    expect(paragraphs("  One\nstill one\n\n \n Two \n\n")).toEqual(["One\nstill one", "Two"]);
+    expect(paragraphs(null)).toEqual([]);
+  });
+});
+
+describe("carriedForward", () => {
+  const withNotes = (notes: string | null) =>
+    application("a", {
+      interviews: [
+        { ...interview("first", "2026-11-01T10:00:00Z", true), notes: "Old advice." },
+        { ...interview("last", "2026-11-05T10:00:00Z", true), kind: "hiring_manager", notes },
+        interview("next", "2026-12-01T10:00:00Z", false),
+      ],
+    });
+
+  it("is the last paragraph of the latest completed Interview's notes", () => {
+    const carried = carriedForward(withNotes("How it went.\n\nNext time: lead with the decision."));
+    expect(carried?.from.kind).toBe("hiring_manager");
+    expect(carried?.text).toBe("Next time: lead with the decision.");
+  });
+
+  it("is nothing when that Interview has no notes, or nothing is ahead", () => {
+    expect(carriedForward(withNotes(null))).toBeNull();
+    expect(carriedForward(application("a", { interviews: [{ ...interview("x", "2026-11-01T10:00:00Z", true), notes: "Hi" }] }))).toBeNull();
+  });
+});
+
+describe("calendar days", () => {
+  it("counts whole days in local time, whatever the hour", () => {
+    expect(calendarDaysBetween(new Date(2026, 10, 23, 23, 0), new Date(2026, 10, 25, 1, 0))).toBe(2);
+    expect(calendarDaysBetween(new Date(2026, 10, 23, 9), new Date(2026, 10, 23, 22))).toBe(0);
+    expect(calendarDaysBetween(new Date(2026, 10, 23), new Date(2026, 9, 28))).toBe(-26);
+  });
+
+  it("reads a date-only value as that local day", () => {
+    expect(parseDay("2026-11-23").getDate()).toBe(23);
+    expect(parseDay("2026-11-23T10:00:00Z").toISOString()).toBe("2026-11-23T10:00:00.000Z");
+  });
+
+  it("says how far off a day is", () => {
+    expect([0, 1, -1, 2, -26].map(relativeDays)).toEqual(["today", "tomorrow", "yesterday", "in 2 days", "26 days ago"]);
+  });
+});
+
+describe("applicationProgress", () => {
+  it("is Waiting, Interview scheduled, Offer, or Done with its Outcome", () => {
+    expect(applicationProgress(application("a", {})).label).toBe("Waiting");
+    expect(applicationProgress(application("a", { interviews: [interview("n", "2099-01-01T00:00:00Z", false)] })).label).toBe("Interview scheduled");
+    expect(applicationProgress(application("a", { status: "done", outcome: "offer" })).label).toBe("Offer");
+    expect(applicationProgress(application("a", { status: "done", outcome: "withdrawn" })).label).toBe("Done · Withdrawn");
   });
 });
