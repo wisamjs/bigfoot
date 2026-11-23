@@ -24,7 +24,7 @@ export function AccountMenu({ user }: { user: CurrentUser }) {
   const [signingOut, startSignOut] = useTransition();
 
   return (
-    <div ref={setContainer} className="relative">
+    <div ref={setContainer} className="relative shrink-0">
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger
           className="grid size-11 cursor-pointer place-items-center rounded-full transition-shadow hover:ring-2 hover:ring-line-brand-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand data-[state=open]:ring-2 data-[state=open]:ring-line-brand"

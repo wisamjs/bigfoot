@@ -18,18 +18,18 @@ const links = [
 export function AppHeader({ user, current }: { user?: CurrentUser; current: (typeof links)[number]["href"] }) {
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-card">
-      <Container className="flex h-[72px] items-center gap-3 sm:gap-8">
+      <Container className="flex h-[72px] items-center gap-2 sm:gap-8">
         <Link href="/" aria-label="Bigfoot home" className="touch-target rounded-control">
           <Wordmark compact tile />
         </Link>
-        <nav aria-label="Signed in" className="flex-1">
+        <nav aria-label="Signed in" className="min-w-0 flex-1">
           <ul className="m-0 flex list-none items-center gap-1 p-0">
             {links.map((link) => (
               <li key={link.href}>
                 <Link
                   href={link.href}
                   aria-current={link.href === current ? "page" : undefined}
-                  className="touch-target rounded-control px-3.5 py-2.5 font-medium text-body transition-colors hover:bg-card-strong hover:text-heading aria-[current=page]:bg-card-strong aria-[current=page]:font-semibold aria-[current=page]:text-heading"
+                  className="touch-target rounded-control px-2.5 py-2.5 font-medium sm:px-3.5 text-body transition-colors hover:bg-card-strong hover:text-heading aria-[current=page]:bg-card-strong aria-[current=page]:font-semibold aria-[current=page]:text-heading"
                 >
                   {link.label}
                 </Link>
