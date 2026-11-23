@@ -57,6 +57,16 @@ A change to a component in `src/components/ui/` or `src/features/` updates its s
 
 Review sends back a PR that changes a component's behaviour or look without touching its stories.
 
+## Coverage floors
+
+Every decision path needs a test, so both test runs fail below a floor. Each floor is the current
+coverage minus 2 points: raise it as tests are added, never lower it.
+
+| Tests | Floor | Set in |
+|---|---|---|
+| Frontend (Vitest, `npm test`) | statements 56, branches 56, functions 57, lines 56 | `thresholds` in `vitest.config.mts` |
+| API (pytest-cov, `npm run test:api`), line and branch coverage of `api/app` | 97% | `fail_under` in `api/pyproject.toml` |
+
 ## Where code goes
 
 | Folder | Holds |
