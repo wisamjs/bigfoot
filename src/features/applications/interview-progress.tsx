@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useIsClient } from "@/hooks/use-is-client";
 import { DaysFromToday } from "@/features/applications/application-when";
+import { interviewHref } from "@/features/applications/routes";
 import { COMPLETED_MARK } from "@/features/applications/status-tone";
 import { INTERVIEW_OPTIONS, nextInterview, type Application, type Interview, type Status } from "@/lib/applications";
 
@@ -10,13 +12,20 @@ const dayFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "num
 /**
  * The Application's Interviews as a strip of segments, by date (BIG-174): one for each completed
  * Interview, green while the Application is In Progress and grey once it is Done (BIG-177), the
- * brand colour for the next, a light line for the rest, each with its date and kind under it. On a
- * phone, the segments alone and "2 of 4 Interviews completed". Nothing when there are no Interviews.
+ * brand colour for the next, a light line for the rest, each with its date and kind under it. Each
+ * segment opens its Interview page. On a phone, the segments alone and "2 of 4 Interviews
+ * completed". Nothing when there are no Interviews.
+ *
+ * On an Interview page (`current` is that Interview's id, BIG-178), its segment is outlined and
+ * labelled "This interview · Nov 13", and a phone's line reads "Interview 2 of 4" with a link to
+ * "Next: <kind> →".
  */
-export function InterviewProgress({ app }: { app: Application }) {
+export function InterviewProgress({ app, current }: { app: Application; current?: string }) {
   const next = nextInterview(app);
   const completed = app.interviews.filter((interview) => interview.completed).length;
   if (app.interviews.length === 0) return null;
+  const position = app.interviews.findIndex((interview) => interview.id === current);
+  const following = position >= 0 ? app.interviews[position + 1] : undefined;
   return (
     <div>
       <ol
@@ -24,36 +33,85 @@ export function InterviewProgress({ app }: { app: Application }) {
         className="m-0 grid list-none auto-cols-fr grid-flow-col gap-2 p-0 sm:grid-flow-row sm:grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] sm:gap-3"
       >
         {app.interviews.map((interview) => (
-          <Segment key={interview.id} interview={interview} status={app.status} next={interview.id === next?.id} />
+          <Segment
+            key={interview.id}
+            applicationId={app.id}
+            interview={interview}
+            status={app.status}
+            next={interview.id === next?.id}
+            current={interview.id === current}
+          />
         ))}
       </ol>
-      <p className="m-0 mt-2 text-sm text-body sm:hidden">
-        {completed} of {app.interviews.length} Interviews completed
+      <p className="m-0 mt-2 flex items-center justify-between gap-3 text-sm text-body sm:hidden">
+        {position >= 0 ? (
+          <>
+            <span>
+              Interview {position + 1} of {app.interviews.length}
+            </span>
+            {following && (
+              <Link
+                href={interviewHref(app.id, following.id)}
+                className="inline-flex min-h-6 items-center rounded-control font-medium text-fg-brand underline underline-offset-4 hover:text-fg-brand-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              >
+                Next: {INTERVIEW_OPTIONS[following.kind].label} →
+              </Link>
+            )}
+          </>
+        ) : (
+          <span>
+            {completed} of {app.interviews.length} Interviews completed
+          </span>
+        )}
       </p>
     </div>
   );
 }
 
-function Segment({ interview, status, next }: { interview: Interview; status: Status; next: boolean }) {
+function Segment({
+  applicationId,
+  interview,
+  status,
+  next,
+  current,
+}: {
+  applicationId: string;
+  interview: Interview;
+  status: Status;
+  next: boolean;
+  current: boolean;
+}) {
   const bar = interview.completed ? COMPLETED_MARK[status] : next ? "bg-brand" : "bg-line-medium";
+  const kind = INTERVIEW_OPTIONS[interview.kind].label;
   return (
     <li className="min-w-0">
-      <span aria-hidden className={`block h-1.5 rounded-full ${bar}`} />
-      <span className="hidden sm:block">
-        <span className={`mt-2.5 block text-xs ${next ? "font-medium text-fg-brand" : "text-body"}`}>
-          <SegmentWhen interview={interview} next={next} />
+      {/* A phone's thin bar gets a touch target of 44px from the link's own padding; the outline of the current Interview is drawn on the inner box, close around the segment. */}
+      <Link
+        href={interviewHref(applicationId, interview.id)}
+        aria-current={current ? "page" : undefined}
+        className="-my-[19px] block rounded-control py-[19px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:my-0 sm:py-0"
+      >
+        <span className={`-m-1.5 block rounded-control p-1.5 ${current ? "ring-2 ring-brand" : ""}`}>
+          <span aria-hidden className={`block h-1.5 rounded-full ${bar}`} />
+          <span className="sr-only sm:hidden">{kind}</span>
+          <span className="hidden sm:block">
+            <span className={`mt-2.5 block text-xs ${current ? "font-medium text-heading" : next ? "font-medium text-fg-brand" : "text-body"}`}>
+              <SegmentWhen interview={interview} next={next} current={current} />
+            </span>
+            <span className="mt-1 block truncate text-sm font-bold text-heading">{kind}</span>
+          </span>
         </span>
-        <span className="mt-1 block truncate text-sm font-bold text-heading">{INTERVIEW_OPTIONS[interview.kind].label}</span>
-      </span>
+      </Link>
     </li>
   );
 }
 
-/** "Nov 6 · Completed", "Nov 25 · Next, in 2 days", or "Dec 2". */
-function SegmentWhen({ interview, next }: { interview: Interview; next: boolean }) {
+/** "Nov 6 · Completed", "Nov 25 · Next, in 2 days", "Dec 2", or on an Interview's own page "This interview · Nov 13". */
+function SegmentWhen({ interview, next, current }: { interview: Interview; next: boolean; current: boolean }) {
   const isClient = useIsClient();
   if (!isClient) return <span className="inline-block h-4" />;
   const day = dayFormat.format(new Date(interview.at));
+  if (current) return <>This interview · {day}</>;
   if (interview.completed) return <>{day} · Completed</>;
   if (next)
     return (

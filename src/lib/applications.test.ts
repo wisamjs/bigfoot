@@ -6,6 +6,7 @@ import {
   carriedForward,
   getApplicationGroups,
   interviewSections,
+  noteBlocks,
   paragraphs,
   parseDay,
   relativeDays,
@@ -226,6 +227,29 @@ describe("paragraphs", () => {
   it("splits notes at blank lines, trimmed, dropping empty ones", () => {
     expect(paragraphs("  One\nstill one\n\n \n Two \n\n")).toEqual(["One\nstill one", "Two"]);
     expect(paragraphs(null)).toEqual([]);
+  });
+});
+
+describe("noteBlocks", () => {
+  it("reads lines starting with a dash as a list and the rest as text", () => {
+    expect(noteBlocks("Asked about caching.\nThen queues.\n\n- Send thank-you\n- Ask about on-call\nDone.")).toEqual([
+      { type: "text", id: 0, text: "Asked about caching.\nThen queues." },
+      {
+        type: "list",
+        id: 3,
+        items: [
+          { id: 3, text: "Send thank-you" },
+          { id: 4, text: "Ask about on-call" },
+        ],
+      },
+      { type: "text", id: 5, text: "Done." },
+    ]);
+  });
+
+  it("leaves a dash with no space after it as text, and has no blocks without notes", () => {
+    expect(noteBlocks("-5 degrees")).toEqual([{ type: "text", id: 0, text: "-5 degrees" }]);
+    expect(noteBlocks(null)).toEqual([]);
+    expect(noteBlocks(" \n\n")).toEqual([]);
   });
 });
 

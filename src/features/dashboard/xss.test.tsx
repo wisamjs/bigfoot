@@ -164,11 +164,13 @@ describe("the Interview notes on the Interview page", () => {
     const user = userEvent.setup();
     const current = interview("i1", { application_id: "birch", at: new Date(2026, 10, 20, 10, 0).toISOString(), completed: false });
     render(<InterviewEditor app={application("birch", { company: "Birch", interviews: [current] })} interview={current} />);
-    const notes = screen.getByLabelText("Interview notes");
-    await user.click(notes);
+    await user.click(screen.getByRole("button", { name: "Add Interview notes" }));
     await user.paste(payload);
     await user.tab();
     expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { notes: payload.trim() });
+    expectNothingInjected();
+    // Read back as text too.
+    await user.click(screen.getByRole("button", { name: "Done" }));
     expectNothingInjected();
   });
 });

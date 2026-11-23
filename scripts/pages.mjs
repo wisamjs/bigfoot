@@ -100,17 +100,17 @@ export const PAGES = [
     states: [
       {
         name: "interview-heading-editing",
-        steps: [{ click: 'button[aria-label="Edit kind and date"]' }],
+        steps: [{ click: "button", text: "Edit details" }],
         expect: "Save",
       },
       {
         name: "interview-heading-calendar",
-        steps: [{ click: 'button[aria-label="Edit kind and date"]' }, { click: 'main form button[aria-label^="Date, "]' }],
+        steps: [{ click: "button", text: "Edit details" }, { click: 'main form button[aria-label^="Date, "]' }],
         expect: "Mo",
       },
       {
         name: "delete-interview-page-confirmation",
-        steps: [{ click: "button", text: "Delete Interview" }],
+        steps: [{ click: 'button[aria-label^="More actions"]', pointer: true }, { click: '[role="menuitem"]', text: "Delete Interview" }],
         expect: "with its Interview notes",
       },
       {
@@ -119,6 +119,7 @@ export const PAGES = [
         // through would let the job seeker leave before the prompt could be checked.
         name: "interview-unsaved-changes-prompt",
         steps: [
+          { click: 'button[aria-label="Edit Interview notes"]' },
           { fill: 'textarea[id^="notes-"]', value: "x".repeat(20_001) },
           // "← Vercel", back to the Interview's Application page (BIG-166).
           { click: "main a", text: "Vercel" },

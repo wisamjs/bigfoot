@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { Badge } from "@/components/ui/badge";
 import { InterviewEditor } from "@/features/applications/interview-editor";
-import { InterviewHeading } from "@/features/applications/interview-heading";
-import { OUTCOME_TONE } from "@/features/applications/status-tone";
 import { applicationHref } from "@/features/applications/routes";
 import { UnsavedChanges } from "@/features/applications/unsaved-changes";
 import { AppHeader } from "@/features/shell/app-header";
 import { BackLink } from "@/features/shell/dashboard-link";
 import { FormPage } from "@/features/shell/form-page";
 import { getApplications } from "@/lib/api";
-import { OUTCOME_OPTIONS, STATUS_OPTIONS, type Application } from "@/lib/applications";
 import { getCurrentUser } from "@/lib/dal";
 
 type Props = PageProps<"/applications/[id]/interviews/[interviewId]">;
@@ -38,24 +34,14 @@ async function InterviewPageBody({ params }: Pick<Props, "params">) {
   if (!app || !interview) notFound();
   return (
     <FormPage
+      wide
       header={<AppHeader user={user} current="/dashboard" />}
       title={app.company}
       // The Interview page belongs to its Application page, so "← <company>" goes there.
       back={<BackLink href={applicationHref(app.id)}>{app.company}</BackLink>}
-      heading={<InterviewHeading app={app} interview={interview} badge={<DoneBadge app={app} />} />}
       guard={UnsavedChanges}
     >
       <InterviewEditor app={app} interview={interview} />
     </FormPage>
-  );
-}
-
-/** "Done · Rejected" once the Application is Done; nothing while it is In Progress. */
-function DoneBadge({ app }: { app: Application }) {
-  if (!app.outcome) return null;
-  return (
-    <Badge tone={OUTCOME_TONE[app.outcome]}>
-      {`${STATUS_OPTIONS[app.status].label} · ${OUTCOME_OPTIONS[app.outcome].label}`}
-    </Badge>
   );
 }

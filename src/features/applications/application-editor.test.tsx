@@ -199,12 +199,20 @@ describe("the Interviews", () => {
     expect(screen.getByText("2 of 4 Interviews completed")).toBeInTheDocument();
   });
 
+  it("opens each Interview's page from its segment", () => {
+    open(oak);
+    const segments = within(screen.getByRole("list", { name: "Interviews by date" })).getAllByRole("link");
+    expect(segments).toHaveLength(4);
+    expect(segments[0]).toHaveAttribute("href", "/applications/oak/interviews/screen");
+    expect(segments.some((link) => link.hasAttribute("aria-current"))).toBe(false);
+  });
+
   it("strips completed Interviews green while In Progress and grey once Done (BIG-177)", () => {
     const bars = () =>
       within(screen.getByRole("list", { name: "Interviews by date" }))
         .getAllByRole("listitem")
-        // eslint-disable-next-line testing-library/no-node-access -- the bar is decoration (aria-hidden), with no role or text to query by.
-        .map((segment) => segment.firstElementChild);
+        // eslint-disable-next-line testing-library/no-node-access -- the bar is decoration (aria-hidden) inside the segment's link, with no role or text to query by.
+        .map((segment) => segment.firstElementChild?.firstElementChild?.firstElementChild);
     const { unmount } = open(oak);
     expect(bars().filter((bar) => bar?.classList.contains("bg-fg-success-strong"))).toHaveLength(2);
     expect(bars().filter((bar) => bar?.classList.contains("bg-tone-gray-fg"))).toHaveLength(0);
