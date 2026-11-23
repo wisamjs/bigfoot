@@ -21,18 +21,23 @@ const lumen = application("lumen", {
   is_waiting: false,
   waiting_since: null,
   interviews: [
-    interview("screen", { application_id: "lumen", kind: "recruiter_screen", at: daysFromNow(-17, 10), notes: "Quick walkthrough of my last team." }),
+    interview("screen", { application_id: "lumen", kind: "recruiter_screen", at: daysFromNow(-17, 10), how_it_went: "Quick walkthrough of my last team." }),
     interview("manager", {
       application_id: "lumen",
       kind: "hiring_manager",
       at: daysFromNow(-10, 11),
-      notes: "Dug into how I handle underperformance.\n\nWent well. Follow-ups:\n- Send the roadmap doc\n- Thank-you email\n- Ask about on-call",
+      what_they_asked:
+        "Tell me about a time you had to let someone go.\nHow do you decide what your team does not build?\nWhat does a good first 90 days look like here?",
+      how_it_went:
+        "Dug into how I handle underperformance and how I split time between hands-on work and people work. The incident story landed well: clear timeline, what I changed after.\n\nRambled on the roadmap question.",
+      takeaway: "Lead with the decision, then the trade-off, then what I would measure.",
     }),
     interview("deep-dive", { application_id: "lumen", kind: "technical_deep_dive", at: daysFromNow(2, 11), completed: false }),
     interview("leadership", { application_id: "lumen", kind: "leadership", at: daysFromNow(9, 13), completed: false }),
   ],
 });
 const [, completed, upcoming] = lumen.interviews;
+const empty = { what_they_asked: null, how_it_went: null, takeaway: null };
 
 const meta = {
   component: InterviewEditor,
@@ -50,28 +55,38 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** A completed Interview: "Completed · 10 days ago", this one outlined on the strip, its notes read as text with "- " lines as a list. */
+/**
+ * Filled: a completed Interview, "Completed · 10 days ago", this one outlined on the strip, the
+ * Takeaway for next time in its own card, How it went as text and They asked as a list.
+ */
 export const Completed: Story = {
   play: async ({ canvas }) => {
     await expect(await canvas.findByText("Completed · 10 days ago")).toBeVisible();
     await expect(canvas.getByRole("link", { name: /^This interview · / })).toHaveAttribute("aria-current", "page");
-    await expect(within(canvas.getByRole("region", { name: "Interview notes" })).getAllByRole("listitem")).toHaveLength(3);
+    const takeaway = canvas.getByRole("region", { name: "Takeaway for next time" });
+    await expect(takeaway).toHaveTextContent("Lead with the decision");
+    const notes = canvas.getByRole("region", { name: "Interview notes" });
+    await expect(within(notes).getByText(/Rambled on the roadmap question/)).toBeVisible();
+    await expect(within(notes).getAllByRole("listitem")).toHaveLength(3);
+    await expect(within(notes).getByRole("list", { name: "They asked" })).toBeVisible();
     await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
   },
 };
 
 /**
  * Coming up, with no Prep notes: "Upcoming · in 2 days", the Before card offering Add Prep notes
- * ("Get ready for <weekday>") and the After card waiting for how it went.
+ * ("Get ready for <weekday>") and the After card waiting for how it went, which Add Interview
+ * notes opens into the three fields.
  */
 export const Upcoming: Story = {
   args: { interview: upcoming },
-  play: async ({ canvas }) => {
+  play: async ({ canvas, userEvent }) => {
     await expect(await canvas.findByText("Upcoming · in 2 days")).toBeVisible();
     await expect(canvas.getByText(/^Get ready for /)).toBeVisible();
     await expect(canvas.getByRole("button", { name: "Add Prep notes" })).toBeVisible();
     await expect(canvas.getByText("Nothing yet, that’s expected")).toBeVisible();
-    await expect(canvas.getByRole("button", { name: "Add Interview notes" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Add Interview notes" }));
+    await expect(canvas.getByRole("textbox", { name: "What they asked" })).toHaveFocus();
   },
 };
 
@@ -115,7 +130,7 @@ export const CompletedWithPrepNotes: Story = {
   args: { interview: { ...completed, prep_notes: "Review the caching chapter.\nDraw the diagram first.\nAsk about the on-call rotation.\nBring the take-home." } },
   play: async ({ canvas, userEvent }) => {
     const headings = canvas.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
-    await expect(headings).toEqual(["Interview notes", "Prep notes"]);
+    await expect(headings).toEqual(["Takeaway for next time", "Interview notes", "Prep notes"]);
     const prep = canvas.getByRole("region", { name: "Prep notes" });
     await expect(prep).not.toHaveTextContent("on-call");
     await userEvent.click(within(prep).getByRole("button", { name: "Show Prep notes" }));
@@ -144,53 +159,63 @@ export const EditingPrepNotes: Story = {
   },
 };
 
-/** No Interview notes yet: the card says so, and Add Interview notes opens the field. */
-export const NoNotes: Story = {
-  args: { interview: { ...completed, notes: null } },
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole("button", { name: "Add Interview notes" }));
-    await expect(canvas.getByRole("textbox", { name: "Interview notes" })).toHaveFocus();
+/** Empty, completed: "Just finished", How did it go?, and the three empty fields straight away, none focused. */
+export const JustFinished: Story = {
+  args: { interview: { ...completed, ...empty } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("Just finished · write it down while it’s fresh")).toBeVisible();
+    await expect(canvas.getByRole("heading", { level: 2, name: "How did it go?" })).toBeVisible();
+    await expect(canvas.getByRole("textbox", { name: "What they asked" })).toHaveAttribute("placeholder", "One question per line");
+    await expect(canvas.getByRole("textbox", { name: "How it went" })).toHaveAttribute("placeholder", "What landed, what didn't");
+    await expect(canvas.getByRole("textbox", { name: "Takeaway for next time" })).toHaveAttribute(
+      "placeholder",
+      "One thing to do differently",
+    );
+    await expect(canvas.getByRole("textbox", { name: "What they asked" })).not.toHaveFocus();
   },
 };
 
-/** Edit turns the notes into a field; Done goes back to the text and gives focus back to Edit. */
+/** Editing: Edit turns the notes into three fields; Done goes back to the text and gives focus back to Edit. */
 export const Editing: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: "Edit Interview notes" }));
-    await expect(canvas.getByRole("textbox", { name: "Interview notes" })).toHaveFocus();
+    await expect(canvas.getByRole("textbox", { name: "What they asked" })).toHaveFocus();
+    await expect(canvas.getByRole("textbox", { name: "How it went" })).toHaveValue(completed.how_it_went);
+    await expect(canvas.getByRole("textbox", { name: "Takeaway for next time" })).toHaveValue(completed.takeaway);
+    await expect(canvas.queryByRole("region", { name: "Takeaway for next time" })).not.toBeInTheDocument();
     await userEvent.click(canvas.getByRole("button", { name: "Done" }));
     await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
     await waitFor(() => expect(canvas.getByRole("button", { name: "Edit Interview notes" })).toHaveFocus());
   },
 };
 
-/** The notes save by themselves when the field is left, with a "Saved" that fades. */
+/** Each field saves by itself when it's left, with its own "Saved" that fades. */
 export const SaveNotes: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: "Edit Interview notes" }));
-    await userEvent.type(canvas.getByRole("textbox", { name: "Interview notes" }), " Sent a thank-you.");
+    await userEvent.type(canvas.getByRole("textbox", { name: "Takeaway for next time" }), " Fast.");
     await userEvent.tab();
     await waitFor(() =>
       expect(updateInterviewAction).toHaveBeenCalledWith("lumen", completed.id, {
-        notes: `${completed.notes} Sent a thank-you.`,
+        takeaway: `${completed.takeaway} Fast.`,
       }),
     );
     await expect(await canvas.findByText("Saved")).toBeVisible();
   },
 };
 
-/** The server refuses a save: the reason shows beside the notes, and Done stays in the field. */
+/** A failed save: the reason shows beside that field, and Done stays in it. */
 export const SaveFails: Story = {
   beforeEach: () => {
     mocked(updateInterviewAction).mockResolvedValue({ ok: false, error: "Couldn’t reach Bigfoot’s server. Try again." });
   },
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: "Edit Interview notes" }));
-    await userEvent.type(canvas.getByRole("textbox", { name: "Interview notes" }), "!");
+    await userEvent.type(canvas.getByRole("textbox", { name: "How it went" }), "!");
     await userEvent.tab();
     await expect(await canvas.findByText(/Couldn’t reach Bigfoot’s server/)).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Done" }));
-    await expect(canvas.getByRole("textbox", { name: "Interview notes" })).toHaveFocus();
+    await expect(canvas.getByRole("textbox", { name: "How it went" })).toHaveFocus();
   },
 };
 
@@ -230,7 +255,8 @@ export const LongText: Story = {
   args: {
     interview: {
       ...completed,
-      notes:
+      takeaway: "Write the decision, the trade-off and the measure on a card before the call, and read it aloud once.",
+      how_it_went:
         "A very long first line of Interview notes that goes on and on past the edge of the field so it has to wrap onto the next line and then some more.\n\nThen a second paragraph with follow-ups: thank-you email, send the take-home by Friday, ask about the team’s on-call rotation.",
     },
   },

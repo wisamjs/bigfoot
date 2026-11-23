@@ -65,8 +65,8 @@ describe("Add Interview", () => {
     expect(within(form!).getByLabelText("Application")).toBeRequired();
     expect(within(form!).getByRole("group", { name: "Date and time" })).toBeInTheDocument();
     expect(within(form!).getByLabelText("Time")).toHaveValue("");
-    expect(within(form!).getByLabelText("Interview notes")).not.toBeRequired();
-    expect(within(form!).getByLabelText("Interview notes")).toHaveAttribute("placeholder", expect.stringMatching(/\w/));
+    expect(within(form!).getByLabelText("How it went")).not.toBeRequired();
+    expect(within(form!).getByLabelText("How it went")).toHaveAttribute("placeholder", expect.stringMatching(/\w/));
   });
 
   it("shows each missing field's error beside it, focuses the first, and saves nothing", async () => {
@@ -110,14 +110,14 @@ describe("Add Interview", () => {
     await user.selectOptions(within(form!).getByLabelText("Application"), "cedar");
     await user.selectOptions(within(form!).getByLabelText("Kind"), "technical");
     await pickDate(user, form!, "14:30");
-    await user.type(within(form!).getByLabelText("Interview notes"), "  Went well  ");
+    await user.type(within(form!).getByLabelText("How it went"), "  Went well  ");
     await user.click(within(form!).getByRole("button", { name: "Add Interview" }));
 
     const now = new Date();
     expect(actions.createInterviewAction).toHaveBeenCalledWith("cedar", {
       kind: "technical",
       at: new Date(now.getFullYear(), now.getMonth(), 15, 14, 30).toISOString(),
-      notes: "Went well",
+      how_it_went: "Went well",
     });
     expect(push).toHaveBeenCalledWith("/dashboard");
   });

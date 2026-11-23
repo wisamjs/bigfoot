@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { XSS_TEXT, XSS_URLS } from "@/test/xss";
 import { ACCESS_TOKEN_NAME_MAX } from "./account";
-import { APPLICATION_MAX_LENGTHS, INTERVIEW_NOTES_MAX_LENGTH, OFFICE_DAYS } from "./applications";
+import { APPLICATION_MAX_LENGTHS, INTERVIEW_NOTES_MAX_LENGTHS, OFFICE_DAYS } from "./applications";
 import {
   accessTokenNameError,
   applicationErrors,
@@ -31,7 +31,11 @@ describe("limits", () => {
       posting_url: pythonNumber("POSTING_URL_MAX_LENGTH"),
     });
     expect(OFFICE_DAYS).toEqual([pythonNumber("OFFICE_DAYS_MIN"), 2, 3, pythonNumber("OFFICE_DAYS_MAX")]);
-    expect(INTERVIEW_NOTES_MAX_LENGTH).toBe(pythonNumber("INTERVIEW_NOTES_MAX_LENGTH"));
+    expect(INTERVIEW_NOTES_MAX_LENGTHS).toEqual({
+      what_they_asked: pythonNumber("WHAT_THEY_ASKED_MAX_LENGTH"),
+      how_it_went: pythonNumber("HOW_IT_WENT_MAX_LENGTH"),
+      takeaway: pythonNumber("TAKEAWAY_MAX_LENGTH"),
+    });
     expect(ACCESS_TOKEN_NAME_MAX).toBe(pythonNumber("ACCESS_TOKEN_NAME_MAX", "api/app/models.py"));
   });
 });
@@ -113,22 +117,36 @@ describe("applicationErrors", () => {
 });
 
 describe("interviewErrors", () => {
-  it("accepts a kind, a timestamp, and notes up to the limit", () => {
-    const notes = "a".repeat(INTERVIEW_NOTES_MAX_LENGTH);
-    expect(interviewErrors({ kind: "technical", at: "2026-12-01T15:00:00.000Z", notes }, { creating: true })).toEqual(
+  it("accepts a kind, a timestamp, and each Interview notes field up to its limit", () => {
+    const notes = {
+      what_they_asked: "a".repeat(INTERVIEW_NOTES_MAX_LENGTHS.what_they_asked),
+      how_it_went: "a".repeat(INTERVIEW_NOTES_MAX_LENGTHS.how_it_went),
+      takeaway: "a".repeat(INTERVIEW_NOTES_MAX_LENGTHS.takeaway),
+    };
+    expect(interviewErrors({ kind: "technical", at: "2026-12-01T15:00:00.000Z", ...notes }, { creating: true })).toEqual(
       {},
     );
-    expect(interviewErrors({ notes: null })).toEqual({});
+    expect(interviewErrors({ what_they_asked: null, how_it_went: null, takeaway: null })).toEqual({});
   });
 
   it("refuses an unknown kind, a date that isn't one, and notes over the limit", () => {
     expect(
-      interviewErrors({ kind: "<script>", at: "tomorrow", notes: "a".repeat(INTERVIEW_NOTES_MAX_LENGTH + 1) }),
+      interviewErrors({
+        kind: "<script>",
+        at: "tomorrow",
+        what_they_asked: "a".repeat(20_001),
+        how_it_went: "a".repeat(20_001),
+        takeaway: "a".repeat(501),
+      }),
     ).toEqual({
       kind: "Choose an Interview kind.",
       at: "Enter a date and time.",
-      notes: "Interview notes can be at most 20,000 characters.",
+      what_they_asked: "What they asked can be at most 20,000 characters.",
+      how_it_went: "How it went can be at most 20,000 characters.",
+      takeaway: "Takeaway for next time can be at most 500 characters.",
     });
+    // The single field they replaced is no longer one Bigfoot stores.
+    expect(interviewErrors({ notes: "Old" })).toEqual({ notes: "This isn’t a field Bigfoot stores." });
   });
 
   it("needs the kind and a date and time on a new Interview, never just a date", () => {
@@ -147,7 +165,7 @@ describe("interviewErrors", () => {
   });
 
   it.each(XSS_TEXT)("keeps %j in Interview notes as typed", (notes) => {
-    expect(interviewErrors({ notes })).toEqual({});
+    expect(interviewErrors({ what_they_asked: notes, how_it_went: notes, takeaway: notes })).toEqual({});
   });
 });
 

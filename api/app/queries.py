@@ -22,7 +22,9 @@ APPLICATION_COLUMNS = (
 COLUMNS = sql.SQL(APPLICATION_COLUMNS)
 # `expired` is derived on every read, never stored, like an Interview's `completed`.
 ACCESS_TOKEN_COLUMNS = sql.SQL("id, name, created_at, last_used_at, expires_at, expires_at <= now() as expired")
-INTERVIEW_COLUMNS = sql.SQL("id, application_id, kind, at, notes, prep_notes, created_at, updated_at")
+INTERVIEW_COLUMNS = sql.SQL(
+    "id, application_id, kind, at, what_they_asked, how_it_went, takeaway, prep_notes, created_at, updated_at"
+)
 # By date alone (docs/adr/0005).
 INTERVIEW_ORDER = sql.SQL("order by at, created_at, id")
 

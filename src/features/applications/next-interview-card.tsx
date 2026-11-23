@@ -4,18 +4,27 @@ import { buttonClasses } from "@/components/ui/button-classes";
 import { DaysFromToday, InterviewDayTime } from "@/features/applications/application-when";
 import { DateTile } from "@/features/applications/date-tile";
 import { interviewHref } from "@/features/applications/routes";
-import { carriedForward, INTERVIEW_OPTIONS, type Application, type Interview } from "@/lib/applications";
+import {
+  carriedForward,
+  hasInterviewNotes,
+  INTERVIEW_NOTES_FIELDS,
+  INTERVIEW_NOTES_LABELS,
+  INTERVIEW_OPTIONS,
+  type Application,
+  type Interview,
+} from "@/lib/applications";
 
 /**
  * The Application's next Interview, first on its page (BIG-174): when it is, its kind, and Open
- * Interview. Under them, what the last completed Interview's notes carry forward (their last
- * paragraph), and this Interview's own Interview notes, or Add Interview notes to start them on its
- * Interview page.
+ * Interview. Under them, what the last completed Interview's notes carry forward (the last
+ * paragraph of How it went, until BIG-181), and this Interview's own Interview notes, each field
+ * that has text under its name, or Add Interview notes to start them on its Interview page.
  */
 export function NextInterviewCard({ app, interview }: { app: Application; interview: Interview }) {
   const href = interviewHref(app.id, interview.id);
   const kind = INTERVIEW_OPTIONS[interview.kind].label;
   const carried = carriedForward(app);
+  const hasNotes = hasInterviewNotes(interview);
   return (
     <section aria-labelledby="next-up-title" className="card flex flex-col gap-5 border-line-brand-subtle p-5 sm:p-8">
       <div className="flex items-start gap-4">
@@ -54,15 +63,20 @@ export function NextInterviewCard({ app, interview }: { app: Application; interv
         </div>
       )}
 
-      {interview.notes && (
+      {hasNotes && (
         <div className="min-w-0">
           <h3 className="m-0 text-sm font-medium text-body">Interview notes</h3>
-          <p className="m-0 mt-1 line-clamp-6 whitespace-pre-line break-words text-base text-heading">{interview.notes}</p>
+          {INTERVIEW_NOTES_FIELDS.filter((field) => interview[field]).map((field) => (
+            <p key={field} className="m-0 mt-1 line-clamp-6 whitespace-pre-line break-words text-base text-heading">
+              <span className="font-bold">{INTERVIEW_NOTES_LABELS[field]}: </span>
+              {interview[field]}
+            </p>
+          ))}
         </div>
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        {!interview.notes && (
+        {!hasNotes && (
           <>
             <Link href={href} className={`${buttonClasses("brand")} max-sm:flex-1`}>
               <Plus className="size-4" aria-hidden />

@@ -15,6 +15,7 @@ import {
   upcomingInterviews,
   type Application,
   type ApplicationGroup,
+  hasInterviewNotes,
   type Interview,
 } from "@/lib/applications";
 
@@ -100,7 +101,7 @@ function RowLink({ job }: { job: Application }) {
  */
 function Progress({ job, group }: { job: Application; group: string }) {
   const completed = job.interviews.filter((interview) => interview.completed);
-  const withNotes = completed.filter((interview) => interview.notes).length;
+  const withNotes = completed.filter(hasInterviewNotes).length;
   return (
     <div className="text-xs text-body">
       <p className="m-0">{group}</p>

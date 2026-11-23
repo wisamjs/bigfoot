@@ -77,10 +77,18 @@ def create_interview(
             )
         row = conn.execute(
             sql.SQL(
-                "insert into interviews (application_id, kind, at, notes, prep_notes)"
-                " values (%s, %s, %s, %s, %s) returning {}"
+                "insert into interviews (application_id, kind, at, what_they_asked, how_it_went, takeaway, prep_notes)"
+                " values (%s, %s, %s, %s, %s, %s, %s) returning {}"
             ).format(INTERVIEW_COLUMNS),
-            (application_id, body.kind, body.at, body.notes, body.prep_notes),
+            (
+                application_id,
+                body.kind,
+                body.at,
+                body.what_they_asked,
+                body.how_it_went,
+                body.takeaway,
+                body.prep_notes,
+            ),
         ).fetchone()
     return interview_view(row, datetime.now(UTC))
 
@@ -95,7 +103,8 @@ def update_interview(
 ) -> Interview:
     """Change an Interview's kind, date, Interview notes or Prep notes.
 
-    Only the fields sent change; send null for `notes` or `prep_notes` to clear them. The date can't be cleared.
+    Only the fields sent change; send null for `what_they_asked`, `how_it_went`, `takeaway` or `prep_notes` to
+    clear it. The date can't be cleared.
     """
     changes = body.model_dump(exclude_unset=True)
     assignments = [sql.SQL("{} = %s").format(sql.Identifier(name)) for name in changes]

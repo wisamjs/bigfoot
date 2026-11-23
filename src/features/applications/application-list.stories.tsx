@@ -36,7 +36,7 @@ function interview(id: string, i: number, kind: InterviewKind, at: string, compl
     kind,
     at,
     completed,
-    notes: notes ? "Went well; asked about trade-offs." : null,
+    how_it_went: notes ? "Went well; asked about trade-offs." : null,
   });
 }
 

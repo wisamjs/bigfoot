@@ -18,7 +18,7 @@ import { ADD_APPLICATION_HREF, applicationHref } from "@/features/applications/r
 import { UnsavedChanges, useUnsavedChanges } from "@/features/applications/unsaved-changes";
 import {
   INTERVIEW_KINDS,
-  INTERVIEW_NOTES_MAX_LENGTH,
+  INTERVIEW_NOTES_MAX_LENGTHS,
   INTERVIEW_OPTIONS,
   type Application,
   type InterviewKind,
@@ -26,12 +26,13 @@ import {
 import { interviewErrors, isValid, summarize, type FieldErrors } from "@/lib/validation";
 
 /** Each field's control id, after the form's own id, in the order focus looks for an error. */
-const CONTROLS = { application: "application", kind: "kind", date: "at", time: "at-time", notes: "notes" } as const;
+const CONTROLS = { application: "application", kind: "kind", date: "at", time: "at-time", how_it_went: "how-it-went" } as const;
 type Control = keyof typeof CONTROLS;
 
 /**
  * An Interview that doesn't exist yet, on the Add Interview page: the Application it belongs to,
- * its kind, its date and time (both required, no time assumed), and Interview notes. Adding it
+ * its kind, its date and time (both required, no time assumed), and How it went (Interview notes;
+ * the other two fields are written on its Interview page). Adding it
  * goes back to the Application page it was opened from, or to the dashboard. With no Applications,
  * it explains that an Interview needs one.
  */
@@ -60,7 +61,7 @@ function NewInterviewFields({
   const [applicationId, setApplicationId] = useState(chosen);
   const [kind, setKind] = useState<InterviewKind>("informal_chat");
   const [at, setAt] = useState<DateAndTime>({ date: "", time: "" });
-  const [notes, setNotes] = useState("");
+  const [howItWent, setHowItWent] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors<Control>>({});
   // What's wrong before anything is sent; errors from the save itself show in SaveStatus.
   const [invalid, setInvalid] = useState<string | null>(null);
@@ -73,7 +74,7 @@ function NewInterviewFields({
       ["kind", kind !== "informal_chat"],
       ["date", at.date !== ""],
       ["time", at.time !== ""],
-      ["notes", notes !== ""],
+      ["how_it_went", howItWent !== ""],
     ] as const
   ).find(([, differs]) => differs)?.[0];
   useUnsavedChanges(!added && changed !== undefined, () => {
@@ -102,7 +103,7 @@ function NewInterviewFields({
   }
 
   /** What's missing or wrong, each keyed by the control it belongs beside. */
-  function check(fields: { kind: InterviewKind; at: string | null; notes: string | null }): FieldErrors<Control> {
+  function check(fields: { kind: InterviewKind; at: string | null; how_it_went: string | null }): FieldErrors<Control> {
     const errors: FieldErrors<Control> = {};
     if (!applicationId) errors.application = "Choose the Application this Interview belongs to.";
     const api = interviewErrors(fields, { creating: true });
@@ -110,7 +111,7 @@ function NewInterviewFields({
     if (!at.date) errors.date = "Pick the date and enter the time.";
     else if (!at.time) errors.time = "Enter the time.";
     else if (api.at) errors.date = api.at;
-    if (api.notes) errors.notes = api.notes;
+    if (api.how_it_went) errors.how_it_went = api.how_it_went;
     return errors;
   }
 
@@ -121,7 +122,7 @@ function NewInterviewFields({
     const fields = {
       kind,
       at: at.date && at.time ? fromLocalInput(`${at.date}T${at.time}`) : null,
-      notes: notes.trim() || null,
+      how_it_went: howItWent.trim() || null,
     };
     const errors = check(fields);
     setFieldErrors(errors);
@@ -225,18 +226,18 @@ function NewInterviewFields({
         />
         <FieldError id={`${id}-at-error`} error={atError} />
       </fieldset>
-      <Field id={`${id}-notes`} label="Interview notes" error={fieldErrors.notes}>
+      <Field id={`${id}-how-it-went`} label="How it went" error={fieldErrors.how_it_went}>
         <textarea
-          id={`${id}-notes`}
-          value={notes}
+          id={`${id}-how-it-went`}
+          value={howItWent}
           rows={3}
-          maxLength={INTERVIEW_NOTES_MAX_LENGTH}
-          placeholder={PLACEHOLDERS.notes}
+          maxLength={INTERVIEW_NOTES_MAX_LENGTHS.how_it_went}
+          placeholder={PLACEHOLDERS.how_it_went}
           onChange={(e) => {
-            setNotes(e.target.value);
-            clear("notes");
+            setHowItWent(e.target.value);
+            clear("how_it_went");
           }}
-          {...invalidProps(`${id}-notes-error`, fieldErrors.notes)}
+          {...invalidProps(`${id}-how-it-went-error`, fieldErrors.how_it_went)}
           className={`${inputClasses} field-sizing-content max-h-96 min-h-20 resize-y`}
         />
       </Field>

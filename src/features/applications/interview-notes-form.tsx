@@ -1,7 +1,7 @@
 "use client";
 
-import { Pencil, Plus } from "lucide-react";
-import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import { Lightbulb, Pencil, Plus } from "lucide-react";
+import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { FieldError, invalidProps } from "@/components/ui/field-error";
 import { inputClasses } from "@/components/ui/input";
@@ -10,102 +10,282 @@ import { PLACEHOLDERS } from "@/features/applications/placeholders";
 import { SaveStatus } from "@/components/ui/save-status";
 import { useUnsavedChanges } from "@/features/applications/unsaved-changes";
 import type { SaveResult, SaveTracker } from "@/hooks/use-save-status";
-import { INTERVIEW_NOTES_MAX_LENGTH, INTERVIEW_PREP_NOTES_MAX_LENGTH, noteBlocks, type Interview } from "@/lib/applications";
+import {
+  INTERVIEW_NOTES_FIELDS,
+  INTERVIEW_NOTES_LABELS,
+  INTERVIEW_NOTES_MAX_LENGTHS,
+  INTERVIEW_PREP_NOTES_MAX_LENGTH,
+  hasInterviewNotes,
+  noteBlocks,
+  questions,
+  type Interview,
+  type InterviewNotesField,
+} from "@/lib/applications";
 
-/** How long typing must stop before Interview notes save by themselves. */
+/** How long typing must stop before an Interview notes field saves by itself. */
 export const NOTES_PAUSE_MS = 1000;
 
-/** The two notes an Interview carries, which read, edit and save the same way. */
-export type NotesField = "notes" | "prep_notes";
+/** A field of notes an Interview carries: one of the Interview notes fields, or its Prep notes. */
+export type NotesFieldName = InterviewNotesField | "prep_notes";
 
-const NOTES_FIELDS = {
-  notes: {
-    title: "Interview notes",
-    idPrefix: "notes",
-    placeholder: PLACEHOLDERS.notes,
-    maxLength: INTERVIEW_NOTES_MAX_LENGTH,
-  },
-  prep_notes: {
-    title: "Prep notes",
-    idPrefix: "prep-notes",
-    placeholder: PLACEHOLDERS.prep_notes,
-    maxLength: INTERVIEW_PREP_NOTES_MAX_LENGTH,
-  },
-} as const;
-
-/**
- * How a notes card sits on the Interview page (BIG-180). Plain: Interview notes of a completed
- * Interview. Before and after: an upcoming Interview's two cards, Prep notes ("Get ready for
- * Wednesday") then Interview notes, which is a dashed "Nothing yet, that's expected" until written.
- * Folded: a completed Interview's Prep notes under its Interview notes, shown as their first lines
- * until opened, and not at all when there are none.
- */
-type Layout = "plain" | "before" | "after" | "folded";
-
-/** What saving the notes came to: the problem found before sending, and the save itself if one was sent. */
+/** What saving a field came to: the problem found before sending, and the save itself if one was sent. */
 export type NotesSave = { problem: string | undefined; sent: Promise<SaveResult> | null };
 
-/**
- * An Interview's notes card, on its Interview page (BIG-178): written, read and cleared here. It
- * reads as text until edited, lines starting "- " as a list, with Edit at the top right (Add
- * Interview notes while there are none). Edit turns the notes into a field, as the Details card does
- * its details, and Done goes back to the text, unless a save has failed or the notes are over the
- * limit: then focus stays in the field. The notes save by themselves, as a draft: about a second
- * after typing stops, and when the field is left. Each save replaces the last, so what's stored is
- * exactly what was typed, and a save waits for the one before it, so two are never in flight.
- * Typing carries on while one is. The field isn't remounted by a save: notes saved elsewhere only
- * replace what's typed when nothing was typed over the old ones.
- */
-export function InterviewNotesForm(props: NotesFormProps) {
-  return <NotesForm {...props} field="notes" layout={props.interview.completed ? "plain" : "after"} />;
+/** The id of a notes field's control. */
+export function notesFieldId(interviewId: string, field: NotesFieldName) {
+  return `${field}-${interviewId}`;
 }
 
 /**
- * An Interview's Prep notes card (BIG-180): what the job seeker writes to get ready for it, kept
- * apart from the Interview notes about how it went. It works as the Interview notes card does.
- * Before the Interview it is the first card ("Get ready for Wednesday"); afterwards it folds under
- * the Interview notes, and is left out while empty.
+ * An Interview's notes on its Interview page (BIG-178, BIG-179): What they asked, How it went and
+ * Takeaway for next time, written, read and cleared here. They read as text until edited: the
+ * takeaway in its own card above, then How it went (lines starting "- " as a list) and They asked,
+ * one question per line, with Edit at the top right (Add Interview notes while there are none).
+ * A completed Interview with none opens straight into the three empty fields under "How did it go?";
+ * an upcoming one is the "After" card, dashed with "Nothing yet, that's expected" until written
+ * (BIG-180).
+ * Edit turns them into fields, as the Details card does its details, and Done goes back to the
+ * text, unless a save has failed or a field is over its limit: then focus goes to that field.
+ *
+ * Each field saves by itself, as a draft, with its own save status: about a second after typing in
+ * it stops, and when it's left. Each save replaces that field's last one, so what's stored is
+ * exactly what was typed, and waits for the one before it, so two are never in flight for a field.
+ * A field isn't remounted by a save: a value saved elsewhere only replaces what's typed when
+ * nothing was typed over the old one.
  */
-export function PrepNotesForm(props: NotesFormProps) {
-  return <NotesForm {...props} field="prep_notes" layout={props.interview.completed ? "folded" : "before"} />;
-}
-
-type NotesFormProps = {
-  interview: Interview;
-  /** Owned by the Interview page's editor, so "Saved" outlasts this form re-rendering with the saved notes. */
-  tracker: SaveTracker;
-  /** Checks and saves the notes, or says why not. */
-  onSave: (notes: string | null) => NotesSave;
-};
-
-function NotesForm({
+export function InterviewNotesForm({
   interview,
-  field,
-  layout,
-  tracker,
+  trackers,
   onSave,
-}: NotesFormProps & { field: NotesField; layout: Layout }) {
-  const { title, idPrefix, placeholder, maxLength } = NOTES_FIELDS[field];
-  const saved = interview[field];
-  const [draft, setDraft] = useState(saved ?? "");
-  const [seen, setSeen] = useState(saved);
-  // What the server holds, for the unsaved check: the saved notes, or what a save just stored.
-  const [stored, setStored] = useState(saved);
-  const [error, setError] = useState<string | undefined>();
-  const [editing, setEditing] = useState(false);
-  // Folded Prep notes show their first lines until opened.
-  const [open, setOpen] = useState(false);
+}: {
+  interview: Interview;
+  /** One per field, owned by the Interview page's editor, so "Saved" outlasts this form re-rendering with the saved value. */
+  trackers: Record<InterviewNotesField, SaveTracker>;
+  /** Checks and saves one field, or says why not. */
+  onSave: (field: InterviewNotesField, value: string | null) => NotesSave;
+}) {
+  // Fresh: a completed Interview with nothing written yet opens straight into the fields.
+  const [fresh] = useState(() => interview.completed && !hasInterviewNotes(interview));
+  const [editing, setEditing] = useState(fresh);
+  // Edit (or Add Interview notes) was pressed: the first field takes focus. Not on arriving at the page.
+  const [asked, setAsked] = useState(false);
   const headingId = useId();
   const editRef = useRef<HTMLButtonElement>(null);
   const wasEditingRef = useRef(editing);
-  const fieldId = `${idPrefix}-${interview.id}`;
-  const errorId = `${fieldId}-error`;
-  const nearLimit = draft.length >= maxLength * 0.9;
+
+  const reopen = (field: InterviewNotesField) => {
+    setEditing(true);
+    requestAnimationFrame(() => document.getElementById(notesFieldId(interview.id, field))?.focus());
+  };
+  const drafts = {
+    what_they_asked: useNotesDraft(interview, "what_they_asked", onSave, reopen),
+    how_it_went: useNotesDraft(interview, "how_it_went", onSave, reopen),
+    takeaway: useNotesDraft(interview, "takeaway", onSave, reopen),
+  };
+
+  // Back from the fields, focus returns to the button that opened them.
+  useEffect(() => {
+    if (wasEditingRef.current && !editing) editRef.current?.focus();
+    wasEditingRef.current = editing;
+  }, [editing]);
+
+  function edit() {
+    setAsked(true);
+    setEditing(true);
+  }
+
+  function done() {
+    const stuck = INTERVIEW_NOTES_FIELDS.find((field) => {
+      const problem = drafts[field].flush();
+      return problem || trackers[field].status.phase === "failed";
+    });
+    if (stuck) {
+      document.getElementById(notesFieldId(interview.id, stuck))?.focus();
+      return;
+    }
+    setEditing(false);
+  }
+
+  const shown = Object.fromEntries(
+    INTERVIEW_NOTES_FIELDS.map((field) => [field, drafts[field].draft.trim() || null]),
+  ) as Record<InterviewNotesField, string | null>;
+  const any = hasInterviewNotes(shown);
+  // An upcoming Interview with nothing written yet waits for afterwards.
+  const waiting = !interview.completed && !any && !editing;
+
+  return (
+    <div className="flex min-w-0 flex-col gap-6">
+      {!editing && shown.takeaway && <TakeawayCard takeaway={shown.takeaway} />}
+      <section aria-labelledby={headingId} className={cardClasses(editing, waiting)}>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <NotesHeading id={headingId} justFinished={editing && fresh && !asked} after={!interview.completed} />
+          {!editing && <NotesStatuses trackers={trackers} canEdit={any} editRef={editRef} onEdit={edit} />}
+        </div>
+        {editing ? (
+          <>
+            {INTERVIEW_NOTES_FIELDS.map((field, index) => (
+              <NotesField
+                key={field}
+                id={notesFieldId(interview.id, field)}
+                field={field}
+                draft={drafts[field]}
+                tracker={trackers[field]}
+                focusOnOpen={asked && index === 0}
+              />
+            ))}
+            <Button onClick={done} className="self-start">
+              Done
+            </Button>
+          </>
+        ) : (
+          <NotesRead notes={shown} waiting={waiting} editRef={editRef} onAdd={edit} />
+        )}
+      </section>
+    </div>
+  );
+}
+
+/** The notes card's classes: outlined while editing, dashed while waiting for afterwards. */
+function cardClasses(editing: boolean, waiting: boolean) {
+  return ["card flex min-w-0 flex-col gap-4 p-5 sm:p-7", editing && "border-line-brand-subtle", waiting && "border-dashed"]
+    .filter(Boolean)
+    .join(" ");
+}
+
+/** Each field's save status, then Edit once there is something to edit. */
+function NotesStatuses({
+  trackers,
+  canEdit,
+  editRef,
+  onEdit,
+}: {
+  trackers: Record<InterviewNotesField, SaveTracker>;
+  canEdit: boolean;
+  editRef: RefObject<HTMLButtonElement | null>;
+  onEdit: () => void;
+}) {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-3">
+      {INTERVIEW_NOTES_FIELDS.map((field) => (
+        <SaveStatus
+          key={field}
+          status={trackers[field].status}
+          label={INTERVIEW_NOTES_LABELS[field]}
+          onRetry={trackers[field].retry}
+        />
+      ))}
+      {canEdit && <EditButton label="Edit Interview notes" editRef={editRef} onEdit={onEdit} />}
+    </span>
+  );
+}
+
+/** The tertiary Edit button at a notes card's top right. */
+function EditButton({
+  label,
+  editRef,
+  onEdit,
+}: {
+  label: string;
+  editRef: RefObject<HTMLButtonElement | null>;
+  onEdit: () => void;
+}) {
+  return (
+    <Button ref={editRef} variant="tertiary" className="px-2.5" onClick={onEdit} aria-label={label}>
+      <Pencil className="size-4" aria-hidden />
+      Edit
+    </Button>
+  );
+}
+
+/** The notes read as text, or, with none, says so with Add Interview notes. */
+function NotesRead({
+  notes,
+  waiting,
+  editRef,
+  onAdd,
+}: {
+  notes: Record<InterviewNotesField, string | null>;
+  /** An upcoming Interview with none: dashed "Nothing yet" instead of "No Interview notes yet." */
+  waiting: boolean;
+  editRef: RefObject<HTMLButtonElement | null>;
+  onAdd: () => void;
+}) {
+  if (hasInterviewNotes(notes)) return <NotesText howItWent={notes.how_it_went} whatTheyAsked={notes.what_they_asked} />;
+  return (
+    <div className="flex flex-col items-start gap-3">
+      {waiting ? (
+        <div className="flex flex-col gap-1">
+          <p className="m-0 text-base font-medium text-heading">Nothing yet, that’s expected</p>
+          <p className="m-0 text-base text-body">Write down how it went once it’s over.</p>
+        </div>
+      ) : (
+        <p className="m-0 text-base text-body">No Interview notes yet.</p>
+      )}
+      <Button ref={editRef} variant="secondary" onClick={onAdd}>
+        Add Interview notes
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * The card's heading: "Interview notes" (under "After" before the Interview), or "How did it go?"
+ * for a completed Interview just opened with none.
+ */
+function NotesHeading({ id, justFinished, after }: { id: string; justFinished: boolean; after: boolean }) {
+  if (!justFinished) {
+    return (
+      <div className="flex flex-col gap-1">
+        {after && <p className="m-0 text-xs font-bold uppercase tracking-wide text-body">After</p>}
+        <h2 id={id} className="m-0 text-2xl font-bold leading-[1.25] text-heading">
+          Interview notes
+        </h2>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="m-0 text-xs font-bold uppercase tracking-[0.08em] text-fg-brand">
+        Just finished · write it down while it’s fresh
+      </p>
+      <h2 id={id} className="m-0 text-2xl font-bold leading-[1.25] text-heading">
+        How did it go?
+      </h2>
+      <p className="m-0 text-sm text-body">Two minutes now beats twenty from memory. Every field is optional.</p>
+    </div>
+  );
+}
+
+/** One field's draft: what's typed, why it can't be saved, and how to save it now. */
+type NotesDraft = {
+  draft: string;
+  error: string | undefined;
+  change: (value: string) => void;
+  /** Saves what's typed now, if it differs from what's stored. Returns why it couldn't send it, if so. */
+  flush: () => string | undefined;
+};
+
+/**
+ * The draft of one Interview notes or Prep notes field: saved about a second after typing stops and when the
+ * field is left (`flush`), one save at a time. A value saved elsewhere replaces the draft unless it
+ * was typed over. Reports itself unsaved, so leaving the page asks first; Keep editing reopens it.
+ */
+function useNotesDraft<Field extends NotesFieldName>(
+  interview: Interview,
+  field: Field,
+  onSave: (field: Field, value: string | null) => NotesSave,
+  reopen: (field: Field) => void,
+): NotesDraft {
+  const saved = interview[field];
+  const [draft, setDraft] = useState(saved ?? "");
+  const [seen, setSeen] = useState(saved);
+  // What the server holds, for the unsaved check: the saved value, or what a save just stored.
+  const [stored, setStored] = useState(saved);
+  const [error, setError] = useState<string | undefined>();
 
   // Timers and saves run after this render, so they read the latest of these, not their own render's.
   const draftRef = useRef(draft);
   const onSaveRef = useRef(onSave);
-  // What the server holds: the saved notes, or the ones a save just stored before the page catches up.
   const storedRef = useRef(saved);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const sendingRef = useRef(false);
@@ -120,46 +300,35 @@ function NotesForm({
   }, [saved]);
   useEffect(() => () => clearTimeout(timerRef.current), []);
 
-  // Notes saved elsewhere replace the draft, unless it was typed over; set during render, the way
-  // React advises for state that follows a prop.
+  // A value saved elsewhere replaces the draft, unless it was typed over; set during render, the
+  // way React advises for state that follows a prop.
   if (saved !== seen) {
     setSeen(saved);
     setStored(saved);
     if ((draft.trim() || null) === seen) setDraft(saved ?? "");
   }
 
-  // Back from the field, focus returns to the button that opened it.
-  useEffect(() => {
-    if (wasEditingRef.current && !editing) editRef.current?.focus();
-    wasEditingRef.current = editing;
-  }, [editing]);
+  // A draft still inside its typing pause, or whose save failed, is lost on leaving.
+  useUnsavedChanges((draft.trim() || null) !== stored, () => reopen(field));
 
-  // Notes still inside their typing pause, or whose save failed, are lost on leaving: the prompt's
-  // Keep editing opens the field again.
-  useUnsavedChanges((draft.trim() || null) !== stored, () => {
-    setEditing(true);
-    document.getElementById(fieldId)?.focus();
-  });
-
-  /** Saves what's typed now, if it differs from what's stored, once no other save is in flight. Returns why it couldn't send them, if so. */
   function flush(): string | undefined {
     clearTimeout(timerRef.current);
     if (sendingRef.current) {
       flushAgainRef.current = true;
       return undefined;
     }
-    // As the API stores them: ends trimmed, blank is none.
-    const notes = draftRef.current.trim() || null;
-    if (notes === storedRef.current) return undefined;
-    const { problem, sent } = onSaveRef.current(notes);
+    // As the API stores it: ends trimmed, blank is none.
+    const value = draftRef.current.trim() || null;
+    if (value === storedRef.current) return undefined;
+    const { problem, sent } = onSaveRef.current(field, value);
     setError(problem);
     if (!sent) return problem;
     sendingRef.current = true;
     void sent.then((result) => {
       sendingRef.current = false;
       if (result.ok) {
-        storedRef.current = notes;
-        setStored(notes);
+        storedRef.current = value;
+        setStored(value);
       }
       if (flushAgainRef.current) {
         flushAgainRef.current = false;
@@ -169,252 +338,122 @@ function NotesForm({
     return undefined;
   }
 
-  function done() {
-    const problem = flush();
-    if (problem || tracker.status.phase === "failed") {
-      document.getElementById(fieldId)?.focus();
-      return;
-    }
-    setEditing(false);
-  }
+  return {
+    draft,
+    error,
+    flush,
+    change(value) {
+      setDraft(value);
+      setError(undefined);
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(flush, NOTES_PAUSE_MS);
+    },
+  };
+}
 
+/** One field while editing: its label and save status, the field, and its character count near the limit. */
+function NotesField({
+  id,
+  field,
+  draft,
+  tracker,
+  focusOnOpen,
+}: {
+  id: string;
+  field: InterviewNotesField;
+  draft: NotesDraft;
+  tracker: SaveTracker;
+  /** Pressing Edit or Add Interview notes is the request to write; arriving at the page isn't. */
+  focusOnOpen: boolean;
+}) {
+  const label = INTERVIEW_NOTES_LABELS[field];
+  const max = INTERVIEW_NOTES_MAX_LENGTHS[field];
+  const errorId = `${id}-error`;
+  const nearLimit = draft.draft.length >= max * 0.9;
+  const focusRef = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
+  // Focus once, when the fields open at the job seeker's request.
+  const [focusFirst] = useState(focusOnOpen);
+  useEffect(() => {
+    if (focusFirst) focusRef.current?.focus();
+  }, [focusFirst]);
+  const shared = {
+    id,
+    value: draft.draft,
+    maxLength: max,
+    placeholder: PLACEHOLDERS[field],
+    onBlur: () => void draft.flush(),
+    ...invalidProps(errorId, draft.error),
+  };
   return (
-    <NotesCard
-      title={title}
-      placeholder={placeholder}
-      maxLength={maxLength}
-      layout={layout}
-      at={interview.at}
-      open={open}
-      onToggle={() => setOpen((was) => !was)}
-      headingId={headingId}
-      fieldId={fieldId}
-      errorId={errorId}
-      error={error}
-      editing={editing}
-      draft={draft}
-      nearLimit={nearLimit}
-      tracker={tracker}
-      editRef={editRef}
-      onEdit={() => setEditing(true)}
-      onChange={(value) => {
-        setDraft(value);
-        setError(undefined);
-        clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(flush, NOTES_PAUSE_MS);
-      }}
-      onBlur={() => void flush()}
-      onDone={done}
-    />
+    <div className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <label htmlFor={id} className="text-sm font-bold text-heading">
+          {label}
+        </label>
+        <SaveStatus status={tracker.status} label={label} onRetry={tracker.retry} />
+      </div>
+      {field === "takeaway" ? (
+        <input
+          ref={focusRef}
+          {...shared}
+          type="text"
+          onChange={(e) => draft.change(e.target.value)}
+          className={inputClasses}
+        />
+      ) : (
+        <textarea
+          ref={focusRef}
+          {...shared}
+          rows={3}
+          onChange={(e) => draft.change(e.target.value)}
+          // Grows with the text where the browser supports it; otherwise it scrolls and resizes.
+          className={`${inputClasses} field-sizing-content max-h-96 min-h-20 resize-y`}
+        />
+      )}
+      {nearLimit && (
+        <span className="text-xs font-medium text-body">
+          {draft.draft.length.toLocaleString("en-CA")} of {max.toLocaleString("en-CA")} characters
+        </span>
+      )}
+      <FieldError id={errorId} error={draft.error} />
+    </div>
   );
 }
 
-type CardProps = {
-  title: string;
-  placeholder: string;
-  maxLength: number;
-  layout: Layout;
-  at: string;
-  open: boolean;
-  onToggle: () => void;
-  headingId: string;
-  fieldId: string;
-  errorId: string;
-  error: string | undefined;
-  editing: boolean;
-  draft: string;
-  nearLimit: boolean;
-  tracker: SaveTracker;
-  editRef: RefObject<HTMLButtonElement | null>;
-  onEdit: () => void;
-  onChange: (value: string) => void;
-  onBlur: () => void;
-  onDone: () => void;
-};
-
-/**
- * The card itself: its heading and save status, then the text or, while editing, the field and
- * Done. `layout` says where it sits on the Interview page (see Layout).
- */
-function NotesCard(props: CardProps) {
-  const { notes, hidden, waiting, showing, className } = cardState(props);
-  if (hidden) return null;
+/** The takeaway, read: its own card above the notes, with a lightbulb. */
+function TakeawayCard({ takeaway }: { takeaway: string }) {
+  const headingId = useId();
   return (
-    <section aria-labelledby={props.headingId} className={className}>
-      <NotesHeading {...props} canEdit={!props.editing && !!notes && showing} />
-      <NotesBody {...props} notes={notes} showing={showing} waiting={waiting} />
+    <section
+      aria-labelledby={headingId}
+      className="card flex min-w-0 gap-3 border-line-brand-subtle p-5 sm:p-6"
+    >
+      <Lightbulb className="mt-0.5 size-5 shrink-0 text-fg-brand" aria-hidden />
+      <div className="min-w-0">
+        <h2 id={headingId} className="m-0 text-xs font-bold uppercase tracking-[0.08em] text-fg-brand">
+          {INTERVIEW_NOTES_LABELS.takeaway}
+        </h2>
+        <p className="m-0 mt-1 break-words text-lg font-bold leading-[1.4] text-heading">{takeaway}</p>
+      </div>
     </section>
   );
 }
 
-/** What the card shows: the notes, whether it is left out (folded Prep notes with none), waiting (dashed) or showing in full. */
-function cardState({ layout, editing, draft, open }: Pick<CardProps, "layout" | "editing" | "draft" | "open">) {
-  const notes = draft.trim() || null;
-  const folded = layout === "folded";
-  const waiting = layout === "after" && !notes && !editing;
-  const className = ["card flex min-w-0 flex-col gap-4 p-5 sm:p-7", editing && "border-line-brand-subtle", waiting && "border-dashed"]
-    .filter(Boolean)
-    .join(" ");
-  // Prep notes of a completed Interview that has none aren't shown empty.
-  return { notes, hidden: folded && !notes && !editing, waiting, showing: !folded || open || editing, className };
-}
-
-/** Under the heading: the "Get ready for" line, then the field, the text (folded or whole) or the Add button. */
-function NotesBody(props: CardProps & { notes: string | null; showing: boolean; waiting: boolean }) {
-  const { layout, at, editing, notes, showing, waiting, open, onToggle, title, editRef, onEdit } = props;
+/** How it went as text (lines starting "- " as a list, the rest as paragraphs), then They asked as a list. */
+function NotesText({ howItWent, whatTheyAsked }: { howItWent: string | null; whatTheyAsked: string | null }) {
+  const asked = questions(whatTheyAsked);
   return (
-    <>
-      {layout === "before" && (
-        <p className="m-0 text-base font-medium text-heading">
-          <GetReadyFor at={at} />
-        </p>
-      )}
-      {editing ? (
-        <NotesField {...props} />
-      ) : notes ? (
-        <>
-          <NotesText notes={showing ? notes : firstLines(notes)} />
-          {layout === "folded" && (
-            <Button variant="tertiary" className="self-start px-2.5" onClick={onToggle} aria-expanded={open}>
-              {open ? `Hide ${title}` : `Show ${title}`}
-            </Button>
-          )}
-        </>
-      ) : (
-        <NoNotes title={title} layout={layout} waiting={waiting} editRef={editRef} onEdit={onEdit} />
-      )}
-    </>
-  );
-}
-
-/** The heading with its "Before" or "After" label, the character count near the limit, the save status and Edit. */
-function NotesHeading({
-  title,
-  layout,
-  headingId,
-  editing,
-  draft,
-  maxLength,
-  nearLimit,
-  tracker,
-  canEdit,
-  editRef,
-  onEdit,
-}: CardProps & { canEdit: boolean }) {
-  const eyebrow = layout === "before" ? "Before" : layout === "after" ? "After" : null;
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <div className="flex min-w-0 flex-col gap-1">
-        {eyebrow && <p className="m-0 text-xs font-bold uppercase tracking-wide text-body">{eyebrow}</p>}
-        <h2
-          id={headingId}
-          className={`m-0 font-bold leading-[1.25] text-heading ${layout === "folded" ? "text-xl" : "text-2xl"}`}
-        >
-          {title}
-        </h2>
-      </div>
-      <span className="inline-flex flex-wrap items-center gap-3">
-        {editing && nearLimit && (
-          <span className="text-xs font-medium text-body">
-            {draft.length.toLocaleString("en-CA")} of {maxLength.toLocaleString("en-CA")} characters
-          </span>
-        )}
-        <SaveStatus status={tracker.status} label={title} onRetry={tracker.retry} />
-        {canEdit && (
-          <Button ref={editRef} variant="tertiary" className="px-2.5" onClick={onEdit} aria-label={`Edit ${title}`}>
-            <Pencil className="size-4" aria-hidden />
-            Edit
-          </Button>
-        )}
-      </span>
+    <div className="flex min-w-0 flex-col gap-4 break-words text-base leading-[1.6] text-body">
+      {howItWent && <NoteBlocks notes={howItWent} />}
+      {asked.length > 0 && <TheyAsked questions={asked} />}
     </div>
   );
 }
 
-/** The textarea that saves by itself, its error, and Done. */
-function NotesField({
-  headingId,
-  fieldId,
-  errorId,
-  error,
-  draft,
-  maxLength,
-  placeholder,
-  onChange,
-  onBlur,
-  onDone,
-}: CardProps) {
+/** Some notes as text: lines starting "- " as a list, the rest as paragraphs. */
+function NoteBlocks({ notes }: { notes: string }) {
   return (
-    <>
-      <div>
-        <textarea
-          id={fieldId}
-          aria-labelledby={headingId}
-          value={draft}
-          rows={3}
-          maxLength={maxLength}
-          placeholder={placeholder}
-          // eslint-disable-next-line jsx-a11y/no-autofocus -- Pressing Edit or Add is the request to write.
-          autoFocus
-          onChange={(e) => onChange(e.target.value)}
-          onBlur={onBlur}
-          {...invalidProps(errorId, error)}
-          // Grows with the notes where the browser supports it; otherwise it scrolls and resizes.
-          className={`${inputClasses} field-sizing-content max-h-96 min-h-20 resize-y`}
-        />
-        <FieldError id={errorId} error={error} />
-      </div>
-      <Button onClick={onDone} className="self-start">
-        Done
-      </Button>
-    </>
-  );
-}
-
-/** A card with nothing written: the dashed "Nothing yet" of the After card, "No … yet" or just the Add button. */
-function NoNotes({
-  title,
-  layout,
-  waiting,
-  editRef,
-  onEdit,
-}: {
-  title: string;
-  layout: Layout;
-  waiting: boolean;
-  editRef: RefObject<HTMLButtonElement | null>;
-  onEdit: () => void;
-}) {
-  return (
-    <div className="flex flex-col items-start gap-3">
-      {waiting && (
-        <div className="flex flex-col gap-1">
-          <p className="m-0 text-base font-medium text-heading">Nothing yet, that’s expected</p>
-          <p className="m-0 text-base text-body">Write down how it went once it’s over.</p>
-        </div>
-      )}
-      {layout === "plain" && <p className="m-0 text-base text-body">No {title} yet.</p>}
-      <Button ref={editRef} variant="secondary" onClick={onEdit}>
-        {layout === "before" && <Plus className="size-4" aria-hidden />}
-        Add {title}
-      </Button>
-    </div>
-  );
-}
-
-/** How many lines of folded Prep notes show before "Show Prep notes". */
-const FOLDED_LINES = 2;
-
-/** The first lines of some notes, with "…" when there are more. */
-function firstLines(notes: string): string {
-  const lines = notes.split("\n").filter((line) => line.trim());
-  return lines.length > FOLDED_LINES ? `${lines.slice(0, FOLDED_LINES).join("\n")}\n…` : lines.join("\n");
-}
-
-/** The notes as text: lines starting "- " as a list, the rest as paragraphs. */
-function NotesText({ notes }: { notes: string }) {
-  return (
-    <div className="flex min-w-0 flex-col gap-3 break-words text-base leading-[1.6] text-body">
+    <div className="flex flex-col gap-3">
       {noteBlocks(notes).map((block) =>
         block.type === "list" ? (
           <ul key={block.id} className="m-0 flex list-disc flex-col gap-1 pl-5">
@@ -429,5 +468,268 @@ function NotesText({ notes }: { notes: string }) {
         ),
       )}
     </div>
+  );
+}
+
+/** What they asked, one question per line, as a list under "They asked". */
+export function TheyAsked({ questions: asked, className = "" }: { questions: string[]; className?: string }) {
+  const headingId = useId();
+  // Keyed by their text, numbered when one repeats.
+  const seen = new Map<string, number>();
+  const items = asked.map((text) => {
+    const count = (seen.get(text) ?? 0) + 1;
+    seen.set(text, count);
+    return { text, key: `${count}:${text}` };
+  });
+  return (
+    <div className={className}>
+      <h3 id={headingId} className="m-0 text-xs font-bold uppercase tracking-[0.08em] text-body">
+        They asked
+      </h3>
+      <ul aria-labelledby={headingId} className="m-0 mt-2 flex list-disc flex-col gap-1 pl-5">
+        {items.map((item) => (
+          <li key={item.key}>{item.text}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * An Interview's Prep notes card (BIG-180): what the job seeker writes to get ready for it, kept
+ * apart from the Interview notes about how it went. Before the Interview it is the first card
+ * ("Get ready for Wednesday"); afterwards it folds under the Interview notes, as their first lines
+ * until opened, and is left out while empty. It reads, edits and saves like the Interview notes:
+ * as text until Edit, saving by itself with its own save status.
+ */
+export function PrepNotesForm({
+  interview,
+  tracker,
+  onSave,
+}: {
+  interview: Interview;
+  /** Owned by the Interview page's editor, so "Saved" outlasts this form re-rendering with the saved notes. */
+  tracker: SaveTracker;
+  /** Checks and saves the notes, or says why not. */
+  onSave: (notes: string | null) => NotesSave;
+}) {
+  const folded = interview.completed;
+  const [editing, setEditing] = useState(false);
+  // Folded Prep notes show their first lines until opened.
+  const [open, setOpen] = useState(false);
+  const headingId = useId();
+  const editRef = useRef<HTMLButtonElement>(null);
+  const wasEditingRef = useRef(editing);
+  const draft = useNotesDraft(
+    interview,
+    "prep_notes",
+    (_field, value) => onSave(value),
+    () => setEditing(true),
+  );
+  const notes = draft.draft.trim() || null;
+
+  // Back from the field, focus returns to the button that opened it.
+  useEffect(() => {
+    if (wasEditingRef.current && !editing) editRef.current?.focus();
+    wasEditingRef.current = editing;
+  }, [editing]);
+
+  function done() {
+    const problem = draft.flush();
+    if (problem || tracker.status.phase === "failed") {
+      document.getElementById(notesFieldId(interview.id, "prep_notes"))?.focus();
+      return;
+    }
+    setEditing(false);
+  }
+
+  // Prep notes of a completed Interview that has none aren't shown empty.
+  if (folded && !notes && !editing) return null;
+  return (
+    <section aria-labelledby={headingId} className={cardClasses(editing, false)}>
+      <PrepHeading
+        id={headingId}
+        folded={folded}
+        status={<SaveStatus status={tracker.status} label={PREP_NOTES_TITLE} onRetry={tracker.retry} />}
+        edit={
+          prepCanEdit({ editing, notes, folded, open }) && (
+            <EditButton label={`Edit ${PREP_NOTES_TITLE}`} editRef={editRef} onEdit={() => setEditing(true)} />
+          )
+        }
+      />
+      {!folded && <GetReadyLine at={interview.at} />}
+      {editing ? (
+        <PrepField id={notesFieldId(interview.id, "prep_notes")} headingId={headingId} draft={draft} onDone={done} />
+      ) : (
+        <PrepBody
+          notes={notes}
+          folded={folded}
+          open={open}
+          editRef={editRef}
+          onToggle={() => setOpen((was) => !was)}
+          onAdd={() => setEditing(true)}
+        />
+      )}
+    </section>
+  );
+}
+
+const PREP_NOTES_TITLE = "Prep notes";
+
+/** Edit shows once there are notes to edit in full: not while editing, nor while they are still folded. */
+function prepCanEdit({
+  editing,
+  notes,
+  folded,
+  open,
+}: {
+  editing: boolean;
+  notes: string | null;
+  folded: boolean;
+  open: boolean;
+}) {
+  return !editing && Boolean(notes) && (!folded || open);
+}
+
+/** How many lines of folded Prep notes show before "Show Prep notes". */
+const FOLDED_LINES = 2;
+
+/** The first lines of some notes, with "…" when there are more. */
+function firstLines(notes: string): string {
+  const lines = notes.split("\n").filter((line) => line.trim());
+  return lines.length > FOLDED_LINES ? `${lines.slice(0, FOLDED_LINES).join("\n")}\n…` : lines.join("\n");
+}
+
+/** "Get ready for Wednesday", above Prep notes before the Interview. */
+function GetReadyLine({ at }: { at: string }) {
+  return (
+    <p className="m-0 text-base font-medium text-heading">
+      <GetReadyFor at={at} />
+    </p>
+  );
+}
+
+/** The Prep notes heading, with its "Before" label while the Interview is ahead, the save status and Edit. */
+function PrepHeading({
+  id,
+  folded,
+  status,
+  edit,
+}: {
+  id: string;
+  folded: boolean;
+  status: ReactNode;
+  edit: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex min-w-0 flex-col gap-1">
+        {!folded && <p className="m-0 text-xs font-bold uppercase tracking-wide text-body">Before</p>}
+        <h2 id={id} className={`m-0 font-bold leading-[1.25] text-heading ${folded ? "text-xl" : "text-2xl"}`}>
+          {PREP_NOTES_TITLE}
+        </h2>
+      </div>
+      <span className="inline-flex flex-wrap items-center gap-3">
+        {status}
+        {edit}
+      </span>
+    </div>
+  );
+}
+
+/** Prep notes read as text, or, with none, the Add Prep notes button. */
+function PrepBody({
+  notes,
+  folded,
+  open,
+  editRef,
+  onToggle,
+  onAdd,
+}: {
+  notes: string | null;
+  folded: boolean;
+  open: boolean;
+  editRef: RefObject<HTMLButtonElement | null>;
+  onToggle: () => void;
+  onAdd: () => void;
+}) {
+  if (notes) return <PrepRead notes={notes} folded={folded} open={open} onToggle={onToggle} />;
+  return (
+    <Button ref={editRef} variant="secondary" className="self-start" onClick={onAdd}>
+      <Plus className="size-4" aria-hidden />
+      Add {PREP_NOTES_TITLE}
+    </Button>
+  );
+}
+
+/** Prep notes as text: whole, or while folded their first lines with Show or Hide Prep notes. */
+function PrepRead({
+  notes,
+  folded,
+  open,
+  onToggle,
+}: {
+  notes: string;
+  folded: boolean;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <>
+      <div className="flex min-w-0 flex-col gap-4 break-words text-base leading-[1.6] text-body">
+        <NoteBlocks notes={folded && !open ? firstLines(notes) : notes} />
+      </div>
+      {folded && (
+        <Button variant="tertiary" className="self-start px-2.5" onClick={onToggle} aria-expanded={open}>
+          {open ? `Hide ${PREP_NOTES_TITLE}` : `Show ${PREP_NOTES_TITLE}`}
+        </Button>
+      )}
+    </>
+  );
+}
+
+/** The Prep notes textarea that saves by itself, its character count near the limit, its error and Done. */
+function PrepField({
+  id,
+  headingId,
+  draft,
+  onDone,
+}: {
+  id: string;
+  headingId: string;
+  draft: NotesDraft;
+  onDone: () => void;
+}) {
+  const errorId = `${id}-error`;
+  const max = INTERVIEW_PREP_NOTES_MAX_LENGTH;
+  return (
+    <>
+      <div>
+        <textarea
+          id={id}
+          aria-labelledby={headingId}
+          value={draft.draft}
+          rows={3}
+          maxLength={max}
+          placeholder={PLACEHOLDERS.prep_notes}
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- Pressing Edit or Add is the request to write.
+          autoFocus
+          onChange={(e) => draft.change(e.target.value)}
+          onBlur={() => void draft.flush()}
+          {...invalidProps(errorId, draft.error)}
+          // Grows with the notes where the browser supports it; otherwise it scrolls and resizes.
+          className={`${inputClasses} field-sizing-content max-h-96 min-h-20 resize-y`}
+        />
+        {draft.draft.length >= max * 0.9 && (
+          <span className="text-xs font-medium text-body">
+            {draft.draft.length.toLocaleString("en-CA")} of {max.toLocaleString("en-CA")} characters
+          </span>
+        )}
+        <FieldError id={errorId} error={draft.error} />
+      </div>
+      <Button onClick={onDone} className="self-start">
+        Done
+      </Button>
+    </>
   );
 }

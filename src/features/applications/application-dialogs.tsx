@@ -5,7 +5,7 @@ import { deleteApplicationAction } from "@/app/applications/actions";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import type { SaveResult } from "@/hooks/use-save-status";
-import { INTERVIEW_OPTIONS, type Application, type Interview } from "@/lib/applications";
+import { hasInterviewNotes, INTERVIEW_OPTIONS, type Application, type Interview } from "@/lib/applications";
 
 /**
  * The body of every Delete dialog: says what will be deleted, and deletes only once confirmed.
@@ -85,8 +85,8 @@ export function DeleteApplicationDialog({
 const dayFormat = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" });
 
 /** ", with its Interview notes", ", with its Prep notes" or both; nothing when it has neither. */
-function withNotes({ notes, prep_notes }: Interview) {
-  const held = [notes && "Interview notes", prep_notes && "Prep notes"].filter(Boolean);
+function withNotes(interview: Interview) {
+  const held = [hasInterviewNotes(interview) && "Interview notes", interview.prep_notes && "Prep notes"].filter(Boolean);
   return held.length ? `, with its ${held.join(" and ")}` : "";
 }
 

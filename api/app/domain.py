@@ -40,9 +40,12 @@ InterviewKind = Literal[
     "people_management",
 ]
 
-# Interview notes are plain text; generous enough that nobody writing by hand reaches it.
-INTERVIEW_NOTES_MAX_LENGTH = 20_000
-# Prep notes are the same sort of text, with the same limit.
+# Interview notes are three plain-text fields. What they asked and How it went are generous enough
+# that nobody writing by hand reaches them; Takeaway for next time is one short line.
+WHAT_THEY_ASKED_MAX_LENGTH = 20_000
+HOW_IT_WENT_MAX_LENGTH = 20_000
+TAKEAWAY_MAX_LENGTH = 500
+# Prep notes are the same sort of text as How it went, with the same limit.
 INTERVIEW_PREP_NOTES_MAX_LENGTH = 20_000
 
 # The longest text each Application field stores, in characters. Generous for anything typed or

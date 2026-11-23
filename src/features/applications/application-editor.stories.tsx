@@ -30,15 +30,18 @@ const lumen = application("lumen", {
       application_id: "lumen",
       kind: "recruiter_screen",
       at: daysFromNow(-17, 10),
-      notes:
+      how_it_went:
         "Quick walkthrough of my last team and how I ran quarterly planning. Two squads, 11 engineers, reporting to the Director of Platform. Band lines up with what I asked for.\n\nNext: hiring manager.",
     }),
     interview("manager", {
       application_id: "lumen",
       kind: "hiring_manager",
       at: daysFromNow(-10, 11),
-      notes:
+      what_they_asked:
+        "Tell me about a time you had to let someone go.\nHow do you decide what your team does not build?\nWhat does a good first 90 days look like here?",
+      how_it_went:
         "Dug into how I handle underperformance and how I split time between hands-on work and people work. The incident story landed well.\n\nRambled on the roadmap question. Next time: lead with the decision, then the trade-off.",
+      takeaway: "Lead with the decision, then the trade-off, then what I would measure.",
     }),
     interview("deep-dive", { application_id: "lumen", kind: "technical_deep_dive", at: daysFromNow(2, 11), completed: false }),
     interview("leadership", { application_id: "lumen", kind: "leadership", at: daysFromNow(9, 13), completed: false }),
@@ -73,7 +76,7 @@ type Story = StoryObj<typeof meta>;
 
 /**
  * An Interview scheduled: the strip (completed Interviews green), the next Interview with what the
- * last one's notes carry forward, Later and Completed, and the Details card with the salary hidden.
+ * last one's How it went carries forward, Later and Completed (each with its Interview notes inline), and the Details card with the salary hidden.
  */
 export const Default: Story = {
   play: async ({ canvas }) => {
@@ -83,6 +86,10 @@ export const Default: Story = {
     await expect(canvas.getByRole("heading", { level: 2, name: "Technical Deep-Dive" })).toBeVisible();
     await expect(canvas.getByText("Rambled on the roadmap question. Next time: lead with the decision, then the trade-off.", { selector: ".rounded-card p" })).toBeVisible();
     await expect(canvas.getByText("Interview scheduled")).toBeVisible();
+    // A completed Interview shows all three Interview notes fields inline.
+    const completed = canvas.getByRole("list", { name: "Completed" });
+    await expect(within(completed).getByRole("list", { name: "They asked" })).toBeVisible();
+    await expect(within(completed).getByText(/Lead with the decision, then the trade-off, then what I would measure/)).toBeVisible();
     await expect(canvas.queryByText("$210k–$240k")).not.toBeInTheDocument();
     const rows = canvas.getAllByRole("link", { name: /^Open Interview: / });
     await expect(rows.map((row) => row.textContent)).toEqual([
@@ -133,7 +140,7 @@ export const NextHasNotes: Story = {
     app: {
       ...lumen,
       interviews: lumen.interviews.map((i) =>
-        i.id === "deep-dive" ? { ...i, notes: "Bring the feature store migration story. Ask who owns on-call." } : i,
+        i.id === "deep-dive" ? { ...i, how_it_went: "Bring the feature store migration story. Ask who owns on-call." } : i,
       ),
     },
   },

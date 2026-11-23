@@ -44,8 +44,23 @@ export const INTERVIEW_KINDS = [
 ] as const;
 export type InterviewKind = (typeof INTERVIEW_KINDS)[number];
 
-/** The longest Interview notes the API stores, in characters. */
-export const INTERVIEW_NOTES_MAX_LENGTH = 20_000;
+/** Interview notes (GLOSSARY.md): three optional plain-text fields on an Interview, in the order they're written. */
+export const INTERVIEW_NOTES_FIELDS = ["what_they_asked", "how_it_went", "takeaway"] as const;
+export type InterviewNotesField = (typeof INTERVIEW_NOTES_FIELDS)[number];
+
+/** The longest text each Interview notes field stores, in characters; the API and database enforce them too. */
+export const INTERVIEW_NOTES_MAX_LENGTHS: Record<InterviewNotesField, number> = {
+  what_they_asked: 20_000,
+  how_it_went: 20_000,
+  takeaway: 500,
+};
+
+/** Each Interview notes field's name, as GLOSSARY.md and the forms call it. */
+export const INTERVIEW_NOTES_LABELS: Record<InterviewNotesField, string> = {
+  what_they_asked: "What they asked",
+  how_it_went: "How it went",
+  takeaway: "Takeaway for next time",
+};
 
 /** The longest Prep notes the API stores, in characters: the same as Interview notes. */
 export const INTERVIEW_PREP_NOTES_MAX_LENGTH = 20_000;
@@ -64,8 +79,12 @@ export type Interview = {
   kind: InterviewKind;
   /** ISO timestamp, required (docs/adr/0005). */
   at: string;
-  /** Interview notes: plain text the job seeker wrote about this Interview; null when there are none. */
-  notes: string | null;
+  /** Interview notes, What they asked: the questions, one per line; null when there are none. */
+  what_they_asked: string | null;
+  /** Interview notes, How it went: free text; null when there is none. */
+  how_it_went: string | null;
+  /** Interview notes, Takeaway for next time: one short line; null when there is none. */
+  takeaway: string | null;
   /** Prep notes: plain text the job seeker wrote to get ready for this Interview; null when there are none. */
   prep_notes: string | null;
   /** Derived by the API: the date is in the past. */
@@ -107,7 +126,20 @@ export type ApplicationFields = Omit<
 >;
 
 /** What a form sends: `at` is null while no date and time has been given, and validation refuses it. */
-export type InterviewFields = Pick<Interview, "kind" | "notes" | "prep_notes"> & { at: string | null };
+export type InterviewFields = Pick<Interview, "kind" | InterviewNotesField | "prep_notes"> & { at: string | null };
+
+/** Whether an Interview has Interview notes: any of the three fields has text. */
+export function hasInterviewNotes(interview: Pick<Interview, InterviewNotesField>): boolean {
+  return INTERVIEW_NOTES_FIELDS.some((field) => Boolean(interview[field]?.trim()));
+}
+
+/** What they asked, as its questions: one per line, trimmed, blank lines dropped. */
+export function questions(whatTheyAsked: string | null): string[] {
+  return (whatTheyAsked ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
 
 type Option = { label: string };
 
@@ -315,14 +347,15 @@ export function noteBlocks(notes: string | null): NoteBlock[] {
 }
 
 /**
- * What the next Interview carries forward (BIG-174): the last paragraph of the Interview notes of
- * the latest completed Interview, where the job seeker usually writes what to do differently next
- * time. Null when there is no next Interview, or the last completed one has no notes.
+ * What the next Interview carries forward (BIG-174): the last paragraph of How it went of the
+ * latest completed Interview, where the job seeker usually wrote what to do differently next time
+ * before the Takeaway had a field of its own (BIG-181 replaces this with the Takeaway). Null when
+ * there is no next Interview, or the last completed one has no How it went.
  */
 export function carriedForward(app: Application): { from: Interview; text: string } | null {
   if (!nextInterview(app)) return null;
   const from = lastCompletedInterview(app);
-  const text = paragraphs(from?.notes ?? null).at(-1);
+  const text = paragraphs(from?.how_it_went ?? null).at(-1);
   return from && text ? { from, text } : null;
 }
 

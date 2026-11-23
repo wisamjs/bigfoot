@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/applications/actions";
 import { application, interview } from "@/test/applications";
 import { InterviewEditor } from "./interview-editor";
+import { hasInterviewNotes } from "@/lib/applications";
 import { NOTES_PAUSE_MS } from "./interview-notes-form";
 import { UnsavedChanges } from "./unsaved-changes";
 
@@ -28,7 +29,7 @@ beforeEach(() => {
   );
 });
 
-const technical = interview("i1", { application_id: "birch", kind: "technical", notes: "Asked about caching" });
+const technical = interview("i1", { application_id: "birch", kind: "technical", how_it_went: "Asked about caching" });
 const birch = application("birch", { company: "Birch", interviews: [technical] });
 
 /** The page puts the editor inside UnsavedChanges, with the heading. */
@@ -44,7 +45,9 @@ function openPage(app = birch, current = technical) {
 }
 
 const editNotes = () => screen.getByRole("button", { name: "Edit Interview notes" });
-const notesField = () => screen.getByRole("textbox", { name: "Interview notes" });
+const notesField = () => screen.getByRole("textbox", { name: "How it went" });
+const askedField = () => screen.getByRole("textbox", { name: "What they asked" });
+const takeawayField = () => screen.getByRole("textbox", { name: "Takeaway for next time" });
 
 describe("the Interview page", () => {
   it("reads the Interview notes as text, and no kind or date field (they're in the heading's Edit details)", () => {
@@ -60,11 +63,11 @@ describe("the Interview page", () => {
     const { user } = openPage();
     await user.click(editNotes());
     expect(notesField()).toHaveValue("Asked about caching");
-    expect(notesField()).toHaveFocus();
+    expect(askedField()).toHaveFocus();
 
     await user.type(notesField(), " and queues");
     await user.tab();
-    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { notes: "Asked about caching and queues" });
+    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { how_it_went: "Asked about caching and queues" });
     expect(await screen.findByText("Saved")).toBeInTheDocument();
   });
 
@@ -74,7 +77,7 @@ describe("the Interview page", () => {
     await user.click(editNotes());
     await user.type(notesField(), "!");
     await user.tab();
-    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { notes: "Asked about caching!" });
+    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { how_it_went: "Asked about caching!" });
   });
 
   it("asks before deleting, warning about the Interview notes, then deletes and leaves", async () => {
@@ -108,7 +111,8 @@ describe("the Interview page", () => {
   });
 
   it("leaves the notes out of the warning when there are none", async () => {
-    const bare = interview("i1", { application_id: "birch", kind: "technical", notes: null });
+    const bare = interview("i1", { application_id: "birch", kind: "technical" });
+    // Completed with no notes: the fields are open already.
     const { user } = openPage(application("birch", { company: "Birch", interviews: [bare] }), bare);
     await user.click(screen.getByRole("button", { name: /^More actions/ }));
     await user.click(screen.getByRole("menuitem", { name: "Delete Interview" }));
@@ -138,7 +142,8 @@ describe("the Interview page", () => {
 });
 
 describe("Interview notes", () => {
-  const blank = interview("i1", { application_id: "oak", kind: "recruiter_screen" });
+  // Upcoming, so it starts with Add Interview notes rather than open fields.
+  const blank = interview("i1", { application_id: "oak", kind: "recruiter_screen", completed: false });
   const oak = application("oak", { company: "Oak", interviews: [blank] });
 
   // The pause before notes save is a timer; user-event's own delays keep running with the clock.
@@ -158,7 +163,7 @@ describe("Interview notes", () => {
   /** The page with its notes open for writing: Add Interview notes when empty, Edit otherwise. */
   async function openNotes(current = blank) {
     const { user } = openPage({ ...oak, interviews: [current] }, current);
-    await user.click(screen.getByRole("button", { name: current.notes ? "Edit Interview notes" : "Add Interview notes" }));
+    await user.click(screen.getByRole("button", { name: hasInterviewNotes(current) ? "Edit Interview notes" : "Add Interview notes" }));
     return { user, notes: notesField() };
   }
 
@@ -175,7 +180,7 @@ describe("Interview notes", () => {
     expect(actions.updateInterviewAction).not.toHaveBeenCalled();
     await user.tab();
     expect(actions.updateInterviewAction).toHaveBeenCalledExactlyOnceWith("oak", "i1", {
-      notes: "Friendly.\n\nAsk about the team.",
+      how_it_went: "Friendly.\n\nAsk about the team.",
     });
   });
 
@@ -188,7 +193,7 @@ describe("Interview notes", () => {
     expect(actions.updateInterviewAction).not.toHaveBeenCalled();
 
     pause(NOTES_PAUSE_MS / 2);
-    expect(actions.updateInterviewAction).toHaveBeenCalledExactlyOnceWith("oak", "i1", { notes: "Fri end" });
+    expect(actions.updateInterviewAction).toHaveBeenCalledExactlyOnceWith("oak", "i1", { how_it_went: "Fri end" });
 
     // Leaving the field with nothing new to save sends nothing more.
     await user.tab();
@@ -200,7 +205,7 @@ describe("Interview notes", () => {
     await user.clear(notes);
     await user.type(notes, "  ");
     await user.tab();
-    expect(actions.updateInterviewAction).toHaveBeenCalledWith("oak", "i1", { notes: null });
+    expect(actions.updateInterviewAction).toHaveBeenCalledWith("oak", "i1", { how_it_went: null });
   });
 
   it("sends nothing when only spaces are typed into empty notes", async () => {
@@ -217,7 +222,7 @@ describe("Interview notes", () => {
     const { user, notes } = await openNotes();
     await user.type(notes, "One");
     await user.tab();
-    expect(screen.getAllByRole("status").map((status) => status.textContent)).toContain("Interview notes: Saving…");
+    expect(screen.getAllByRole("status").map((status) => status.textContent)).toContain("How it went: Saving…");
 
     await user.click(notes);
     expect(notes).not.toHaveAttribute("readonly");
@@ -228,7 +233,7 @@ describe("Interview notes", () => {
 
     await act(async () => settle({ ok: true }));
     expect(actions.updateInterviewAction).toHaveBeenCalledTimes(2);
-    expect(actions.updateInterviewAction).toHaveBeenLastCalledWith("oak", "i1", { notes: "One two" });
+    expect(actions.updateInterviewAction).toHaveBeenLastCalledWith("oak", "i1", { how_it_went: "One two" });
     expect(notes).toHaveValue("One two");
   });
 
@@ -252,14 +257,14 @@ describe("Interview notes", () => {
 
   it("says there are none, with Add Interview notes, which opens the field", async () => {
     const { user } = openPage({ ...oak, interviews: [blank] }, blank);
-    expect(screen.getByText("No Interview notes yet.")).toBeInTheDocument();
+    expect(screen.getByText("Nothing yet, that’s expected")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Edit Interview notes" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Add Interview notes" }));
-    expect(notesField()).toHaveFocus();
+    expect(askedField()).toHaveFocus();
   });
 
   it("shows lines starting with a dash as a list", () => {
-    const listed = interview("i1", { application_id: "oak", notes: "Went well.\n\n- Send a thank-you\n- Ask about on-call" });
+    const listed = interview("i1", { application_id: "oak", how_it_went: "Went well.\n\n- Send a thank-you\n- Ask about on-call" });
     openPage({ ...oak, interviews: [listed] }, listed);
     const items = within(screen.getByRole("region", { name: "Interview notes" })).getAllByRole("listitem");
     expect(items.map((item) => item.textContent)).toEqual(["Send a thank-you", "Ask about on-call"]);
@@ -270,7 +275,7 @@ describe("Interview notes", () => {
     const { user, notes } = await openNotes(technical);
     await user.type(notes, " More.");
     await user.click(screen.getByRole("button", { name: "Done" }));
-    expect(actions.updateInterviewAction).toHaveBeenCalledExactlyOnceWith("oak", "i1", { notes: "Asked about caching More." });
+    expect(actions.updateInterviewAction).toHaveBeenCalledExactlyOnceWith("oak", "i1", { how_it_went: "Asked about caching More." });
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(screen.getByText("Asked about caching More.")).toBeInTheDocument();
     await waitFor(() => expect(editNotes()).toHaveFocus());
@@ -285,6 +290,63 @@ describe("Interview notes", () => {
     await user.click(screen.getByRole("button", { name: "Done" }));
     expect(notesField()).toHaveFocus();
     expect(notesField()).toHaveValue("Kept");
+  });
+
+  it("saves each field by itself, with its own save status", async () => {
+    const { user } = await openNotes();
+    await user.type(askedField(), "Why us?{Enter}Why now?");
+    await user.type(takeawayField(), "Slow down");
+    await user.tab();
+    expect(actions.updateInterviewAction).toHaveBeenNthCalledWith(1, "oak", "i1", { what_they_asked: "Why us?\nWhy now?" });
+    expect(actions.updateInterviewAction).toHaveBeenNthCalledWith(2, "oak", "i1", { takeaway: "Slow down" });
+    await waitFor(() =>
+      expect(screen.getAllByRole("status").map((status) => status.textContent)).toEqual(
+        expect.arrayContaining(["What they asked: Saved", "Takeaway for next time: Saved"]),
+      ),
+    );
+  });
+
+  it("keeps the takeaway to one short line", async () => {
+    await openNotes();
+    expect(takeawayField()).toHaveAttribute("maxlength", "500");
+    expect(takeawayField().tagName).toBe("INPUT");
+  });
+
+  it("reads the takeaway in its own card above the notes, and What they asked as a list under They asked", () => {
+    const full = interview("i1", {
+      application_id: "oak",
+      what_they_asked: "Why us?\n\n Why now? ",
+      how_it_went: "Went well.",
+      takeaway: "Lead with the decision.",
+    });
+    openPage({ ...oak, interviews: [full] }, full);
+    expect(screen.getByRole("region", { name: "Takeaway for next time" })).toHaveTextContent("Lead with the decision.");
+    const asked = screen.getByRole("list", { name: "They asked" });
+    expect(within(asked).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["Why us?", "Why now?"]);
+    expect(screen.getByText("Went well.")).toBeInTheDocument();
+  });
+
+  it("opens a completed Interview with no notes straight into the three empty fields, under How did it go?", () => {
+    const fresh = interview("i1", { application_id: "oak" });
+    openPage({ ...oak, interviews: [fresh] }, fresh);
+    expect(screen.getByRole("heading", { level: 2, name: "How did it go?" })).toBeInTheDocument();
+    expect(screen.getByText("Just finished · write it down while it’s fresh")).toBeInTheDocument();
+    expect(askedField()).toHaveValue("");
+    expect(notesField()).toHaveValue("");
+    expect(takeawayField()).toHaveValue("");
+    // Arriving at the page doesn't move focus into a field.
+    expect(askedField()).not.toHaveFocus();
+    expect(screen.queryByRole("button", { name: "Add Interview notes" })).not.toBeInTheDocument();
+  });
+
+  it("asks before leaving with an unsaved takeaway, and Keep editing goes back to it", async () => {
+    vi.mocked(actions.updateInterviewAction).mockResolvedValue({ ok: false, error: "Couldn’t reach Bigfoot’s server." });
+    const { user } = await openNotes();
+    await user.type(takeawayField(), "Kept");
+    await user.click(screen.getByRole("link", { name: "Dashboard" }));
+    expect(await screen.findByText(/You have unsaved changes/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Keep editing" }));
+    await waitFor(() => expect(takeawayField()).toHaveFocus());
   });
 });
 
@@ -359,7 +421,7 @@ describe("Prep notes", () => {
     });
 
     it("shows Interview notes normally once written, in the After card", () => {
-      page({ completed: false, at: inDays(2), notes: "Moved up." });
+      page({ completed: false, at: inDays(2), how_it_went: "Moved up." });
       expect(screen.getByText("Moved up.")).toBeInTheDocument();
       expect(screen.queryByText("Nothing yet, that’s expected")).not.toBeInTheDocument();
     });
@@ -367,7 +429,7 @@ describe("Prep notes", () => {
 
   describe("after the Interview", () => {
     it("shows Interview notes first, then Prep notes folded to their first lines", async () => {
-      const { user } = page({ notes: "Went well.", prep_notes: "One\nTwo\nThree\nFour" });
+      const { user } = page({ how_it_went: "Went well.", prep_notes: "One\nTwo\nThree\nFour" });
       const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
       expect(headings).toEqual(["Interview notes", "Prep notes"]);
       const prep = screen.getByRole("region", { name: "Prep notes" });
@@ -386,7 +448,7 @@ describe("Prep notes", () => {
     });
 
     it("leaves the Prep notes card out when there are none", () => {
-      page({ notes: "Went well." });
+      page({ how_it_went: "Went well." });
       expect(screen.queryByRole("region", { name: "Prep notes" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /Prep notes/ })).not.toBeInTheDocument();
     });
@@ -402,7 +464,7 @@ describe("Prep notes", () => {
   });
 
   it("is named in the delete warning, with the Interview notes when both are there", async () => {
-    const { user } = page({ notes: "Went well.", prep_notes: "Review caching" });
+    const { user } = page({ how_it_went: "Went well.", prep_notes: "Review caching" });
     await user.click(screen.getByRole("button", { name: /^More actions/ }));
     await user.click(screen.getByRole("menuitem", { name: "Delete Interview" }));
     expect(screen.getByRole("dialog")).toHaveTextContent("will be deleted, with its Interview notes and Prep notes. This can’t be undone.");

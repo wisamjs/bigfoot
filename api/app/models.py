@@ -12,13 +12,15 @@ from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, Fie
 from app.auth import ACCESS_TOKEN_PREFIX
 from app.domain import (
     COMPANY_MAX_LENGTH,
-    INTERVIEW_NOTES_MAX_LENGTH,
+    HOW_IT_WENT_MAX_LENGTH,
     INTERVIEW_PREP_NOTES_MAX_LENGTH,
     OFFICE_DAYS_MAX,
     OFFICE_DAYS_MIN,
     POSTING_URL_MAX_LENGTH,
     SALARY_MAX_LENGTH,
+    TAKEAWAY_MAX_LENGTH,
     TITLE_MAX_LENGTH,
+    WHAT_THEY_ASKED_MAX_LENGTH,
     InterviewKind,
     Location,
     Outcome,
@@ -66,7 +68,9 @@ Title = Annotated[str, Field(max_length=TITLE_MAX_LENGTH), AfterValidator(_requi
 OfficeDays = Annotated[int, Field(ge=OFFICE_DAYS_MIN, le=OFFICE_DAYS_MAX)]
 Salary = Annotated[str | None, Field(max_length=SALARY_MAX_LENGTH), AfterValidator(_optional_text)]
 PostingUrl = Annotated[str | None, Field(max_length=POSTING_URL_MAX_LENGTH), AfterValidator(_posting_url)]
-InterviewNotes = Annotated[str | None, Field(max_length=INTERVIEW_NOTES_MAX_LENGTH), AfterValidator(_optional_text)]
+WhatTheyAsked = Annotated[str | None, Field(max_length=WHAT_THEY_ASKED_MAX_LENGTH), AfterValidator(_optional_text)]
+HowItWent = Annotated[str | None, Field(max_length=HOW_IT_WENT_MAX_LENGTH), AfterValidator(_optional_text)]
+Takeaway = Annotated[str | None, Field(max_length=TAKEAWAY_MAX_LENGTH), AfterValidator(_optional_text)]
 PrepNotes = Annotated[str | None, Field(max_length=INTERVIEW_PREP_NOTES_MAX_LENGTH), AfterValidator(_optional_text)]
 
 
@@ -107,11 +111,22 @@ STATUS = "Whether the Application is still going (GLOSSARY.md, Status)."
 OUTCOME = "How a Done Application ended. Required when the status is `done`, and only then."
 KIND = "What sort of conversation the Interview is (GLOSSARY.md, Interview kind)."
 AT = "When the Interview happens: a date and time, with a time zone. Required (docs/adr/0005)."
-NOTES = (
-    "Interview notes (GLOSSARY.md): what the job seeker wrote about this Interview, as plain text of at most "
-    f"{INTERVIEW_NOTES_MAX_LENGTH:,} characters. Null when there are none."
+# Interview notes (GLOSSARY.md) are these three fields together.
+WHAT_THEY_ASKED = (
+    "What they asked (GLOSSARY.md, Interview notes): the questions the Interview asked, one per line, as plain "
+    f"text of at most {WHAT_THEY_ASKED_MAX_LENGTH:,} characters. Null when there are none."
 )
-EXAMPLE_NOTES = "Asked about caching trade-offs. Next time, draw the diagram first."
+HOW_IT_WENT = (
+    "How it went (GLOSSARY.md, Interview notes): what the job seeker wrote about this Interview, as plain text "
+    f"of at most {HOW_IT_WENT_MAX_LENGTH:,} characters. Null when there is none."
+)
+TAKEAWAY = (
+    "Takeaway for next time (GLOSSARY.md, Interview notes): one thing to do differently, as plain text of at "
+    f"most {TAKEAWAY_MAX_LENGTH:,} characters. Null when there is none."
+)
+EXAMPLE_WHAT_THEY_ASKED = "How would you cache a feed?\nTell me about a disagreement with a designer."
+EXAMPLE_HOW_IT_WENT = "Friendly. The caching question ran long."
+EXAMPLE_TAKEAWAY = "Draw the diagram first."
 PREP_NOTES = (
     "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its "
     f"Interview notes, as plain text of at most {INTERVIEW_PREP_NOTES_MAX_LENGTH:,} characters. "
@@ -202,14 +217,18 @@ class InterviewCreate(BaseModel):
 
     kind: InterviewKind = Field(description=KIND, examples=["technical"])
     at: InterviewAt = Field(description=AT, examples=["2026-11-20T17:00:00Z"])
-    notes: InterviewNotes = Field(default=None, description=f"{NOTES} Blank is stored as null.", examples=[None])
+    what_they_asked: WhatTheyAsked = Field(
+        default=None, description=f"{WHAT_THEY_ASKED} Blank is stored as null.", examples=[None]
+    )
+    how_it_went: HowItWent = Field(default=None, description=f"{HOW_IT_WENT} Blank is stored as null.", examples=[None])
+    takeaway: Takeaway = Field(default=None, description=f"{TAKEAWAY} Blank is stored as null.", examples=[None])
     prep_notes: PrepNotes = Field(
         default=None, description=f"{PREP_NOTES} Blank is stored as null.", examples=[EXAMPLE_PREP_NOTES]
     )
 
 
 class InterviewPatch(BaseModel):
-    """Only the fields sent are changed; send null for `notes` or `prep_notes` to clear them.
+    """Only the fields sent are changed; send null for one of the Interview notes fields or `prep_notes` to clear it.
 
     The date can't be cleared.
     """
@@ -220,8 +239,14 @@ class InterviewPatch(BaseModel):
     at: InterviewAt | None = Field(
         default=None, description=f"{AT} Cannot be cleared.", examples=["2026-11-27T15:30:00Z"]
     )
-    notes: InterviewNotes = Field(
-        default=None, description=f"{NOTES} Blank is stored as null.", examples=[EXAMPLE_NOTES]
+    what_they_asked: WhatTheyAsked = Field(
+        default=None, description=f"{WHAT_THEY_ASKED} Blank is stored as null.", examples=[EXAMPLE_WHAT_THEY_ASKED]
+    )
+    how_it_went: HowItWent = Field(
+        default=None, description=f"{HOW_IT_WENT} Blank is stored as null.", examples=[EXAMPLE_HOW_IT_WENT]
+    )
+    takeaway: Takeaway = Field(
+        default=None, description=f"{TAKEAWAY} Blank is stored as null.", examples=[EXAMPLE_TAKEAWAY]
     )
     prep_notes: PrepNotes = Field(
         default=None, description=f"{PREP_NOTES} Blank is stored as null.", examples=[EXAMPLE_PREP_NOTES]
@@ -249,7 +274,9 @@ class Interview(BaseModel):
     application_id: UUID = Field(description="The Application this Interview belongs to.")
     kind: InterviewKind = Field(description=KIND, examples=["technical"])
     at: datetime = Field(description=AT, examples=["2026-11-20T17:00:00Z"])
-    notes: str | None = Field(description=NOTES, examples=[EXAMPLE_NOTES])
+    what_they_asked: str | None = Field(description=WHAT_THEY_ASKED, examples=[EXAMPLE_WHAT_THEY_ASKED])
+    how_it_went: str | None = Field(description=HOW_IT_WENT, examples=[EXAMPLE_HOW_IT_WENT])
+    takeaway: str | None = Field(description=TAKEAWAY, examples=[EXAMPLE_TAKEAWAY])
     prep_notes: str | None = Field(description=PREP_NOTES, examples=[EXAMPLE_PREP_NOTES])
     completed: bool = Field(
         description="Derived, never stored: the date is in the past.",

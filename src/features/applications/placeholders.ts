@@ -7,6 +7,9 @@ export const PLACEHOLDERS = {
   title: "Frontend Engineer",
   salary: "$150k–$180k",
   posting_url: "https://…",
+  // Interview notes: the words of the BIG-179 designs.
+  what_they_asked: "One question per line",
+  how_it_went: "What landed, what didn't",
+  takeaway: "One thing to do differently",
   prep_notes: "Review the caching chapter. Ask about the on-call rotation.",
-  notes: "Talked through a past project; they asked about testing. Follow up Friday.",
 } as const;
