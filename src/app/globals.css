@@ -118,14 +118,6 @@
   --border: var(--line);
   --input: var(--line-medium);
   --ring: var(--brand);
-  /* Spot illustrations (src/components/illustrations.tsx) */
-  --art-halo: #efc9dc;
-  --art-outline: #3c0d28;
-  --art-fur: #b5538c;
-  --art-face: #fbeaf2;
-  --art-accent: #d98ab3;
-  --art-paper: #ffffff;
-  --art-cell: #f2d2e2;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -198,14 +190,6 @@
 
     --color-1-400: rgba(255, 255, 255, 0.14);
     --color-1-700: rgba(0, 0, 0, 0.3);
-
-    --art-halo: #4a1632;
-    --art-outline: #1f0714;
-    --art-fur: #b5538c;
-    --art-face: #f2d2e2;
-    --art-accent: #e59cc4;
-    --art-paper: #faebf1;
-    --art-cell: #e3c6d7;
   }
 }
 

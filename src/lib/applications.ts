@@ -152,14 +152,30 @@ export function lastCompletedInterview(app: Application): Interview | null {
 }
 
 /** The dashboard's three numbers: Open, Active, and the Next Interview across In Progress Applications. */
+/** The dashboard's counts: In Progress Applications, Offers, upcoming Interviews, and Applications waiting to hear back. */
 export function getStats(apps: Application[]) {
   const open = apps.filter((a) => !isDone(a));
   return {
-    open: open.length,
-    active: open.filter((a) => nextInterview(a) !== null).length,
+    inProgress: open.length,
+    offers: apps.filter((a) => isDone(a) && a.outcome === "offer").length,
+    upcoming: getUpcoming(apps).length,
     waiting: open.filter((a) => a.is_waiting).length,
-    next: getUpcoming(apps)[0] ?? null,
   };
+}
+
+function count(n: number, one: string, many: string) {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+/** The line under the dashboard's heading: "5 In Progress · 1 Offer · 4 upcoming Interviews", or "Nothing here yet." */
+export function dashboardSummary(apps: Application[]): string {
+  if (apps.length === 0) return "Nothing here yet.";
+  const stats = getStats(apps);
+  return [
+    `${stats.inProgress} In Progress`,
+    count(stats.offers, "Offer", "Offers"),
+    count(stats.upcoming, "upcoming Interview", "upcoming Interviews"),
+  ].join(" · ");
 }
 
 export type DatedInterview = { application: Application; interview: Interview & { at: string } };

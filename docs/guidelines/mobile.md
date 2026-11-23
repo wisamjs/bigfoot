@@ -19,7 +19,7 @@ Other guidelines (BIG-78) are added to this folder beside this file.
    it sits in a sticky footer (`AddFormActions`). Source: reach on a tall form, which is what
    BIG-123's audit found. *Checked by human review with `npm run capture`.*
 4. **The main task on a page starts within one screen.** On the dashboard that is the
-   Applications list: stat cards share one row, and the Interviews calendar starts closed.
+   Applications card, which comes first, above the Interviews card.
    Long lists get a sticky row of chips that jump to each group. *Checked by human review.*
 5. **Pages reflow at 320px with no sideways scrolling.** Source: WCAG 1.4.10 Reflow.
    *Checked by `npm run a11y`.*

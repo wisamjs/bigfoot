@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   getApplicationGroups,
   getCalendarInterviews,
+  dashboardSummary,
   getStats,
   getUpcoming,
   INTERVIEW_KINDS,
@@ -98,7 +99,7 @@ describe("an Interview saved with no date (docs/adr/0005)", () => {
   it("counts as completed, so its Application stays Waiting and is not Active", () => {
     expect(nextInterview(legacy)).toBeNull();
     expect(getApplicationGroups([legacy]).map((c) => c.id)).toEqual(["waiting"]);
-    expect(getStats([legacy]).active).toBe(0);
+    expect(getStats([legacy]).upcoming).toBe(0);
     expect(getUpcoming([legacy])).toEqual([]);
   });
 
@@ -109,19 +110,27 @@ describe("an Interview saved with no date (docs/adr/0005)", () => {
 });
 
 describe("getStats", () => {
-  it("counts Open and Active, and finds the soonest upcoming Interview of In Progress Applications", () => {
+  it("counts In Progress, Offers, upcoming Interviews and Applications waiting to hear back", () => {
     const sooner = application("sooner", {
       is_waiting: false,
       interviews: [interview("soon", "2026-11-20T15:00:00Z", false)],
     });
     const stats = getStats([waiting, scheduled, sooner, offer, rejected]);
-    expect(stats.open).toBe(3);
-    expect(stats.active).toBe(2);
-    expect(stats.next?.application.id).toBe("sooner");
+    expect(stats.inProgress).toBe(3);
+    expect(stats.offers).toBe(1);
+    expect(stats.upcoming).toBe(getUpcoming([waiting, scheduled, sooner]).length);
+    expect(stats.waiting).toBe(1);
+  });
+});
+
+describe("dashboardSummary", () => {
+  it("says what the search holds, singular and plural", () => {
+    expect(dashboardSummary([waiting, offer, rejected])).toBe("1 In Progress · 1 Offer · 0 upcoming Interviews");
+    expect(dashboardSummary([rejected])).toBe("0 In Progress · 0 Offers · 0 upcoming Interviews");
   });
 
-  it("has no next Interview when nothing is scheduled", () => {
-    expect(getStats([waiting, rejected]).next).toBeNull();
+  it("says nothing is here without Applications", () => {
+    expect(dashboardSummary([])).toBe("Nothing here yet.");
   });
 });
 

@@ -38,6 +38,7 @@ export const PAGES = [
       { name: "show-done", steps: [{ click: "label", text: "Show done" }], expect: "Rejected" },
       { name: "change-status-menu", steps: [{ click: 'button[aria-label^="Change Status"]', pointer: true }], expect: "Mark Rejected" },
       { name: "nothing-scheduled", applications: "none", steps: [], expect: "All quiet in the woods" },
+      { name: "account-menu", steps: [{ click: "button", text: "Account menu", pointer: true }], expect: "Sign out" },
     ],
   },
   // A dynamic route's entry fills its [id]: `application` is the company of one of the

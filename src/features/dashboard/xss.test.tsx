@@ -12,7 +12,6 @@ import { application, interview } from "@/test/applications";
 import { INJECTED_ELEMENTS, XSS_TEXT, XSS_URLS } from "@/test/xss";
 import { InterviewCalendar } from "./interview-calendar";
 import { DashboardApplications } from "./dashboard-applications";
-import { NextInterviewStat } from "./next-interview-stat";
 
 // Everything a job seeker types is shown as text and never runs (BIG-89): each payload goes into
 // every Application field and the Interview notes, then through each display and form.
@@ -96,17 +95,9 @@ describe.each(XSS_TEXT.map((payload, n) => [payload, XSS_URLS[n]] as const))("%j
     expectNothingInjected();
   });
 
-  it("shows as text on the calendar and the Next Interview stat", () => {
+  it("shows as text on the calendar, its picked day and its agenda", () => {
     const apps = [poisoned(payload, url)];
-    render(
-      <>
-        <InterviewCalendar interviews={getUpcoming(apps)} />
-        {/* The stat is one of the dashboard's list of numbers. */}
-        <ul>
-          <NextInterviewStat next={getUpcoming(apps)[0] ?? null} />
-        </ul>
-      </>,
-    );
+    render(<InterviewCalendar interviews={getUpcoming(apps)} />);
     expect(screen.getAllByText(payload, { exact: false }).length).toBeGreaterThan(0);
     expectNothingInjected();
   });
