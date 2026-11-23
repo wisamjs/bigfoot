@@ -22,6 +22,11 @@ dev = [
 [tool.uv]
 package = false
 
+# The `bigfoot-api` Vercel project's build step (BIG-71): applies merged migrations to prod before
+# this deployment goes live, and fails the build when it can't. See docs/runbooks/database.md.
+[tool.vercel.scripts]
+build = "python ../scripts/db-status.py --deploy"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

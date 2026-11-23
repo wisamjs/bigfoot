@@ -157,9 +157,9 @@ Where the skill and the Next.js docs in `node_modules/next/dist/docs/` disagree,
 Two Supabase projects, both in `us-east-1`:
 
 - **`Bigfoot`** (Free plan) is for local development (`public` schema) and the `migrations-applied` CI job. `.env.local` and the CI `DATABASE_URL` secret point here. Tests, smoke and a11y in CI use a Postgres container instead.
-- **`bigfoot-prod`** (Pro plan: daily backups, never pauses) holds real job seekers' data. Its `DATABASE_URL` is only in Vercel's Production environment and the password manager, never in the repo or CI.
+- **`bigfoot-prod`** (Pro plan: daily backups, never pauses) holds real job seekers' data. Its URLs are only in Vercel's Production environment and the password manager, never in the repo or CI.
 
-[`docs/runbooks/database.md`](docs/runbooks/database.md) covers connecting to prod, applying migrations and restoring from a backup.
+Merged migrations reach both on their own: CI applies them to `Bigfoot` on each push to `main`, and the `bigfoot-api` Vercel build applies them to `bigfoot-prod` before the new API goes live. [`docs/runbooks/database.md`](docs/runbooks/database.md) covers connecting to prod, applying migrations and restoring from a backup.
 
 ## Deployments
 
