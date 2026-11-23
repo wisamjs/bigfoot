@@ -18,6 +18,7 @@ const IN = {
   landing: "src/features/landing/hero.tsx",
   shell: "src/features/shell/app-footer.tsx",
   authTest: "src/features/auth/auth-card.test.tsx",
+  applicationsStory: "src/features/applications/application-list.stories.tsx",
   server: "src/proxy.ts",
 };
 
@@ -43,6 +44,7 @@ describe("import boundaries", () => {
     [IN.applications, "@/features/dashboard/interview-calendar"],
     [IN.auth, "@/app/page"],
     [IN.auth, "@/test/applications"],
+    [IN.applicationsStory, "@/features/dashboard/interview-calendar"],
     [IN.ui, "@/auth"],
     [IN.auth, "@/auth"],
   ])("stop %s importing %s", async (from, source) => {
@@ -59,6 +61,7 @@ describe("import boundaries", () => {
     [IN.shell, "@/features/auth/auth-button"],
     [IN.app, "@/features/dashboard/dashboard-applications"],
     [IN.authTest, "@/test/applications"],
+    [IN.applicationsStory, "@/test/applications"],
     [IN.lib, "@/auth"],
     [IN.app, "@/auth"],
     [IN.server, "@/lib/session"],

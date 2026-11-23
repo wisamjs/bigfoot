@@ -38,7 +38,9 @@ export default defineConfig({
             enabled: true,
             headless: true,
             // The installed Google Chrome (preinstalled on CI's runners), so nothing is downloaded.
-            provider: playwright({ launchOptions: { channel: "chrome" } }),
+            // Reduced motion: globals.css then skips animations and transitions, so a dialog or
+            // popover is visible on its first render and play functions need no waitFor for it.
+            provider: playwright({ launchOptions: { channel: "chrome" }, contextOptions: { reducedMotion: "reduce" } }),
             instances: [{ browser: "chromium" }],
           },
         },
