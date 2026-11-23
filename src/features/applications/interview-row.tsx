@@ -1,37 +1,15 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
-import { useState } from "react";
-import { updateInterviewAction } from "@/app/applications/actions";
-import { DateTimePicker } from "@/components/ui/date-time-picker";
-import { RequiredMark } from "@/components/ui/field";
-import { FieldError, invalidProps } from "@/components/ui/field-error";
-import { inputClasses } from "@/components/ui/input";
-import { SaveStatus } from "@/components/ui/save-status";
-import { useSaveStatus, type SaveResult, type SaveTracker } from "@/hooks/use-save-status";
-import { InterviewNotesForm } from "@/features/applications/interview-notes-form";
-import { fromLocalInput, toLocalInput } from "@/features/applications/local-datetime";
-import {
-  INTERVIEW_KINDS,
-  INTERVIEW_OPTIONS,
-  type Application,
-  type Interview,
-  type InterviewFields,
-  type InterviewKind,
-} from "@/lib/applications";
-import { DATE_NEEDED, interviewErrors, isValid, type FieldErrors } from "@/lib/validation";
+import { InterviewFields } from "@/features/applications/interview-fields";
+import { INTERVIEW_OPTIONS, type Application, type Interview } from "@/lib/applications";
 
 /** The id of an Interview's delete button, which the list focuses when a neighbour is deleted. */
 export const deleteButtonId = (interviewId: string) => `delete-interview-${interviewId}`;
 
-const fieldLabelClasses = "mb-1 flex min-h-4 flex-wrap items-center justify-between gap-x-2 text-xs font-medium text-body";
-
 /**
- * One Interview: its kind (saved on change), date and time (saved once both are given, on picking
- * a date or leaving the time field), Delete, and its Interview notes (a draft, saved after a pause
- * in typing and on leaving them). Each has its own save status, kept here because the kind and date
- * are keyed by their saved values and remount when a save lands; this row is keyed by the Interview. An Interview saved before dates were required shows "Date needed"
- * beside its date, and no other change saves until it has one (docs/adr/0005).
+ * One Interview on its Application page: its fields (InterviewFields), with Delete beside the date.
+ * The list keys this row by the Interview.
  */
 export function InterviewRow({
   app,
@@ -46,115 +24,25 @@ export function InterviewRow({
   /** Asks to delete this Interview: the list shows the confirmation, because the row goes with it. */
   onDelete: () => void;
 }) {
-  const kindSave = useSaveStatus();
-  const atSave = useSaveStatus();
-  const notesSave = useSaveStatus();
-  // The kind's and date's errors, found before sending or by the API, beside their fields.
-  const [errors, setErrors] = useState<FieldErrors>(() => (interview.at ? {} : { at: DATE_NEEDED }));
-  const saved = toLocalInput(interview.at);
   const label = `Interview ${position}`;
   const kindLabel = INTERVIEW_OPTIONS[interview.kind].label;
-
-  /**
-   * Checks one change with the API's rules, then saves it, or shows why not beside its field (and
-   * beside the date, when the Interview has none). Returns the problems found before sending, and
-   * the save when one was sent.
-   */
-  function saveChange(
-    tracker: SaveTracker,
-    changes: Partial<InterviewFields>,
-  ): { problems: FieldErrors; sent: Promise<SaveResult> | null } {
-    const problems = interviewErrors(changes, { savedAt: interview.at });
-    const checked = Object.fromEntries(Object.keys(changes).map((name) => [name, problems[name]]));
-    setErrors((prev) => ({ ...prev, ...checked, ...(problems.at ? { at: problems.at } : {}) }));
-    if (!isValid(problems)) return { problems, sent: null };
-    const sent = tracker.run(async () => {
-      const result = await updateInterviewAction(app.id, interview.id, changes);
-      if (!result.ok && result.fieldErrors) setErrors((prev) => ({ ...prev, ...result.fieldErrors }));
-      return result;
-    });
-    return { problems, sent };
-  }
-
   return (
     <li className="flex flex-wrap items-end gap-3 rounded-card border border-line bg-surface p-3">
-      <div className="min-w-44 flex-1">
-        <div className={fieldLabelClasses}>
-          <span>
-            <label htmlFor={`kind-${interview.id}`}>
-              Kind<span className="sr-only">, {label}</span>
-            </label>
-            <RequiredMark />
-          </span>
-          <SaveStatus status={kindSave.status} label={`${label} kind`} onRetry={kindSave.retry} />
-        </div>
-        <select
-          // Keyed by the saved value, like the other fields: a save resets only the field it changed,
-          // so notes being written survive a change of kind or date. A failed save changes no key,
-          // so the field keeps what was picked.
-          key={interview.kind}
-          id={`kind-${interview.id}`}
-          defaultValue={interview.kind}
-          disabled={kindSave.saving}
-          required
-          onChange={(e) => saveChange(kindSave, { kind: e.target.value as InterviewKind })}
-          className={inputClasses}
-          {...invalidProps(`kind-${interview.id}-error`, errors.kind)}
-        >
-          {INTERVIEW_KINDS.map((kind) => (
-            <option key={kind} value={kind}>
-              {INTERVIEW_OPTIONS[kind].label}
-            </option>
-          ))}
-        </select>
-        <FieldError id={`kind-${interview.id}-error`} error={errors.kind} />
-      </div>
-      <div className="min-w-52 flex-1">
-        <div className={fieldLabelClasses}>
-          <span>
-            <span id={`at-${interview.id}-label`}>
-              Date and time<span className="sr-only">, {label}</span>
-            </span>
-            <RequiredMark />
-          </span>
-          <SaveStatus status={atSave.status} label={`${label} date and time`} onRetry={atSave.retry} />
-        </div>
-        <fieldset aria-labelledby={`at-${interview.id}-label`} className="m-0 min-w-0 border-0 p-0">
-          <DateTimePicker
-            key={saved}
-            id={`at-${interview.id}`}
-            dateLabel={`Date, ${label}`}
-            timeLabel={`Time, ${label}`}
-            value={saved}
-            disabled={atSave.saving}
-            // A date with no time yet waits for one; no time is assumed. Clearing the date is refused.
-            onChange={({ date, time }) => {
-              if (!date) saveChange(atSave, { at: null });
-              else if (time) saveChange(atSave, { at: fromLocalInput(`${date}T${time}`) });
-            }}
-            invalid={errors.at ? { date: true, time: true } : undefined}
-            aria-describedby={`at-${interview.id}-error`}
-          />
-        </fieldset>
-        <FieldError id={`at-${interview.id}-error`} error={errors.at} />
-      </div>
-      <button
-        type="button"
-        id={deleteButtonId(interview.id)}
-        onClick={onDelete}
-        aria-label={`Delete ${kindLabel} Interview, ${label}`}
-        className="touch-target rounded-control p-2.5 text-body transition-colors hover:bg-danger-soft hover:text-fg-danger"
-      >
-        <Trash2 className="size-4" aria-hidden />
-      </button>
-      <InterviewNotesForm
+      <InterviewFields
+        app={app}
         interview={interview}
         label={label}
-        tracker={notesSave}
-        onSave={(notes) => {
-          const { problems, sent } = saveChange(notesSave, { notes });
-          return { problem: problems.notes, sent };
-        }}
+        actions={
+          <button
+            type="button"
+            id={deleteButtonId(interview.id)}
+            onClick={onDelete}
+            aria-label={`Delete ${kindLabel} Interview, ${label}`}
+            className="touch-target rounded-control p-2.5 text-body transition-colors hover:bg-danger-soft hover:text-fg-danger"
+          >
+            <Trash2 className="size-4" aria-hidden />
+          </button>
+        }
       />
     </li>
   );
