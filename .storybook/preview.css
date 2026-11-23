@@ -1,0 +1,15 @@
+/*
+ * What src/app/layout.tsx adds around every page, for stories: the Allo font (next/font/local
+ * there, a plain @font-face here) on <body>. Tokens come from globals.css, imported in preview.tsx.
+ */
+@font-face {
+  font-family: "Allo";
+  src: url("../node_modules/allo-font/fonts/webfonts/AlloVariable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-allo: "Allo";
+}
