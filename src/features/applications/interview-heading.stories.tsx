@@ -19,11 +19,6 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-/** One saved before dates were required shows "Date needed". */
-export const DateNeeded: Story = {
-  args: { interview: { ...interview, at: null } },
-};
-
 /** The edit button turns the kind and the date into fields, with focus on Kind. */
 export const Editing: Story = {
   play: async ({ canvas, userEvent }) => {

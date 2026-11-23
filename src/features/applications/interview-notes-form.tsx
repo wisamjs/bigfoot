@@ -31,7 +31,7 @@ export function InterviewNotesForm({
   interview: Interview;
   /** Owned by the Interview page's editor, so "Saved" outlasts this form re-rendering with the saved notes. */
   tracker: SaveTracker;
-  /** Checks and saves the notes, or says why not (an Interview with no date yet). */
+  /** Checks and saves the notes, or says why not. */
   onSave: (notes: string | null) => NotesSave;
 }) {
   const [draft, setDraft] = useState(interview.notes ?? "");

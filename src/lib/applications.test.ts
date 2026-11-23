@@ -28,7 +28,7 @@ import {
   type Interview,
 } from "./applications";
 
-function interview(id: string, at: string | null, completed: boolean): Interview {
+function interview(id: string, at: string, completed: boolean): Interview {
   return { id, application_id: "a", kind: "technical", at, notes: null, completed, created_at: "", updated_at: "" };
 }
 
@@ -93,30 +93,26 @@ describe("getApplicationGroups", () => {
 });
 
 describe("getCalendarInterviews", () => {
-  it("keeps past and upcoming dated Interviews of In Progress Applications, by date", () => {
-    const undated = application("undated", { is_waiting: false, interviews: [interview("none", null, true)] });
-    const result = getCalendarInterviews([scheduled, rejected, undated]);
+  it("keeps past and upcoming Interviews of In Progress Applications, by date", () => {
+    const result = getCalendarInterviews([scheduled, rejected]);
     expect(result.map((d) => d.interview.id)).toEqual(["past", "next"]);
   });
 });
 
-describe("an Interview saved with no date (docs/adr/0005)", () => {
-  // As the API sends it: completed, and last, since it has no place by date.
-  const legacy = application("legacy", {
-    is_waiting: true,
-    interviews: [interview("past", "2026-11-02T15:00:00Z", true), interview("none", null, true)],
+describe("nextInterview and lastCompletedInterview", () => {
+  const app = application("both", {
+    is_waiting: false,
+    interviews: [
+      interview("old", "2026-11-01T15:00:00Z", true),
+      interview("recent", "2026-11-02T15:00:00Z", true),
+      interview("next", "2026-12-01T15:00:00Z", false),
+    ],
   });
 
-  it("counts as completed, so its Application stays Waiting and is not Active", () => {
-    expect(nextInterview(legacy)).toBeNull();
-    expect(getApplicationGroups([legacy]).map((c) => c.id)).toEqual(["waiting"]);
-    expect(getStats([legacy]).upcoming).toBe(0);
-    expect(getUpcoming([legacy])).toEqual([]);
-  });
-
-  it("is never the last completed Interview, which is the latest dated one", () => {
-    expect(lastCompletedInterview(legacy)?.id).toBe("past");
-    expect(lastCompletedInterview(application("only", { interviews: [interview("none", null, true)] }))).toBeNull();
+  it("finds the soonest one ahead and the latest completed one", () => {
+    expect(nextInterview(app)?.id).toBe("next");
+    expect(lastCompletedInterview(app)?.id).toBe("recent");
+    expect(lastCompletedInterview(application("none", { interviews: [] }))).toBeNull();
   });
 });
 
@@ -206,20 +202,19 @@ describe("locationText", () => {
 });
 
 describe("interviewSections (BIG-174)", () => {
-  it("splits the next Interview from the later ones, and puts the completed ones newest first, undated last", () => {
+  it("splits the next Interview from the later ones, and puts the completed ones newest first", () => {
     const app = application("a", {
       interviews: [
         interview("old", "2026-11-01T10:00:00Z", true),
         interview("recent", "2026-11-05T10:00:00Z", true),
         interview("next", "2026-12-01T10:00:00Z", false),
         interview("later", "2026-12-09T10:00:00Z", false),
-        interview("undated", null, true),
       ],
     });
     const { next, later, completed } = interviewSections(app);
     expect(next?.id).toBe("next");
     expect(later.map((i) => i.id)).toEqual(["later"]);
-    expect(completed.map((i) => i.id)).toEqual(["recent", "old", "undated"]);
+    expect(completed.map((i) => i.id)).toEqual(["recent", "old"]);
   });
 
   it("has no next Interview when none is ahead", () => {

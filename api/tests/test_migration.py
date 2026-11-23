@@ -1,4 +1,5 @@
-"""The Interviews migration keeps what job seekers already recorded (BIG-38)."""
+"""Migrations that change what job seekers already recorded: Interviews (BIG-38), Locations, and
+requiring an Interview's date (BIG-139)."""
 
 from datetime import UTC
 
@@ -9,6 +10,7 @@ from psycopg import sql
 from tests.conftest import MIGRATIONS, TEST_SCHEMA
 
 MIGRATION = "20261113000000_give_applications_many_interviews.sql"
+REQUIRE_DATE = "20261124000000_require_interview_date.sql"
 
 
 @pytest.mark.rebuilds_schema
@@ -98,3 +100,54 @@ def test_free_text_locations_become_a_location_choice_or_nothing(settings):
         "Toronto, ON": None,
         "None": None,
     }
+
+
+def _add_application(conn) -> str:
+    return conn.execute(
+        "insert into applications (job_seeker_id, company, title) values ('alice', 'Ramp', 'Engineer') returning id"
+    ).fetchone()[0]
+
+
+def test_the_database_requires_an_interviews_date(settings):
+    with psycopg.connect(settings.database_url, prepare_threshold=None, autocommit=True) as conn:
+        conn.execute(sql.SQL("set search_path to {}").format(sql.Identifier(TEST_SCHEMA)))
+        application = _add_application(conn)
+        with pytest.raises(psycopg.errors.NotNullViolation):
+            conn.execute("insert into interviews (application_id, kind) values (%s, 'technical')", (application,))
+
+
+@pytest.mark.rebuilds_schema
+def test_the_date_migration_deletes_undated_interviews_and_keeps_dated_ones(settings):
+    before = [m for m in sorted(MIGRATIONS.glob("*.sql")) if m.name < REQUIRE_DATE]
+    schema = sql.Identifier(TEST_SCHEMA)
+    with psycopg.connect(settings.database_url, prepare_threshold=None, autocommit=True) as conn:
+        conn.execute(sql.SQL("drop schema if exists {} cascade").format(schema))
+        conn.execute(sql.SQL("create schema {}").format(schema))
+        conn.execute(sql.SQL("set search_path to {}").format(schema))
+        for migration in before:
+            conn.execute(migration.read_text())
+
+        application = _add_application(conn)
+        conn.execute(
+            "insert into interviews (application_id, kind, at, notes)"
+            " values (%s, 'technical', '2026-09-15T16:00:00Z', 'Draw the diagram first.')",
+            (application,),
+        )
+        conn.execute(
+            "insert into interviews (application_id, kind, notes) values (%s, 'recruiter_screen', 'Undated.')",
+            (application,),
+        )
+
+        conn.execute((MIGRATIONS / REQUIRE_DATE).read_text())
+
+        interviews = conn.execute("select kind, at, notes from interviews").fetchall()
+        nullable = conn.execute(
+            "select is_nullable from information_schema.columns"
+            " where table_schema = %s and table_name = 'interviews' and column_name = 'at'",
+            (TEST_SCHEMA,),
+        ).fetchone()[0]
+
+    assert [(kind, at.astimezone(UTC).isoformat(), notes) for kind, at, notes in interviews] == [
+        ("technical", "2026-09-15T16:00:00+00:00", "Draw the diagram first.")
+    ]
+    assert nullable == "NO"

@@ -19,7 +19,7 @@ import {
   type InterviewFields,
   type InterviewKind,
 } from "@/lib/applications";
-import { DATE_NEEDED, interviewErrors, isValid, type FieldErrors } from "@/lib/validation";
+import { interviewErrors, isValid, type FieldErrors } from "@/lib/validation";
 
 type Saved = Pick<Interview, "kind" | "at">;
 type Values = { kind: InterviewKind } & DateAndTime;
@@ -45,10 +45,10 @@ function changesOf(values: Values, saved: Saved): Partial<InterviewFields> {
 
 /**
  * The Interview page's heading: the company, then the role, the Interview kind and its date and
- * time ("Date needed" without one), with `badge` beside them, and an edit button that turns the
+ * time, with `badge` beside them, and an edit button that turns the
  * kind and the date into fields in place (EditableHeading). Enter, Save, or leaving them saves
- * what changed, checked first with the API's rules: the date can't be cleared, no time is assumed,
- * and an Interview with no date saves nothing until it has one (docs/adr/0005). A problem shows
+ * what changed, checked first with the API's rules: the date can't be cleared and no time is
+ * assumed (docs/adr/0005). A problem shows
  * beside its field and sends nothing. Escape and Cancel put back what was saved. Leaving the page
  * with a change not yet saved asks first (UnsavedChanges).
  */
@@ -76,7 +76,7 @@ export function InterviewHeading({ app, interview, badge }: { app: Application; 
 
   function startEditing() {
     setValues(valuesOf(shown));
-    setErrors(shown.at ? {} : { at: DATE_NEEDED });
+    setErrors({});
     setEditing(true);
   }
 
@@ -92,7 +92,7 @@ export function InterviewHeading({ app, interview, badge }: { app: Application; 
       stopEditing();
       return;
     }
-    const problems = interviewErrors(changes, { savedAt: shown.at });
+    const problems = interviewErrors(changes);
     setErrors(problems);
     if (!isValid(problems)) {
       if (problems.kind) kindRef.current?.focus();
@@ -105,7 +105,7 @@ export function InterviewHeading({ app, interview, badge }: { app: Application; 
       return outcome;
     });
     if (result.ok) {
-      setShown((prev) => ({ kind: changes.kind ?? prev.kind, at: "at" in changes ? (changes.at ?? null) : prev.at }));
+      setShown((prev) => ({ kind: changes.kind ?? prev.kind, at: changes.at ?? prev.at }));
       stopEditing();
     }
   }

@@ -23,12 +23,8 @@ export function NextInterviewCard({ app, interview }: { app: Application; interv
         <div className="min-w-0 flex-1">
           <p className="m-0 text-xs font-bold uppercase tracking-[0.08em] text-fg-brand">
             Next up
-            {interview.at && (
-              <>
-                {" · "}
-                <DaysFromToday date={interview.at} />
-              </>
-            )}
+            {" · "}
+            <DaysFromToday date={interview.at} />
           </p>
           <h2 id="next-up-title" className="m-0 mt-1 break-words text-2xl font-bold leading-[1.2] text-heading">
             {kind}

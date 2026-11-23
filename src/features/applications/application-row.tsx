@@ -99,7 +99,7 @@ function RowLink({ job }: { job: Application }) {
  * while the Application is In Progress, grey once it is Done (BIG-177).
  */
 function Progress({ job, group }: { job: Application; group: string }) {
-  const completed = job.interviews.filter((interview) => interview.completed && interview.at !== null);
+  const completed = job.interviews.filter((interview) => interview.completed);
   const withNotes = completed.filter((interview) => interview.notes).length;
   return (
     <div className="text-xs text-body">
@@ -122,16 +122,13 @@ function Progress({ job, group }: { job: Application; group: string }) {
 
 /**
  * What comes next: the Outcome of a Done Application other than an Offer, each upcoming Interview's
- * kind (soonest first, its date on hover and to screen readers), "Waiting since", and any
- * Interview whose date is needed.
+ * kind (soonest first, its date on hover and to screen readers), and "Waiting since".
  */
 function Next({ job }: { job: Application }) {
   const upcoming = upcomingInterviews(job);
-  // Saved before dates were required (docs/adr/0005): they count as completed, but show as needing a date.
-  const dateNeeded = job.interviews.filter((interview) => interview.at === null);
   const outcome = job.outcome && job.outcome !== "offer" ? job.outcome : null;
 
-  if (!outcome && upcoming.length === 0 && !job.is_waiting && dateNeeded.length === 0) {
+  if (!outcome && upcoming.length === 0 && !job.is_waiting) {
     return <span className="text-sm text-body-subtle">—</span>;
   }
   return (
@@ -145,12 +142,6 @@ function Next({ job }: { job: Application }) {
         </ul>
       )}
       {job.is_waiting && <ApplicationWhen app={job} />}
-      {dateNeeded.map((interview) => (
-        <p key={interview.id} className="m-0 flex items-center gap-2">
-          <Badge tone={INTERVIEW_TONE[interview.kind]}>{INTERVIEW_OPTIONS[interview.kind].label}</Badge>
-          <InterviewWhen at={null} />
-        </p>
-      ))}
     </div>
   );
 }
@@ -161,15 +152,13 @@ const hoverFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", ti
 function UpcomingInterview({ interview }: { interview: Interview }) {
   // The server can't know the viewer's time zone, so the date is added after hydration.
   const isClient = useIsClient();
-  const when = isClient && interview.at ? hoverFormat.format(new Date(interview.at)) : undefined;
+  const when = isClient ? hoverFormat.format(new Date(interview.at)) : undefined;
   return (
     <li title={when} className="inline-flex">
       <Badge tone={INTERVIEW_TONE[interview.kind]}>{INTERVIEW_OPTIONS[interview.kind].label}</Badge>
-      {interview.at && (
-        <span className="sr-only">
-          , <InterviewWhen at={interview.at} />
-        </span>
-      )}
+      <span className="sr-only">
+        , <InterviewWhen at={interview.at} />
+      </span>
     </li>
   );
 }

@@ -104,16 +104,13 @@ SALARY = Field(default=None, description="The pay range, as the job seeker write
 STATUS = "Whether the Application is still going (GLOSSARY.md, Status)."
 OUTCOME = "How a Done Application ended. Required when the status is `done`, and only then."
 KIND = "What sort of conversation the Interview is (GLOSSARY.md, Interview kind)."
-AT = (
-    "When the Interview happens: a date and time, with a time zone. Required (docs/adr/0005); "
-    'null only on an Interview saved before it was, which shows "Date needed" until one is set.'
-)
+AT = "When the Interview happens: a date and time, with a time zone. Required (docs/adr/0005)."
 NOTES = (
     "Interview notes (GLOSSARY.md): what the job seeker wrote about this Interview, as plain text of at most "
     f"{INTERVIEW_NOTES_MAX_LENGTH:,} characters. Null when there are none."
 )
 EXAMPLE_NOTES = "Asked about caching trade-offs. Next time, draw the diagram first."
-INTERVIEW_ORDER_DESCRIPTION = "Ordered by date. Any with no date yet come last."
+INTERVIEW_ORDER_DESCRIPTION = "Ordered by date."
 
 
 ApplicationId = Annotated[UUID, Path(description="The Application's id.")]
@@ -201,8 +198,7 @@ class InterviewCreate(BaseModel):
 
 
 class InterviewPatch(BaseModel):
-    """Only the fields sent are changed; send null for `notes` to clear them. The date can't be cleared, and a
-    change to an Interview saved without one must set it."""
+    """Only the fields sent are changed; send null for `notes` to clear them. The date can't be cleared."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -235,13 +231,10 @@ class Interview(BaseModel):
     id: UUID
     application_id: UUID = Field(description="The Application this Interview belongs to.")
     kind: InterviewKind = Field(description=KIND, examples=["technical"])
-    at: datetime | None = Field(description=AT, examples=["2026-11-20T17:00:00Z"])
+    at: datetime = Field(description=AT, examples=["2026-11-20T17:00:00Z"])
     notes: str | None = Field(description=NOTES, examples=[EXAMPLE_NOTES])
     completed: bool = Field(
-        description=(
-            "Derived, never stored: the date is in the past. An Interview with no date yet counts as completed "
-            "until it gets one, so no Application looks further along than it is."
-        ),
+        description="Derived, never stored: the date is in the past.",
         examples=[False],
     )
     created_at: datetime

@@ -109,7 +109,7 @@ export function DeleteInterviewDialog({
         >
           <span className="font-medium text-heading">
             {INTERVIEW_OPTIONS[interview.kind].label}
-            {interview.at && ` on ${dayFormat.format(new Date(interview.at))}`}
+            {` on ${dayFormat.format(new Date(interview.at))}`}
           </span>{" "}
           will be deleted{interview.notes ? ", with its Interview notes" : ""}. This can’t be undone.
         </DeleteConfirmation>

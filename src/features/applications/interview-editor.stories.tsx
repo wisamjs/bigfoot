@@ -47,18 +47,6 @@ export const SaveNotes: Story = {
   },
 };
 
-/** One saved before dates were required won't save notes until it has a date, and says so. */
-export const DateNeeded: Story = {
-  args: { interview: { ...interview, at: null, notes: null } },
-  play: async ({ canvas, userEvent }) => {
-    const notes = canvas.getByRole("textbox", { name: "Interview notes" });
-    await userEvent.type(notes, "Went well");
-    await userEvent.tab();
-    await expect(notes).toHaveAttribute("aria-invalid", "true");
-    await expect(updateInterviewAction).not.toHaveBeenCalled();
-  },
-};
-
 /** The server refuses a save: the reason shows beside the notes. */
 export const SaveFails: Story = {
   beforeEach: () => {

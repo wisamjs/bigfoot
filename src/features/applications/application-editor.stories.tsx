@@ -143,20 +143,6 @@ export const NextHasNotes: Story = {
   },
 };
 
-/** An Interview saved before dates were required shows Date needed, and comes last under Completed. */
-export const DateNeeded: Story = {
-  args: {
-    app: {
-      ...lumen,
-      interviews: [...lumen.interviews, interview("undated", { application_id: "lumen", kind: "people_management", at: null })],
-    },
-  },
-  play: async ({ canvas }) => {
-    const rows = canvas.getAllByRole("link", { name: /^Open Interview: / });
-    await expect(rows.at(-1)).toHaveTextContent("People Management");
-  },
-};
-
 /** Reveal shows the salary; it starts hidden each time. */
 export const RevealSalary: Story = {
   play: async ({ canvas, userEvent }) => {

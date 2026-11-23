@@ -23,13 +23,12 @@ COLUMNS = sql.SQL(APPLICATION_COLUMNS)
 # `expired` is derived on every read, never stored, like an Interview's `completed`.
 ACCESS_TOKEN_COLUMNS = sql.SQL("id, name, created_at, last_used_at, expires_at, expires_at <= now() as expired")
 INTERVIEW_COLUMNS = sql.SQL("id, application_id, kind, at, notes, created_at, updated_at")
-# By date alone (docs/adr/0005). An Interview with no date yet has no place by date, so it sorts last,
-# Postgres' default for nulls in ascending order.
+# By date alone (docs/adr/0005).
 INTERVIEW_ORDER = sql.SQL("order by at, created_at, id")
 
 
 def interview_view(row: dict[str, Any], now: datetime) -> Interview:
-    return Interview(**row, completed=row["at"] is None or row["at"] <= now)
+    return Interview(**row, completed=row["at"] <= now)
 
 
 def _application(row: dict[str, Any], interviews: list[dict[str, Any]], now: datetime) -> Application:
@@ -37,8 +36,7 @@ def _application(row: dict[str, Any], interviews: list[dict[str, Any]], now: dat
     waiting = row["status"] == "in_progress" and not any(not i.completed for i in views)
     since: datetime | date | None = None
     if waiting:
-        dated = [i.at for i in views if i.at is not None]
-        since = max(dated) if dated else row["applied_on"]
+        since = max((i.at for i in views), default=row["applied_on"])
     return Application(**row, interviews=views, is_waiting=waiting, waiting_since=since)
 
 

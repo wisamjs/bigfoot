@@ -3,7 +3,6 @@
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException, Request, status
-from fastapi.exceptions import RequestValidationError
 from psycopg import sql
 
 from app.auth import JobSeekerId
@@ -25,13 +24,6 @@ router = APIRouter(
     responses={**UNAUTHORIZED, **INTERVIEW_NOT_FOUND},
 )
 
-DATE_NEEDED_ERROR = {
-    "type": "missing",
-    "loc": ("body", "at"),
-    "msg": "is needed: this Interview has no date yet, so any change to it must set one",
-    "input": None,
-}
-
 
 @router.get(
     "",
@@ -39,7 +31,7 @@ DATE_NEEDED_ERROR = {
     responses={404: {"model": ErrorMessage, "description": APPLICATION_NOT_FOUND[404]["description"]}},
 )
 def list_interviews(request: Request, job_seeker: JobSeekerId, application_id: ApplicationId) -> list[Interview]:
-    """The Application's Interviews, ordered by date. Any with no date yet come last."""
+    """The Application's Interviews, ordered by date."""
     with pool(request).connection() as conn, conn.transaction():
         owned(conn, job_seeker, application_id)
         rows = conn.execute(
@@ -101,22 +93,13 @@ def update_interview(
 ) -> Interview:
     """Change an Interview's kind, date or Interview notes.
 
-    Only the fields sent change; send null for `notes` to clear them. The date can't be cleared, and
-    any change to an Interview saved without a date must set one (422).
+    Only the fields sent change; send null for `notes` to clear them. The date can't be cleared.
     """
     changes = body.model_dump(exclude_unset=True)
     assignments = [sql.SQL("{} = %s").format(sql.Identifier(name)) for name in changes]
     assignments.append(sql.SQL("updated_at = now()"))
     with pool(request).connection() as conn, conn.transaction():
         owned(conn, job_seeker, application_id)
-        current = conn.execute(
-            "select at from interviews where id = %s and application_id = %s for update",
-            (interview_id, application_id),
-        ).fetchone()
-        if current is None:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "Interview not found")
-        if current["at"] is None and "at" not in changes:
-            raise RequestValidationError([DATE_NEEDED_ERROR])
         row = conn.execute(
             sql.SQL("update interviews set {} where id = %s and application_id = %s returning {}").format(
                 sql.SQL(", ").join(assignments), INTERVIEW_COLUMNS

@@ -6,7 +6,6 @@ import { APPLICATION_MAX_LENGTHS, INTERVIEW_NOTES_MAX_LENGTH, OFFICE_DAYS } from
 import {
   accessTokenNameError,
   applicationErrors,
-  DATE_NEEDED,
   interviewErrors,
   isHttpUrl,
   isValid,
@@ -145,13 +144,6 @@ describe("interviewErrors", () => {
   it("refuses clearing the date of an Interview", () => {
     expect(interviewErrors({ at: null })).toEqual({ at: "Enter the date and time." });
     expect(interviewErrors({ at: "" })).toEqual({ at: "Enter the date and time." });
-  });
-
-  it("needs any change to an Interview with no date to set one (ADR 0005)", () => {
-    expect(interviewErrors({ kind: "technical" }, { savedAt: null })).toEqual({ at: DATE_NEEDED });
-    expect(interviewErrors({ notes: "Went well." }, { savedAt: null })).toEqual({ at: DATE_NEEDED });
-    expect(interviewErrors({ notes: "Booked.", at: "2026-12-01T15:00:00.000Z" }, { savedAt: null })).toEqual({});
-    expect(interviewErrors({ kind: "technical" }, { savedAt: "2026-12-01T15:00:00.000Z" })).toEqual({});
   });
 
   it.each(XSS_TEXT)("keeps %j in Interview notes as typed", (notes) => {

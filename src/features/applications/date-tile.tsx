@@ -15,12 +15,11 @@ const TONES = {
 
 /**
  * An Interview's month and day as a small calendar tile ("NOV / 25"), in the viewer's time zone.
- * Decorative: the date is always written out beside it, so screen readers skip the tile. "?" for an
- * Interview saved with no date (docs/adr/0005).
+ * Decorative: the date is always written out beside it, so screen readers skip the tile.
  */
-export function DateTile({ at, tone = "outline", className = "" }: { at: string | null; tone?: keyof typeof TONES; className?: string }) {
+export function DateTile({ at, tone = "outline", className = "" }: { at: string; tone?: keyof typeof TONES; className?: string }) {
   const isClient = useIsClient();
-  const date = at && isClient ? new Date(at) : null;
+  const date = isClient ? new Date(at) : null;
   return (
     <span
       aria-hidden
@@ -29,7 +28,7 @@ export function DateTile({ at, tone = "outline", className = "" }: { at: string 
       <span className="text-[11px] font-bold uppercase tracking-[0.06em]">
         {date ? monthFormat.format(date) : ""}
       </span>
-      <span className="mt-1 text-xl font-bold">{date ? date.getDate() : at ? "" : "?"}</span>
+      <span className="mt-1 text-xl font-bold">{date ? date.getDate() : ""}</span>
     </span>
   );
 }

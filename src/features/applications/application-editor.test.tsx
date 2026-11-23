@@ -156,7 +156,6 @@ describe("the Interviews", () => {
       interview("manager", { application_id: "oak", kind: "hiring_manager", at: daysFromNow(-3), notes: "Went long.\n\nAsk about on-call." }),
       interview("deep", { application_id: "oak", kind: "technical_deep_dive", at: daysFromNow(2), completed: false }),
       interview("lead", { application_id: "oak", kind: "leadership", at: daysFromNow(9), completed: false }),
-      interview("undated", { application_id: "oak", kind: "people_management", at: null }),
     ],
   });
   const rows = () => screen.getAllByRole("link", { name: /^Open Interview: / }).map((row) => row.textContent);
@@ -170,18 +169,16 @@ describe("the Interviews", () => {
     expect(within(next).getByRole("link", { name: "Add Interview notes" })).toHaveAttribute("href", "/applications/oak/interviews/deep");
   });
 
-  it("lists the rest under Later, then the completed ones under Completed, newest first, undated last", () => {
+  it("lists the rest under Later, then the completed ones under Completed, newest first", () => {
     open(oak);
     expect(within(screen.getByRole("list", { name: "Later" })).getAllByRole("listitem")).toHaveLength(1);
-    expect(within(screen.getByRole("list", { name: "Completed" })).getAllByRole("listitem")).toHaveLength(3);
+    expect(within(screen.getByRole("list", { name: "Completed" })).getAllByRole("listitem")).toHaveLength(2);
     expect(screen.queryByRole("list", { name: "Done" })).not.toBeInTheDocument();
     expect(rows()).toEqual([
       "Open Interview: Leadership",
       "Open Interview: Hiring Manager",
       "Open Interview: Recruiter Screen",
-      "Open Interview: People Management",
     ]);
-    expect(screen.getAllByText("Date needed").length).toBeGreaterThan(0);
   });
 
   it("shows a completed Interview's notes in full", () => {
@@ -198,8 +195,8 @@ describe("the Interviews", () => {
 
   it("strips them by date, counting the completed ones", () => {
     open(oak);
-    expect(within(screen.getByRole("list", { name: "Interviews by date" })).getAllByRole("listitem")).toHaveLength(5);
-    expect(screen.getByText("3 of 5 Interviews completed")).toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: "Interviews by date" })).getAllByRole("listitem")).toHaveLength(4);
+    expect(screen.getByText("2 of 4 Interviews completed")).toBeInTheDocument();
   });
 
   it("strips completed Interviews green while In Progress and grey once Done (BIG-177)", () => {
@@ -209,11 +206,11 @@ describe("the Interviews", () => {
         // eslint-disable-next-line testing-library/no-node-access -- the bar is decoration (aria-hidden), with no role or text to query by.
         .map((segment) => segment.firstElementChild);
     const { unmount } = open(oak);
-    expect(bars().filter((bar) => bar?.classList.contains("bg-fg-success-strong"))).toHaveLength(3);
+    expect(bars().filter((bar) => bar?.classList.contains("bg-fg-success-strong"))).toHaveLength(2);
     expect(bars().filter((bar) => bar?.classList.contains("bg-tone-gray-fg"))).toHaveLength(0);
     unmount();
     open({ ...oak, status: "done", outcome: "rejected" });
-    expect(bars().filter((bar) => bar?.classList.contains("bg-tone-gray-fg"))).toHaveLength(3);
+    expect(bars().filter((bar) => bar?.classList.contains("bg-tone-gray-fg"))).toHaveLength(2);
     expect(bars().filter((bar) => bar?.classList.contains("bg-fg-success-strong"))).toHaveLength(0);
   });
 

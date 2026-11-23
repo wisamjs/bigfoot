@@ -59,14 +59,11 @@ export type Interview = {
   id: string;
   application_id: string;
   kind: InterviewKind;
-  /**
-   * ISO timestamp, required (docs/adr/0005). Null only on an Interview saved before it was: that
-   * shows "Date needed", counts as completed, and can't be changed without setting a date.
-   */
-  at: string | null;
+  /** ISO timestamp, required (docs/adr/0005). */
+  at: string;
   /** Interview notes: plain text the job seeker wrote about this Interview; null when there are none. */
   notes: string | null;
-  /** Derived by the API: the date is in the past (or there is none yet, so nothing looks further along). */
+  /** Derived by the API: the date is in the past. */
   completed: boolean;
   created_at: string;
   updated_at: string;
@@ -86,7 +83,7 @@ export type Application = {
   status: Status;
   /** Set exactly when the status is done. */
   outcome: Outcome | null;
-  /** Ordered by date; any with no date yet come last. */
+  /** Ordered by date. */
   interviews: Interview[];
   /** Derived by the API: In Progress with no upcoming Interview, including a new Application. */
   is_waiting: boolean;
@@ -104,7 +101,8 @@ export type ApplicationFields = Omit<
   "id" | "interviews" | "is_waiting" | "waiting_since" | "is_sample" | "created_at" | "updated_at"
 >;
 
-export type InterviewFields = Pick<Interview, "kind" | "at" | "notes">;
+/** What a form sends: `at` is null while no date and time has been given, and validation refuses it. */
+export type InterviewFields = Pick<Interview, "kind" | "notes"> & { at: string | null };
 
 type Option = { label: string };
 
@@ -167,9 +165,9 @@ export function nextInterview(app: Application): Interview | null {
   return upcomingInterviews(app)[0] ?? null;
 }
 
-/** The latest completed Interview with a date; one with no date yet has no place by date. */
+/** The latest completed Interview. */
 export function lastCompletedInterview(app: Application): Interview | null {
-  return app.interviews.findLast((i) => i.completed && i.at !== null) ?? null;
+  return app.interviews.findLast((i) => i.completed) ?? null;
 }
 
 /** The dashboard's three numbers: Open, Active, and the Next Interview across In Progress Applications. */
@@ -199,10 +197,10 @@ export function dashboardSummary(apps: Application[]): string {
   ].join(" · ");
 }
 
-export type DatedInterview = { application: Application; interview: Interview & { at: string } };
+export type DatedInterview = { application: Application; interview: Interview };
 
 function dated(application: Application, interviews: Interview[]): DatedInterview[] {
-  return interviews.map((interview) => ({ application, interview: interview as DatedInterview["interview"] }));
+  return interviews.map((interview) => ({ application, interview }));
 }
 
 /** Upcoming Interviews of open Applications, soonest first. */
@@ -213,11 +211,11 @@ export function getUpcoming(apps: Application[]): DatedInterview[] {
     .toSorted((a, b) => a.interview.at.localeCompare(b.interview.at));
 }
 
-/** Every dated Interview of open Applications, past and upcoming, by date. Done Applications drop off. */
+/** Every Interview of open Applications, past and upcoming, by date. Done Applications drop off. */
 export function getCalendarInterviews(apps: Application[]): DatedInterview[] {
   return apps
     .filter((a) => !isDone(a))
-    .flatMap((a) => dated(a, a.interviews.filter((i) => i.at !== null)))
+    .flatMap((a) => dated(a, a.interviews))
     .toSorted((a, b) => a.interview.at.localeCompare(b.interview.at));
 }
 
@@ -262,10 +260,7 @@ export type InterviewSections = { next: Interview | null; later: Interview[]; co
 
 export function interviewSections(app: Application): InterviewSections {
   const [next = null, ...later] = upcomingInterviews(app);
-  // Completed ones come by date; any saved with no date (docs/adr/0005) come last there, and stay last.
-  const dated = app.interviews.filter((i) => i.completed && i.at !== null).toReversed();
-  const undated = app.interviews.filter((i) => i.at === null);
-  return { next, later, completed: [...dated, ...undated] };
+  return { next, later, completed: app.interviews.filter((i) => i.completed).toReversed() };
 }
 
 /** The paragraphs of some notes: runs of text split by blank lines, trimmed. */

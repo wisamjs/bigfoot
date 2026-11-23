@@ -49,10 +49,9 @@ function Segment({ interview, status, next }: { interview: Interview; status: St
   );
 }
 
-/** "Nov 6 · Completed", "Nov 25 · Next, in 2 days", "Dec 2", or "Date needed". */
+/** "Nov 6 · Completed", "Nov 25 · Next, in 2 days", or "Dec 2". */
 function SegmentWhen({ interview, next }: { interview: Interview; next: boolean }) {
   const isClient = useIsClient();
-  if (!interview.at) return <span className="text-fg-danger">Date needed</span>;
   if (!isClient) return <span className="inline-block h-4" />;
   const day = dayFormat.format(new Date(interview.at));
   if (interview.completed) return <>{day} · Completed</>;

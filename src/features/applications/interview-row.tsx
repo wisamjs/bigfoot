@@ -34,7 +34,7 @@ export function InterviewRow({ applicationId, interview }: { applicationId: stri
             <span className="sr-only">Open Interview: </span>
             {kind}
           </Link>
-          {completed && interview.at && (
+          {completed && (
             <span className="inline-flex items-center gap-1 text-sm font-medium text-fg-success-strong">
               <Check className="size-4" aria-hidden />
               Completed
@@ -43,7 +43,7 @@ export function InterviewRow({ applicationId, interview }: { applicationId: stri
         </p>
         <p className="m-0 mt-1 text-sm text-body">
           <InterviewDayTime at={interview.at} />
-          {!completed && interview.at && (
+          {!completed && (
             <>
               {" · "}
               <DaysFromToday date={interview.at} />

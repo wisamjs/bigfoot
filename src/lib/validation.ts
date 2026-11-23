@@ -158,18 +158,15 @@ export function applicationErrors(input: unknown, { creating }: { creating: bool
   return Object.assign(errors, statusErrors(fields, creating));
 }
 
-/** Beside the date of an Interview saved before dates were required (docs/adr/0005). */
-export const DATE_NEEDED = "Date needed. Set the date and time to save any change to this Interview.";
-
 type InterviewInput = Partial<Record<keyof InterviewFields, unknown>>;
 
 function interviewKindError(fields: InterviewInput, creating: boolean) {
   return (creating || "kind" in fields) && !KIND_SET.has(fields.kind) ? "Choose an Interview kind." : null;
 }
 
-/** The date and time's problem; when it isn't given, a saved Interview without one needs it set. */
-function interviewDateError(fields: InterviewInput, creating: boolean, savedAt: string | null | undefined) {
-  if (!creating && !("at" in fields)) return savedAt === null ? DATE_NEEDED : null;
+/** The date and time's problem: required when creating, and never cleared by a change. */
+function interviewDateError(fields: InterviewInput, creating: boolean) {
+  if (!creating && !("at" in fields)) return null;
   if (fields.at === undefined || fields.at === null || fields.at === "") return "Enter the date and time.";
   if (typeof fields.at !== "string" || !isTimestamp(fields.at)) return "Enter a date and time.";
   return null;
@@ -178,19 +175,15 @@ function interviewDateError(fields: InterviewInput, creating: boolean, savedAt: 
 /**
  * Problems with an Interview's fields. `creating` checks a whole new Interview, so the kind and the
  * date and time are required; otherwise only the fields given are checked, as a change, and the
- * date can't be cleared. `savedAt` is the date the Interview has now: when it has none, a change
- * must set one.
+ * date can't be cleared.
  */
-export function interviewErrors(
-  input: unknown,
-  { creating = false, savedAt }: { creating?: boolean; savedAt?: string | null } = {},
-): FieldErrors {
+export function interviewErrors(input: unknown, { creating = false }: { creating?: boolean } = {}): FieldErrors {
   if (typeof input !== "object" || input === null) return { form: "Nothing to save." };
   const fields = input as InterviewInput;
   const errors: FieldErrors = unknownFields(input, ["kind", "at", "notes"]);
   const kind = interviewKindError(fields, creating);
   if (kind) errors.kind = kind;
-  const at = interviewDateError(fields, creating, savedAt);
+  const at = interviewDateError(fields, creating);
   if (at) errors.at = at;
   const notes = optionalText(fields.notes, "Interview notes", INTERVIEW_NOTES_MAX_LENGTH);
   if (notes) errors.notes = notes;

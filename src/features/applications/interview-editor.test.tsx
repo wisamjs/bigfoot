@@ -4,7 +4,6 @@ import Link from "next/link";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/applications/actions";
 import { application, interview } from "@/test/applications";
-import { DATE_NEEDED } from "@/lib/validation";
 import { InterviewEditor } from "./interview-editor";
 import { NOTES_PAUSE_MS } from "./interview-notes-form";
 import { UnsavedChanges } from "./unsaved-changes";
@@ -60,15 +59,6 @@ describe("the Interview page", () => {
     expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { notes: "Asked about caching!" });
   });
 
-  it("won't save notes on an Interview with no date, and says to set one", async () => {
-    const undated = interview("i1", { application_id: "birch", at: null });
-    const { user } = openPage(application("birch", { company: "Birch", interviews: [undated] }), undated);
-    await user.type(screen.getByLabelText("Interview notes"), "Went well");
-    await user.tab();
-    expect(actions.updateInterviewAction).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("Interview notes")).toHaveAccessibleDescription(DATE_NEEDED);
-  });
-
   it("asks before deleting, warning about the Interview notes, then deletes and leaves", async () => {
     const { user } = openPage();
     await user.click(screen.getByRole("button", { name: "Delete Interview" }));
@@ -96,11 +86,11 @@ describe("the Interview page", () => {
     expect(within(dialog).getByRole("button", { name: "Cancel" })).toHaveFocus();
   });
 
-  it("leaves the notes out of the warning when there are none, and the date when there is none", async () => {
-    const bare = interview("i1", { application_id: "birch", kind: "technical", notes: null, at: null });
+  it("leaves the notes out of the warning when there are none", async () => {
+    const bare = interview("i1", { application_id: "birch", kind: "technical", notes: null });
     const { user } = openPage(application("birch", { company: "Birch", interviews: [bare] }), bare);
     await user.click(screen.getByRole("button", { name: "Delete Interview" }));
-    expect(screen.getByRole("dialog")).toHaveTextContent("Technical will be deleted. This can’t be undone.");
+    expect(screen.getByRole("dialog")).toHaveTextContent(/Technical on \d+ \w+ will be deleted\. This can’t be undone\./);
   });
 
   it("stays open and says why when deleting fails", async () => {

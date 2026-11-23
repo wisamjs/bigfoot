@@ -4,7 +4,6 @@ import Link from "next/link";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/applications/actions";
 import { application, interview } from "@/test/applications";
-import { DATE_NEEDED } from "@/lib/validation";
 import { InterviewEditor } from "./interview-editor";
 import { InterviewHeading } from "./interview-heading";
 import { UnsavedChanges } from "./unsaved-changes";
@@ -48,11 +47,6 @@ describe("the Interview page heading", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Birch" })).toBeInTheDocument();
     const details = screen.getByText(/Senior Engineer · Technical Interview ·/);
     expect(within(details).getByText((_, el) => el?.tagName === "TIME")).toHaveAttribute("datetime", technical.at);
-  });
-
-  it("shows Date needed for an Interview saved before dates were required", () => {
-    openPage(interview("i1", { application_id: "birch", at: null }));
-    expect(screen.getByText("Date needed")).toBeInTheDocument();
   });
 
   it("turns the kind and the date into fields, with focus on the kind", async () => {
@@ -119,16 +113,6 @@ describe("the Interview page heading", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Enter the date and time.");
     expect(within(form()).getByRole("button", { name: /^Date, / })).toHaveAttribute("aria-invalid", "true");
     expect(actions.updateInterviewAction).not.toHaveBeenCalled();
-  });
-
-  it("won't save a new kind on an Interview with no date until it has one", async () => {
-    const { user } = openPage(interview("i1", { application_id: "birch", at: null }));
-    await user.click(editButton());
-    expect(screen.getByRole("alert")).toHaveTextContent(DATE_NEEDED);
-    await user.selectOptions(screen.getByLabelText(/^Kind/), "leadership");
-    await user.click(within(form()).getByRole("button", { name: "Save" }));
-    expect(actions.updateInterviewAction).not.toHaveBeenCalled();
-    expect(within(form()).getByRole("button", { name: /^Date, / })).toHaveFocus();
   });
 
   it("puts back the saved kind and date on Escape, without saving", async () => {

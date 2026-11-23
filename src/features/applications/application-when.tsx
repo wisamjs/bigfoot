@@ -30,28 +30,16 @@ const shortWhenFormat = new Intl.DateTimeFormat(undefined, {
   minute: "2-digit",
 });
 
-/**
- * One Interview's date and time, in the viewer's time zone, without the year; "Date needed" for one
- * saved before dates were required (docs/adr/0005).
- */
-export function InterviewWhen({ at }: { at: string | null }) {
-  if (!at) return <span className="font-medium text-fg-danger">Date needed</span>;
-  return <InterviewDate at={at} />;
-}
-
-/**
- * One Interview's date and time with the year, as its own page's heading shows it; "Date needed"
- * for one saved before dates were required (docs/adr/0005).
- */
-export function InterviewWhenLong({ at }: { at: string | null }) {
+/** One Interview's date and time with the year, as its own page's heading shows it. */
+export function InterviewWhenLong({ at }: { at: string }) {
   const isClient = useIsClient();
-  if (!at) return <span className="font-medium text-fg-danger">Date needed</span>;
   // The server can't know the viewer's time zone, so the date renders after hydration.
   if (!isClient) return <span className="inline-block h-5 w-32 align-middle" />;
   return <time dateTime={at}>{whenFormat.format(new Date(at))}</time>;
 }
 
-function InterviewDate({ at }: { at: string }) {
+/** One Interview's date and time, in the viewer's time zone, without the year. */
+export function InterviewWhen({ at }: { at: string }) {
   const isClient = useIsClient();
   if (!isClient) return <span className="block h-5" />;
   return (
@@ -69,11 +57,10 @@ const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute:
 
 /**
  * An Interview's day and time as the Application page shows it (BIG-174): "Wed, Dec 2 · 1:30 PM",
- * or with `weekday="long"`, "Wednesday, Dec 2 · 1:30 PM". "Date needed" when there is none.
+ * or with `weekday="long"`, "Wednesday, Dec 2 · 1:30 PM".
  */
-export function InterviewDayTime({ at, weekday = "short" }: { at: string | null; weekday?: "short" | "long" }) {
+export function InterviewDayTime({ at, weekday = "short" }: { at: string; weekday?: "short" | "long" }) {
   const isClient = useIsClient();
-  if (!at) return <span className="font-medium text-fg-danger">Date needed</span>;
   if (!isClient) return <span className="inline-block h-5 w-32 align-middle" />;
   const date = new Date(at);
   return (

@@ -25,14 +25,12 @@ type Plan = {
   done?: (InterviewKind | [InterviewKind, "notes"])[];
   /** Upcoming Interviews: their kind and how many days away. */
   next?: [InterviewKind, number][];
-  /** A completed Interview saved before dates were required (docs/adr/0005). */
-  dateNeeded?: InterviewKind;
   outcome?: Outcome | null;
   sample?: boolean;
 };
 
 /** One Interview of the Application `id`. */
-function interview(id: string, i: number, kind: InterviewKind, at: string | null, completed: boolean, notes = false) {
+function interview(id: string, i: number, kind: InterviewKind, at: string, completed: boolean, notes = false) {
   return testInterview(`${id}-${i}`, {
     application_id: id,
     kind,
@@ -74,7 +72,7 @@ const DEFAULT_PLAN = {
 
 /** One Application as the API returns it, with its derived fields worked out from the plan. */
 function app(company: string, title: string, plan: Plan = {}): Application {
-  const { location, officeDays, done, next, dateNeeded, outcome, sample, appliedDaysAgo } =
+  const { location, officeDays, done, next, outcome, sample, appliedDaysAgo } =
     { ...DEFAULT_PLAN, ...plan };
   const id = company.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   const applied = appliedDaysAgo ?? 7 + done.length * 7;
@@ -83,7 +81,6 @@ function app(company: string, title: string, plan: Plan = {}): Application {
   const upcoming = next.map(([kind, days], i) =>
     interview(id, 10 + i, kind, daysFromNow(days, i % 2 === 0), false),
   );
-  const missing = dateNeeded ? [interview(id, 20, dateNeeded, null, true)] : [];
   const isWaiting = !outcome && upcoming.length === 0;
   return application(id, {
     company,
@@ -93,7 +90,7 @@ function app(company: string, title: string, plan: Plan = {}): Application {
     applied_on: appliedOn,
     status: outcome ? "done" : "in_progress",
     outcome,
-    interviews: [...completed, ...upcoming, ...missing],
+    interviews: [...completed, ...upcoming],
     is_waiting: isWaiting,
     waiting_since: isWaiting ? (completed.at(-1)?.at ?? appliedOn) : null,
     is_sample: sample,
@@ -137,7 +134,6 @@ const jobSearch: Application[] = [
   }),
   app("Hootsuite", "Intermediate Frontend Developer", {
     ...HYBRID_2,
-    dateNeeded: "recruiter_screen",
   }),
 
   // Interview scheduled: one or more upcoming, some far along.

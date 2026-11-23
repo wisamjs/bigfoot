@@ -26,11 +26,9 @@ export function InterviewEditor({ app, interview }: { app: Application; intervie
         key={interview.id}
         interview={interview}
         tracker={notesSave}
-        // An Interview with no date saves nothing until it has one (docs/adr/0005): the notes say
-        // so, as the date is set in the heading.
         onSave={(notes) => {
-          const problems = interviewErrors({ notes }, { savedAt: interview.at });
-          if (!isValid(problems)) return { problem: problems.notes ?? problems.at, sent: null };
+          const problems = interviewErrors({ notes });
+          if (!isValid(problems)) return { problem: problems.notes, sent: null };
           return { problem: undefined, sent: notesSave.run(() => updateInterviewAction(app.id, interview.id, { notes })) };
         }}
       />
