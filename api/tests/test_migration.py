@@ -1,5 +1,5 @@
-"""Migrations that change what job seekers already recorded: Interviews (BIG-38), Locations, and
-requiring an Interview's date (BIG-139)."""
+"""Migrations that change what job seekers already recorded: Interviews (BIG-38), Locations, requiring an
+Interview's date (BIG-139) and splitting Interview notes (BIG-179)."""
 
 from datetime import UTC
 
@@ -151,3 +151,45 @@ def test_the_date_migration_deletes_undated_interviews_and_keeps_dated_ones(sett
         ("technical", "2026-09-15T16:00:00+00:00", "Draw the diagram first.")
     ]
     assert nullable == "NO"
+
+
+SPLIT_NOTES = "20261125000000_split_interview_notes.sql"
+
+
+@pytest.mark.rebuilds_schema
+def test_splitting_interview_notes_moves_existing_notes_unchanged_into_how_it_went(settings):
+    before = [m for m in sorted(MIGRATIONS.glob("*.sql")) if m.name < SPLIT_NOTES]
+    schema = sql.Identifier(TEST_SCHEMA)
+    written = "Asked about caching.\n\n- Why us?\n- Why now?\n\nNext time: draw the diagram first.  "
+    with psycopg.connect(settings.database_url, prepare_threshold=None, autocommit=True) as conn:
+        conn.execute(sql.SQL("drop schema if exists {} cascade").format(schema))
+        conn.execute(sql.SQL("create schema {}").format(schema))
+        conn.execute(sql.SQL("set search_path to {}").format(schema))
+        for migration in before:
+            conn.execute(migration.read_text())
+
+        application = _add_application(conn)
+        for kind, notes in [("technical", written), ("leadership", "é" * 20_000), ("recruiter_screen", None)]:
+            conn.execute(
+                "insert into interviews (application_id, kind, at, notes) values (%s, %s, '2026-09-15T16:00:00Z', %s)",
+                (application, kind, notes),
+            )
+
+        conn.execute((MIGRATIONS / SPLIT_NOTES).read_text())
+
+        rows = conn.execute(
+            "select kind, what_they_asked, how_it_went, takeaway from interviews order by kind"
+        ).fetchall()
+        # The new columns keep their limits.
+        with pytest.raises(psycopg.errors.CheckViolation):
+            conn.execute("update interviews set takeaway = %s", ("x" * 501,))
+        with pytest.raises(psycopg.errors.CheckViolation):
+            conn.execute("update interviews set what_they_asked = %s", ("x" * 20_001,))
+        with pytest.raises(psycopg.errors.CheckViolation):
+            conn.execute("update interviews set how_it_went = %s", ("x" * 20_001,))
+
+    assert rows == [
+        ("leadership", None, "é" * 20_000, None),
+        ("recruiter_screen", None, None, None),
+        ("technical", None, written, None),
+    ]

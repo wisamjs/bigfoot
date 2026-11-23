@@ -11,12 +11,17 @@ import { interviewErrors, isValid } from "@/lib/validation";
 /**
  * The Interview page under its "← <company>" link (BIG-178): the heading (kind, date, badges, Edit
  * details and ⋯ with Delete Interview), the Application's Interviews as a strip with this one
- * outlined, then the Interview notes card, which reads as text until edited and saves by itself
- * with its own save status. Leaving with the kind, the date or Interview notes not yet saved asks
- * first: the page puts this inside UnsavedChanges.
+ * outlined, then the Interview notes (BIG-179): What they asked, How it went and Takeaway for next
+ * time, which read as text until edited and each save by themselves with their own save status.
+ * Leaving with the kind, the date or an Interview notes field not yet saved asks first: the page
+ * puts this inside UnsavedChanges.
  */
 export function InterviewEditor({ app, interview }: { app: Application; interview: Interview }) {
-  const notesSave = useSaveStatus();
+  const trackers = {
+    what_they_asked: useSaveStatus(),
+    how_it_went: useSaveStatus(),
+    takeaway: useSaveStatus(),
+  };
   return (
     <div className="flex flex-col gap-6 sm:gap-8">
       <InterviewHeading app={app} interview={interview} />
@@ -25,11 +30,15 @@ export function InterviewEditor({ app, interview }: { app: Application; intervie
         <InterviewNotesForm
           key={interview.id}
           interview={interview}
-          tracker={notesSave}
-          onSave={(notes) => {
-            const problems = interviewErrors({ notes });
-            if (!isValid(problems)) return { problem: problems.notes, sent: null };
-            return { problem: undefined, sent: notesSave.run(() => updateInterviewAction(app.id, interview.id, { notes })) };
+          trackers={trackers}
+          onSave={(field, value) => {
+            const changes = { [field]: value };
+            const problems = interviewErrors(changes);
+            if (!isValid(problems)) return { problem: problems[field], sent: null };
+            return {
+              problem: undefined,
+              sent: trackers[field].run(() => updateInterviewAction(app.id, interview.id, changes)),
+            };
           }}
         />
       </div>

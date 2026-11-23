@@ -37,7 +37,7 @@ def test_deletes_the_job_seeker_and_all_their_applications(settings, client, tok
     onboard(client, token())
     add(client, token())
     for app in applications(client, token()):
-        body = {"kind": "technical", "at": "2026-11-20T17:00:00Z", "notes": "Mine"}
+        body = {"kind": "technical", "at": "2026-11-20T17:00:00Z", "how_it_went": "Mine"}
         assert client.post(f"/applications/{app['id']}/interviews", json=body, headers=token()).status_code == 201
 
     assert client.delete("/me", headers=token()).status_code == 204

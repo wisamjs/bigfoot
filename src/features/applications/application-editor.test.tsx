@@ -152,8 +152,8 @@ describe("the Interviews", () => {
     company: "Oak",
     is_waiting: false,
     interviews: [
-      interview("screen", { application_id: "oak", kind: "recruiter_screen", at: daysFromNow(-10), notes: "Friendly.\n\nLead with the decision next time." }),
-      interview("manager", { application_id: "oak", kind: "hiring_manager", at: daysFromNow(-3), notes: "Went long.\n\nAsk about on-call." }),
+      interview("screen", { application_id: "oak", kind: "recruiter_screen", at: daysFromNow(-10), how_it_went: "Friendly.\n\nLead with the decision next time." }),
+      interview("manager", { application_id: "oak", kind: "hiring_manager", at: daysFromNow(-3), how_it_went: "Went long.\n\nAsk about on-call." }),
       interview("deep", { application_id: "oak", kind: "technical_deep_dive", at: daysFromNow(2), completed: false }),
       interview("lead", { application_id: "oak", kind: "leadership", at: daysFromNow(9), completed: false }),
     ],
@@ -188,7 +188,7 @@ describe("the Interviews", () => {
   });
 
   it("shows the next one's own notes instead of Add Interview notes once it has some", () => {
-    open({ ...oak, interviews: oak.interviews.map((i) => (i.id === "deep" ? { ...i, notes: "Bring the migration story." } : i)) });
+    open({ ...oak, interviews: oak.interviews.map((i) => (i.id === "deep" ? { ...i, how_it_went: "Bring the migration story." } : i)) });
     expect(screen.getByText("Bring the migration story.")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Add Interview notes" })).not.toBeInTheDocument();
   });

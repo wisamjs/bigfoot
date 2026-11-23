@@ -1,5 +1,5 @@
 // Checks what a job seeker typed before it is sent, with the API's own rules (api/app/models.py)
-// and limits (APPLICATION_MAX_LENGTHS, INTERVIEW_NOTES_MAX_LENGTH, ACCESS_TOKEN_NAME_MAX): the forms run them to show
+// and limits (APPLICATION_MAX_LENGTHS, INTERVIEW_NOTES_MAX_LENGTHS, ACCESS_TOKEN_NAME_MAX): the forms run them to show
 // errors beside each field, and the Server Actions run them again, because anyone can call those
 // with any values. FastAPI and the database still check everything; this only answers sooner.
 
@@ -7,7 +7,9 @@ import { ACCESS_TOKEN_NAME_MAX } from "@/lib/account";
 import {
   APPLICATION_MAX_LENGTHS,
   INTERVIEW_KINDS,
-  INTERVIEW_NOTES_MAX_LENGTH,
+  INTERVIEW_NOTES_FIELDS,
+  INTERVIEW_NOTES_LABELS,
+  INTERVIEW_NOTES_MAX_LENGTHS,
   LOCATIONS,
   OFFICE_DAYS,
   OUTCOMES,
@@ -180,13 +182,15 @@ function interviewDateError(fields: InterviewInput, creating: boolean) {
 export function interviewErrors(input: unknown, { creating = false }: { creating?: boolean } = {}): FieldErrors {
   if (typeof input !== "object" || input === null) return { form: "Nothing to save." };
   const fields = input as InterviewInput;
-  const errors: FieldErrors = unknownFields(input, ["kind", "at", "notes"]);
+  const errors: FieldErrors = unknownFields(input, ["kind", "at", ...INTERVIEW_NOTES_FIELDS]);
   const kind = interviewKindError(fields, creating);
   if (kind) errors.kind = kind;
   const at = interviewDateError(fields, creating);
   if (at) errors.at = at;
-  const notes = optionalText(fields.notes, "Interview notes", INTERVIEW_NOTES_MAX_LENGTH);
-  if (notes) errors.notes = notes;
+  for (const field of INTERVIEW_NOTES_FIELDS) {
+    const problem = optionalText(fields[field], INTERVIEW_NOTES_LABELS[field], INTERVIEW_NOTES_MAX_LENGTHS[field]);
+    if (problem) errors[field] = problem;
+  }
   return errors;
 }
 

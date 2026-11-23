@@ -352,7 +352,7 @@ describe("Add Interview", () => {
       </Page>,
     );
     expect(clickGoesThrough("Dashboard")).toBe(true);
-    await user.type(screen.getByLabelText("Interview notes"), "Prep");
+    await user.type(screen.getByLabelText("How it went"), "Prep");
     expect(clickGoesThrough("Dashboard")).toBe(false);
     expect(screen.getByText(PROMPT)).toBeInTheDocument();
   });

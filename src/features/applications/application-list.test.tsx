@@ -98,8 +98,8 @@ describe("ApplicationList", () => {
     const app = application("Birch", {
       is_waiting: true,
       interviews: [
-        interview("a", { at: "2026-10-01T15:00:00Z", completed: true, notes: "Asked about caching." }),
-        interview("b", { at: "2026-10-08T15:00:00Z", completed: true, notes: "Pairing exercise." }),
+        interview("a", { at: "2026-10-01T15:00:00Z", completed: true, how_it_went: "Asked about caching." }),
+        interview("b", { at: "2026-10-08T15:00:00Z", completed: true, how_it_went: "Pairing exercise." }),
         interview("c", { at: "2026-10-15T15:00:00Z", completed: true }),
       ],
     });

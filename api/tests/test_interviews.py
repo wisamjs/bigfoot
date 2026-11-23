@@ -125,59 +125,77 @@ def notes_url(app, interview):
     return f"/applications/{app['id']}/interviews/{interview['id']}"
 
 
-def test_notes_are_optional_and_can_be_added_changed_and_cleared(client, token):
+NOTES_FIELDS = ["what_they_asked", "how_it_went", "takeaway"]
+
+
+@pytest.mark.parametrize("field", NOTES_FIELDS)
+def test_each_notes_field_is_optional_and_can_be_added_changed_and_cleared_alone(client, token, field):
     app = create_application(client, token())
     interview = add(client, token(), app, "technical", PAST)
-    assert interview["notes"] is None
+    assert all(interview[f] is None for f in NOTES_FIELDS)
     url = notes_url(app, interview)
 
-    added = client.patch(url, json={"notes": "Asked about caching.\n\nDraw the diagram first."}, headers=token())
-    assert added.json()["notes"] == "Asked about caching.\n\nDraw the diagram first."
-    assert added.json()["kind"] == "technical" and added.json()["at"] == interview["at"]
-    assert reread(client, token(), app)["interviews"][0]["notes"] == added.json()["notes"]
+    added = client.patch(url, json={field: "Asked about caching.\n\nDraw the diagram first."}, headers=token())
+    assert added.json()[field] == "Asked about caching.\n\nDraw the diagram first."
+    # Saving one field leaves the other two alone.
+    assert all(added.json()[f] is None for f in NOTES_FIELDS if f != field)
+    assert reread(client, token(), app)["interviews"][0][field] == added.json()[field]
 
-    assert client.patch(url, json={"notes": "Went well."}, headers=token()).json()["notes"] == "Went well."
+    assert client.patch(url, json={field: "Went well."}, headers=token()).json()[field] == "Went well."
     # Changing another field leaves the notes alone.
-    assert client.patch(url, json={"kind": "leadership"}, headers=token()).json()["notes"] == "Went well."
-    assert client.patch(url, json={"notes": None}, headers=token()).json()["notes"] is None
+    assert client.patch(url, json={"kind": "leadership"}, headers=token()).json()[field] == "Went well."
+    assert client.patch(url, json={field: None}, headers=token()).json()[field] is None
 
 
 def test_notes_can_be_given_when_adding_an_interview(client, token):
     app = create_application(client, token())
-    body = {"kind": "technical", "at": FUTURE.isoformat(), "notes": "  Bring ID.\n"}
+    body = {
+        "kind": "technical",
+        "at": FUTURE.isoformat(),
+        "what_they_asked": "Why us?\nWhy now?",
+        "how_it_went": "  Bring ID.\n",
+        "takeaway": "Smile",
+    }
     res = client.post(f"/applications/{app['id']}/interviews", json=body, headers=token())
-    assert res.status_code == 201 and res.json()["notes"] == "Bring ID."
+    assert res.status_code == 201
+    assert [res.json()[f] for f in NOTES_FIELDS] == ["Why us?\nWhy now?", "Bring ID.", "Smile"]
 
 
-def test_blank_notes_are_stored_as_none(client, token):
+def test_the_old_notes_field_is_refused(client, token):
     app = create_application(client, token())
     url = notes_url(app, add(client, token(), app))
-    client.patch(url, json={"notes": "Something"}, headers=token())
-    assert client.patch(url, json={"notes": " \n "}, headers=token()).json()["notes"] is None
+    assert client.patch(url, json={"notes": "Old"}, headers=token()).status_code == 422
 
 
-def test_notes_have_a_generous_limit(client, token):
+@pytest.mark.parametrize("field", NOTES_FIELDS)
+def test_blank_notes_are_stored_as_none(client, token, field):
     app = create_application(client, token())
     url = notes_url(app, add(client, token(), app))
-    assert client.patch(url, json={"notes": "é" * 20_000}, headers=token()).json()["notes"] == "é" * 20_000
-    assert client.patch(url, json={"notes": "x" * 20_001}, headers=token()).status_code == 422
-    assert reread(client, token(), app)["interviews"][0]["notes"] == "é" * 20_000
+    client.patch(url, json={field: "Something"}, headers=token())
+    assert client.patch(url, json={field: " \n "}, headers=token()).json()[field] is None
 
 
-def test_deleting_an_interview_deletes_its_notes(client, token, settings):
-    import psycopg
+@pytest.mark.parametrize(("field", "limit"), [("what_they_asked", 20_000), ("how_it_went", 20_000), ("takeaway", 500)])
+def test_notes_fields_have_limits(client, token, field, limit):
+    app = create_application(client, token())
+    url = notes_url(app, add(client, token(), app))
+    assert client.patch(url, json={field: "é" * limit}, headers=token()).json()[field] == "é" * limit
+    assert client.patch(url, json={field: "x" * (limit + 1)}, headers=token()).status_code == 422
+    assert reread(client, token(), app)["interviews"][0][field] == "é" * limit
 
-    from tests.conftest import TEST_SCHEMA
 
+def test_deleting_an_interview_deletes_all_its_notes(client, token, settings):
     app = create_application(client, token())
     kept = add(client, token(), app, "recruiter_screen")
     gone = add(client, token(), app, "technical")
-    client.patch(notes_url(app, kept), json={"notes": "Kept"}, headers=token())
-    client.patch(notes_url(app, gone), json={"notes": "Gone"}, headers=token())
+    notes = {"what_they_asked": "Q", "how_it_went": "Kept", "takeaway": "T"}
+    client.patch(notes_url(app, kept), json=notes, headers=token())
+    client.patch(notes_url(app, gone), json={f: "Gone" for f in NOTES_FIELDS}, headers=token())
     assert client.delete(notes_url(app, gone), headers=token()).status_code == 204
     with psycopg.connect(settings.database_url, prepare_threshold=None) as conn:
-        conn.execute(f'set search_path to "{TEST_SCHEMA}"')
-        assert conn.execute("select notes from interviews").fetchall() == [("Kept",)]
+        conn.execute(sql.SQL("set search_path to {}").format(sql.Identifier(TEST_SCHEMA)))
+        rows = conn.execute("select what_they_asked, how_it_went, takeaway from interviews").fetchall()
+    assert rows == [("Q", "Kept", "T")]
 
 
 def test_delete_cancels_an_interview(client, token):

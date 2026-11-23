@@ -69,7 +69,11 @@ export async function addTestApplications(jobSeekerId = TEST_JOB_SEEKER_ID) {
     for (const [kind, days, hour] of interviews) {
       const body = { kind, at: at(days, hour) };
       // Every completed Interview has Interview notes, so cards show the notes mark.
-      if (days < 0) body.notes = "Went well. Asked about past projects.\n\nNext time: have a question ready about the team.";
+      if (days < 0) {
+        body.what_they_asked = "Tell me about a past project.\nHow do you test your work?";
+        body.how_it_went = "Went well. Asked about past projects.";
+        body.takeaway = "Have a question ready about the team.";
+      }
       await call(jobSeekerId, "POST", `/applications/${application.id}/interviews`, body);
     }
   }

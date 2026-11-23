@@ -34,7 +34,7 @@ export const MissingFields: Story = {
   },
 };
 
-/** The kind, the date and time, and the notes create the Interview. */
+/** The kind, the date and time, and How it went create the Interview. */
 export const Add: Story = {
   args: { applicationId: "datadog" },
   play: async ({ canvas, userEvent }) => {
@@ -42,12 +42,12 @@ export const Add: Story = {
     await userEvent.click(canvas.getByRole("button", { name: /^Date, / }));
     await userEvent.click(within(await screen.findByRole("grid")).getByText("15"));
     await userEvent.type(canvas.getByLabelText("Time"), "14:30");
-    await userEvent.type(canvas.getByRole("textbox", { name: "Interview notes" }), "Bring the system design notes");
+    await userEvent.type(canvas.getByRole("textbox", { name: "How it went" }), "Bring the system design notes");
     await userEvent.click(canvas.getByRole("button", { name: "Add Interview" }));
     await waitFor(() =>
       expect(createInterviewAction).toHaveBeenCalledWith(
         "datadog",
-        expect.objectContaining({ kind: "technical", notes: "Bring the system design notes" }),
+        expect.objectContaining({ kind: "technical", how_it_went: "Bring the system design notes" }),
       ),
     );
   },

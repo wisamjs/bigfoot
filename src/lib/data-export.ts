@@ -3,6 +3,8 @@
 
 import {
   locationText,
+  INTERVIEW_NOTES_FIELDS,
+  INTERVIEW_NOTES_LABELS,
   INTERVIEW_OPTIONS,
   OUTCOME_OPTIONS,
   STATUS_OPTIONS,
@@ -64,15 +66,16 @@ const CSV_COLUMNS: {
     header: "Interviews",
     value: (a) => a.interviews.map(interviewName).join("; "),
   },
-  {
-    // One paragraph per Interview that has notes, named as in the Interviews column.
-    header: "Interview notes",
-    value: (a) =>
+  // Interview notes, a column for each field: one paragraph per Interview that has it, named as in
+  // the Interviews column.
+  ...INTERVIEW_NOTES_FIELDS.map((field) => ({
+    header: INTERVIEW_NOTES_LABELS[field],
+    value: (a: Application) =>
       a.interviews
-        .filter((i) => i.notes)
-        .map((i) => `${interviewName(i)}: ${i.notes}`)
+        .filter((i) => i[field])
+        .map((i) => `${interviewName(i)}: ${i[field]}`)
         .join("\n\n"),
-  },
+  })),
   { header: "Sample Application", value: (a) => (a.is_sample ? "Yes" : "No") },
   { header: "Created", value: (a) => isoUtc(a.created_at) },
   { header: "Updated", value: (a) => isoUtc(a.updated_at) },

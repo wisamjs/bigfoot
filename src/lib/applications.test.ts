@@ -5,10 +5,12 @@ import {
   calendarDaysBetween,
   carriedForward,
   getApplicationGroups,
+  hasInterviewNotes,
   interviewSections,
   noteBlocks,
   paragraphs,
   parseDay,
+  questions,
   relativeDays,
   getCalendarInterviews,
   dashboardSummary,
@@ -30,7 +32,7 @@ import {
 } from "./applications";
 
 function interview(id: string, at: string, completed: boolean): Interview {
-  return { id, application_id: "a", kind: "technical", at, notes: null, completed, created_at: "", updated_at: "" };
+  return { id, application_id: "a", kind: "technical", at, what_they_asked: null, how_it_went: null, takeaway: null, completed, created_at: "", updated_at: "" };
 }
 
 function application(id: string, overrides: Partial<Application>): Application {
@@ -253,12 +255,28 @@ describe("noteBlocks", () => {
   });
 });
 
+describe("Interview notes", () => {
+  it("are there when any of the three fields has text", () => {
+    const none = { what_they_asked: null, how_it_went: null, takeaway: null };
+    expect(hasInterviewNotes(none)).toBe(false);
+    expect(hasInterviewNotes({ ...none, how_it_went: "  " })).toBe(false);
+    expect(hasInterviewNotes({ ...none, what_they_asked: "Why us?" })).toBe(true);
+    expect(hasInterviewNotes({ ...none, how_it_went: "Fine" })).toBe(true);
+    expect(hasInterviewNotes({ ...none, takeaway: "Slow down" })).toBe(true);
+  });
+
+  it("read What they asked as one question per line, trimmed, blank lines dropped", () => {
+    expect(questions(" Why us? \n\nWhy now?\n  ")).toEqual(["Why us?", "Why now?"]);
+    expect(questions(null)).toEqual([]);
+  });
+});
+
 describe("carriedForward", () => {
   const withNotes = (notes: string | null) =>
     application("a", {
       interviews: [
-        { ...interview("first", "2026-11-01T10:00:00Z", true), notes: "Old advice." },
-        { ...interview("last", "2026-11-05T10:00:00Z", true), kind: "hiring_manager", notes },
+        { ...interview("first", "2026-11-01T10:00:00Z", true), how_it_went: "Old advice." },
+        { ...interview("last", "2026-11-05T10:00:00Z", true), kind: "hiring_manager", how_it_went: notes },
         interview("next", "2026-12-01T10:00:00Z", false),
       ],
     });
@@ -271,7 +289,7 @@ describe("carriedForward", () => {
 
   it("is nothing when that Interview has no notes, or nothing is ahead", () => {
     expect(carriedForward(withNotes(null))).toBeNull();
-    expect(carriedForward(application("a", { interviews: [{ ...interview("x", "2026-11-01T10:00:00Z", true), notes: "Hi" }] }))).toBeNull();
+    expect(carriedForward(application("a", { interviews: [{ ...interview("x", "2026-11-01T10:00:00Z", true), how_it_went: "Hi" }] }))).toBeNull();
   });
 });
 

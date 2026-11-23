@@ -6,7 +6,15 @@ import { useId, useState } from "react";
 import { DaysFromToday, InterviewDayTime } from "@/features/applications/application-when";
 import { DateTile } from "@/features/applications/date-tile";
 import { interviewHref } from "@/features/applications/routes";
-import { INTERVIEW_OPTIONS, paragraphs, type Interview } from "@/lib/applications";
+import { TheyAsked } from "@/features/applications/interview-notes-form";
+import {
+  INTERVIEW_NOTES_LABELS,
+  INTERVIEW_OPTIONS,
+  hasInterviewNotes,
+  paragraphs,
+  questions,
+  type Interview,
+} from "@/lib/applications";
 
 /** Notes longer than this fold on a phone, behind Show all notes. */
 const FOLD_LENGTH = 140;
@@ -14,8 +22,8 @@ const FOLD_LENGTH = 140;
 /**
  * One Interview in the Application page's Interviews card (BIG-174): a date tile, its kind, its day
  * and time. One still ahead says how far off it is, and "Add Interview notes" while it has none; a
- * completed one is marked Completed and shows its Interview notes in full, folded to the first paragraph
- * on a phone behind Show all notes. The kind is a link whose area covers the row, so the whole row
+ * completed one is marked Completed and shows its Interview notes in full (BIG-179: How it went, They
+ * asked and the takeaway), folded to the first paragraph on a phone behind Show all notes. The kind is a link whose area covers the row, so the whole row
  * opens the Interview page, where it is edited; the notes sit above that, so their text can be
  * selected.
  */
@@ -50,9 +58,9 @@ export function InterviewRow({ applicationId, interview }: { applicationId: stri
             </>
           )}
         </p>
-        {completed && interview.notes && <Notes notes={interview.notes} />}
+        {completed && hasInterviewNotes(interview) && <Notes interview={interview} />}
       </div>
-      <RowEnd completed={completed} hasNotes={Boolean(interview.notes)} />
+      <RowEnd completed={completed} hasNotes={hasInterviewNotes(interview)} />
     </li>
   );
 }
@@ -69,12 +77,14 @@ function RowEnd({ completed, hasNotes }: { completed: boolean; hasNotes: boolean
 }
 
 /**
- * A completed Interview's notes, paragraph by paragraph. On a phone, long ones show the first
- * paragraph, cut to three lines, and Show all notes; wider screens always show them all.
+ * A completed Interview's notes: How it went paragraph by paragraph, They asked as a list, then the
+ * takeaway. On a phone, long ones show only the first of these, cut to three lines, and Show all
+ * notes; wider screens always show them all.
  */
-function Notes({ notes }: { notes: string }) {
+function Notes({ interview }: { interview: Interview }) {
   const id = useId();
   const [expanded, setExpanded] = useState(false);
+  const notes = interview.how_it_went ?? "";
   // Keyed by their text, numbered when one repeats.
   const seen = new Map<string, number>();
   const parts = paragraphs(notes).map((text) => {
@@ -82,21 +92,28 @@ function Notes({ notes }: { notes: string }) {
     seen.set(text, count);
     return { text, key: `${count}:${text}` };
   });
-  const folds = parts.length > 1 || notes.length > FOLD_LENGTH;
+  const asked = questions(interview.what_they_asked);
+  const takeaway = interview.takeaway;
+  const pieces = parts.length + (asked.length ? 1 : 0) + (takeaway ? 1 : 0);
+  const folds = pieces > 1 || notes.length > FOLD_LENGTH;
   const folded = folds && !expanded;
+  // On a phone, folded: only the first piece shows, cut to three lines.
+  const fold = (index: number) => (folded ? (index === 0 ? "max-sm:line-clamp-3" : "max-sm:hidden") : "");
   return (
     <div className="relative z-10 mt-3 flex flex-col items-start gap-3">
-      <div id={id} className="flex flex-col gap-3">
+      <div id={id} className="flex min-w-0 flex-col gap-3 text-base leading-[1.6] text-heading">
         {parts.map((part, index) => (
-          <p
-            key={part.key}
-            className={`m-0 whitespace-pre-line break-words text-base leading-[1.6] text-heading ${
-              folded ? (index === 0 ? "max-sm:line-clamp-3" : "max-sm:hidden") : ""
-            }`}
-          >
+          <p key={part.key} className={`m-0 whitespace-pre-line break-words ${fold(index)}`}>
             {part.text}
           </p>
         ))}
+        {asked.length > 0 && <TheyAsked questions={asked} className={`break-words ${fold(parts.length)}`} />}
+        {takeaway && (
+          <p className={`m-0 break-words ${fold(pieces - 1)}`}>
+            <span className="font-bold">{INTERVIEW_NOTES_LABELS.takeaway}: </span>
+            {takeaway}
+          </p>
+        )}
       </div>
       {folds && (
         <button

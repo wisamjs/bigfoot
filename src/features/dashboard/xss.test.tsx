@@ -52,7 +52,7 @@ function poisoned(payload: string, url: string) {
     application_id: "x",
     at: new Date(2026, 10, 20, 10, 0).toISOString(),
     completed: false,
-    notes: payload,
+    how_it_went: payload,
   });
   return application("x", {
     company: payload,
@@ -110,13 +110,13 @@ describe("the Add Interview form", () => {
     await user.click(within(screen.getByRole("grid")).getByText("20"));
     await user.type(screen.getByLabelText("Time"), "10:00");
     // Pastes rather than types: user-event reads braces and brackets as key names.
-    await user.click(screen.getByLabelText("Interview notes"));
+    await user.click(screen.getByLabelText("How it went"));
     await user.paste(payload);
     await user.click(screen.getByRole("button", { name: "Add Interview" }));
 
     expect(actions.createInterviewAction).toHaveBeenCalledWith(
       "birch",
-      expect.objectContaining({ notes: payload.trim() }),
+      expect.objectContaining({ how_it_went: payload.trim() }),
     );
     expectNothingInjected();
   });
@@ -167,7 +167,8 @@ describe("the Interview notes on the Interview page", () => {
     await user.click(screen.getByRole("button", { name: "Add Interview notes" }));
     await user.paste(payload);
     await user.tab();
-    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { notes: payload.trim() });
+    // Add Interview notes puts focus in the first field, What they asked.
+    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { what_they_asked: payload.trim() });
     expectNothingInjected();
     // Read back as text too.
     await user.click(screen.getByRole("button", { name: "Done" }));

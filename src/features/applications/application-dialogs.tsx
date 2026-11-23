@@ -5,7 +5,7 @@ import { deleteApplicationAction } from "@/app/applications/actions";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import type { SaveResult } from "@/hooks/use-save-status";
-import { INTERVIEW_OPTIONS, type Application, type Interview } from "@/lib/applications";
+import { hasInterviewNotes, INTERVIEW_OPTIONS, type Application, type Interview } from "@/lib/applications";
 
 /**
  * The body of every Delete dialog: says what will be deleted, and deletes only once confirmed.
@@ -111,7 +111,7 @@ export function DeleteInterviewDialog({
             {INTERVIEW_OPTIONS[interview.kind].label}
             {` on ${dayFormat.format(new Date(interview.at))}`}
           </span>{" "}
-          will be deleted{interview.notes ? ", with its Interview notes" : ""}. This can’t be undone.
+          will be deleted{hasInterviewNotes(interview) ? ", with its Interview notes" : ""}. This can’t be undone.
         </DeleteConfirmation>
       )}
     </Modal>

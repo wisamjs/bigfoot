@@ -74,7 +74,8 @@ describe("the Interview page heading", () => {
 
   it("shows no Done badge while the Application is In Progress", () => {
     openPage();
-    expect(screen.queryByText(/^Done/)).not.toBeInTheDocument();
+    // The notes card's Done button (its fields are open: completed, no notes) isn't a badge.
+    expect(screen.queryByText(/^Done ·/)).not.toBeInTheDocument();
     expect(screen.getByText(/^Completed · /)).toHaveClass("bg-success-soft");
   });
 
@@ -128,7 +129,8 @@ describe("the Interview page heading", () => {
     const { user } = openPage();
     await user.click(editButton());
     await user.selectOptions(screen.getByLabelText(/^Kind/), "leadership");
-    await user.click(screen.getByRole("button", { name: "Add Interview notes" }));
+    // A completed Interview with no notes opens with its notes fields.
+    await user.click(screen.getByLabelText("How it went"));
     expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { kind: "leadership" });
   });
 
