@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { signInWithGoogle, signOutAction } from "@/app/actions";
+import { signInWithGoogle } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 
 type Props = {
@@ -48,16 +48,6 @@ export function GoogleAuthButton({ children, variant = "brand", size = "md", cla
       <Button type="submit" variant={variant} size={size} className="w-full">
         <GoogleLogo />
         {children}
-      </Button>
-    </form>
-  );
-}
-
-export function SignOutButton() {
-  return (
-    <form action={signOutAction}>
-      <Button type="submit" variant="tertiary" size="sm">
-        Sign out
       </Button>
     </form>
   );

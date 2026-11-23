@@ -2,18 +2,56 @@
    Skeleton shapes are aria-hidden, with no role or text, so queries by role or text cannot
    reach them; this test counts them in the DOM. */
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { signOutAction } from "@/app/actions";
 import { AppHeader } from "./app-header";
+import { initials } from "./avatar";
 
 vi.mock("@/app/actions", () => ({ signInWithGoogle: vi.fn(), signOutAction: vi.fn() }));
 
+const user = { id: "u1", name: "Wisam Zaghal", firstName: "Wisam", email: "w@example.test", image: null };
+
+describe("AppHeader", () => {
+  it("opens the avatar's menu: who is signed in, Account and Sign out", async () => {
+    const pointer = userEvent.setup();
+    render(<AppHeader user={user} current="/dashboard" />);
+    const trigger = screen.getByRole("button", { name: "Account menu, Wisam Zaghal" });
+    expect(trigger).toHaveTextContent("WZ");
+
+    await pointer.click(trigger);
+    const menu = screen.getByRole("menu");
+    expect(within(menu).getByText("w@example.test")).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: "Account" })).toHaveAttribute("href", "/account");
+    await pointer.click(within(menu).getByRole("menuitem", { name: "Sign out" }));
+    expect(signOutAction).toHaveBeenCalled();
+  });
+
+  it("opens the menu from the keyboard", async () => {
+    const keyboard = userEvent.setup();
+    render(<AppHeader user={user} current="/account" />);
+    screen.getByRole("button", { name: /^Account menu/ }).focus();
+    await keyboard.keyboard("{Enter}");
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+  });
+});
+
 describe("AppHeader without a user", () => {
-  it("keeps the real nav and Sign out, with shapes where the job seeker goes", () => {
+  it("keeps the real nav, with a shape where the avatar goes", () => {
     render(<AppHeader current="/dashboard" />);
     const nav = screen.getByRole("navigation", { name: "Signed in" });
     expect(within(nav).getByRole("link", { name: "Dashboard" })).toHaveAttribute("aria-current", "page");
     expect(within(nav).getByRole("link", { name: "Account" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
-    expect(screen.getByRole("banner").querySelectorAll(".skeleton")).toHaveLength(3);
+    expect(screen.queryByRole("button", { name: /^Account menu/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("banner").querySelectorAll(".skeleton")).toHaveLength(1);
+  });
+});
+
+describe("initials", () => {
+  it("takes the first and last words' first letters", () => {
+    expect(initials("Wisam Zaghal")).toBe("WZ");
+    expect(initials("ana de la cruz")).toBe("AC");
+    expect(initials("Cher")).toBe("C");
+    expect(initials("  ")).toBe("?");
   });
 });

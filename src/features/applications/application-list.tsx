@@ -22,20 +22,23 @@ type Props = {
   linked?: boolean;
   /** Render as a decorative picture (landing page) instead of readable content. */
   decorative?: boolean;
+  /** Draw the table edge to edge inside a card (the dashboard's Applications card) instead of in a frame of its own. */
+  flush?: boolean;
 };
 
 /**
  * The dashboard's Applications: one table, a row per Application, ordered by what they are waiting
  * on (Waiting, Interview scheduled, Offer, and Done on request).
  */
-export function ApplicationList({ applications, showDone = false, linked = false, decorative = false }: Props) {
+export function ApplicationList({ applications, showDone = false, linked = false, decorative = false, flush = false }: Props) {
   const groups = getApplicationGroups(applications, { showDone });
   const { listRef, announcement, onChanged } = useMovedCard(applications, showDone);
   const a11y = decorative ? decorativeProps(groups) : {};
+  const look = flush ? FLUSH : FRAMED;
 
   if (groups.length === 0) {
     return (
-      <p className="m-0 rounded-control bg-surface p-6 text-center text-sm text-body">
+      <p className={`m-0 rounded-control bg-surface p-6 text-center text-sm text-body ${look.empty}`}>
         Open Applications show up here, ordered by whether an Interview is booked.
       </p>
     );
@@ -43,10 +46,10 @@ export function ApplicationList({ applications, showDone = false, linked = false
 
   return (
     <div ref={listRef} className={`flex flex-col gap-3 ${decorative ? "text-left shadow-2xl" : ""}`} {...a11y}>
-      {linked && <Announcement text={announcement} />}
-      <div className={frameClasses}>
-        <table className={tableClasses}>
-          <TableHead />
+      {linked && <Announcement text={announcement} flush={flush} />}
+      <div className={look.frame}>
+        <table className={look.table}>
+          <TableHead flush={flush} />
           <tbody>
             {groups.flatMap((group) =>
               group.applications.map((job) => (
@@ -66,10 +69,10 @@ export function ApplicationList({ applications, showDone = false, linked = false
   );
 }
 
-function TableHead() {
+function TableHead({ flush = false }: { flush?: boolean }) {
   return (
     <thead>
-      <tr className={headRowClasses}>
+      <tr className={(flush ? FLUSH : FRAMED).headRow}>
         <th scope="col" className={cellClasses}>
           Application
         </th>
@@ -91,9 +94,9 @@ function TableHead() {
 }
 
 /** Says what a row's Change Status menu just did, e.g. "Acme marked Rejected"; screen readers hear it politely. */
-function Announcement({ text }: { text: string }) {
+function Announcement({ text, flush }: { text: string; flush: boolean }) {
   return (
-    <output aria-live="polite" className={text ? "text-sm font-medium text-heading" : "sr-only"}>
+    <output aria-live="polite" className={text ? `text-sm font-medium text-heading ${flush ? "px-4 sm:px-6" : ""}` : "sr-only"}>
       {text}
     </output>
   );
@@ -105,11 +108,12 @@ function decorativeProps(groups: ApplicationGroup[]) {
 }
 
 /** The Applications table while it loads: its header and four rows in skeleton shapes. */
-export function ApplicationListSkeleton() {
+export function ApplicationListSkeleton({ flush = false }: { flush?: boolean }) {
+  const look = flush ? FLUSH : FRAMED;
   return (
-    <div aria-hidden className={frameClasses}>
-      <table className={tableClasses}>
-        <TableHead />
+    <div aria-hidden className={look.frame}>
+      <table className={look.table}>
+        <TableHead flush={flush} />
         <tbody>
           {[0, 1, 2, 3].map((row) => (
             <tr key={row} className={rowBorderClasses}>
@@ -145,3 +149,13 @@ const tableClasses =
   "w-full border-separate border-spacing-0 text-left [&_th:first-child]:rounded-tl-control [&_th:last-child]:rounded-tr-control [&_tr:last-child>td:first-child]:rounded-bl-control [&_tr:last-child>td:last-child]:rounded-br-control";
 
 const headRowClasses = "bg-surface text-xs font-medium uppercase tracking-[0.4px] text-heading";
+// Inside the dashboard's card: no frame or rounded corners, a tinted head row between rules, and
+// the first and last columns lined up with the card's heading.
+const flushTableClasses =
+  "w-full border-separate border-spacing-0 text-left [&_tr>*:first-child]:pl-4 sm:[&_tr>*:first-child]:pl-6 [&_tr>*:last-child]:pr-2 sm:[&_tr>*:last-child]:pr-4";
+const flushHeadRowClasses =
+  "bg-card-strong text-xs font-semibold uppercase tracking-[0.04em] text-body [&>th]:border-t [&>th]:border-line [&>th]:py-2.5";
+
+/** The table in a frame of its own (the landing page), or edge to edge in the dashboard's card. */
+const FRAMED = { frame: frameClasses, table: tableClasses, headRow: headRowClasses, empty: "" };
+const FLUSH = { frame: "", table: flushTableClasses, headRow: flushHeadRowClasses, empty: "mx-4 sm:mx-6" };

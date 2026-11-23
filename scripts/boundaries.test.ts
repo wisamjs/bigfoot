@@ -14,7 +14,7 @@ const IN = {
   app: "src/app/page.tsx",
   applications: "src/features/applications/status-tone.ts",
   auth: "src/features/auth/auth-card.tsx",
-  dashboard: "src/features/dashboard/next-interview-stat.tsx",
+  dashboard: "src/features/dashboard/dashboard-card.tsx",
   landing: "src/features/landing/hero.tsx",
   shell: "src/features/shell/app-footer.tsx",
   authTest: "src/features/auth/auth-card.test.tsx",

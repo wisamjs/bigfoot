@@ -23,7 +23,9 @@ export const SHOWN_IN = {
   "src/features/applications/sample-badge.tsx": "src/features/applications/application-list.stories.tsx",
   "src/features/applications/status-form.tsx": "src/features/applications/application-editor.stories.tsx",
   "src/features/applications/unsaved-changes.tsx": "src/features/applications/interview-editor.stories.tsx",
-  "src/features/auth/auth-button.tsx": "src/features/shell/app-header.stories.tsx",
+  "src/features/dashboard/dashboard-card.tsx": "src/features/dashboard/dashboard-applications.stories.tsx",
+  "src/features/shell/account-menu.tsx": "src/features/shell/app-header.stories.tsx",
+  "src/features/shell/avatar.tsx": "src/features/shell/app-header.stories.tsx",
   "src/features/shell/illustrations.tsx": "src/features/dashboard/interview-calendar.stories.tsx",
   "src/features/shell/wordmark.tsx": "src/features/shell/app-header.stories.tsx",
 };
@@ -35,9 +37,9 @@ export const SHOWN_IN = {
 export const ON_PAGE = {
   "src/features/applications/add-links.tsx": "/dashboard",
   "src/features/applications/deleted-notice.tsx": "/applications/[id]",
+  "src/features/auth/auth-button.tsx": "/sign-in",
   "src/features/auth/auth-card.tsx": "/sign-in",
   "src/features/auth/sign-in-note.tsx": "/sign-in",
-  "src/features/dashboard/dashboard-applications.tsx": "/dashboard",
   "src/features/landing/account-deleted-notice.tsx": "/",
   "src/features/landing/features.tsx": "/",
   "src/features/landing/footer.tsx": "/",

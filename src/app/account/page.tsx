@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
 import { AppFooter } from "@/features/shell/app-footer";
-import { AppHeader, Avatar } from "@/features/shell/app-header";
+import { AppHeader } from "@/features/shell/app-header";
+import { Avatar } from "@/features/shell/avatar";
 import { AccessTokens } from "@/features/account/access-tokens";
 import { DeleteAccountForm } from "@/features/account/delete-account-form";
 import { Download } from "lucide-react";
