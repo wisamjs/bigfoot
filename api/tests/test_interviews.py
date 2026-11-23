@@ -198,6 +198,65 @@ def test_deleting_an_interview_deletes_all_its_notes(client, token, settings):
     assert rows == [("Q", "Kept", "T")]
 
 
+# Prep notes
+
+
+def test_prep_notes_are_separate_from_notes_and_can_be_added_changed_and_cleared(client, token):
+    app = create_application(client, token())
+    interview = add(client, token(), app, "technical", FUTURE)
+    assert interview["prep_notes"] is None
+    url = notes_url(app, interview)
+
+    added = client.patch(url, json={"prep_notes": "Review caching.\n\nAsk about on-call."}, headers=token())
+    assert added.json()["prep_notes"] == "Review caching.\n\nAsk about on-call."
+    assert added.json()["how_it_went"] is None
+    assert reread(client, token(), app)["interviews"][0]["prep_notes"] == added.json()["prep_notes"]
+
+    # Changing the notes, or another field, leaves the Prep notes alone, and the other way round.
+    notes_added = client.patch(url, json={"how_it_went": "Went well."}, headers=token())
+    assert notes_added.json()["prep_notes"] == added.json()["prep_notes"]
+    assert client.patch(url, json={"prep_notes": "Just this."}, headers=token()).json()["how_it_went"] == "Went well."
+    assert client.patch(url, json={"prep_notes": None}, headers=token()).json()["prep_notes"] is None
+
+
+def test_prep_notes_can_be_given_when_adding_an_interview(client, token):
+    app = create_application(client, token())
+    body = {"kind": "technical", "at": FUTURE.isoformat(), "prep_notes": "  Bring ID.\n"}
+    res = client.post(f"/applications/{app['id']}/interviews", json=body, headers=token())
+    assert res.status_code == 201 and res.json()["prep_notes"] == "Bring ID." and res.json()["how_it_went"] is None
+
+
+def test_blank_prep_notes_are_stored_as_none(client, token):
+    app = create_application(client, token())
+    url = notes_url(app, add(client, token(), app))
+    client.patch(url, json={"prep_notes": "Something"}, headers=token())
+    assert client.patch(url, json={"prep_notes": " \n "}, headers=token()).json()["prep_notes"] is None
+
+
+def test_prep_notes_have_the_same_generous_limit_as_notes(client, token):
+    app = create_application(client, token())
+    url = notes_url(app, add(client, token(), app))
+    assert client.patch(url, json={"prep_notes": "é" * 20_000}, headers=token()).json()["prep_notes"] == "é" * 20_000
+    assert client.patch(url, json={"prep_notes": "x" * 20_001}, headers=token()).status_code == 422
+    assert reread(client, token(), app)["interviews"][0]["prep_notes"] == "é" * 20_000
+
+
+def test_deleting_an_interview_deletes_its_prep_notes(client, token, settings):
+    import psycopg
+
+    from tests.conftest import TEST_SCHEMA
+
+    app = create_application(client, token())
+    kept = add(client, token(), app, "recruiter_screen")
+    gone = add(client, token(), app, "technical")
+    client.patch(notes_url(app, kept), json={"prep_notes": "Kept"}, headers=token())
+    client.patch(notes_url(app, gone), json={"prep_notes": "Gone"}, headers=token())
+    assert client.delete(notes_url(app, gone), headers=token()).status_code == 204
+    with psycopg.connect(settings.database_url, prepare_threshold=None) as conn:
+        conn.execute(f'set search_path to "{TEST_SCHEMA}"')
+        assert conn.execute("select prep_notes from interviews").fetchall() == [("Kept",)]
+
+
 def test_delete_cancels_an_interview(client, token):
     app = create_application(client, token())
     interview = add(client, token(), app, "technical", FUTURE)

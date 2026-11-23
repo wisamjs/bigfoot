@@ -32,7 +32,7 @@ import {
 } from "./applications";
 
 function interview(id: string, at: string, completed: boolean): Interview {
-  return { id, application_id: "a", kind: "technical", at, what_they_asked: null, how_it_went: null, takeaway: null, completed, created_at: "", updated_at: "" };
+  return { id, application_id: "a", kind: "technical", at, what_they_asked: null, how_it_went: null, takeaway: null, prep_notes: null, completed, created_at: "", updated_at: "" };
 }
 
 function application(id: string, overrides: Partial<Application>): Application {

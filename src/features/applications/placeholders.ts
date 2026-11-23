@@ -11,4 +11,5 @@ export const PLACEHOLDERS = {
   what_they_asked: "One question per line",
   how_it_went: "What landed, what didn't",
   takeaway: "One thing to do differently",
+  prep_notes: "Review the caching chapter. Ask about the on-call rotation.",
 } as const;

@@ -74,6 +74,8 @@ export async function addTestApplications(jobSeekerId = TEST_JOB_SEEKER_ID) {
         body.how_it_went = "Went well. Asked about past projects.";
         body.takeaway = "Have a question ready about the team.";
       }
+      // Technical Interviews also have Prep notes, so the Before card and the folded Prep notes show (BIG-180).
+      if (kind === "technical") body.prep_notes = "Review the caching chapter.\nDraw the diagram first.\nAsk about the on-call rotation.";
       await call(jobSeekerId, "POST", `/applications/${application.id}/interviews`, body);
     }
   }

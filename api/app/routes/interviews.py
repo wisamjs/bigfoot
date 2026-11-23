@@ -62,7 +62,8 @@ def create_interview(
     request: Request, job_seeker: JobSeekerId, application_id: ApplicationId, body: InterviewCreate
 ) -> Interview:
     """Add an Interview to an Application. The kind and the date and time are required; kinds can
-    repeat, and Interview notes are optional. The number of Interviews per Application is capped (409)."""
+    repeat, and Interview notes and Prep notes are optional. The number of Interviews per Application is capped
+    (409)."""
     with pool(request).connection() as conn, conn.transaction():
         owned(conn, job_seeker, application_id, lock=True)
         count = conn.execute("select count(*) from interviews where application_id = %s", (application_id,)).fetchone()[
@@ -76,10 +77,18 @@ def create_interview(
             )
         row = conn.execute(
             sql.SQL(
-                "insert into interviews (application_id, kind, at, what_they_asked, how_it_went, takeaway)"
-                " values (%s, %s, %s, %s, %s, %s) returning {}"
+                "insert into interviews (application_id, kind, at, what_they_asked, how_it_went, takeaway, prep_notes)"
+                " values (%s, %s, %s, %s, %s, %s, %s) returning {}"
             ).format(INTERVIEW_COLUMNS),
-            (application_id, body.kind, body.at, body.what_they_asked, body.how_it_went, body.takeaway),
+            (
+                application_id,
+                body.kind,
+                body.at,
+                body.what_they_asked,
+                body.how_it_went,
+                body.takeaway,
+                body.prep_notes,
+            ),
         ).fetchone()
     return interview_view(row, datetime.now(UTC))
 
@@ -92,10 +101,10 @@ def update_interview(
     interview_id: InterviewId,
     body: InterviewPatch,
 ) -> Interview:
-    """Change an Interview's kind, date or Interview notes.
+    """Change an Interview's kind, date, Interview notes or Prep notes.
 
-    Only the fields sent change; send null for `what_they_asked`, `how_it_went` or `takeaway` to clear it.
-    The date can't be cleared.
+    Only the fields sent change; send null for `what_they_asked`, `how_it_went`, `takeaway` or `prep_notes` to
+    clear it. The date can't be cleared.
     """
     changes = body.model_dump(exclude_unset=True)
     assignments = [sql.SQL("{} = %s").format(sql.Identifier(name)) for name in changes]
@@ -117,7 +126,7 @@ def update_interview(
 def delete_interview(
     request: Request, job_seeker: JobSeekerId, application_id: ApplicationId, interview_id: InterviewId
 ) -> None:
-    """Delete an Interview, for example a cancelled one, and its Interview notes (all three fields) with it."""
+    """Delete an Interview, for example a cancelled one, and its Interview notes and Prep notes with it."""
     with pool(request).connection() as conn, conn.transaction():
         owned(conn, job_seeker, application_id)
         deleted = conn.execute(

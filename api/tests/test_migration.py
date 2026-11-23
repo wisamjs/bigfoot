@@ -153,7 +153,7 @@ def test_the_date_migration_deletes_undated_interviews_and_keeps_dated_ones(sett
     assert nullable == "NO"
 
 
-SPLIT_NOTES = "20261125000000_split_interview_notes.sql"
+SPLIT_NOTES = "20261125000001_split_interview_notes.sql"
 
 
 @pytest.mark.rebuilds_schema

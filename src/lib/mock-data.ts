@@ -16,6 +16,7 @@ function sample(
     what_they_asked: null,
     how_it_went: null,
     takeaway: null,
+    prep_notes: null,
     completed,
     created_at: "2026-11-01T00:00:00Z",
     updated_at: "2026-11-01T00:00:00Z",

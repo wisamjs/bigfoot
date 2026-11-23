@@ -80,6 +80,7 @@ const FIELD_LABELS: Record<string, string> = {
   what_they_asked: "What they asked",
   how_it_went: "How it went",
   takeaway: "Takeaway for next time",
+  prep_notes: "Prep notes",
   name: "Name",
 };
 

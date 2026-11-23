@@ -12,6 +12,7 @@ export function interview(id: string, overrides: Partial<Interview> = {}): Inter
     what_they_asked: null,
     how_it_went: null,
     takeaway: null,
+    prep_notes: null,
     completed: true,
     created_at: "",
     updated_at: "",

@@ -76,9 +76,9 @@ describe("applicationsCsv", () => {
           outcome: "not_the_right_fit",
           is_sample: true,
           interviews: [
-            { id: "i1", application_id: "a1", kind: "recruiter_screen", at: ts, what_they_asked: "Why us?\nSalary range?", how_it_went: "Friendly, asked about salary.", takeaway: null, completed: true, created_at: ts, updated_at: ts },
-            { id: "i2", application_id: "a1", kind: "technical", at: ts, what_they_asked: null, how_it_went: null, takeaway: null, completed: true, created_at: ts, updated_at: ts },
-            { id: "i3", application_id: "a1", kind: "fe_system_design", at: ts, what_they_asked: null, how_it_went: "Drew the cache late.\nStart with the diagram.", takeaway: "Diagram first.", completed: true, created_at: ts, updated_at: ts },
+            { id: "i1", application_id: "a1", kind: "recruiter_screen", at: ts, what_they_asked: "Why us?\nSalary range?", how_it_went: "Friendly, asked about salary.", takeaway: null, prep_notes: "Know the salary range.", completed: true, created_at: ts, updated_at: ts },
+            { id: "i2", application_id: "a1", kind: "technical", at: ts, what_they_asked: null, how_it_went: null, takeaway: null, prep_notes: null, completed: true, created_at: ts, updated_at: ts },
+            { id: "i3", application_id: "a1", kind: "fe_system_design", at: ts, what_they_asked: null, how_it_went: "Drew the cache late.\nStart with the diagram.", takeaway: "Diagram first.", prep_notes: null, completed: true, created_at: ts, updated_at: ts },
           ],
         }),
         application({ company: "Second" }),
@@ -102,6 +102,7 @@ describe("applicationsCsv", () => {
         "Recruiter Screen (2026-11-02T15:00:00Z): Friendly, asked about salary.\n\n" +
         "FE System Design (2026-11-02T15:00:00Z): Drew the cache late.\nStart with the diagram.",
       "Takeaway for next time": "FE System Design (2026-11-02T15:00:00Z): Diagram first.",
+      "Prep notes": "Recruiter Screen (2026-11-02T15:00:00Z): Know the salary range.",
       "Sample Application": "Yes",
       Created: "2026-11-02T15:00:00Z",
       Updated: "2026-11-02T15:00:00Z",
@@ -147,8 +148,8 @@ describe("dataExportJson", () => {
     expired: false,
   };
 
-  it("holds the profile, every Application field (is_sample and Interview notes included) and Access token names and dates", () => {
-    const noted = { id: "i1", application_id: "a1", kind: "technical", at: ts, what_they_asked: "Why us?", how_it_went: "Went well.", takeaway: "Smile.", completed: true, created_at: ts, updated_at: ts } as const;
+  it("holds the profile, every Application field (is_sample, Interview notes and Prep notes included) and Access token names and dates", () => {
+    const noted = { id: "i1", application_id: "a1", kind: "technical", at: ts, what_they_asked: "Why us?", how_it_went: "Went well.", takeaway: "Smile.", prep_notes: "Review caching.", completed: true, created_at: ts, updated_at: ts } as const;
     const app = application({ is_sample: true, interviews: [noted] });
     const record = {
       job_seeker_id: "google-123",
@@ -182,6 +183,7 @@ describe("dataExportJson", () => {
       what_they_asked: "Why us?",
       how_it_went: "Went well.",
       takeaway: "Smile.",
+      prep_notes: "Review caching.",
     });
   });
 

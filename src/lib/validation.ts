@@ -10,6 +10,7 @@ import {
   INTERVIEW_NOTES_FIELDS,
   INTERVIEW_NOTES_LABELS,
   INTERVIEW_NOTES_MAX_LENGTHS,
+  INTERVIEW_PREP_NOTES_MAX_LENGTH,
   LOCATIONS,
   OFFICE_DAYS,
   OUTCOMES,
@@ -182,7 +183,7 @@ function interviewDateError(fields: InterviewInput, creating: boolean) {
 export function interviewErrors(input: unknown, { creating = false }: { creating?: boolean } = {}): FieldErrors {
   if (typeof input !== "object" || input === null) return { form: "Nothing to save." };
   const fields = input as InterviewInput;
-  const errors: FieldErrors = unknownFields(input, ["kind", "at", ...INTERVIEW_NOTES_FIELDS]);
+  const errors: FieldErrors = unknownFields(input, ["kind", "at", ...INTERVIEW_NOTES_FIELDS, "prep_notes"]);
   const kind = interviewKindError(fields, creating);
   if (kind) errors.kind = kind;
   const at = interviewDateError(fields, creating);
@@ -191,6 +192,8 @@ export function interviewErrors(input: unknown, { creating = false }: { creating
     const problem = optionalText(fields[field], INTERVIEW_NOTES_LABELS[field], INTERVIEW_NOTES_MAX_LENGTHS[field]);
     if (problem) errors[field] = problem;
   }
+  const prepNotes = optionalText(fields.prep_notes, "Prep notes", INTERVIEW_PREP_NOTES_MAX_LENGTH);
+  if (prepNotes) errors.prep_notes = prepNotes;
   return errors;
 }
 

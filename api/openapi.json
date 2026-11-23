@@ -710,7 +710,7 @@
           "Interviews"
         ],
         "summary": "Add an Interview",
-        "description": "Add an Interview to an Application. The kind and the date and time are required; kinds can\nrepeat, and Interview notes are optional. The number of Interviews per Application is capped (409).",
+        "description": "Add an Interview to an Application. The kind and the date and time are required; kinds can\nrepeat, and Interview notes and Prep notes are optional. The number of Interviews per Application is capped\n(409).",
         "operationId": "create_interview_applications__application_id__interviews_post",
         "security": [
           {
@@ -804,7 +804,7 @@
           "Interviews"
         ],
         "summary": "Edit an Interview",
-        "description": "Change an Interview's kind, date or Interview notes.\n\nOnly the fields sent change; send null for `what_they_asked`, `how_it_went` or `takeaway` to clear it.\nThe date can't be cleared.",
+        "description": "Change an Interview's kind, date, Interview notes or Prep notes.\n\nOnly the fields sent change; send null for `what_they_asked`, `how_it_went`, `takeaway` or `prep_notes` to\nclear it. The date can't be cleared.",
         "operationId": "update_interview_applications__application_id__interviews__interview_id__patch",
         "security": [
           {
@@ -898,7 +898,7 @@
           "Interviews"
         ],
         "summary": "Delete an Interview",
-        "description": "Delete an Interview, for example a cancelled one, and its Interview notes (all three fields) with it.",
+        "description": "Delete an Interview, for example a cancelled one, and its Interview notes and Prep notes with it.",
         "operationId": "delete_interview_applications__application_id__interviews__interview_id__delete",
         "security": [
           {
@@ -1705,6 +1705,21 @@
               "Draw the diagram first."
             ]
           },
+          "prep_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prep Notes",
+            "description": "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its Interview notes, as plain text of at most 20,000 characters. Null when there are none.",
+            "examples": [
+              "Review the caching chapter. Ask about the on-call rotation."
+            ]
+          },
           "completed": {
             "type": "boolean",
             "title": "Completed",
@@ -1733,6 +1748,7 @@
           "what_they_asked",
           "how_it_went",
           "takeaway",
+          "prep_notes",
           "completed",
           "created_at",
           "updated_at"
@@ -1822,6 +1838,22 @@
             "description": "Takeaway for next time (GLOSSARY.md, Interview notes): one thing to do differently, as plain text of at most 500 characters. Null when there is none. Blank is stored as null.",
             "examples": [
               null
+            ]
+          },
+          "prep_notes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prep Notes",
+            "description": "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its Interview notes, as plain text of at most 20,000 characters. Null when there are none. Blank is stored as null.",
+            "examples": [
+              "Review the caching chapter. Ask about the on-call rotation."
             ]
           }
         },
@@ -1931,12 +1963,28 @@
             "examples": [
               "Draw the diagram first."
             ]
+          },
+          "prep_notes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prep Notes",
+            "description": "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its Interview notes, as plain text of at most 20,000 characters. Null when there are none. Blank is stored as null.",
+            "examples": [
+              "Review the caching chapter. Ask about the on-call rotation."
+            ]
           }
         },
         "additionalProperties": false,
         "type": "object",
         "title": "InterviewPatch",
-        "description": "Only the fields sent are changed; send null for one of the Interview notes fields to clear it. The date\ncan't be cleared."
+        "description": "Only the fields sent are changed; send null for one of the Interview notes fields or `prep_notes` to clear it.\n\nThe date can't be cleared."
       },
       "JobSeeker": {
         "properties": {

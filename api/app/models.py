@@ -13,6 +13,7 @@ from app.auth import ACCESS_TOKEN_PREFIX
 from app.domain import (
     COMPANY_MAX_LENGTH,
     HOW_IT_WENT_MAX_LENGTH,
+    INTERVIEW_PREP_NOTES_MAX_LENGTH,
     OFFICE_DAYS_MAX,
     OFFICE_DAYS_MIN,
     POSTING_URL_MAX_LENGTH,
@@ -70,6 +71,7 @@ PostingUrl = Annotated[str | None, Field(max_length=POSTING_URL_MAX_LENGTH), Aft
 WhatTheyAsked = Annotated[str | None, Field(max_length=WHAT_THEY_ASKED_MAX_LENGTH), AfterValidator(_optional_text)]
 HowItWent = Annotated[str | None, Field(max_length=HOW_IT_WENT_MAX_LENGTH), AfterValidator(_optional_text)]
 Takeaway = Annotated[str | None, Field(max_length=TAKEAWAY_MAX_LENGTH), AfterValidator(_optional_text)]
+PrepNotes = Annotated[str | None, Field(max_length=INTERVIEW_PREP_NOTES_MAX_LENGTH), AfterValidator(_optional_text)]
 
 
 def _has_a_time(value: Any) -> Any:
@@ -125,6 +127,12 @@ TAKEAWAY = (
 EXAMPLE_WHAT_THEY_ASKED = "How would you cache a feed?\nTell me about a disagreement with a designer."
 EXAMPLE_HOW_IT_WENT = "Friendly. The caching question ran long."
 EXAMPLE_TAKEAWAY = "Draw the diagram first."
+PREP_NOTES = (
+    "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its "
+    f"Interview notes, as plain text of at most {INTERVIEW_PREP_NOTES_MAX_LENGTH:,} characters. "
+    "Null when there are none."
+)
+EXAMPLE_PREP_NOTES = "Review the caching chapter. Ask about the on-call rotation."
 INTERVIEW_ORDER_DESCRIPTION = "Ordered by date."
 
 
@@ -214,11 +222,16 @@ class InterviewCreate(BaseModel):
     )
     how_it_went: HowItWent = Field(default=None, description=f"{HOW_IT_WENT} Blank is stored as null.", examples=[None])
     takeaway: Takeaway = Field(default=None, description=f"{TAKEAWAY} Blank is stored as null.", examples=[None])
+    prep_notes: PrepNotes = Field(
+        default=None, description=f"{PREP_NOTES} Blank is stored as null.", examples=[EXAMPLE_PREP_NOTES]
+    )
 
 
 class InterviewPatch(BaseModel):
-    """Only the fields sent are changed; send null for one of the Interview notes fields to clear it. The date
-    can't be cleared."""
+    """Only the fields sent are changed; send null for one of the Interview notes fields or `prep_notes` to clear it.
+
+    The date can't be cleared.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -234,6 +247,9 @@ class InterviewPatch(BaseModel):
     )
     takeaway: Takeaway = Field(
         default=None, description=f"{TAKEAWAY} Blank is stored as null.", examples=[EXAMPLE_TAKEAWAY]
+    )
+    prep_notes: PrepNotes = Field(
+        default=None, description=f"{PREP_NOTES} Blank is stored as null.", examples=[EXAMPLE_PREP_NOTES]
     )
 
     @field_validator("at")
@@ -261,6 +277,7 @@ class Interview(BaseModel):
     what_they_asked: str | None = Field(description=WHAT_THEY_ASKED, examples=[EXAMPLE_WHAT_THEY_ASKED])
     how_it_went: str | None = Field(description=HOW_IT_WENT, examples=[EXAMPLE_HOW_IT_WENT])
     takeaway: str | None = Field(description=TAKEAWAY, examples=[EXAMPLE_TAKEAWAY])
+    prep_notes: str | None = Field(description=PREP_NOTES, examples=[EXAMPLE_PREP_NOTES])
     completed: bool = Field(
         description="Derived, never stored: the date is in the past.",
         examples=[False],

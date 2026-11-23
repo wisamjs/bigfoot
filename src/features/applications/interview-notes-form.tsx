@@ -1,10 +1,11 @@
 "use client";
 
-import { Lightbulb, Pencil } from "lucide-react";
-import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import { Lightbulb, Pencil, Plus } from "lucide-react";
+import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { FieldError, invalidProps } from "@/components/ui/field-error";
 import { inputClasses } from "@/components/ui/input";
+import { GetReadyFor } from "@/features/applications/application-when";
 import { PLACEHOLDERS } from "@/features/applications/placeholders";
 import { SaveStatus } from "@/components/ui/save-status";
 import { useUnsavedChanges } from "@/features/applications/unsaved-changes";
@@ -13,6 +14,7 @@ import {
   INTERVIEW_NOTES_FIELDS,
   INTERVIEW_NOTES_LABELS,
   INTERVIEW_NOTES_MAX_LENGTHS,
+  INTERVIEW_PREP_NOTES_MAX_LENGTH,
   hasInterviewNotes,
   noteBlocks,
   questions,
@@ -23,11 +25,14 @@ import {
 /** How long typing must stop before an Interview notes field saves by itself. */
 export const NOTES_PAUSE_MS = 1000;
 
+/** A field of notes an Interview carries: one of the Interview notes fields, or its Prep notes. */
+export type NotesFieldName = InterviewNotesField | "prep_notes";
+
 /** What saving a field came to: the problem found before sending, and the save itself if one was sent. */
 export type NotesSave = { problem: string | undefined; sent: Promise<SaveResult> | null };
 
-/** The id of an Interview notes field's control. */
-export function notesFieldId(interviewId: string, field: InterviewNotesField) {
+/** The id of a notes field's control. */
+export function notesFieldId(interviewId: string, field: NotesFieldName) {
   return `${field}-${interviewId}`;
 }
 
@@ -36,7 +41,9 @@ export function notesFieldId(interviewId: string, field: InterviewNotesField) {
  * Takeaway for next time, written, read and cleared here. They read as text until edited: the
  * takeaway in its own card above, then How it went (lines starting "- " as a list) and They asked,
  * one question per line, with Edit at the top right (Add Interview notes while there are none).
- * A completed Interview with none opens straight into the three empty fields under "How did it go?".
+ * A completed Interview with none opens straight into the three empty fields under "How did it go?";
+ * an upcoming one is the "After" card, dashed with "Nothing yet, that's expected" until written
+ * (BIG-180).
  * Edit turns them into fields, as the Details card does its details, and Done goes back to the
  * text, unless a save has failed or a field is over its limit: then focus goes to that field.
  *
@@ -103,34 +110,16 @@ export function InterviewNotesForm({
     INTERVIEW_NOTES_FIELDS.map((field) => [field, drafts[field].draft.trim() || null]),
   ) as Record<InterviewNotesField, string | null>;
   const any = hasInterviewNotes(shown);
+  // An upcoming Interview with nothing written yet waits for afterwards.
+  const waiting = !interview.completed && !any && !editing;
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
       {!editing && shown.takeaway && <TakeawayCard takeaway={shown.takeaway} />}
-      <section
-        aria-labelledby={headingId}
-        className={`card flex min-w-0 flex-col gap-4 p-5 sm:p-7 ${editing ? "border-line-brand-subtle" : ""}`}
-      >
+      <section aria-labelledby={headingId} className={cardClasses(editing, waiting)}>
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <NotesHeading id={headingId} justFinished={editing && fresh && !asked} />
-          {!editing && (
-            <span className="inline-flex flex-wrap items-center gap-3">
-              {INTERVIEW_NOTES_FIELDS.map((field) => (
-                <SaveStatus
-                  key={field}
-                  status={trackers[field].status}
-                  label={INTERVIEW_NOTES_LABELS[field]}
-                  onRetry={trackers[field].retry}
-                />
-              ))}
-              {any && (
-                <Button ref={editRef} variant="tertiary" className="px-2.5" onClick={edit} aria-label="Edit Interview notes">
-                  <Pencil className="size-4" aria-hidden />
-                  Edit
-                </Button>
-              )}
-            </span>
-          )}
+          <NotesHeading id={headingId} justFinished={editing && fresh && !asked} after={!interview.completed} />
+          {!editing && <NotesStatuses trackers={trackers} canEdit={any} editRef={editRef} onEdit={edit} />}
         </div>
         {editing ? (
           <>
@@ -149,27 +138,89 @@ export function InterviewNotesForm({
             </Button>
           </>
         ) : (
-          <NotesRead notes={shown} editRef={editRef} onAdd={edit} />
+          <NotesRead notes={shown} waiting={waiting} editRef={editRef} onAdd={edit} />
         )}
       </section>
     </div>
   );
 }
 
+/** The notes card's classes: outlined while editing, dashed while waiting for afterwards. */
+function cardClasses(editing: boolean, waiting: boolean) {
+  return ["card flex min-w-0 flex-col gap-4 p-5 sm:p-7", editing && "border-line-brand-subtle", waiting && "border-dashed"]
+    .filter(Boolean)
+    .join(" ");
+}
+
+/** Each field's save status, then Edit once there is something to edit. */
+function NotesStatuses({
+  trackers,
+  canEdit,
+  editRef,
+  onEdit,
+}: {
+  trackers: Record<InterviewNotesField, SaveTracker>;
+  canEdit: boolean;
+  editRef: RefObject<HTMLButtonElement | null>;
+  onEdit: () => void;
+}) {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-3">
+      {INTERVIEW_NOTES_FIELDS.map((field) => (
+        <SaveStatus
+          key={field}
+          status={trackers[field].status}
+          label={INTERVIEW_NOTES_LABELS[field]}
+          onRetry={trackers[field].retry}
+        />
+      ))}
+      {canEdit && <EditButton label="Edit Interview notes" editRef={editRef} onEdit={onEdit} />}
+    </span>
+  );
+}
+
+/** The tertiary Edit button at a notes card's top right. */
+function EditButton({
+  label,
+  editRef,
+  onEdit,
+}: {
+  label: string;
+  editRef: RefObject<HTMLButtonElement | null>;
+  onEdit: () => void;
+}) {
+  return (
+    <Button ref={editRef} variant="tertiary" className="px-2.5" onClick={onEdit} aria-label={label}>
+      <Pencil className="size-4" aria-hidden />
+      Edit
+    </Button>
+  );
+}
+
 /** The notes read as text, or, with none, says so with Add Interview notes. */
 function NotesRead({
   notes,
+  waiting,
   editRef,
   onAdd,
 }: {
   notes: Record<InterviewNotesField, string | null>;
+  /** An upcoming Interview with none: dashed "Nothing yet" instead of "No Interview notes yet." */
+  waiting: boolean;
   editRef: RefObject<HTMLButtonElement | null>;
   onAdd: () => void;
 }) {
   if (hasInterviewNotes(notes)) return <NotesText howItWent={notes.how_it_went} whatTheyAsked={notes.what_they_asked} />;
   return (
     <div className="flex flex-col items-start gap-3">
-      <p className="m-0 text-base text-body">No Interview notes yet.</p>
+      {waiting ? (
+        <div className="flex flex-col gap-1">
+          <p className="m-0 text-base font-medium text-heading">Nothing yet, that’s expected</p>
+          <p className="m-0 text-base text-body">Write down how it went once it’s over.</p>
+        </div>
+      ) : (
+        <p className="m-0 text-base text-body">No Interview notes yet.</p>
+      )}
       <Button ref={editRef} variant="secondary" onClick={onAdd}>
         Add Interview notes
       </Button>
@@ -177,13 +228,19 @@ function NotesRead({
   );
 }
 
-/** The card's heading: "Interview notes", or "How did it go?" for a completed Interview just opened with none. */
-function NotesHeading({ id, justFinished }: { id: string; justFinished: boolean }) {
+/**
+ * The card's heading: "Interview notes" (under "After" before the Interview), or "How did it go?"
+ * for a completed Interview just opened with none.
+ */
+function NotesHeading({ id, justFinished, after }: { id: string; justFinished: boolean; after: boolean }) {
   if (!justFinished) {
     return (
-      <h2 id={id} className="m-0 text-2xl font-bold leading-[1.25] text-heading">
-        Interview notes
-      </h2>
+      <div className="flex flex-col gap-1">
+        {after && <p className="m-0 text-xs font-bold uppercase tracking-wide text-body">After</p>}
+        <h2 id={id} className="m-0 text-2xl font-bold leading-[1.25] text-heading">
+          Interview notes
+        </h2>
+      </div>
     );
   }
   return (
@@ -209,15 +266,15 @@ type NotesDraft = {
 };
 
 /**
- * The draft of one Interview notes field: saved about a second after typing stops and when the
+ * The draft of one Interview notes or Prep notes field: saved about a second after typing stops and when the
  * field is left (`flush`), one save at a time. A value saved elsewhere replaces the draft unless it
  * was typed over. Reports itself unsaved, so leaving the page asks first; Keep editing reopens it.
  */
-function useNotesDraft(
+function useNotesDraft<Field extends NotesFieldName>(
   interview: Interview,
-  field: InterviewNotesField,
-  onSave: (field: InterviewNotesField, value: string | null) => NotesSave,
-  reopen: (field: InterviewNotesField) => void,
+  field: Field,
+  onSave: (field: Field, value: string | null) => NotesSave,
+  reopen: (field: Field) => void,
 ): NotesDraft {
   const saved = interview[field];
   const [draft, setDraft] = useState(saved ?? "");
@@ -387,24 +444,29 @@ function NotesText({ howItWent, whatTheyAsked }: { howItWent: string | null; wha
   const asked = questions(whatTheyAsked);
   return (
     <div className="flex min-w-0 flex-col gap-4 break-words text-base leading-[1.6] text-body">
-      {howItWent && (
-        <div className="flex flex-col gap-3">
-          {noteBlocks(howItWent).map((block) =>
-            block.type === "list" ? (
-              <ul key={block.id} className="m-0 flex list-disc flex-col gap-1 pl-5">
-                {block.items.map((item) => (
-                  <li key={item.id}>{item.text}</li>
-                ))}
-              </ul>
-            ) : (
-              <p key={block.id} className="m-0 whitespace-pre-line">
-                {block.text}
-              </p>
-            ),
-          )}
-        </div>
-      )}
+      {howItWent && <NoteBlocks notes={howItWent} />}
       {asked.length > 0 && <TheyAsked questions={asked} />}
+    </div>
+  );
+}
+
+/** Some notes as text: lines starting "- " as a list, the rest as paragraphs. */
+function NoteBlocks({ notes }: { notes: string }) {
+  return (
+    <div className="flex flex-col gap-3">
+      {noteBlocks(notes).map((block) =>
+        block.type === "list" ? (
+          <ul key={block.id} className="m-0 flex list-disc flex-col gap-1 pl-5">
+            {block.items.map((item) => (
+              <li key={item.id}>{item.text}</li>
+            ))}
+          </ul>
+        ) : (
+          <p key={block.id} className="m-0 whitespace-pre-line">
+            {block.text}
+          </p>
+        ),
+      )}
     </div>
   );
 }
@@ -430,5 +492,244 @@ export function TheyAsked({ questions: asked, className = "" }: { questions: str
         ))}
       </ul>
     </div>
+  );
+}
+
+/**
+ * An Interview's Prep notes card (BIG-180): what the job seeker writes to get ready for it, kept
+ * apart from the Interview notes about how it went. Before the Interview it is the first card
+ * ("Get ready for Wednesday"); afterwards it folds under the Interview notes, as their first lines
+ * until opened, and is left out while empty. It reads, edits and saves like the Interview notes:
+ * as text until Edit, saving by itself with its own save status.
+ */
+export function PrepNotesForm({
+  interview,
+  tracker,
+  onSave,
+}: {
+  interview: Interview;
+  /** Owned by the Interview page's editor, so "Saved" outlasts this form re-rendering with the saved notes. */
+  tracker: SaveTracker;
+  /** Checks and saves the notes, or says why not. */
+  onSave: (notes: string | null) => NotesSave;
+}) {
+  const folded = interview.completed;
+  const [editing, setEditing] = useState(false);
+  // Folded Prep notes show their first lines until opened.
+  const [open, setOpen] = useState(false);
+  const headingId = useId();
+  const editRef = useRef<HTMLButtonElement>(null);
+  const wasEditingRef = useRef(editing);
+  const draft = useNotesDraft(
+    interview,
+    "prep_notes",
+    (_field, value) => onSave(value),
+    () => setEditing(true),
+  );
+  const notes = draft.draft.trim() || null;
+
+  // Back from the field, focus returns to the button that opened it.
+  useEffect(() => {
+    if (wasEditingRef.current && !editing) editRef.current?.focus();
+    wasEditingRef.current = editing;
+  }, [editing]);
+
+  function done() {
+    const problem = draft.flush();
+    if (problem || tracker.status.phase === "failed") {
+      document.getElementById(notesFieldId(interview.id, "prep_notes"))?.focus();
+      return;
+    }
+    setEditing(false);
+  }
+
+  // Prep notes of a completed Interview that has none aren't shown empty.
+  if (folded && !notes && !editing) return null;
+  return (
+    <section aria-labelledby={headingId} className={cardClasses(editing, false)}>
+      <PrepHeading
+        id={headingId}
+        folded={folded}
+        status={<SaveStatus status={tracker.status} label={PREP_NOTES_TITLE} onRetry={tracker.retry} />}
+        edit={
+          prepCanEdit({ editing, notes, folded, open }) && (
+            <EditButton label={`Edit ${PREP_NOTES_TITLE}`} editRef={editRef} onEdit={() => setEditing(true)} />
+          )
+        }
+      />
+      {!folded && <GetReadyLine at={interview.at} />}
+      {editing ? (
+        <PrepField id={notesFieldId(interview.id, "prep_notes")} headingId={headingId} draft={draft} onDone={done} />
+      ) : (
+        <PrepBody
+          notes={notes}
+          folded={folded}
+          open={open}
+          editRef={editRef}
+          onToggle={() => setOpen((was) => !was)}
+          onAdd={() => setEditing(true)}
+        />
+      )}
+    </section>
+  );
+}
+
+const PREP_NOTES_TITLE = "Prep notes";
+
+/** Edit shows once there are notes to edit in full: not while editing, nor while they are still folded. */
+function prepCanEdit({
+  editing,
+  notes,
+  folded,
+  open,
+}: {
+  editing: boolean;
+  notes: string | null;
+  folded: boolean;
+  open: boolean;
+}) {
+  return !editing && Boolean(notes) && (!folded || open);
+}
+
+/** How many lines of folded Prep notes show before "Show Prep notes". */
+const FOLDED_LINES = 2;
+
+/** The first lines of some notes, with "…" when there are more. */
+function firstLines(notes: string): string {
+  const lines = notes.split("\n").filter((line) => line.trim());
+  return lines.length > FOLDED_LINES ? `${lines.slice(0, FOLDED_LINES).join("\n")}\n…` : lines.join("\n");
+}
+
+/** "Get ready for Wednesday", above Prep notes before the Interview. */
+function GetReadyLine({ at }: { at: string }) {
+  return (
+    <p className="m-0 text-base font-medium text-heading">
+      <GetReadyFor at={at} />
+    </p>
+  );
+}
+
+/** The Prep notes heading, with its "Before" label while the Interview is ahead, the save status and Edit. */
+function PrepHeading({
+  id,
+  folded,
+  status,
+  edit,
+}: {
+  id: string;
+  folded: boolean;
+  status: ReactNode;
+  edit: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex min-w-0 flex-col gap-1">
+        {!folded && <p className="m-0 text-xs font-bold uppercase tracking-wide text-body">Before</p>}
+        <h2 id={id} className={`m-0 font-bold leading-[1.25] text-heading ${folded ? "text-xl" : "text-2xl"}`}>
+          {PREP_NOTES_TITLE}
+        </h2>
+      </div>
+      <span className="inline-flex flex-wrap items-center gap-3">
+        {status}
+        {edit}
+      </span>
+    </div>
+  );
+}
+
+/** Prep notes read as text, or, with none, the Add Prep notes button. */
+function PrepBody({
+  notes,
+  folded,
+  open,
+  editRef,
+  onToggle,
+  onAdd,
+}: {
+  notes: string | null;
+  folded: boolean;
+  open: boolean;
+  editRef: RefObject<HTMLButtonElement | null>;
+  onToggle: () => void;
+  onAdd: () => void;
+}) {
+  if (notes) return <PrepRead notes={notes} folded={folded} open={open} onToggle={onToggle} />;
+  return (
+    <Button ref={editRef} variant="secondary" className="self-start" onClick={onAdd}>
+      <Plus className="size-4" aria-hidden />
+      Add {PREP_NOTES_TITLE}
+    </Button>
+  );
+}
+
+/** Prep notes as text: whole, or while folded their first lines with Show or Hide Prep notes. */
+function PrepRead({
+  notes,
+  folded,
+  open,
+  onToggle,
+}: {
+  notes: string;
+  folded: boolean;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <>
+      <div className="flex min-w-0 flex-col gap-4 break-words text-base leading-[1.6] text-body">
+        <NoteBlocks notes={folded && !open ? firstLines(notes) : notes} />
+      </div>
+      {folded && (
+        <Button variant="tertiary" className="self-start px-2.5" onClick={onToggle} aria-expanded={open}>
+          {open ? `Hide ${PREP_NOTES_TITLE}` : `Show ${PREP_NOTES_TITLE}`}
+        </Button>
+      )}
+    </>
+  );
+}
+
+/** The Prep notes textarea that saves by itself, its character count near the limit, its error and Done. */
+function PrepField({
+  id,
+  headingId,
+  draft,
+  onDone,
+}: {
+  id: string;
+  headingId: string;
+  draft: NotesDraft;
+  onDone: () => void;
+}) {
+  const errorId = `${id}-error`;
+  const max = INTERVIEW_PREP_NOTES_MAX_LENGTH;
+  return (
+    <>
+      <div>
+        <textarea
+          id={id}
+          aria-labelledby={headingId}
+          value={draft.draft}
+          rows={3}
+          maxLength={max}
+          placeholder={PLACEHOLDERS.prep_notes}
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- Pressing Edit or Add is the request to write.
+          autoFocus
+          onChange={(e) => draft.change(e.target.value)}
+          onBlur={() => void draft.flush()}
+          {...invalidProps(errorId, draft.error)}
+          // Grows with the notes where the browser supports it; otherwise it scrolls and resizes.
+          className={`${inputClasses} field-sizing-content max-h-96 min-h-20 resize-y`}
+        />
+        {draft.draft.length >= max * 0.9 && (
+          <span className="text-xs font-medium text-body">
+            {draft.draft.length.toLocaleString("en-CA")} of {max.toLocaleString("en-CA")} characters
+          </span>
+        )}
+        <FieldError id={errorId} error={draft.error} />
+      </div>
+      <Button onClick={onDone} className="self-start">
+        Done
+      </Button>
+    </>
   );
 }

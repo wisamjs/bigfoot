@@ -62,6 +62,9 @@ export const INTERVIEW_NOTES_LABELS: Record<InterviewNotesField, string> = {
   takeaway: "Takeaway for next time",
 };
 
+/** The longest Prep notes the API stores, in characters: the same as Interview notes. */
+export const INTERVIEW_PREP_NOTES_MAX_LENGTH = 20_000;
+
 /** The longest text each Application field stores, in characters; the API and database enforce them too. */
 export const APPLICATION_MAX_LENGTHS = {
   company: 200,
@@ -82,6 +85,8 @@ export type Interview = {
   how_it_went: string | null;
   /** Interview notes, Takeaway for next time: one short line; null when there is none. */
   takeaway: string | null;
+  /** Prep notes: plain text the job seeker wrote to get ready for this Interview; null when there are none. */
+  prep_notes: string | null;
   /** Derived by the API: the date is in the past. */
   completed: boolean;
   created_at: string;
@@ -121,7 +126,7 @@ export type ApplicationFields = Omit<
 >;
 
 /** What a form sends: `at` is null while no date and time has been given, and validation refuses it. */
-export type InterviewFields = Pick<Interview, "kind" | InterviewNotesField> & { at: string | null };
+export type InterviewFields = Pick<Interview, "kind" | InterviewNotesField | "prep_notes"> & { at: string | null };
 
 /** Whether an Interview has Interview notes: any of the three fields has text. */
 export function hasInterviewNotes(interview: Pick<Interview, InterviewNotesField>): boolean {

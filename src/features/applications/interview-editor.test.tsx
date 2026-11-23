@@ -257,7 +257,7 @@ describe("Interview notes", () => {
 
   it("says there are none, with Add Interview notes, which opens the field", async () => {
     const { user } = openPage({ ...oak, interviews: [blank] }, blank);
-    expect(screen.getByText("No Interview notes yet.")).toBeInTheDocument();
+    expect(screen.getByText("Nothing yet, that’s expected")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Edit Interview notes" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Add Interview notes" }));
     expect(askedField()).toHaveFocus();
@@ -347,5 +347,133 @@ describe("Interview notes", () => {
     expect(await screen.findByText(/You have unsaved changes/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Keep editing" }));
     await waitFor(() => expect(takeawayField()).toHaveFocus());
+  });
+});
+
+describe("Prep notes", () => {
+  const DAY = 86_400_000;
+  const inDays = (days: number) => new Date(Date.now() + days * DAY).toISOString();
+  const weekdayOf = (iso: string) => new Intl.DateTimeFormat(undefined, { weekday: "long" }).format(new Date(iso));
+  const dateOf = (iso: string) => new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(iso));
+
+  function page(overrides: Parameters<typeof interview>[1]) {
+    const current = interview("i1", { application_id: "elm", kind: "technical", ...overrides });
+    return openPage(application("elm", { company: "Elm", interviews: [current] }), current);
+  }
+
+  const prepField = () => screen.getByRole("textbox", { name: "Prep notes" });
+
+  describe("before the Interview", () => {
+    it("shows the Before card first, then the After card waiting for how it went", () => {
+      page({ completed: false, at: inDays(2), prep_notes: "Review caching" });
+      const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
+      expect(headings).toEqual(["Prep notes", "Interview notes"]);
+      expect(screen.getByText("Review caching")).toBeInTheDocument();
+      expect(screen.getByText("Nothing yet, that’s expected")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Add Interview notes" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Show Prep notes/ })).not.toBeInTheDocument();
+    });
+
+    it("says \"Get ready for\" the weekday within the next 7 days, and the date after that", async () => {
+      const soon = inDays(2);
+      page({ completed: false, at: soon });
+      expect(await screen.findByText(`Get ready for ${weekdayOf(soon)}`)).toBeInTheDocument();
+    });
+
+    it("says \"Get ready for\" the date when it is a week or more away", async () => {
+      const later = inDays(20);
+      page({ completed: false, at: later });
+      expect(await screen.findByText(`Get ready for ${dateOf(later)}`)).toBeInTheDocument();
+    });
+
+    it("offers Add Prep notes while there are none, which opens the field", async () => {
+      const { user } = page({ completed: false, at: inDays(2) });
+      await user.click(screen.getByRole("button", { name: "Add Prep notes" }));
+      expect(prepField()).toHaveFocus();
+    });
+
+    it("saves Prep notes by themselves, on their own field, leaving Interview notes alone", async () => {
+      const { user } = page({ completed: false, at: inDays(2) });
+      await user.click(screen.getByRole("button", { name: "Add Prep notes" }));
+      await user.type(prepField(), "  Review caching ");
+      await user.tab();
+      expect(actions.updateInterviewAction).toHaveBeenCalledExactlyOnceWith("elm", "i1", { prep_notes: "Review caching" });
+      expect(await screen.findByText("Saved")).toBeInTheDocument();
+    });
+
+    it("edits with Edit and Done, gives focus back to Edit, and shows what was typed", async () => {
+      const { user } = page({ completed: false, at: inDays(2), prep_notes: "Review caching" });
+      await user.click(screen.getByRole("button", { name: "Edit Prep notes" }));
+      await user.type(prepField(), " and queues");
+      await user.click(screen.getByRole("button", { name: "Done" }));
+      expect(actions.updateInterviewAction).toHaveBeenCalledWith("elm", "i1", { prep_notes: "Review caching and queues" });
+      expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+      await waitFor(() => expect(screen.getByRole("button", { name: "Edit Prep notes" })).toHaveFocus());
+    });
+
+    it("asks before leaving with Prep notes not yet saved", async () => {
+      const { user } = page({ completed: false, at: inDays(2) });
+      vi.mocked(actions.updateInterviewAction).mockReturnValue(new Promise(() => {}));
+      await user.click(screen.getByRole("button", { name: "Add Prep notes" }));
+      await user.type(prepField(), "Review caching");
+      await user.click(screen.getByRole("link", { name: "Dashboard" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent("You have unsaved changes.");
+    });
+
+    it("shows Interview notes normally once written, in the After card", () => {
+      page({ completed: false, at: inDays(2), how_it_went: "Moved up." });
+      expect(screen.getByText("Moved up.")).toBeInTheDocument();
+      expect(screen.queryByText("Nothing yet, that’s expected")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("after the Interview", () => {
+    it("shows Interview notes first, then Prep notes folded to their first lines", async () => {
+      const { user } = page({ how_it_went: "Went well.", prep_notes: "One\nTwo\nThree\nFour" });
+      const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
+      expect(headings).toEqual(["Interview notes", "Prep notes"]);
+      const prep = screen.getByRole("region", { name: "Prep notes" });
+      expect(prep).toHaveTextContent("One");
+      expect(prep).toHaveTextContent("Two");
+      expect(prep).not.toHaveTextContent("Three");
+      expect(within(prep).queryByRole("button", { name: "Edit Prep notes" })).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Show Prep notes" }));
+      expect(prep).toHaveTextContent("Four");
+      expect(screen.getByRole("button", { name: "Hide Prep notes" })).toHaveAttribute("aria-expanded", "true");
+      expect(within(prep).getByRole("button", { name: "Edit Prep notes" })).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Hide Prep notes" }));
+      expect(prep).not.toHaveTextContent("Four");
+    });
+
+    it("leaves the Prep notes card out when there are none", () => {
+      page({ how_it_went: "Went well." });
+      expect(screen.queryByRole("region", { name: "Prep notes" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Prep notes/ })).not.toBeInTheDocument();
+    });
+
+    it("edits folded Prep notes once opened", async () => {
+      const { user } = page({ prep_notes: "Review caching" });
+      await user.click(screen.getByRole("button", { name: "Show Prep notes" }));
+      await user.click(screen.getByRole("button", { name: "Edit Prep notes" }));
+      await user.type(prepField(), "!");
+      await user.tab();
+      expect(actions.updateInterviewAction).toHaveBeenCalledExactlyOnceWith("elm", "i1", { prep_notes: "Review caching!" });
+    });
+  });
+
+  it("is named in the delete warning, with the Interview notes when both are there", async () => {
+    const { user } = page({ how_it_went: "Went well.", prep_notes: "Review caching" });
+    await user.click(screen.getByRole("button", { name: /^More actions/ }));
+    await user.click(screen.getByRole("menuitem", { name: "Delete Interview" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("will be deleted, with its Interview notes and Prep notes. This can’t be undone.");
+  });
+
+  it("is named alone in the delete warning when it is all there is", async () => {
+    const { user } = page({ prep_notes: "Review caching" });
+    await user.click(screen.getByRole("button", { name: /^More actions/ }));
+    await user.click(screen.getByRole("menuitem", { name: "Delete Interview" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("will be deleted, with its Prep notes. This can’t be undone.");
   });
 });
