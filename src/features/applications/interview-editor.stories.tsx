@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, mocked, screen, waitFor, within } from "storybook/test";
 import { deleteInterviewAndLeaveAction, updateInterviewAction } from "@/app/applications/actions";
+import { prepLookBack, takeawayShowsOn } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
 import { InterviewEditor } from "./interview-editor";
 import { UnsavedChanges } from "./unsaved-changes";
@@ -37,6 +38,30 @@ const lumen = application("lumen", {
   ],
 });
 const [, completed, upcoming] = lumen.interviews;
+
+// Other Applications: Tilth Agritech has a Hiring Manager tomorrow, so Lumen Bio's Hiring Manager
+// takeaway shows on its prep too; Fernway Health, rejected, had a Technical Deep-Dive with a takeaway.
+const tilth = application("tilth", {
+  company: "Tilth Agritech",
+  is_waiting: false,
+  waiting_since: null,
+  interviews: [interview("tilth-manager", { application_id: "tilth", kind: "hiring_manager", at: daysFromNow(1, 10), completed: false })],
+});
+const fernway = application("fernway", {
+  company: "Fernway Health",
+  status: "done",
+  outcome: "rejected",
+  is_waiting: false,
+  interviews: [
+    interview("fernway-dive", {
+      application_id: "fernway",
+      kind: "technical_deep_dive",
+      at: daysFromNow(-30, 14),
+      takeaway: "Draw the system before talking through it.",
+    }),
+  ],
+});
+const everyApplication = [lumen, tilth, fernway];
 const empty = { what_they_asked: null, how_it_went: null, takeaway: null };
 
 const meta = {
@@ -74,8 +99,25 @@ export const Completed: Story = {
 };
 
 /**
+ * Says where its takeaway shows (BIG-181): on the prep for this Application's next Interview and
+ * for the next Hiring Manager elsewhere, each a link to that Interview's page.
+ */
+export const TakeawayShowsOnPrep: Story = {
+  args: { showsOn: takeawayShowsOn(everyApplication, lumen, completed) },
+  play: async ({ canvas }) => {
+    const takeaway = canvas.getByRole("region", { name: "Takeaway for next time" });
+    const links = await within(takeaway).findAllByRole("link");
+    await expect(links.map((link) => link.textContent)).toEqual([
+      "Shows on the prep for Technical Deep-Dive · in 2 days",
+      "Shows on the prep for your next Hiring Manager · Tilth Agritech, tomorrow",
+    ]);
+    await expect(links[0]).toHaveAttribute("href", "/applications/lumen/interviews/deep-dive");
+  },
+};
+
+/**
  * Coming up, with no Prep notes: "Upcoming · in 2 days", the Before card offering Add Prep notes
- * ("Get ready for <weekday>") and the After card waiting for how it went, which Add Interview
+ * ("Get ready for <weekday>"), with nothing to look back at, and the After card waiting for how it went, which Add Interview
  * notes opens into the three fields.
  */
 export const Upcoming: Story = {
@@ -87,6 +129,25 @@ export const Upcoming: Story = {
     await expect(canvas.getByText("Nothing yet, that’s expected")).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Add Interview notes" }));
     await expect(canvas.getByRole("textbox", { name: "What they asked" })).toHaveFocus();
+  },
+};
+
+/**
+ * Coming up, looking back (BIG-181): the Before card shows this Application's Hiring Manager
+ * takeaway, the last Technical Deep-Dive's at Fernway Health (a Done Application), and They asked
+ * last time.
+ */
+export const UpcomingWithTakeaways: Story = {
+  args: { interview: upcoming, lookBack: prepLookBack(everyApplication, lumen, upcoming) },
+  play: async ({ canvas }) => {
+    const prep = canvas.getByRole("region", { name: "Prep notes" });
+    const takeaways = within(within(prep).getByRole("list", { name: "Takeaways for this Interview" })).getAllByRole("listitem");
+    await expect(takeaways).toHaveLength(2);
+    await expect(await within(takeaways[0]).findByText(/^[A-Z][a-z]{2} \d+$/)).toBeVisible();
+    await expect(takeaways[0]).toHaveTextContent("Lead with the decision, then the trade-off, then what I would measure.");
+    await expect(takeaways[1]).toHaveTextContent("From your last Technical Deep-Dive · Fernway Health");
+    await expect(within(within(prep).getByRole("list", { name: "They asked last time" })).getAllByRole("listitem")).toHaveLength(3);
+    await expect(within(prep).getByRole("button", { name: "Add Prep notes" })).toBeVisible();
   },
 };
 
@@ -253,11 +314,40 @@ export const Delete: Story = {
 
 export const LongText: Story = {
   args: {
+    showsOn: takeawayShowsOn(everyApplication, lumen, completed),
     interview: {
       ...completed,
       takeaway: "Write the decision, the trade-off and the measure on a card before the call, and read it aloud once.",
       how_it_went:
         "A very long first line of Interview notes that goes on and on past the edge of the field so it has to wrap onto the next line and then some more.\n\nThen a second paragraph with follow-ups: thank-you email, send the take-home by Friday, ask about the team’s on-call rotation.",
     },
+  },
+};
+
+// Lumen Bio with a long takeaway and a long question behind its Technical Deep-Dive.
+const longLumen = {
+  ...lumen,
+  interviews: lumen.interviews.map((i) =>
+    i.id === "manager"
+      ? {
+          ...i,
+          takeaway: "Write the decision, the trade-off and the measure on a card before the call, and read it aloud once.",
+          what_they_asked:
+            "Walk me through the most complicated cross-team migration you have led, including how you kept every stakeholder informed along the way?",
+        }
+      : i,
+  ),
+};
+
+/** Long takeaways, company names and questions looked back at wrap inside their boxes. */
+export const UpcomingLongText: Story = {
+  args: {
+    app: longLumen,
+    interview: upcoming,
+    lookBack: prepLookBack(
+      [longLumen, tilth, { ...fernway, company: "Northern Lights Software Engineering Co-operative of British Columbia" }],
+      longLumen,
+      upcoming,
+    ),
   },
 };

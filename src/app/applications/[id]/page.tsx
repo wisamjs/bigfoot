@@ -8,6 +8,7 @@ import { FormPage } from "@/features/shell/form-page";
 import { UnsavedChanges } from "@/features/applications/unsaved-changes";
 import { ADDED_PARAM } from "@/features/applications/routes";
 import { getApplications } from "@/lib/api";
+import { nextInterview, prepLookBack } from "@/lib/applications";
 import { getCurrentUser } from "@/lib/dal";
 
 export const metadata: Metadata = {
@@ -29,6 +30,7 @@ async function Application({ params, searchParams }: Pick<PageProps<"/applicatio
   // Application, a malformed id and another job seeker's all come up empty, and look the same.
   const app = applications.find((a) => a.id === id);
   if (!app) notFound();
+  const next = nextInterview(app);
   return (
     <FormPage
       header={<AppHeader user={user} current="/dashboard" />}
@@ -37,7 +39,12 @@ async function Application({ params, searchParams }: Pick<PageProps<"/applicatio
       guard={UnsavedChanges}
       wide
     >
-      <ApplicationEditor app={app} justAdded={query[ADDED_PARAM] === "1"} />
+      <ApplicationEditor
+        app={app}
+        justAdded={query[ADDED_PARAM] === "1"}
+        // Worked out here, from every Application, so only what shows reaches the browser.
+        lookBack={next ? prepLookBack(applications, app, next) : undefined}
+      />
     </FormPage>
   );
 }

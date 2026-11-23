@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/applications/actions";
-import type { Application } from "@/lib/applications";
+import { prepLookBack, type Application, type PrepLookBack } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
 import { ApplicationEditor } from "./application-editor";
 import { UnsavedChanges } from "./unsaved-changes";
@@ -37,19 +37,19 @@ const DAY = 86_400_000;
 const daysFromNow = (days: number) => new Date(Date.now() + days * DAY).toISOString();
 
 /** What the Application page puts around the editor. */
-function Editor({ app, justAdded = false }: { app: Application; justAdded?: boolean }) {
+function Editor({ app, justAdded = false, lookBack }: { app: Application; justAdded?: boolean; lookBack?: PrepLookBack }) {
   return (
     <main>
       <UnsavedChanges>
-        <ApplicationEditor app={app} justAdded={justAdded} />
+        <ApplicationEditor app={app} justAdded={justAdded} lookBack={lookBack} />
       </UnsavedChanges>
     </main>
   );
 }
 
-function open(app: Application, { justAdded = false } = {}) {
+function open(app: Application, { justAdded = false, lookBack }: { justAdded?: boolean; lookBack?: PrepLookBack } = {}) {
   const user = userEvent.setup();
-  const utils = render(<Editor app={app} justAdded={justAdded} />);
+  const utils = render(<Editor app={app} justAdded={justAdded} lookBack={lookBack} />);
   return { user, ...utils };
 }
 
@@ -153,20 +153,43 @@ describe("the Interviews", () => {
     is_waiting: false,
     interviews: [
       interview("screen", { application_id: "oak", kind: "recruiter_screen", at: daysFromNow(-10), how_it_went: "Friendly.\n\nLead with the decision next time." }),
-      interview("manager", { application_id: "oak", kind: "hiring_manager", at: daysFromNow(-3), how_it_went: "Went long.\n\nAsk about on-call." }),
+      interview("manager", {
+        application_id: "oak",
+        kind: "hiring_manager",
+        at: daysFromNow(-3),
+        how_it_went: "Went long.\n\nAsk about on-call.",
+        takeaway: "Lead with the decision.",
+      }),
       interview("deep", { application_id: "oak", kind: "technical_deep_dive", at: daysFromNow(2), completed: false }),
       interview("lead", { application_id: "oak", kind: "leadership", at: daysFromNow(9), completed: false }),
     ],
   });
   const rows = () => screen.getAllByRole("link", { name: /^Open Interview: / }).map((row) => row.textContent);
 
-  it("shows the next one first, on its own, with the last paragraph of the last completed one's notes", () => {
-    open(oak);
+  it("shows the next one first, on its own, with the takeaways that apply and They asked last time", () => {
+    const elm = application("elm", {
+      company: "Elm Health",
+      interviews: [interview("elm-dive", { application_id: "elm", kind: "technical_deep_dive", at: daysFromNow(-20), takeaway: "Draw it first." })],
+    });
+    const asked = { ...oak, interviews: oak.interviews.map((i) => (i.id === "manager" ? { ...i, what_they_asked: "Why Oak?\nWhat would you not build?" } : i)) };
+    open(asked, { lookBack: prepLookBack([asked, elm], asked, asked.interviews[2]) });
     const next = screen.getByRole("region", { name: "Technical Deep-Dive" });
     expect(next).toHaveTextContent(/Next up · in 2 days/);
-    expect(within(next).getByText("Carried forward from Hiring Manager notes")).toBeInTheDocument();
-    expect(within(next).getByText("Ask about on-call.")).toBeInTheDocument();
+    const takeaways = within(within(next).getByRole("list", { name: "Takeaways for this Interview" })).getAllByRole("listitem");
+    expect(takeaways.map((t) => t.textContent)).toEqual([
+      expect.stringMatching(/^Takeaway from Hiring Manager · .+Lead with the decision\.$/),
+      "From your last Technical Deep-Dive · Elm HealthDraw it first.",
+    ]);
+    expect(within(within(next).getByRole("list", { name: "They asked last time" })).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(next).queryByText(/Carried forward/)).not.toBeInTheDocument();
     expect(within(next).getByRole("link", { name: "Add Interview notes" })).toHaveAttribute("href", "/applications/oak/interviews/deep");
+  });
+
+  it("looks back at nothing when there is nothing to look back at", () => {
+    open(oak);
+    const next = screen.getByRole("region", { name: "Technical Deep-Dive" });
+    expect(within(next).queryByRole("list", { name: "Takeaways for this Interview" })).not.toBeInTheDocument();
+    expect(within(next).queryByRole("list", { name: "They asked last time" })).not.toBeInTheDocument();
   });
 
   it("lists the rest under Later, then the completed ones under Completed, newest first", () => {

@@ -83,6 +83,13 @@ export function DaysFromToday({ date }: { date: string }) {
 const readyDayFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
 const weekdayFormat = new Intl.DateTimeFormat(undefined, { weekday: "long" });
 
+/** An Interview's day without the year or time, "Nov 13", in the viewer's time zone. Nothing until hydration. */
+export function ShortDay({ at }: { at: string }) {
+  const isClient = useIsClient();
+  if (!isClient) return null;
+  return <time dateTime={at}>{readyDayFormat.format(new Date(at))}</time>;
+}
+
 /**
  * "Get ready for Wednesday" when the Interview is within the next 7 days, otherwise "Get ready for
  * Dec 2" (BIG-180). Just "Get ready" until hydration, which can't know the viewer's time zone.

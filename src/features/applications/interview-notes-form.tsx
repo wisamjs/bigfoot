@@ -7,6 +7,7 @@ import { FieldError, invalidProps } from "@/components/ui/field-error";
 import { inputClasses } from "@/components/ui/input";
 import { GetReadyFor } from "@/features/applications/application-when";
 import { PLACEHOLDERS } from "@/features/applications/placeholders";
+import { PrepLookBack, TakeawayShowsOn } from "@/features/applications/prep-look-back";
 import { SaveStatus } from "@/components/ui/save-status";
 import { useUnsavedChanges } from "@/features/applications/unsaved-changes";
 import type { SaveResult, SaveTracker } from "@/hooks/use-save-status";
@@ -20,7 +21,13 @@ import {
   questions,
   type Interview,
   type InterviewNotesField,
+  type PrepLookBack as LookBack,
+  type PrepTakeaway,
 } from "@/lib/applications";
+
+/** Nothing to look back at, or nowhere a takeaway shows: what a page with no other Applications passes. */
+export const NO_LOOK_BACK: LookBack = { takeaways: [], theyAsked: null };
+const NOWHERE: PrepTakeaway[] = [];
 
 /** How long typing must stop before an Interview notes field saves by itself. */
 export const NOTES_PAUSE_MS = 1000;
@@ -43,7 +50,7 @@ export function notesFieldId(interviewId: string, field: NotesFieldName) {
  * one question per line, with Edit at the top right (Add Interview notes while there are none).
  * A completed Interview with none opens straight into the three empty fields under "How did it go?";
  * an upcoming one is the "After" card, dashed with "Nothing yet, that's expected" until written
- * (BIG-180).
+ * (BIG-180). The takeaway's card says which upcoming Interviews' prep it shows on (BIG-181).
  * Edit turns them into fields, as the Details card does its details, and Done goes back to the
  * text, unless a save has failed or a field is over its limit: then focus goes to that field.
  *
@@ -57,8 +64,11 @@ export function InterviewNotesForm({
   interview,
   trackers,
   onSave,
+  showsOn = NOWHERE,
 }: {
   interview: Interview;
+  /** The upcoming Interviews whose prep shows this one's takeaway (takeawayShowsOn). */
+  showsOn?: PrepTakeaway[];
   /** One per field, owned by the Interview page's editor, so "Saved" outlasts this form re-rendering with the saved value. */
   trackers: Record<InterviewNotesField, SaveTracker>;
   /** Checks and saves one field, or says why not. */
@@ -115,7 +125,7 @@ export function InterviewNotesForm({
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      {!editing && shown.takeaway && <TakeawayCard takeaway={shown.takeaway} />}
+      {!editing && shown.takeaway && <TakeawayCard takeaway={shown.takeaway} showsOn={showsOn} />}
       <section aria-labelledby={headingId} className={cardClasses(editing, waiting)}>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <NotesHeading id={headingId} justFinished={editing && fresh && !asked} after={!interview.completed} />
@@ -420,8 +430,8 @@ function NotesField({
   );
 }
 
-/** The takeaway, read: its own card above the notes, with a lightbulb. */
-function TakeawayCard({ takeaway }: { takeaway: string }) {
+/** The takeaway, read: its own card above the notes, with a lightbulb and where it shows. */
+function TakeawayCard({ takeaway, showsOn }: { takeaway: string; showsOn: PrepTakeaway[] }) {
   const headingId = useId();
   return (
     <section
@@ -434,6 +444,7 @@ function TakeawayCard({ takeaway }: { takeaway: string }) {
           {INTERVIEW_NOTES_LABELS.takeaway}
         </h2>
         <p className="m-0 mt-1 break-words text-lg font-bold leading-[1.4] text-heading">{takeaway}</p>
+        <TakeawayShowsOn showsOn={showsOn} />
       </div>
     </section>
   );
@@ -500,14 +511,18 @@ export function TheyAsked({ questions: asked, className = "" }: { questions: str
  * apart from the Interview notes about how it went. Before the Interview it is the first card
  * ("Get ready for Wednesday"); afterwards it folds under the Interview notes, as their first lines
  * until opened, and is left out while empty. It reads, edits and saves like the Interview notes:
- * as text until Edit, saving by itself with its own save status.
+ * as text until Edit, saving by itself with its own save status. Before the Interview, the
+ * takeaways that apply and They asked last time show under its heading (BIG-181).
  */
 export function PrepNotesForm({
   interview,
   tracker,
   onSave,
+  lookBack = NO_LOOK_BACK,
 }: {
   interview: Interview;
+  /** The takeaways and They asked last time this Interview's prep looks back at (prepLookBack). */
+  lookBack?: LookBack;
   /** Owned by the Interview page's editor, so "Saved" outlasts this form re-rendering with the saved notes. */
   tracker: SaveTracker;
   /** Checks and saves the notes, or says why not. */
@@ -558,6 +573,7 @@ export function PrepNotesForm({
         }
       />
       {!folded && <GetReadyLine at={interview.at} />}
+      {!folded && <PrepLookBack lookBack={lookBack} />}
       {editing ? (
         <PrepField id={notesFieldId(interview.id, "prep_notes")} headingId={headingId} draft={draft} onDone={done} />
       ) : (
