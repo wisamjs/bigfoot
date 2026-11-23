@@ -56,10 +56,12 @@ export const PAGES = [
         expect: "Stays hidden while you edit",
       },
       { name: "salary-revealed", steps: [{ click: "button", text: "Reveal" }], expect: "Hide" },
+      // ⋯ holds Delete application, and on a phone the Change Status choices too. Mark done…, the
+      // wide-screen menu, is checked by its story (application-editor.stories.tsx, MarkDone).
       {
-        name: "mark-done-menu",
-        steps: [{ click: "button", text: "Mark done", pointer: true }],
-        expect: "Mark Rejected",
+        name: "more-menu",
+        steps: [{ click: 'button[aria-label^="More actions"]', pointer: true }],
+        expect: "Delete application",
       },
       {
         name: "delete-confirmation",

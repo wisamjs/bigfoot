@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, Ellipsis, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { updateApplicationAction } from "@/app/applications/actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -133,13 +133,14 @@ function MoreMenu({
   onDelete: () => void;
 }) {
   const [container, setContainer] = useState<HTMLElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   // Only read while the menu is open, so the server's guess never shows.
   const wide = useMediaQuery("(min-width: 640px)");
   return (
     <div ref={setContainer} className="relative">
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button variant="secondary" className="px-3" aria-label={`More actions, ${app.company}`}>
+          <Button ref={triggerRef} variant="secondary" className="px-3" aria-label={`More actions, ${app.company}`}>
             <Ellipsis className="size-4" aria-hidden />
           </Button>
         </DropdownMenuTrigger>
@@ -150,7 +151,14 @@ function MoreMenu({
               <DropdownMenuSeparator />
             </>
           )}
-          <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+          <DropdownMenuItem
+            variant="destructive"
+            onSelect={() => {
+              // The dialog returns focus to what had it when it opened: ⋯, not this item, which goes.
+              triggerRef.current?.focus();
+              onDelete();
+            }}
+          >
             <Trash2 aria-hidden />
             Delete application
           </DropdownMenuItem>

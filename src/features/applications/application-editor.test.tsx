@@ -122,7 +122,7 @@ describe("deleting an Application", () => {
     await user.click(screen.getByRole("button", { name: "More actions, Birch" }));
     expect(screen.queryByRole("menuitem", { name: /^Mark/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole("menuitem", { name: "Delete application" }));
-    return { user, confirm: screen.getByRole("dialog", { name: "Delete application?" }) };
+    return { user, confirm: await screen.findByRole("dialog", { name: "Delete application?" }) };
   }
 
   it("asks for confirmation first, and Cancel keeps the Application", async () => {

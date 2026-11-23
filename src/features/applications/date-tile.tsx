@@ -26,7 +26,7 @@ export function DateTile({ at, tone = "outline", className = "" }: { at: string 
       aria-hidden
       className={`flex size-14 shrink-0 flex-col items-center justify-center rounded-card border leading-none ${TONES[tone]} ${className}`}
     >
-      <span className="text-[11px] font-bold uppercase tracking-[0.06em] opacity-80">
+      <span className="text-[11px] font-bold uppercase tracking-[0.06em]">
         {date ? monthFormat.format(date) : ""}
       </span>
       <span className="mt-1 text-xl font-bold">{date ? date.getDate() : at ? "" : "?"}</span>
