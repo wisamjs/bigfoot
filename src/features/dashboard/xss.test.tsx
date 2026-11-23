@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/applications/actions";
 import { ApplicationEditor } from "@/features/applications/application-editor";
 import { ApplicationHeading } from "@/features/applications/application-heading";
+import { InterviewEditor } from "@/features/applications/interview-editor";
 import { NewApplicationForm } from "@/features/applications/new-application-form";
 import { NewInterviewForm } from "@/features/applications/new-interview-form";
 import { getUpcoming } from "@/lib/applications";
@@ -24,7 +25,7 @@ vi.mock("@/app/applications/actions", () => ({
   deleteApplicationAction: vi.fn(),
   createInterviewAction: vi.fn(),
   updateInterviewAction: vi.fn(),
-  deleteInterviewAction: vi.fn(),
+  deleteInterviewAndLeaveAction: vi.fn(),
 }));
 
 declare global {
@@ -89,7 +90,8 @@ describe.each(XSS_TEXT.map((payload, n) => [payload, XSS_URLS[n]] as const))("%j
     );
     expect(screen.getByRole("heading", { level: 1, name: payload.trim() })).toBeInTheDocument();
     expect(screen.getByLabelText("Location")).toHaveValue(payload);
-    expect(screen.getByLabelText(/^Interview notes/)).toHaveValue(payload);
+    // Interview notes show as the first line of the Interview's row, which opens its Interview page.
+    expect(screen.getByRole("link", { name: /^Open Interview: / })).toHaveTextContent(payload.trim().split("\n")[0]);
     expect(screen.queryByRole("link", { name: /job posting/ })).not.toBeInTheDocument();
     expectNothingInjected();
   });
@@ -156,15 +158,11 @@ describe("the edit forms on the Application page", () => {
     return { user, fill };
   }
 
-  it.each(XSS_TEXT)("send %j exactly as typed, from the details and the Interview notes", async (payload) => {
+  it.each(XSS_TEXT)("send %j exactly as typed, from the details", async (payload) => {
     const { user, fill } = await openBirch();
     await fill("Location", payload);
     await user.tab();
     expect(actions.updateApplicationAction).toHaveBeenCalledWith("birch", { location: payload.trim() });
-
-    await fill(/^Interview notes/, payload);
-    await user.tab();
-    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { notes: payload.trim() });
     expectNothingInjected();
   });
 
@@ -182,6 +180,20 @@ describe("the edit forms on the Application page", () => {
       expect(actions.updateApplicationAction).not.toHaveBeenCalled();
     },
   );
+});
+
+describe("the Interview notes on the Interview page", () => {
+  it.each(XSS_TEXT)("send %j exactly as typed", async (payload) => {
+    const user = userEvent.setup();
+    const current = interview("i1", { application_id: "birch", at: new Date(2026, 10, 20, 10, 0).toISOString(), completed: false });
+    render(<InterviewEditor app={application("birch", { company: "Birch", interviews: [current] })} interview={current} />);
+    const notes = screen.getByLabelText("Interview notes");
+    await user.click(notes);
+    await user.paste(payload);
+    await user.tab();
+    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { notes: payload.trim() });
+    expectNothingInjected();
+  });
 });
 
 describe("the Add form", () => {

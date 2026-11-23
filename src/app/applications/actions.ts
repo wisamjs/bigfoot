@@ -2,7 +2,7 @@
 
 import { refresh, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
-import { INTERVIEW_DELETED_HREF } from "@/features/applications/routes";
+import { interviewDeletedHref } from "@/features/applications/routes";
 import * as api from "@/lib/api";
 import { applicationsTag, type ApplicationFields, type InterviewFields } from "@/lib/applications";
 import { findCurrentUser } from "@/lib/dal";
@@ -79,17 +79,13 @@ export async function updateInterviewAction(applicationId: string, id: string, c
   );
 }
 
-export async function deleteInterviewAction(applicationId: string, id: string) {
-  return run((jobSeekerId) => api.deleteInterview(jobSeekerId, applicationId, id));
-}
-
 /**
- * Deletes the Interview from its own page and goes to the dashboard, which says "Interview
+ * Deletes the Interview from its own page and goes to its Application page, which says "Interview
  * deleted". Like deleteApplicationAction, it redirects instead of refreshing a page that would
  * now be not found.
  */
 export async function deleteInterviewAndLeaveAction(applicationId: string, id: string) {
   const result = await run((jobSeekerId) => api.deleteInterview(jobSeekerId, applicationId, id), {}, { refreshes: false });
-  if (result.ok) redirect(INTERVIEW_DELETED_HREF);
+  if (result.ok) redirect(interviewDeletedHref(applicationId));
   return result;
 }

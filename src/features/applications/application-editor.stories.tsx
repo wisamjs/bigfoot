@@ -28,6 +28,37 @@ type Story = StoryObj<typeof meta>;
 /** In Progress, with a completed Interview and an upcoming one. */
 export const Default: Story = {};
 
+/**
+ * Many Interviews, each a row that opens its Interview page: past ones muted, the next one marked
+ * Next, the first line of any Interview notes, and Date needed for one with no date.
+ */
+export const ManyInterviews: Story = {
+  args: {
+    app: {
+      ...datadog,
+      interviews: [
+        ...datadog.interviews.map((interview, i) =>
+          i === 0 ? { ...interview, notes: "Friendly. Asked why I left my last role.\nFollow up next week." } : interview,
+        ),
+        ...["2026-12-08T17:00:00Z", "2026-12-15T17:00:00Z", "2026-12-22T17:00:00Z"].map((at, i) => ({
+          ...datadog.interviews[0],
+          id: `later-${i}`,
+          kind: (["behavioural", "leadership", "onsite_loop"] as const)[i],
+          at,
+          notes: i === 1 ? "A very long first line of Interview notes that goes on and on past the edge of the row so it has to be cut short" : null,
+          completed: false,
+        })),
+        { ...datadog.interviews[0], id: "undated", kind: "people_management" as const, at: null, notes: null, completed: true },
+      ],
+    },
+  },
+  play: async ({ canvas }) => {
+    const rows = canvas.getAllByRole("link", { name: /^Open Interview: / });
+    await expect(rows.at(-1)).toHaveAccessibleName(/Date needed/);
+    await expect(rows[0]).toHaveAttribute("href", expect.stringMatching(/^\/applications\/datadog\/interviews\//));
+  },
+};
+
 /** Done with an Offer. */
 export const Offer: Story = { args: { app: ramp } };
 

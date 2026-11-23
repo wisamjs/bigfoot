@@ -6,7 +6,6 @@ import { AppHeader } from "@/features/shell/app-header";
 import { AddApplicationLink, AddInterviewLink } from "@/features/applications/add-links";
 import { InterviewCalendar, InterviewCalendarSkeleton } from "@/features/dashboard/interview-calendar";
 import { NextInterviewStat } from "@/features/dashboard/next-interview-stat";
-import { DeletedNotice } from "@/features/dashboard/deleted-notice";
 import { DashboardApplications } from "@/features/dashboard/dashboard-applications";
 import { ApplicationListSkeleton } from "@/features/applications/application-list";
 import { StatCard } from "@/components/ui/stat-card";
@@ -36,7 +35,6 @@ async function Dashboard() {
   return (
     <DashboardLayout
       header={<AppHeader user={user} current="/dashboard" />}
-      notice={<DeletedNotice />}
       greeting={`Welcome back, ${user.firstName}`}
       addInterview={<AddInterviewLink />}
       addApplication={<AddApplicationLink />}
@@ -90,7 +88,6 @@ function DashboardSkeleton() {
 /** The dashboard's layout, shared by the page and its skeleton so they can't drift apart. */
 function DashboardLayout({
   header,
-  notice,
   greeting,
   addInterview,
   addApplication,
@@ -100,8 +97,6 @@ function DashboardLayout({
   applications,
 }: {
   header: ReactNode;
-  /** A status line over the greeting, such as "Interview deleted"; the skeleton has none. */
-  notice?: ReactNode;
   greeting: ReactNode;
   addInterview: ReactNode;
   addApplication: ReactNode;
@@ -115,7 +110,6 @@ function DashboardLayout({
       {header}
       <main id="main" className="py-12">
         <Container className="flex flex-col gap-8">
-          {notice}
           <div>
             <h1 className="m-0 mb-2 text-[32px] font-bold leading-[1.1] text-heading md:text-[40px]">
               {greeting}

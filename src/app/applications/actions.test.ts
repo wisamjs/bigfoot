@@ -7,7 +7,6 @@ import { XSS_URLS } from "@/test/xss";
 import {
   createApplicationAction,
   deleteApplicationAction,
-  deleteInterviewAction,
   deleteInterviewAndLeaveAction,
   updateApplicationAction,
   updateInterviewAction,
@@ -45,9 +44,6 @@ describe("dashboard Server Actions", () => {
     expect(refresh).toHaveBeenCalledOnce();
     // The cached read the Dashboard and Application page share is expired, for this job seeker only.
     expect(updateTag).toHaveBeenCalledExactlyOnceWith("applications:seeker-1");
-
-    await deleteInterviewAction("app-1", "int-1");
-    expect(api.deleteInterview).toHaveBeenCalledWith("seeker-1", "app-1", "int-1");
   });
 
   it("ask a signed-out job seeker to sign in again, without calling the API", async () => {
@@ -132,10 +128,10 @@ describe("adding and deleting an Application", () => {
 });
 
 describe("deleting an Interview from its own page", () => {
-  it("deletes it and goes to the dashboard, which says so, without refreshing the page it was on", async () => {
+  it("deletes it and goes to its Application page, which says so, without refreshing the page it was on", async () => {
     await deleteInterviewAndLeaveAction("app-1", "int-1");
     expect(api.deleteInterview).toHaveBeenCalledWith("seeker-1", "app-1", "int-1");
-    expect(redirect).toHaveBeenCalledWith("/dashboard?deleted=interview");
+    expect(redirect).toHaveBeenCalledWith("/applications/app-1?deleted=interview");
     expect(refresh).not.toHaveBeenCalled();
     expect(updateTag).toHaveBeenCalledExactlyOnceWith("applications:seeker-1");
   });

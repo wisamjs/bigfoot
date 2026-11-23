@@ -30,19 +30,24 @@ function rememberedView(): string {
 // The view changes only on the dashboard, never while this link is on screen.
 const subscribe = () => () => {};
 
+/** "← <page>": the link over a page's heading, back to the page it belongs to. */
+export function BackLink({ href, children }: { href: string; children: string }) {
+  return (
+    <Link
+      href={href}
+      className="touch-target inline-flex w-fit items-center gap-1.5 rounded-control text-sm font-medium text-body transition-colors hover:text-heading"
+    >
+      <ArrowLeft className="size-4" aria-hidden />
+      {children}
+    </Link>
+  );
+}
+
 /**
  * "← Dashboard", back to the view the job seeker left: the month and day its calendar showed
  * (rememberDashboardView). The server renders the plain link; the browser adds the view.
  */
 export function DashboardBackLink() {
   const search = useSyncExternalStore(subscribe, rememberedView, () => "");
-  return (
-    <Link
-      href={`/dashboard${search}`}
-      className="touch-target inline-flex w-fit items-center gap-1.5 rounded-control text-sm font-medium text-body transition-colors hover:text-heading"
-    >
-      <ArrowLeft className="size-4" aria-hidden />
-      Dashboard
-    </Link>
-  );
+  return <BackLink href={`/dashboard${search}`}>Dashboard</BackLink>;
 }
