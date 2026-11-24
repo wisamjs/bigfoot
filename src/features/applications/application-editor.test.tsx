@@ -192,7 +192,7 @@ describe("the Interviews", () => {
     ]);
     expect(within(within(next).getByRole("list", { name: "They asked last time" })).getAllByRole("listitem")).toHaveLength(2);
     expect(within(next).queryByText(/Carried forward/)).not.toBeInTheDocument();
-    expect(within(next).getByRole("link", { name: "Add Interview notes" })).toHaveAttribute("href", "/applications/oak/interviews/deep");
+    expect(within(next).getByRole("link", { name: "Add Prep notes" })).toHaveAttribute("href", "/applications/oak/interviews/deep");
   });
 
   it("looks back at nothing when there is nothing to look back at", () => {
@@ -220,10 +220,18 @@ describe("the Interviews", () => {
     expect(screen.getByText("Ask about on-call.", { selector: "li p" })).toBeInTheDocument();
   });
 
-  it("shows the next one's own notes instead of Add Interview notes once it has some", () => {
-    open({ ...oak, interviews: oak.interviews.map((i) => (i.id === "deep" ? { ...i, how_it_went: "Bring the migration story." } : i)) });
-    expect(screen.getByText("Bring the migration story.")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Add Interview notes" })).not.toBeInTheDocument();
+  it("shows the next one's Prep notes instead of Add Prep notes once it has some", () => {
+    open({ ...oak, interviews: oak.interviews.map((i) => (i.id === "deep" ? { ...i, prep_notes: "Bring the migration story." } : i)) });
+    const next = screen.getByRole("region", { name: "Technical Deep-Dive" });
+    expect(within(next).getByRole("heading", { name: "Prep notes" })).toBeInTheDocument();
+    expect(within(next).getByText("Bring the migration story.")).toBeInTheDocument();
+    expect(within(next).queryByRole("link", { name: "Add Prep notes" })).not.toBeInTheDocument();
+  });
+
+  it("never asks for Interview notes on the next one, which hasn't happened yet", () => {
+    open(oak);
+    const next = screen.getByRole("region", { name: "Technical Deep-Dive" });
+    expect(within(next).queryByText(/Interview notes/)).not.toBeInTheDocument();
   });
 
   it("strips them by date, counting the completed ones", () => {

@@ -327,9 +327,14 @@ body {
     input:not([type="checkbox"], [type="radio"]) {
       min-height: 44px;
     }
-    button,
-    .btn {
+    button {
       min-width: 44px;
+    }
+    /* Never narrower than the label: 44px alone would replace a flex item's automatic minimum,
+       letting a flex-1 button squeeze its text out past its edges (BIG-187). Every .btn size is
+       already 44px wide around an icon. */
+    .btn {
+      min-width: max-content;
     }
     .touch-target {
       display: inline-flex;
