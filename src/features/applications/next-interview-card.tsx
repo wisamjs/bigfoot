@@ -73,17 +73,19 @@ export function NextInterviewCard({
         </div>
       )}
 
+      {/* min-w-fit: on touch screens .btn's 44px floor replaces a flex item's automatic minimum, so
+          without it the two flex-1 buttons squeeze below their labels instead of wrapping (BIG-187). */}
       <div className="flex flex-wrap items-center gap-3">
         {!prepNotes && (
           <>
-            <Link href={href} className={`${buttonClasses("brand")} max-sm:flex-1`}>
+            <Link href={href} className={`${buttonClasses("brand")} min-w-fit max-sm:flex-1`}>
               <Plus className="size-4" aria-hidden />
               Add Prep notes
             </Link>
             <span className="hidden text-sm text-body sm:inline">No Prep notes yet.</span>
           </>
         )}
-        <Link href={href} className={`${buttonClasses("secondary")} max-sm:flex-1 sm:hidden`}>
+        <Link href={href} className={`${buttonClasses("secondary")} min-w-fit max-sm:flex-1 sm:hidden`}>
           Open Interview
         </Link>
       </div>
