@@ -1,29 +1,38 @@
-import { ArrowRight, Lightbulb, Plus } from "lucide-react";
+import { ArrowRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { buttonClasses } from "@/components/ui/button-classes";
 import { DaysFromToday, InterviewDayTime } from "@/features/applications/application-when";
 import { DateTile } from "@/features/applications/date-tile";
+import { NO_LOOK_BACK } from "@/features/applications/interview-notes-form";
+import { PrepLookBack } from "@/features/applications/prep-look-back";
 import { interviewHref } from "@/features/applications/routes";
 import {
-  carriedForward,
   hasInterviewNotes,
   INTERVIEW_NOTES_FIELDS,
   INTERVIEW_NOTES_LABELS,
   INTERVIEW_OPTIONS,
   type Application,
   type Interview,
+  type PrepLookBack as LookBack,
 } from "@/lib/applications";
 
 /**
  * The Application's next Interview, first on its page (BIG-174): when it is, its kind, and Open
- * Interview. Under them, what the last completed Interview's notes carry forward (the last
- * paragraph of How it went, until BIG-181), and this Interview's own Interview notes, each field
+ * Interview. Under them, what its prep looks back at (BIG-181): up to two takeaways and They
+ * asked last time, as on its Interview page. Then this Interview's own Interview notes, each field
  * that has text under its name, or Add Interview notes to start them on its Interview page.
  */
-export function NextInterviewCard({ app, interview }: { app: Application; interview: Interview }) {
+export function NextInterviewCard({
+  app,
+  interview,
+  lookBack = NO_LOOK_BACK,
+}: {
+  app: Application;
+  interview: Interview;
+  lookBack?: LookBack;
+}) {
   const href = interviewHref(app.id, interview.id);
   const kind = INTERVIEW_OPTIONS[interview.kind].label;
-  const carried = carriedForward(app);
   const hasNotes = hasInterviewNotes(interview);
   return (
     <section aria-labelledby="next-up-title" className="card flex flex-col gap-5 border-line-brand-subtle p-5 sm:p-8">
@@ -51,17 +60,7 @@ export function NextInterviewCard({ app, interview }: { app: Application; interv
         </Link>
       </div>
 
-      {carried && (
-        <div className="flex gap-3 rounded-card bg-surface p-4">
-          <Lightbulb className="mt-0.5 size-5 shrink-0 text-fg-brand" aria-hidden />
-          <div className="min-w-0">
-            <p className="m-0 text-sm text-body">
-              Carried forward from {INTERVIEW_OPTIONS[carried.from.kind].label} notes
-            </p>
-            <p className="m-0 mt-1 whitespace-pre-line break-words text-base text-heading">{carried.text}</p>
-          </div>
-        </div>
-      )}
+      <PrepLookBack lookBack={lookBack} />
 
       {hasNotes && (
         <div className="min-w-0">

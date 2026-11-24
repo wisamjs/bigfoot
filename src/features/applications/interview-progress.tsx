@@ -52,7 +52,7 @@ export function InterviewProgress({ app, current }: { app: Application; current?
             {following && (
               <Link
                 href={interviewHref(app.id, following.id)}
-                className="inline-flex min-h-6 items-center rounded-control font-medium text-fg-brand underline underline-offset-4 hover:text-fg-brand-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                className="touch-target inline-flex items-center rounded-control font-medium text-fg-brand underline underline-offset-4 hover:text-fg-brand-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
               >
                 Next: {INTERVIEW_OPTIONS[following.kind].label} →
               </Link>

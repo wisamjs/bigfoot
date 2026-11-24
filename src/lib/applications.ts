@@ -356,16 +356,102 @@ export function noteBlocks(notes: string | null): NoteBlock[] {
 }
 
 /**
- * What the next Interview carries forward (BIG-174): the last paragraph of How it went of the
- * latest completed Interview, where the job seeker usually wrote what to do differently next time
- * before the Takeaway had a field of its own (BIG-181 replaces this with the Takeaway). Null when
- * there is no next Interview, or the last completed one has no How it went.
+ * A Takeaway for next time shown on an upcoming Interview's prep (BIG-181), or, read the other way,
+ * an upcoming Interview a completed one's takeaway shows on. `rule` says which rule linked them:
+ * `same_application`, or `same_kind`, the same Interview kind at another Application.
  */
-export function carriedForward(app: Application): { from: Interview; text: string } | null {
-  if (!nextInterview(app)) return null;
+export type PrepTakeaway = {
+  rule: "same_application" | "same_kind";
+  application: Pick<Application, "id" | "company">;
+  interview: Interview;
+};
+
+/** What an upcoming Interview's prep looks back at: the takeaways that apply, and They asked last time. */
+export type PrepLookBack = {
+  takeaways: PrepTakeaway[];
+  /** What they asked at the same Application's latest completed Interview, when it has questions. */
+  theyAsked: { from: Interview; questions: string[] } | null;
+};
+
+/** Whether an Interview counts as a source of takeaways: completed, with a Takeaway for next time. */
+const hasTakeaway = (i: Interview) => i.completed && Boolean(i.takeaway?.trim());
+
+/** The latest of some dated Interviews that pass `counts`, if any. */
+function latest(candidates: DatedInterview[], counts: (i: Interview) => boolean): DatedInterview | null {
+  return (
+    candidates.filter(({ interview }) => counts(interview)).toSorted((a, b) => a.interview.at.localeCompare(b.interview.at)).at(-1) ??
+    null
+  );
+}
+
+/** What each rule found, in order, as PrepTakeaways carrying only the Application's id and company. */
+function linked(own: DatedInterview | null | undefined, elsewhere: DatedInterview | null | undefined): PrepTakeaway[] {
+  const rules = [
+    { rule: "same_application" as const, match: own },
+    { rule: "same_kind" as const, match: elsewhere },
+  ];
+  return rules.flatMap(({ rule, match }) =>
+    match ? [{ rule, application: { id: match.application.id, company: match.application.company }, interview: match.interview }] : [],
+  );
+}
+
+/** prepTakeaways, with what counts as having a takeaway given, so takeawayShowsOn can ask "if it had one". */
+function findTakeaways(
+  apps: Application[],
+  app: Application,
+  interview: Interview,
+  counts: (i: Interview) => boolean,
+): PrepTakeaway[] {
+  const own = latest(dated(app, app.interviews), counts);
+  const elsewhere = latest(
+    apps.filter((a) => a.id !== app.id).flatMap((a) => dated(a, a.interviews.filter((i) => i.kind === interview.kind))),
+    counts,
+  );
+  return linked(own, elsewhere);
+}
+
+/**
+ * The takeaways an upcoming Interview's prep shows (BIG-181), at most two, nothing stored about
+ * where a takeaway goes: first, from the latest completed Interview of the same Application that
+ * has a Takeaway for next time; then, from the job seeker's latest completed Interview of the same
+ * kind at another Application, Done ones included (a lesson from a rejected Application is still a
+ * lesson). The two rules never pick the same Interview, as the second looks only at other
+ * Applications, so each takeaway shows once.
+ */
+export function prepTakeaways(apps: Application[], app: Application, interview: Interview): PrepTakeaway[] {
+  return findTakeaways(apps, app, interview, hasTakeaway);
+}
+
+/** An upcoming Interview's look-back: its takeaways (prepTakeaways) and They asked last time. */
+export function prepLookBack(apps: Application[], app: Application, interview: Interview): PrepLookBack {
   const from = lastCompletedInterview(app);
-  const text = paragraphs(from?.how_it_went ?? null).at(-1);
-  return from && text ? { from, text } : null;
+  const asked = questions(from?.what_they_asked ?? null);
+  return {
+    takeaways: prepTakeaways(apps, app, interview),
+    theyAsked: from && asked.length > 0 ? { from, questions: asked } : null,
+  };
+}
+
+/**
+ * Where a completed Interview's Takeaway for next time shows (BIG-181), prepTakeaways read the
+ * other way, as if it has one: the soonest upcoming Interview of its Application whose prep shows
+ * it, and the soonest upcoming Interview of the same kind at another In Progress Application whose
+ * prep shows it. Empty for an upcoming Interview, and when neither exists yet or a later
+ * takeaway shows instead.
+ */
+export function takeawayShowsOn(apps: Application[], app: Application, interview: Interview): PrepTakeaway[] {
+  if (!interview.completed) return [];
+  const counts = (i: Interview) => i.id === interview.id || hasTakeaway(i);
+  const showsOn = (target: DatedInterview, rule: PrepTakeaway["rule"]) =>
+    findTakeaways(apps, target.application, target.interview, counts).some(
+      (t) => t.rule === rule && t.interview.id === interview.id,
+    );
+  const own = dated(app, upcomingInterviews(app)).find((target) => showsOn(target, "same_application"));
+  const elsewhere = getUpcoming(apps).find(
+    (target) =>
+      target.application.id !== app.id && target.interview.kind === interview.kind && showsOn(target, "same_kind"),
+  );
+  return linked(own, elsewhere);
 }
 
 /** The Takeaways for next time of an Application's Interviews, newest Interview first: what a Done one's Outcome card lists. */

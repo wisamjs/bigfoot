@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   applicationProgress,
   calendarDaysBetween,
-  carriedForward,
+  prepLookBack,
+  prepTakeaways,
+  takeawayShowsOn,
+  upcomingInterviews,
   getApplicationGroups,
   hasInterviewNotes,
   interviewSections,
@@ -31,6 +34,7 @@ import {
   STATUSES,
   type Application,
   type Interview,
+  type InterviewKind,
 } from "./applications";
 
 function interview(id: string, at: string, completed: boolean): Interview {
@@ -275,25 +279,143 @@ describe("Interview notes", () => {
   });
 });
 
-describe("carriedForward", () => {
-  const withNotes = (notes: string | null) =>
+describe("prepTakeaways", () => {
+  /** A completed Interview on a November day, of a kind, with a takeaway or none. */
+  const done = (id: string, day: number, kind: InterviewKind, takeaway: string | null = null): Interview => ({
+    ...interview(id, `2026-11-${String(day).padStart(2, "0")}T15:00:00Z`, true),
+    kind,
+    takeaway,
+  });
+  const ahead = (id: string, kind: InterviewKind): Interview => ({ ...interview(id, "2026-12-01T15:00:00Z", false), kind });
+
+  const deepDive = ahead("deep-dive", "technical_deep_dive");
+  const lumen = application("lumen", {
+    company: "Lumen Bio",
+    interviews: [
+      done("screen", 6, "recruiter_screen", "Ask about the team first."),
+      done("manager", 13, "hiring_manager", "Lead with the decision."),
+      done("chat", 14, "informal_chat", "  "),
+      deepDive,
+    ],
+  });
+  const fernway = application("fernway", {
+    company: "Fernway Health",
+    interviews: [done("old-dive", 3, "technical_deep_dive", "Draw the diagram first."), done("new-dive", 10, "technical_deep_dive", "Name the trade-off.")],
+  });
+  const summary = (takeaways: ReturnType<typeof prepTakeaways>) =>
+    takeaways.map((t) => [t.rule, t.application.company, t.interview.id]);
+
+  it("is nothing when no completed Interview has a takeaway", () => {
+    const quiet = application("quiet", { interviews: [done("screen", 6, "recruiter_screen"), deepDive] });
+    expect(prepTakeaways([quiet], quiet, deepDive)).toEqual([]);
+  });
+
+  it("takes the latest completed Interview of the same Application that has one, skipping blank ones", () => {
+    expect(summary(prepTakeaways([lumen], lumen, deepDive))).toEqual([["same_application", "Lumen Bio", "manager"]]);
+  });
+
+  it("takes only the latest of the same kind at another Application when its own has none", () => {
+    const quiet = application("quiet", { interviews: [deepDive] });
+    expect(summary(prepTakeaways([quiet, fernway], quiet, deepDive))).toEqual([["same_kind", "Fernway Health", "new-dive"]]);
+  });
+
+  it("shows both, the same Application's first, carrying only the Application's id and company", () => {
+    const takeaways = prepTakeaways([fernway, lumen], lumen, deepDive);
+    expect(summary(takeaways)).toEqual([
+      ["same_application", "Lumen Bio", "manager"],
+      ["same_kind", "Fernway Health", "new-dive"],
+    ]);
+    expect(takeaways[1].application).toEqual({ id: "fernway", company: "Fernway Health" });
+  });
+
+  it("shows an Interview both rules could point at once, looking elsewhere for the same kind", () => {
+    const second = ahead("second", "hiring_manager");
+    const own = application("own", { interviews: [done("first", 12, "hiring_manager", "Slow down."), second] });
+    const other = application("other", { interviews: [done("theirs", 5, "hiring_manager", "Bring numbers.")] });
+    expect(summary(prepTakeaways([own, other], own, second))).toEqual([
+      ["same_application", "own", "first"],
+      ["same_kind", "other", "theirs"],
+    ]);
+    expect(summary(prepTakeaways([own], own, second))).toEqual([["same_application", "own", "first"]]);
+  });
+
+  it("counts an Interview whose own Application is Done", () => {
+    const rejected = { ...fernway, status: "done" as const, outcome: "rejected" as const };
+    const quiet = application("quiet", { interviews: [deepDive] });
+    expect(summary(prepTakeaways([rejected, quiet], quiet, deepDive))).toEqual([["same_kind", "Fernway Health", "new-dive"]]);
+  });
+});
+
+describe("prepLookBack", () => {
+  const ahead = interview("next", "2026-12-01T15:00:00Z", false);
+  const withAsked = (asked: string | null) =>
     application("a", {
       interviews: [
-        { ...interview("first", "2026-11-01T10:00:00Z", true), how_it_went: "Old advice." },
-        { ...interview("last", "2026-11-05T10:00:00Z", true), kind: "hiring_manager", how_it_went: notes },
-        interview("next", "2026-12-01T10:00:00Z", false),
+        { ...interview("first", "2026-11-01T10:00:00Z", true), what_they_asked: "Old question?" },
+        { ...interview("last", "2026-11-05T10:00:00Z", true), what_they_asked: asked, takeaway: "Pause first." },
+        ahead,
       ],
     });
 
-  it("is the last paragraph of the latest completed Interview's notes", () => {
-    const carried = carriedForward(withNotes("How it went.\n\nNext time: lead with the decision."));
-    expect(carried?.from.kind).toBe("hiring_manager");
-    expect(carried?.text).toBe("Next time: lead with the decision.");
+  it("has They asked last time from the latest completed Interview, with the takeaways", () => {
+    const app = withAsked("Why us?\n\nWhy now?");
+    const lookBack = prepLookBack([app], app, ahead);
+    expect(lookBack.theyAsked).toEqual({ from: app.interviews[1], questions: ["Why us?", "Why now?"] });
+    expect(lookBack.takeaways.map((t) => t.interview.id)).toEqual(["last"]);
   });
 
-  it("is nothing when that Interview has no notes, or nothing is ahead", () => {
-    expect(carriedForward(withNotes(null))).toBeNull();
-    expect(carriedForward(application("a", { interviews: [{ ...interview("x", "2026-11-01T10:00:00Z", true), how_it_went: "Hi" }] }))).toBeNull();
+  it("has no They asked last time when that Interview has no questions, or nothing is completed", () => {
+    const app = withAsked(null);
+    expect(prepLookBack([app], app, ahead).theyAsked).toBeNull();
+    const fresh = application("fresh", { interviews: [ahead] });
+    expect(prepLookBack([fresh], fresh, ahead)).toEqual({ takeaways: [], theyAsked: null });
+  });
+});
+
+describe("takeawayShowsOn", () => {
+  const at = (day: number) => `2026-${day > 30 ? "12" : "11"}-${String(day > 30 ? day - 30 : day).padStart(2, "0")}T15:00:00Z`;
+  const make = (id: string, day: number, kind: InterviewKind, completed: boolean, takeaway: string | null = null): Interview => ({
+    ...interview(id, at(day), completed),
+    kind,
+    takeaway,
+  });
+  const manager = make("manager", 13, "hiring_manager", true);
+  const lumen = application("lumen", {
+    company: "Lumen Bio",
+    interviews: [manager, make("deep-dive", 32, "technical_deep_dive", false), make("leadership", 39, "leadership", false)],
+  });
+  const tilth = application("tilth", { company: "Tilth Agritech", interviews: [make("tilth-manager", 31, "hiring_manager", false)] });
+  const targets = (showsOn: ReturnType<typeof takeawayShowsOn>) =>
+    showsOn.map((t) => [t.rule, t.application.company, t.interview.id]);
+
+  it("is the next Interview of its Application and the next of its kind elsewhere, as if it had a takeaway", () => {
+    expect(targets(takeawayShowsOn([lumen, tilth], lumen, manager))).toEqual([
+      ["same_application", "Lumen Bio", "deep-dive"],
+      ["same_kind", "Tilth Agritech", "tilth-manager"],
+    ]);
+  });
+
+  it("agrees with prepTakeaways once the takeaway is written", () => {
+    const written = { ...lumen, interviews: lumen.interviews.map((i) => (i.id === "manager" ? { ...i, takeaway: "Lead." } : i)) };
+    const [deepDive] = upcomingInterviews(written);
+    const [tilthManager] = tilth.interviews;
+    expect(prepTakeaways([written, tilth], written, deepDive).map((t) => t.interview.id)).toEqual(["manager"]);
+    expect(prepTakeaways([written, tilth], tilth, tilthManager).map((t) => t.interview.id)).toEqual(["manager"]);
+  });
+
+  it("is nothing when nothing is ahead, or a later takeaway shows instead", () => {
+    const alone = application("alone", { interviews: [manager] });
+    expect(takeawayShowsOn([alone], alone, manager)).toEqual([]);
+    const later = make("later", 20, "hiring_manager", true, "Newer lesson.");
+    const other = application("other", { interviews: [later] });
+    const superseded = { ...lumen, interviews: [manager, make("chat", 15, "informal_chat", true, "Newer."), ...upcomingInterviews(lumen)] };
+    expect(targets(takeawayShowsOn([superseded, tilth, other], superseded, manager))).toEqual([]);
+  });
+
+  it("skips upcoming Interviews of Done Applications, and an upcoming Interview shows nothing", () => {
+    const doneTilth = { ...tilth, status: "done" as const, outcome: "withdrawn" as const };
+    expect(targets(takeawayShowsOn([lumen, doneTilth], lumen, manager))).toEqual([["same_application", "Lumen Bio", "deep-dive"]]);
+    expect(takeawayShowsOn([lumen, tilth], lumen, lumen.interviews[1])).toEqual([]);
   });
 });
 

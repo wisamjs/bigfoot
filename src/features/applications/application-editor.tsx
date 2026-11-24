@@ -7,7 +7,7 @@ import { InterviewProgress } from "@/features/applications/interview-progress";
 import { NextInterviewCard } from "@/features/applications/next-interview-card";
 import { OutcomeCard } from "@/features/applications/outcome-card";
 import { RememberViewed } from "@/features/applications/recently-viewed";
-import { interviewSections, isDone, type Application } from "@/lib/applications";
+import { interviewSections, isDone, type Application, type PrepLookBack } from "@/lib/applications";
 
 /**
  * The Application page under its "← Dashboard" link (BIG-174): the heading (company, role,
@@ -17,8 +17,18 @@ import { interviewSections, isDone, type Application } from "@/lib/applications"
  * `justAdded` is set when the page opens straight after adding the Application: the Interviews
  * card then prompts for its first Interview.
  * Leaving with a detail typed but not saved asks first: the page puts this inside UnsavedChanges.
+ * `lookBack` is what the next Interview's prep looks back at, worked out by the page from every
+ * Application (BIG-181).
  */
-export function ApplicationEditor({ app, justAdded = false }: { app: Application; justAdded?: boolean }) {
+export function ApplicationEditor({
+  app,
+  justAdded = false,
+  lookBack,
+}: {
+  app: Application;
+  justAdded?: boolean;
+  lookBack?: PrepLookBack;
+}) {
   const { next, later, completed } = interviewSections(app);
   return (
     <div className="flex flex-col gap-6 sm:gap-8">
@@ -27,7 +37,7 @@ export function ApplicationEditor({ app, justAdded = false }: { app: Application
       <InterviewProgress app={app} />
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex min-w-0 flex-col gap-6">
-          {next && <NextInterviewCard app={app} interview={next} />}
+          {next && <NextInterviewCard app={app} interview={next} lookBack={lookBack} />}
           {isDone(app) && <OutcomeCard app={app} />}
           <InterviewList app={app} later={later} completed={completed} justAdded={justAdded} />
         </div>

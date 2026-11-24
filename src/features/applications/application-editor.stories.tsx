@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, mocked, waitFor, within } from "storybook/test";
 import * as actions from "@/app/applications/actions";
+import { prepLookBack } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
 import { ApplicationEditor } from "./application-editor";
 
@@ -76,6 +77,23 @@ const quillon = application("quillon", {
   waiting_since: appliedDaysAgo(5),
 });
 
+// Another Application with a Technical Deep-Dive behind it, for the Next up card's second takeaway.
+const fernway = application("fernway", {
+  company: "Fernway Health",
+  status: "done",
+  outcome: "rejected",
+  is_waiting: false,
+  interviews: [
+    interview("fernway-dive", {
+      application_id: "fernway",
+      kind: "technical_deep_dive",
+      at: daysFromNow(-30, 14),
+      takeaway: "Draw the system before talking through it.",
+    }),
+  ],
+});
+const lookBack = prepLookBack([lumen, fernway], lumen, lumen.interviews[2]);
+
 /** The strip's segments drawn in a colour: a completed Interview's is green, or grey once Done. */
 function completedBars(canvas: ReturnType<typeof within>, colour: string) {
   return within(canvas.getByRole("list", { name: "Interviews by date" }))
@@ -85,7 +103,7 @@ function completedBars(canvas: ReturnType<typeof within>, colour: string) {
 
 const meta = {
   component: ApplicationEditor,
-  args: { app: lumen },
+  args: { app: lumen, lookBack },
   decorators: [(Story) => <main>{Story()}</main>],
 } satisfies Meta<typeof ApplicationEditor>;
 
@@ -93,8 +111,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * An Interview scheduled: the strip (completed Interviews green), the next Interview with what the
- * last one's How it went carries forward, Later and Completed (each with its Interview notes inline), and the Details card with the salary hidden.
+ * An Interview scheduled: the strip (completed Interviews green), the next Interview with the
+ * takeaways that apply (this Application's Hiring Manager, and the last Technical Deep-Dive at
+ * Fernway Health) and They asked last time, Later and Completed (each with its Interview notes inline), and the Details card with the salary hidden.
  */
 export const Default: Story = {
   play: async ({ canvas }) => {
@@ -102,7 +121,13 @@ export const Default: Story = {
     await expect(await canvas.findAllByText(/ · Completed$/)).toHaveLength(2);
     await expect(completedBars(canvas, "bg-fg-success-strong")).toHaveLength(2);
     await expect(canvas.getByRole("heading", { level: 2, name: "Technical Deep-Dive" })).toBeVisible();
-    await expect(canvas.getByText("Rambled on the roadmap question. Next time: lead with the decision, then the trade-off.", { selector: ".rounded-card p" })).toBeVisible();
+    const next = canvas.getByRole("region", { name: "Technical Deep-Dive" });
+    const takeaways = within(within(next).getByRole("list", { name: "Takeaways for this Interview" })).getAllByRole("listitem");
+    await expect(takeaways).toHaveLength(2);
+    await expect(takeaways[0]).toHaveTextContent(/^Takeaway from Hiring Manager · .+Lead with the decision/);
+    await expect(takeaways[1]).toHaveTextContent("From your last Technical Deep-Dive · Fernway HealthDraw the system");
+    await expect(within(within(next).getByRole("list", { name: "They asked last time" })).getAllByRole("listitem")).toHaveLength(3);
+    await expect(within(next).queryByText(/Carried forward/)).not.toBeInTheDocument();
     await expect(canvas.getByText("Interview scheduled")).toBeVisible();
     // A completed Interview shows all three Interview notes fields inline.
     const completed = canvas.getByRole("list", { name: "Completed" });
@@ -257,6 +282,16 @@ export const ChangeOutcome: Story = {
     await waitFor(() =>
       expect(actions.updateApplicationAction).toHaveBeenCalledWith("lumen", { status: "done", outcome: "position_filled" }),
     );
+  },
+};
+
+/** Nothing to look back at: no completed Interview has a takeaway or questions, so the Next up card shows neither. */
+export const NothingToLookBackAt: Story = {
+  args: { lookBack: { takeaways: [], theyAsked: null } },
+  play: async ({ canvas }) => {
+    const next = canvas.getByRole("region", { name: "Technical Deep-Dive" });
+    await expect(within(next).queryByRole("list", { name: "Takeaways for this Interview" })).not.toBeInTheDocument();
+    await expect(within(next).queryByRole("list", { name: "They asked last time" })).not.toBeInTheDocument();
   },
 };
 

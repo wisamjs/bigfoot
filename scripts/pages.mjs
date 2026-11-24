@@ -155,13 +155,22 @@ export const PAGES = [
     ],
   },
   {
-    // An upcoming Interview (BIG-180): the Before card with its Prep notes, and the After card
-    // waiting for how it went.
+    // A completed Interview whose takeaway shows on the prep for Figma's next Interview and for the
+    // next Technical elsewhere (BIG-181).
+    path: "/applications/[id]/interviews/[interviewId]",
+    signedIn: true,
+    application: "Figma",
+    interview: "technical",
+    expect: "Shows on the prep for your next Technical",
+  },
+  {
+    // An upcoming Interview (BIG-180): the Before card with its Prep notes, the takeaways that
+    // apply and They asked last time (BIG-181), and the After card waiting for how it went.
     path: "/applications/[id]/interviews/[interviewId]",
     signedIn: true,
     application: "Datadog",
     interview: "technical",
-    expect: "Nothing yet, that’s expected",
+    expect: "They asked last time",
     states: [
       {
         name: "interview-add-interview-notes",

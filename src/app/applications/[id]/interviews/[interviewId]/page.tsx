@@ -8,6 +8,7 @@ import { AppHeader } from "@/features/shell/app-header";
 import { BackLink } from "@/features/shell/dashboard-link";
 import { FormPage } from "@/features/shell/form-page";
 import { getApplications } from "@/lib/api";
+import { prepLookBack, takeawayShowsOn } from "@/lib/applications";
 import { getCurrentUser } from "@/lib/dal";
 
 type Props = PageProps<"/applications/[id]/interviews/[interviewId]">;
@@ -41,7 +42,13 @@ async function InterviewPageBody({ params }: Pick<Props, "params">) {
       back={<BackLink href={applicationHref(app.id)}>{app.company}</BackLink>}
       guard={UnsavedChanges}
     >
-      <InterviewEditor app={app} interview={interview} />
+      <InterviewEditor
+        app={app}
+        interview={interview}
+        // Worked out here, from every Application, so only what shows reaches the browser.
+        lookBack={interview.completed ? undefined : prepLookBack(applications, app, interview)}
+        showsOn={takeawayShowsOn(applications, app, interview)}
+      />
     </FormPage>
   );
 }

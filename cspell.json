@@ -47,6 +47,7 @@
     "/\\b(?:center|colors?|gray)-[\\w:\\-\\[\\]./]*/g"
   ],
   "words": [
+    "Agritech",
     "Airtable",
     "Allo",
     "AODA",
@@ -65,6 +66,7 @@
     "elses",
     "Faire",
     "fastapi",
+    "Fernway",
     "formatters",
     "hashtext",
     "Hootsuite",

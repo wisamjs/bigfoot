@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/applications/actions";
 import { application, interview } from "@/test/applications";
 import { InterviewEditor } from "./interview-editor";
-import { hasInterviewNotes } from "@/lib/applications";
+import { hasInterviewNotes, prepLookBack, takeawayShowsOn } from "@/lib/applications";
 import { NOTES_PAUSE_MS } from "./interview-notes-form";
 import { UnsavedChanges } from "./unsaved-changes";
 
@@ -475,5 +475,56 @@ describe("Prep notes", () => {
     await user.click(screen.getByRole("button", { name: /^More actions/ }));
     await user.click(screen.getByRole("menuitem", { name: "Delete Interview" }));
     expect(screen.getByRole("dialog")).toHaveTextContent("will be deleted, with its Prep notes. This can’t be undone.");
+  });
+});
+
+describe("takeaways that apply (BIG-181)", () => {
+  const DAY = 86_400_000;
+  const daysFromNow = (days: number) => new Date(Date.now() + days * DAY).toISOString();
+  const manager = interview("manager", {
+    application_id: "lumen",
+    kind: "hiring_manager",
+    at: daysFromNow(-10),
+    what_they_asked: "Why us?\nWhy now?",
+    takeaway: "Lead with the decision.",
+  });
+  const deepDive = interview("deep-dive", { application_id: "lumen", kind: "technical_deep_dive", at: daysFromNow(2), completed: false });
+  const lumen = application("lumen", { company: "Lumen Bio", interviews: [manager, deepDive] });
+  const tilthManager = interview("tilth-manager", { application_id: "tilth", kind: "hiring_manager", at: daysFromNow(1), completed: false });
+  const tilth = application("tilth", { company: "Tilth Agritech", interviews: [tilthManager] });
+  const apps = [lumen, tilth];
+
+  function openWith(props: Parameters<typeof InterviewEditor>[0]) {
+    render(
+      <UnsavedChanges>
+        <InterviewEditor {...props} />
+      </UnsavedChanges>,
+    );
+  }
+
+  it("shows an upcoming Interview's takeaways and They asked last time in its Prep notes card", () => {
+    openWith({ app: lumen, interview: deepDive, lookBack: prepLookBack(apps, lumen, deepDive) });
+    const prep = screen.getByRole("region", { name: "Prep notes" });
+    const [takeaway] = within(within(prep).getByRole("list", { name: "Takeaways for this Interview" })).getAllByRole("listitem");
+    expect(takeaway).toHaveTextContent(/^Takeaway from Hiring Manager · .+Lead with the decision\.$/);
+    expect(within(within(prep).getByRole("list", { name: "They asked last time" })).getAllByRole("listitem")).toHaveLength(2);
+  });
+
+  it("says where a completed Interview's takeaway shows, linking there", () => {
+    openWith({ app: lumen, interview: manager, showsOn: takeawayShowsOn(apps, lumen, manager) });
+    const card = screen.getByRole("region", { name: "Takeaway for next time" });
+    const links = within(card).getAllByRole("link");
+    expect(links.map((link) => link.textContent)).toEqual([
+      "Shows on the prep for Technical Deep-Dive · in 2 days",
+      "Shows on the prep for your next Hiring Manager · Tilth Agritech, tomorrow",
+    ]);
+    expect(links[0]).toHaveAttribute("href", "/applications/lumen/interviews/deep-dive");
+    expect(links[1]).toHaveAttribute("href", "/applications/tilth/interviews/tilth-manager");
+  });
+
+  it("says nothing about where it shows when nothing is ahead", () => {
+    const alone = { ...lumen, interviews: [manager] };
+    openWith({ app: alone, interview: manager, showsOn: takeawayShowsOn([alone], alone, manager) });
+    expect(within(screen.getByRole("region", { name: "Takeaway for next time" })).queryByRole("link")).not.toBeInTheDocument();
   });
 });
