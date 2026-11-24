@@ -24,7 +24,6 @@ export const SHOWN_IN = {
   "src/features/applications/interview-row.tsx": "src/features/applications/application-editor.stories.tsx",
   "src/features/applications/sample-badge.tsx": "src/features/applications/application-list.stories.tsx",
   "src/features/applications/interview-progress.tsx": "src/features/applications/application-editor.stories.tsx",
-  "src/features/applications/next-interview-card.tsx": "src/features/applications/application-editor.stories.tsx",
   "src/features/applications/prep-look-back.tsx": "src/features/applications/interview-editor.stories.tsx",
   "src/features/applications/recently-viewed.tsx": "src/features/applications/application-not-found.stories.tsx",
   "src/features/applications/unsaved-changes.tsx": "src/features/applications/interview-editor.stories.tsx",

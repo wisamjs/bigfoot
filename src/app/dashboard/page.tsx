@@ -4,13 +4,15 @@ import { AppFooter } from "@/features/shell/app-footer";
 import { AppHeader } from "@/features/shell/app-header";
 import { AddInterviewLink } from "@/features/applications/add-links";
 import { ApplicationListSkeleton } from "@/features/applications/application-list";
+import { NextInterviewCard } from "@/features/applications/next-interview-card";
 import { DashboardApplications } from "@/features/dashboard/dashboard-applications";
 import { DashboardCard } from "@/features/dashboard/dashboard-card";
+import { DashboardSummary } from "@/features/dashboard/dashboard-summary";
 import { InterviewCalendar, InterviewCalendarSkeleton } from "@/features/dashboard/interview-calendar";
 import { Container } from "@/components/ui/container";
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton";
 import { getApplications } from "@/lib/api";
-import { dashboardSummary, getCalendarInterviews, getStats } from "@/lib/applications";
+import { dashboardSummary, getCalendarInterviews, getStats, nextUp, prepTakeaways } from "@/lib/applications";
 import { getCurrentUser } from "@/lib/dal";
 
 export const metadata: Metadata = {
@@ -28,11 +30,22 @@ export default function DashboardPage() {
 async function Dashboard() {
   const user = await getCurrentUser();
   const applications = await getApplications(user.id);
+  const next = nextUp(applications);
 
   return (
     <DashboardLayout
       header={<AppHeader user={user} current="/dashboard" />}
-      summary={dashboardSummary(applications)}
+      summary={<DashboardSummary counts={dashboardSummary(applications, new Date())} />}
+      nextUp={
+        next && (
+          <NextInterviewCard
+            on="dashboard"
+            app={next.application}
+            interview={next.interview}
+            lookBack={{ takeaways: prepTakeaways(applications, next.application, next.interview), theyAsked: null }}
+          />
+        )
+      }
       applications={<DashboardApplications applications={applications} />}
       interviews={
         <InterviewCalendar interviews={getCalendarInterviews(applications)} waiting={getStats(applications).waiting} />
@@ -51,7 +64,12 @@ function DashboardSkeleton() {
     <LoadingRegion label="Loading your dashboard…">
       <DashboardLayout
         header={<AppHeader current="/dashboard" />}
-        summary={<Skeleton className="inline-block h-4 w-72 max-w-full align-middle" />}
+        summary={
+          <p className="m-0">
+            <Skeleton className="inline-block h-4 w-72 max-w-full align-middle" />
+          </p>
+        }
+        nextUp={null}
         applications={
           <DashboardCard
             id="applications-title"
@@ -72,18 +90,20 @@ function DashboardSkeleton() {
 
 /**
  * The dashboard's layout (BIG-173), shared by the page and its skeleton so they can't drift apart:
- * the heading and summary line, then the Applications card beside the Interviews card on wide
- * screens, one above the other on narrow ones.
+ * the heading and summary line, then the Applications card, with the Next up card above it (BIG-183),
+ * beside the Interviews card on wide screens, one above the other on narrow ones.
  */
 function DashboardLayout({
   header,
   summary,
+  nextUp,
   applications,
   interviews,
   addInterview,
 }: {
   header: ReactNode;
   summary: ReactNode;
+  nextUp: ReactNode;
   applications: ReactNode;
   interviews: ReactNode;
   addInterview: ReactNode;
@@ -95,11 +115,14 @@ function DashboardLayout({
         <Container className="flex flex-col gap-6">
           <div className="flex flex-col gap-1">
             <h1 className="m-0 text-[32px] font-bold leading-[1.1] tracking-[-0.02em] text-heading">Dashboard</h1>
-            <p className="m-0 text-body">{summary}</p>
+            {summary}
           </div>
 
           <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_23.75rem]">
-            {applications}
+            <div className="flex min-w-0 flex-col gap-6">
+              {nextUp}
+              {applications}
+            </div>
             <DashboardCard id="interviews-title" title="Interviews" actions={addInterview}>
               {interviews}
             </DashboardCard>
