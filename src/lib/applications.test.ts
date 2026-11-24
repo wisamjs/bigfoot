@@ -19,6 +19,7 @@ import {
   dashboardSummary,
   getStats,
   getUpcoming,
+  nextUp,
   INTERVIEW_KINDS,
   INTERVIEW_OPTIONS,
   lastCompletedInterview,
@@ -142,13 +143,58 @@ describe("getStats", () => {
 });
 
 describe("dashboardSummary", () => {
-  it("says what the search holds, singular and plural", () => {
-    expect(dashboardSummary([waiting, offer, rejected])).toBe("1 In Progress · 1 Offer · 0 upcoming Interviews");
-    expect(dashboardSummary([rejected])).toBe("0 In Progress · 0 Offers · 0 upcoming Interviews");
+  const now = new Date("2026-11-20T12:00:00Z");
+  const soon = (id: string, at: string) =>
+    application(id, { is_waiting: false, interviews: [interview(`${id}-i`, at, false)] });
+
+  it("counts Offers, Interviews in the next 2 weeks and Applications waiting to hear back", () => {
+    const apps = [
+      offer,
+      waiting,
+      application("waiting-too", {}),
+      soon("tomorrow", "2026-11-21T15:00:00Z"),
+      soon("in-13-days", "2026-12-03T15:00:00Z"),
+      soon("in-15-days", "2026-12-05T15:00:00Z"),
+      rejected,
+    ];
+    expect(dashboardSummary(apps, now)).toEqual([
+      { id: "offers", text: "1 Offer to decide" },
+      { id: "interviews", text: "2 Interviews in the next 2 weeks" },
+      { id: "waiting", text: "2 waiting to hear back" },
+    ]);
   });
 
-  it("says nothing is here without Applications", () => {
-    expect(dashboardSummary([])).toBe("Nothing here yet.");
+  it("leaves out Interviews of Done Applications", () => {
+    const done = application("done", { status: "done", outcome: "withdrawn", is_waiting: false, interviews: [interview("d", "2026-11-21T15:00:00Z", false)] });
+    expect(dashboardSummary([done], now)).toEqual([]);
+  });
+
+  it("says one in the singular and leaves out counts at zero", () => {
+    expect(dashboardSummary([soon("tomorrow", "2026-11-21T15:00:00Z")], now)).toEqual([
+      { id: "interviews", text: "1 Interview in the next 2 weeks" },
+    ]);
+    expect(dashboardSummary([offer, offer, waiting], now)).toEqual([
+      { id: "offers", text: "2 Offers to decide" },
+      { id: "waiting", text: "1 waiting to hear back" },
+    ]);
+  });
+
+  it("is empty when every count is zero", () => {
+    expect(dashboardSummary([], now)).toEqual([]);
+    expect(dashboardSummary([rejected], now)).toEqual([]);
+  });
+});
+
+describe("nextUp", () => {
+  it("is the soonest upcoming Interview of an In Progress Application", () => {
+    const sooner = application("sooner", { is_waiting: false, interviews: [interview("soon", "2026-11-20T15:00:00Z", false)] });
+    const done = application("done", { status: "done", outcome: "withdrawn", interviews: [interview("d", "2026-11-19T15:00:00Z", false)] });
+    expect(nextUp([scheduled, sooner, done])?.interview.id).toBe("soon");
+    expect(nextUp([scheduled, sooner, done])?.application.id).toBe("sooner");
+  });
+
+  it("is null when nothing is upcoming", () => {
+    expect(nextUp([waiting, rejected])).toBeNull();
   });
 });
 

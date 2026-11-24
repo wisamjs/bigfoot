@@ -216,7 +216,6 @@ export function lastCompletedInterview(app: Application): Interview | null {
   return app.interviews.findLast((i) => i.completed) ?? null;
 }
 
-/** The dashboard's three numbers: Open, Active, and the Next Interview across In Progress Applications. */
 /** The dashboard's counts: In Progress Applications, Offers, upcoming Interviews, and Applications waiting to hear back. */
 export function getStats(apps: Application[]) {
   const open = apps.filter((a) => !isDone(a));
@@ -232,15 +231,32 @@ function count(n: number, one: string, many: string) {
   return `${n} ${n === 1 ? one : many}`;
 }
 
-/** The line under the dashboard's heading: "5 In Progress · 1 Offer · 4 upcoming Interviews", or "Nothing here yet." */
-export function dashboardSummary(apps: Application[]): string {
-  if (apps.length === 0) return "Nothing here yet.";
+/** How far ahead the dashboard's summary line counts upcoming Interviews, in days. */
+export const SUMMARY_DAYS = 14;
+
+/** One count in the dashboard's summary line; `offers` shows in the success colour. */
+export type SummaryCount = { id: "offers" | "interviews" | "waiting"; text: string };
+
+/**
+ * The line under the dashboard's heading (BIG-183), the counts that aren't zero, in order: Offers
+ * to decide (Applications at Offer), upcoming Interviews of In Progress Applications in the next
+ * 14 days from `now`, and Applications waiting to hear back. Empty when every count is zero.
+ */
+export function dashboardSummary(apps: Application[], now: Date): SummaryCount[] {
+  const until = now.getTime() + SUMMARY_DAYS * 24 * 60 * 60 * 1000;
   const stats = getStats(apps);
-  return [
-    `${stats.inProgress} In Progress`,
-    count(stats.offers, "Offer", "Offers"),
-    count(stats.upcoming, "upcoming Interview", "upcoming Interviews"),
-  ].join(" · ");
+  const soon = getUpcoming(apps).filter(({ interview }) => new Date(interview.at).getTime() <= until).length;
+  const counts: [SummaryCount["id"], number, string, string][] = [
+    ["offers", stats.offers, "Offer to decide", "Offers to decide"],
+    ["interviews", soon, `Interview in the next ${SUMMARY_DAYS / 7} weeks`, `Interviews in the next ${SUMMARY_DAYS / 7} weeks`],
+    ["waiting", stats.waiting, "waiting to hear back", "waiting to hear back"],
+  ];
+  return counts.filter(([, n]) => n > 0).map(([id, n, one, many]) => ({ id, text: count(n, one, many) }));
+}
+
+/** The dashboard's Next up: the soonest upcoming Interview of an In Progress Application, if any. */
+export function nextUp(apps: Application[]): DatedInterview | null {
+  return getUpcoming(apps)[0] ?? null;
 }
 
 export type DatedInterview = { application: Application; interview: Interview };
