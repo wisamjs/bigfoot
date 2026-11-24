@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, NotebookPen } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { ApplicationWhen, InterviewWhen } from "@/features/applications/application-when";
@@ -15,7 +15,6 @@ import {
   upcomingInterviews,
   type Application,
   type ApplicationGroup,
-  hasInterviewNotes,
   type Interview,
 } from "@/lib/applications";
 
@@ -101,7 +100,6 @@ function RowLink({ job }: { job: Application }) {
  */
 function Progress({ job, group }: { job: Application; group: string }) {
   const completed = job.interviews.filter((interview) => interview.completed);
-  const withNotes = completed.filter(hasInterviewNotes).length;
   return (
     <div className="text-xs text-body">
       <p className="m-0">{group}</p>
@@ -110,10 +108,8 @@ function Progress({ job, group }: { job: Application; group: string }) {
           {completed.map((interview) => (
             <span key={interview.id} aria-hidden className={`h-1 w-4 rounded-full ${COMPLETED_MARK[job.status]}`} />
           ))}
-          {withNotes > 0 && <NotebookPen className="ml-0.5 size-3" aria-hidden />}
           <span className="sr-only">
             {completed.length} completed {completed.length === 1 ? "Interview" : "Interviews"}
-            {withNotes > 0 && `, ${withNotes} with notes`}
           </span>
         </p>
       )}

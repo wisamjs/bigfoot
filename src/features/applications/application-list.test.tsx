@@ -94,7 +94,7 @@ describe("ApplicationList", () => {
     expect(screen.queryByText("Recruiter Screen")).not.toBeInTheDocument();
   });
 
-  it("marks each completed Interview and says how many have Interview notes, without showing them", () => {
+  it("marks each completed Interview without showing or counting its Interview notes", () => {
     const app = application("Birch", {
       is_waiting: true,
       interviews: [
@@ -105,8 +105,9 @@ describe("ApplicationList", () => {
     });
     render(<ApplicationList applications={[app]} />);
     // The Progress column and its phone-width copy under the role.
-    expect(screen.getAllByText("3 completed Interviews, 2 with notes")).toHaveLength(2);
+    expect(screen.getAllByText("3 completed Interviews")).toHaveLength(2);
     expect(screen.queryByText(/Asked about caching/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/with notes/)).not.toBeInTheDocument();
     expect(within(row("Birch")).getByText(/Waiting since/)).toBeInTheDocument();
   });
 
