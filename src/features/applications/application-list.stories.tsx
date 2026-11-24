@@ -276,12 +276,14 @@ type Story = StoryObj<typeof meta>;
 
 /**
  * A job search a few weeks in: one table, ordered by what each Application is waiting on. An In
- * Progress row marks each completed Interview in green.
+ * Progress row marks each completed Interview in green, and says nothing of its Interview notes,
+ * which the Application page shows (BIG-185).
  */
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     await expect(progressMarks(canvasElement, "Clio")).not.toHaveLength(0);
     await expect(progressMarks(canvasElement, "Clio").every((mark) => mark.classList.contains("bg-fg-success-strong"))).toBe(true);
+    await expect(canvasElement.querySelector("svg.lucide-notebook-pen")).toBeNull();
   },
 };
 
