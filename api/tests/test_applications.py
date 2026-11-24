@@ -127,6 +127,7 @@ def test_create_accepts_text_at_the_maximum_length(client, token):
     assert len(app["company"]) == 200 and len(app["posting_url"]) == 2048
 
 
+@pytest.mark.usefixtures("fresh_schema")
 def test_the_database_rejects_text_that_is_too_long(settings):
     with connect(settings) as conn, pytest.raises(psycopg.errors.CheckViolation):
         conn.execute("insert into applications (job_seeker_id, company, title) values ('alice', %s, 'x')", ("x" * 201,))
@@ -212,6 +213,7 @@ def test_patch_refuses_office_days_on_a_location_that_is_not_hybrid(client, toke
     assert "hybrid" in res.json()["detail"]
 
 
+@pytest.mark.usefixtures("fresh_schema")
 def test_the_database_refuses_office_days_without_hybrid(settings):
     with connect(settings) as conn, pytest.raises(psycopg.errors.CheckViolation):
         conn.execute(
@@ -363,6 +365,7 @@ def test_patch_refuses_a_done_date_or_outcome_note_on_an_in_progress_application
     assert "only for a done application" in res.json()["detail"]
 
 
+@pytest.mark.usefixtures("fresh_schema")
 @pytest.mark.parametrize(
     "columns",
     [

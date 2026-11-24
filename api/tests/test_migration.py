@@ -9,6 +9,9 @@ from psycopg import sql
 
 from tests.conftest import MIGRATIONS, TEST_SCHEMA
 
+# They need the database at an earlier migration.
+pytestmark = pytest.mark.usefixtures("fresh_schema")
+
 MIGRATION = "20261113000000_give_applications_many_interviews.sql"
 REQUIRE_DATE = "20261124000000_require_interview_date.sql"
 

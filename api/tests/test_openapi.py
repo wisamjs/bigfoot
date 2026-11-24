@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.settings import get_settings
+from app.settings import Settings, get_settings
 
 DOC_PATHS = ("/docs", "/redoc", "/openapi.json")
 
@@ -17,9 +17,13 @@ def operations(schema):
             yield f"{method.upper()} {path}", operation
 
 
+# Enough to build the app and read its schema; nothing connects until a request starts its pool.
+OFFLINE = Settings(database_url="postgresql://unused", api_secret="unused", db_schema="public")
+
+
 @pytest.fixture(scope="module")
 def schema():
-    return create_app(replace(get_settings(), api_docs=False)).openapi()
+    return create_app(OFFLINE).openapi()
 
 
 def test_every_operation_has_a_summary_description_and_tag(schema):
@@ -96,6 +100,7 @@ def test_only_creating_a_token_returns_its_secret(schema):
     assert "token_hash" not in str(models)
 
 
+@pytest.mark.usefixtures("fresh_schema")
 @pytest.mark.parametrize("enabled", [False, True])
 def test_docs_are_served_only_when_enabled(settings, enabled):
     with TestClient(create_app(replace(settings, api_docs=enabled))) as client:
@@ -103,6 +108,7 @@ def test_docs_are_served_only_when_enabled(settings, enabled):
             assert client.get(path).status_code == (200 if enabled else 404), path
 
 
+@pytest.mark.usefixtures("fresh_schema")
 def test_a_token_from_the_authorize_dialog_works(settings, token):
     # Swagger UI sends `Authorization: Bearer <token>`, as the token fixture does.
     with TestClient(create_app(replace(settings, api_docs=True))) as client:
@@ -112,6 +118,8 @@ def test_a_token_from_the_authorize_dialog_works(settings, token):
 
 @pytest.mark.parametrize(("value", "enabled"), [(None, False), ("", False), ("false", False), ("true", True)])
 def test_api_docs_setting(monkeypatch, value, enabled):
+    monkeypatch.setenv("DATABASE_URL", "postgresql://unused")
+    monkeypatch.setenv("API_SECRET", "unused")
     if value is None:
         monkeypatch.delenv("API_DOCS", raising=False)
     else:

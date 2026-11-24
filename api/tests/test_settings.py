@@ -11,11 +11,6 @@ COMPLETE = {"DATABASE_URL": "postgresql://db.example/postgres", "API_SECRET": "s
 ENV_EXAMPLE = Path(__file__).resolve().parents[2] / ".env.example"
 
 
-@pytest.fixture(autouse=True)
-def fresh_schema() -> None:
-    """These tests never touch the database, so skip conftest's schema rebuild."""
-
-
 def without(*names: str) -> dict[str, str]:
     return {name: value for name, value in COMPLETE.items() if name not in names}
 
