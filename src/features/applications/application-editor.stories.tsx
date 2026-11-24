@@ -295,19 +295,35 @@ export const NothingToLookBackAt: Story = {
   },
 };
 
-/** The next Interview already has Interview notes: they show instead of Add Interview notes. */
-export const NextHasNotes: Story = {
+/** The next Interview already has Prep notes: they show instead of Add Prep notes. */
+export const NextHasPrepNotes: Story = {
   args: {
     app: {
       ...lumen,
       interviews: lumen.interviews.map((i) =>
-        i.id === "deep-dive" ? { ...i, how_it_went: "Bring the feature store migration story. Ask who owns on-call." } : i,
+        i.id === "deep-dive" ? { ...i, prep_notes: "Bring the feature store migration story. Ask who owns on-call." } : i,
       ),
     },
   },
   play: async ({ canvas }) => {
-    await expect(canvas.getByText(/Bring the feature store migration story/)).toBeVisible();
-    await expect(canvas.queryByRole("link", { name: "Add Interview notes" })).not.toBeInTheDocument();
+    const next = canvas.getByRole("region", { name: "Technical Deep-Dive" });
+    await expect(within(next).getByText(/Bring the feature store migration story/)).toBeVisible();
+    await expect(within(next).queryByRole("link", { name: "Add Prep notes" })).not.toBeInTheDocument();
+  },
+};
+
+/**
+ * A phone: Add Prep notes and Open Interview share a row only while both fit, and never get
+ * narrower than their labels (BIG-187).
+ */
+export const NextUpOnAPhone: Story = {
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+  play: async ({ canvas }) => {
+    const next = canvas.getByRole("region", { name: "Technical Deep-Dive" });
+    const links = ["Add Prep notes", "Open Interview"].map((name) =>
+      within(next).getAllByRole("link", { name }).find((l) => l.checkVisibility()),
+    );
+    await expect(links.every((link) => link && link.scrollWidth <= link.clientWidth)).toBe(true);
   },
 };
 

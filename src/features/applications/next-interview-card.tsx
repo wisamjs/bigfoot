@@ -7,9 +7,6 @@ import { NO_LOOK_BACK } from "@/features/applications/interview-notes-form";
 import { PrepLookBack } from "@/features/applications/prep-look-back";
 import { interviewHref } from "@/features/applications/routes";
 import {
-  hasInterviewNotes,
-  INTERVIEW_NOTES_FIELDS,
-  INTERVIEW_NOTES_LABELS,
   INTERVIEW_OPTIONS,
   type Application,
   type Interview,
@@ -19,12 +16,11 @@ import {
 /**
  * The Application's next Interview, first on its page (BIG-174): when it is, its kind, and Open
  * Interview. Under them, what its prep looks back at (BIG-181): up to two takeaways and They
- * asked last time, as on its Interview page. Then this Interview's own Interview notes, each field
- * that has text under its name, or Add Interview notes to start them on its Interview page.
+ * asked last time, as on its Interview page. Then its Prep notes, or Add Prep notes to start them
+ * on its Interview page: the card is there to get ready, and Interview notes come after (BIG-187).
  *
  * On the dashboard (`on="dashboard"`, BIG-183), the job seeker's soonest upcoming Interview: the
- * line under its kind names the company and role too, and the card shows its Prep notes, or Add
- * Prep notes, instead of Interview notes, as it is there to get ready.
+ * line under its kind names the company and role too.
  */
 export function NextInterviewCard({
   app,
@@ -40,17 +36,7 @@ export function NextInterviewCard({
   const href = interviewHref(app.id, interview.id);
   const kind = INTERVIEW_OPTIONS[interview.kind].label;
   const dashboard = on === "dashboard";
-  const notesName = dashboard ? "Prep notes" : "Interview notes";
-  const notes = dashboard
-    ? interview.prep_notes
-      ? [{ key: "prep_notes", label: null, text: interview.prep_notes }]
-      : []
-    : INTERVIEW_NOTES_FIELDS.filter((field) => interview[field]).map((field) => ({
-        key: field,
-        label: INTERVIEW_NOTES_LABELS[field],
-        text: interview[field],
-      }));
-  const hasNotes = dashboard ? Boolean(interview.prep_notes) : hasInterviewNotes(interview);
+  const prepNotes = interview.prep_notes;
   return (
     <section aria-labelledby="next-up-title" className="card flex flex-col gap-5 border-line-brand-subtle p-5 sm:p-8">
       <div className="flex items-start gap-4">
@@ -80,29 +66,26 @@ export function NextInterviewCard({
 
       <PrepLookBack lookBack={lookBack} />
 
-      {hasNotes && (
+      {prepNotes && (
         <div className="min-w-0">
-          <h3 className="m-0 text-sm font-medium text-body">{notesName}</h3>
-          {notes.map((note) => (
-            <p key={note.key} className="m-0 mt-1 line-clamp-6 whitespace-pre-line break-words text-base text-heading">
-              {note.label && <span className="font-bold">{note.label}: </span>}
-              {note.text}
-            </p>
-          ))}
+          <h3 className="m-0 text-sm font-medium text-body">Prep notes</h3>
+          <p className="m-0 mt-1 line-clamp-6 whitespace-pre-line break-words text-base text-heading">{prepNotes}</p>
         </div>
       )}
 
+      {/* min-w-fit: on touch screens .btn's 44px floor replaces a flex item's automatic minimum, so
+          without it the two flex-1 buttons squeeze below their labels instead of wrapping (BIG-187). */}
       <div className="flex flex-wrap items-center gap-3">
-        {!hasNotes && (
+        {!prepNotes && (
           <>
-            <Link href={href} className={`${buttonClasses("brand")} max-sm:flex-1`}>
+            <Link href={href} className={`${buttonClasses("brand")} min-w-fit max-sm:flex-1`}>
               <Plus className="size-4" aria-hidden />
-              Add {notesName}
+              Add Prep notes
             </Link>
-            <span className="hidden text-sm text-body sm:inline">No {notesName} yet.</span>
+            <span className="hidden text-sm text-body sm:inline">No Prep notes yet.</span>
           </>
         )}
-        <Link href={href} className={`${buttonClasses("secondary")} max-sm:flex-1 sm:hidden`}>
+        <Link href={href} className={`${buttonClasses("secondary")} min-w-fit max-sm:flex-1 sm:hidden`}>
           Open Interview
         </Link>
       </div>
