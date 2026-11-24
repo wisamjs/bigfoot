@@ -18,11 +18,6 @@ spec.loader.exec_module(db_status)
 PROD_URL = "postgresql://postgres.ref:secret@pooler.example:5432/postgres"
 
 
-@pytest.fixture(autouse=True)
-def fresh_schema() -> None:
-    """These tests never touch the database, so skip conftest's schema rebuild."""
-
-
 def test_a_production_build_applies_to_the_migrations_database():
     assert db_status.deploy_target({"VERCEL_ENV": "production", "MIGRATIONS_DATABASE_URL": PROD_URL}) == PROD_URL
 

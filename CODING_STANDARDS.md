@@ -57,15 +57,27 @@ A change to a component in `src/components/ui/` or `src/features/` updates its s
 
 Review sends back a PR that changes a component's behaviour or look without touching its stories.
 
+## Which layer an API test goes in
+
+An API test is a unit test unless only the database can decide what it checks.
+
+- **Unit** (`api/tests`, not marked `db`): logic. Validators and model rules in `models.py`, token checks in `auth.py`, settings, monitoring, anything a function decides from its arguments. Call the function or the model directly: no `TestClient`, no database. For code that reads the database, stand in a fake pool or connection, as `test_auth.py` does. `npm run test:api:unit` runs these in about two seconds, on every commit.
+- **Database** (asks for `client` or `fresh_schema`, which marks it `db`): what only Postgres decides. Constraints, ordering, deletion cascades, ownership between job seekers, limits, migrations, and that a route wires its rules up (one 422 per rule, not every case of it). `npm run test:api` and CI's `runtime` job run these.
+
+A unit test that connects fails at once (a guard in `api/tests/conftest.py`), so one can't pass locally against `.env.local`'s database and fail in CI.
+
+New or changed logic in `api/app` gets a unit test in the same PR. Review sends back a PR that tests a new rule only through HTTP.
+
 ## Coverage floors
 
-Every decision path needs a test, so both test runs fail below a floor. Each floor is the current
+Every decision path needs a test, so every test run fails below a floor. Each floor is the current
 coverage minus 2 points: raise it as tests are added, never lower it.
 
 | Tests | Floor | Set in |
 |---|---|---|
 | Frontend (Vitest, `npm test`) | statements 56, branches 56, functions 57, lines 56 | `thresholds` in `vitest.config.mts` |
 | API (pytest-cov, `npm run test:api`), line and branch coverage of `api/app` | 97% | `fail_under` in `api/pyproject.toml` |
+| API unit tests alone (`npm run test:api:unit`), line and branch coverage of the logic modules: `auth`, `domain`, `models`, `monitoring`, `responses`, `samples`, `settings` | 98% | `--cov-fail-under` and the `--cov` list in `test:api:unit` in `package.json`; a new logic module joins the list |
 
 ## Where code goes
 

@@ -32,7 +32,10 @@ build = "python ../scripts/db-status.py --deploy"
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "--cov=app --cov-branch --cov-report=term"
-markers = ["rebuilds_schema: drops and rebuilds the test schema itself, so conftest restores it afterwards"]
+markers = [
+  "db: uses the database; conftest adds it to every test that asks for `client` or `fresh_schema`",
+  "rebuilds_schema: drops and rebuilds the test schema itself, so conftest restores it afterwards",
+]
 
 [tool.ruff]
 line-length = 120

@@ -18,7 +18,7 @@
     "build-storybook": "storybook build --quiet",
     "test-storybook": "vitest run --project storybook",
     "lint:api": "cd api && uv run ruff check . ../scripts && uv run ruff format --check . ../scripts",
-    "verify": "npm run spell && npm run tokens && npm run stories && npm run lint:api && npm run openapi -- --check && npm run typecheck && npm run lint && npm run test && npm run test-storybook",
+    "verify": "npm run spell && npm run tokens && npm run stories && npm run lint:api && npm run test:api:unit && npm run openapi -- --check && npm run typecheck && npm run lint && npm run test && npm run test-storybook",
     "check": "echo 'npm run check is deprecated: use npm run verify' >&2 && npm run verify",
     "smoke": "node scripts/smoke.mjs",
     "a11y": "node scripts/a11y.mjs",
@@ -30,6 +30,7 @@
     "prepare": "git config core.hooksPath .githooks || true",
     "openapi": "cd api && uv run python ../scripts/openapi.py",
     "dev:api": "cd api && uv run uvicorn --factory app.main:create_app --port 8000 --reload",
+    "test:api:unit": "cd api && uv run pytest -m 'not db' -q --cov-reset --cov=app.auth --cov=app.domain --cov=app.models --cov=app.monitoring --cov=app.responses --cov=app.samples --cov=app.settings --cov-fail-under=98",
     "test:api": "node scripts/test-schema.mjs pytest",
     "db:drop-test-schema": "node scripts/test-schema.mjs drop",
     "db:status": "cd api && uv run python ../scripts/db-status.py"

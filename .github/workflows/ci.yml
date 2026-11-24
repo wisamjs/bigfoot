@@ -20,7 +20,7 @@ jobs:
   # Everything without a database, cheapest first. Each step runs even when an earlier one failed,
   # so one red run names every problem.
   fast-checks:
-    name: "fast-checks: spelling, tokens, Python lint, OpenAPI, types, ESLint, build"
+    name: "fast-checks: spelling, tokens, Python lint, API unit tests, OpenAPI, types, ESLint, build"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -35,6 +35,9 @@ jobs:
       - run: npm run stories
         if: success() || failure()
       - run: npm run lint:api
+        if: success() || failure()
+      # No database here (no service container, no DATABASE_URL), so a unit test that needs one fails.
+      - run: npm run test:api:unit
         if: success() || failure()
       - run: npm run openapi -- --check
         if: success() || failure()
