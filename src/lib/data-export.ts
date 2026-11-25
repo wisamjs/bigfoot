@@ -5,7 +5,7 @@ import {
   locationText,
   INTERVIEW_NOTES_FIELDS,
   INTERVIEW_NOTES_LABELS,
-  INTERVIEW_OPTIONS,
+  categoryLabel,
   OUTCOME_OPTIONS,
   STATUS_OPTIONS,
   type Application,
@@ -92,9 +92,9 @@ const CSV_COLUMNS: {
   { header: "Updated", value: (a) => isoUtc(a.updated_at) },
 ];
 
-/** `Technical (2026-11-11T15:30:00Z)`. */
+/** `Retrospective System Design (System Design, 2026-11-11T15:30:00Z)`: its title, category and date. */
 function interviewName(interview: Interview) {
-  return `${INTERVIEW_OPTIONS[interview.kind].label} (${isoUtc(interview.at)})`;
+  return `${interview.title} (${categoryLabel(interview.category)}, ${isoUtc(interview.at)})`;
 }
 
 /** `2026-11-11T15:30:00Z`: ISO 8601 in UTC, to the second, which spreadsheets read as a date. */

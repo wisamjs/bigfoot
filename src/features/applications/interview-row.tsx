@@ -4,12 +4,12 @@ import { Check, ChevronRight, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useId, useState } from "react";
 import { DaysFromToday, InterviewDayTime } from "@/features/applications/application-when";
+import { CategoryBadge } from "@/features/applications/category-badge";
 import { DateTile } from "@/features/applications/date-tile";
 import { interviewHref } from "@/features/applications/routes";
 import { TheyAsked } from "@/features/applications/interview-notes-form";
 import {
   INTERVIEW_NOTES_LABELS,
-  INTERVIEW_OPTIONS,
   hasInterviewNotes,
   paragraphs,
   questions,
@@ -20,15 +20,14 @@ import {
 const FOLD_LENGTH = 140;
 
 /**
- * One Interview in the Application page's Interviews card (BIG-174): a date tile, its kind, its day
- * and time. One still ahead says how far off it is, and "Add Interview notes" while it has none; a
+ * One Interview in the Application page's Interviews card (BIG-174): a date tile, its title with its
+ * category beside it, its day and time. One still ahead says how far off it is, and "Add Interview notes" while it has none; a
  * completed one is marked Completed and shows its Interview notes in full (BIG-179: How it went, They
- * asked and the takeaway), folded to the first paragraph on a phone behind Show all notes. The kind is a link whose area covers the row, so the whole row
+ * asked and the takeaway), folded to the first paragraph on a phone behind Show all notes. The title is a link whose area covers the row, so the whole row
  * opens the Interview page, where it is edited; the notes sit above that, so their text can be
  * selected.
  */
 export function InterviewRow({ applicationId, interview }: { applicationId: string; interview: Interview }) {
-  const kind = INTERVIEW_OPTIONS[interview.kind].label;
   const completed = interview.completed;
   return (
     <li className="group relative flex gap-4 border-t border-line py-5 first:border-t-0 first:pt-2">
@@ -40,8 +39,9 @@ export function InterviewRow({ applicationId, interview }: { applicationId: stri
             className="text-lg font-bold leading-[1.3] text-heading after:absolute after:inset-0 after:rounded-card focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-brand group-hover:text-fg-brand-strong"
           >
             <span className="sr-only">Open Interview: </span>
-            {kind}
+            {interview.title}
           </Link>
+          <CategoryBadge category={interview.category} />
           {completed && (
             <span className="inline-flex items-center gap-1 text-sm font-medium text-fg-success-strong">
               <Check className="size-4" aria-hidden />

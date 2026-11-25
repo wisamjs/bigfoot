@@ -60,7 +60,7 @@ const birch = application("birch", {
   location: "remote",
   salary: "$150k",
   posting_url: "https://www.birch.test/jobs/1",
-  interviews: [interview("i1", { application_id: "birch", kind: "technical" })],
+  interviews: [interview("i1", { application_id: "birch", category: "technical", title: "Technical" })],
 });
 
 /** Opens Birch with its details as fields. */
@@ -162,16 +162,16 @@ describe("the Interviews", () => {
     company: "Oak",
     is_waiting: false,
     interviews: [
-      interview("screen", { application_id: "oak", kind: "recruiter_screen", at: daysFromNow(-10), how_it_went: "Friendly.\n\nLead with the decision next time." }),
+      interview("screen", { application_id: "oak", category: "recruiter", title: "Recruiter Screen", at: daysFromNow(-10), how_it_went: "Friendly.\n\nLead with the decision next time." }),
       interview("manager", {
         application_id: "oak",
-        kind: "hiring_manager",
+        category: "hiring_manager", title: "Hiring Manager",
         at: daysFromNow(-3),
         how_it_went: "Went long.\n\nAsk about on-call.",
         takeaway: "Lead with the decision.",
       }),
-      interview("deep", { application_id: "oak", kind: "technical_deep_dive", at: daysFromNow(2), completed: false }),
-      interview("lead", { application_id: "oak", kind: "leadership", at: daysFromNow(9), completed: false }),
+      interview("deep", { application_id: "oak", category: "project_deep_dive", title: "Technical Deep-Dive", at: daysFromNow(2), completed: false }),
+      interview("lead", { application_id: "oak", category: "people_management", title: "Leadership", at: daysFromNow(9), completed: false }),
     ],
   });
   const rows = () => screen.getAllByRole("link", { name: /^Open Interview: / }).map((row) => row.textContent);
@@ -179,7 +179,7 @@ describe("the Interviews", () => {
   it("shows the next one first, on its own, with the takeaways that apply and They asked last time", () => {
     const elm = application("elm", {
       company: "Elm Health",
-      interviews: [interview("elm-dive", { application_id: "elm", kind: "technical_deep_dive", at: daysFromNow(-20), takeaway: "Draw it first." })],
+      interviews: [interview("elm-dive", { application_id: "elm", category: "project_deep_dive", title: "Technical Deep-Dive", at: daysFromNow(-20), takeaway: "Draw it first." })],
     });
     const asked = { ...oak, interviews: oak.interviews.map((i) => (i.id === "manager" ? { ...i, what_they_asked: "Why Oak?\nWhat would you not build?" } : i)) };
     open(asked, { lookBack: prepLookBack([asked, elm], asked, asked.interviews[2]) });
@@ -188,7 +188,7 @@ describe("the Interviews", () => {
     const takeaways = within(within(next).getByRole("list", { name: "Takeaways for this Interview" })).getAllByRole("listitem");
     expect(takeaways.map((t) => t.textContent)).toEqual([
       expect.stringMatching(/^Takeaway from Hiring Manager · .+Lead with the decision\.$/),
-      "From your last Technical Deep-Dive · Elm HealthDraw it first.",
+      "From your last Project Deep-dive · Elm HealthDraw it first.",
     ]);
     expect(within(within(next).getByRole("list", { name: "They asked last time" })).getAllByRole("listitem")).toHaveLength(2);
     expect(within(next).queryByText(/Carried forward/)).not.toBeInTheDocument();

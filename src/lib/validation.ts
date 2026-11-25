@@ -1,16 +1,17 @@
 // Checks what a job seeker typed before it is sent, with the API's own rules (api/app/models.py)
-// and limits (APPLICATION_MAX_LENGTHS, INTERVIEW_NOTES_MAX_LENGTHS, ACCESS_TOKEN_NAME_MAX): the forms run them to show
+// and limits (APPLICATION_MAX_LENGTHS, INTERVIEW_NOTES_MAX_LENGTHS, INTERVIEW_TITLE_MAX_LENGTH, ACCESS_TOKEN_NAME_MAX): the forms run them to show
 // errors beside each field, and the Server Actions run them again, because anyone can call those
 // with any values. FastAPI and the database still check everything; this only answers sooner.
 
 import { ACCESS_TOKEN_NAME_MAX } from "@/lib/account";
 import {
   APPLICATION_MAX_LENGTHS,
-  INTERVIEW_KINDS,
+  INTERVIEW_CATEGORIES,
   INTERVIEW_NOTES_FIELDS,
   INTERVIEW_NOTES_LABELS,
   INTERVIEW_NOTES_MAX_LENGTHS,
   INTERVIEW_PREP_NOTES_MAX_LENGTH,
+  INTERVIEW_TITLE_MAX_LENGTH,
   LOCATIONS,
   OFFICE_DAYS,
   OUTCOMES,
@@ -28,7 +29,7 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 const STATUS_SET = new Set<unknown>(STATUSES);
 const OUTCOME_SET = new Set<unknown>(OUTCOMES);
-const KIND_SET = new Set<unknown>(INTERVIEW_KINDS);
+const CATEGORY_SET = new Set<unknown>(INTERVIEW_CATEGORIES);
 const LOCATION_SET = new Set<unknown>(LOCATIONS);
 const OFFICE_DAYS_SET = new Set<unknown>(OFFICE_DAYS);
 
@@ -191,8 +192,13 @@ export function dateOrderError(
 
 type InterviewInput = Partial<Record<keyof InterviewFields, unknown>>;
 
-function interviewKindError(fields: InterviewInput, creating: boolean) {
-  return (creating || "kind" in fields) && !KIND_SET.has(fields.kind) ? "Choose an Interview kind." : null;
+function interviewCategoryError(fields: InterviewInput, creating: boolean) {
+  return (creating || "category" in fields) && !CATEGORY_SET.has(fields.category) ? "Choose an Interview category." : null;
+}
+
+/** The title's problem: required when creating, and never cleared by a change. */
+function interviewTitleError(fields: InterviewInput, creating: boolean) {
+  return creating || "title" in fields ? requiredText(fields.title, "Title", INTERVIEW_TITLE_MAX_LENGTH) : null;
 }
 
 /** The date and time's problem: required when creating, and never cleared by a change. */
@@ -204,18 +210,20 @@ function interviewDateError(fields: InterviewInput, creating: boolean) {
 }
 
 /**
- * Problems with an Interview's fields. `creating` checks a whole new Interview, so the kind and the
- * date and time are required; otherwise only the fields given are checked, as a change, and the
- * date can't be cleared.
+ * Problems with an Interview's fields. `creating` checks a whole new Interview, so the category, the
+ * title and the date and time are required; otherwise only the fields given are checked, as a
+ * change, and none of those three can be cleared.
  */
 export function interviewErrors(input: unknown, { creating = false }: { creating?: boolean } = {}): FieldErrors {
   if (typeof input !== "object" || input === null) return { form: "Nothing to save." };
   const fields = input as InterviewInput;
-  const errors: FieldErrors = unknownFields(input, ["kind", "at", ...INTERVIEW_NOTES_FIELDS, "prep_notes"]);
-  const kind = interviewKindError(fields, creating);
-  if (kind) errors.kind = kind;
-  const at = interviewDateError(fields, creating);
-  if (at) errors.at = at;
+  const errors: FieldErrors = unknownFields(input, ["category", "title", "at", ...INTERVIEW_NOTES_FIELDS, "prep_notes"]);
+  const required = {
+    category: interviewCategoryError(fields, creating),
+    title: interviewTitleError(fields, creating),
+    at: interviewDateError(fields, creating),
+  };
+  for (const [field, problem] of Object.entries(required)) if (problem) errors[field] = problem;
   for (const field of INTERVIEW_NOTES_FIELDS) {
     const problem = optionalText(fields[field], INTERVIEW_NOTES_LABELS[field], INTERVIEW_NOTES_MAX_LENGTHS[field]);
     if (problem) errors[field] = problem;

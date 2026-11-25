@@ -29,7 +29,7 @@ def test_samples_applied_in_the_past_few_weeks():
 
 
 def test_interviews_are_at_17_utc_relative_to_today_with_one_upcoming():
-    interviews = [at for s in sample_applications(NOW) for _, at in s["interviews"]]
+    interviews = [at for s in sample_applications(NOW) for *_, at in s["interviews"]]
     assert all(at.time() == time(17) and at.tzinfo == UTC for at in interviews)
     assert [at for at in interviews if at > NOW] == [datetime(2026, 11, 23, 17, tzinfo=UTC)]
 
@@ -42,9 +42,9 @@ def test_every_sample_passes_the_rules_a_job_seeker_s_own_application_does():
     for sample in sample_applications(NOW):
         fields = {key: value for key, value in sample.items() if key != "interviews"}
         ApplicationCreate.model_validate(fields)
-        for kind, at in sample["interviews"]:
-            InterviewCreate.model_validate({"kind": kind, "at": at})
-        assert all(at.date() >= sample["applied_on"] for _, at in sample["interviews"])
+        for category, title, at in sample["interviews"]:
+            InterviewCreate.model_validate({"category": category, "title": title, "at": at})
+        assert all(at.date() >= sample["applied_on"] for *_, at in sample["interviews"])
 
 
 def test_samples_move_with_the_day_they_are_made():

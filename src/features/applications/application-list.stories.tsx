@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect } from "storybook/test";
-import type { Application, InterviewKind, Location, Outcome } from "@/lib/applications";
+import type { Application, InterviewCategory, Location, Outcome } from "@/lib/applications";
 import { previewApplications } from "@/lib/mock-data";
 import { application, interview as testInterview } from "@/test/applications";
 import { ApplicationList } from "./application-list";
@@ -16,24 +16,45 @@ function daysFromNow(days: number, afternoon = false) {
   return at.toISOString();
 }
 
+/** The Interview titles these stories use, each with its category. */
+const CATEGORY_OF = {
+  "AI Assisted Coding Challenge": "technical",
+  "BE System Design": "system_design",
+  "Behavioural": "culture",
+  "Coding Challenge": "technical",
+  "Cross-Functional Interview": "collaboration",
+  "FE System Design": "system_design",
+  "Hiring Manager": "hiring_manager",
+  "Informal Chat": "recruiter",
+  "Leadership": "people_management",
+  "Onsite Loop": "hiring_manager",
+  "People Management": "people_management",
+  "Recruiter Screen": "recruiter",
+  "Strategy & Values Alignment": "decision_maker",
+  "Technical": "technical",
+  "Technical Deep-Dive": "project_deep_dive",
+} satisfies Record<string, InterviewCategory>;
+type Title = keyof typeof CATEGORY_OF;
+
 type Plan = {
   location?: Location | null;
   /** Days in office, for a Hybrid Location. */
   officeDays?: number;
   appliedDaysAgo?: number;
-  /** Completed Interviews, oldest first: their kind, and whether they have Interview notes. */
-  done?: (InterviewKind | [InterviewKind, "notes"])[];
-  /** Upcoming Interviews: their kind and how many days away. */
-  next?: [InterviewKind, number][];
+  /** Completed Interviews, oldest first: their title, and whether they have Interview notes. */
+  done?: (Title | [Title, "notes"])[];
+  /** Upcoming Interviews: their title and how many days away. */
+  next?: [Title, number][];
   outcome?: Outcome | null;
   sample?: boolean;
 };
 
 /** One Interview of the Application `id`. */
-function interview(id: string, i: number, kind: InterviewKind, at: string, completed: boolean, notes = false) {
+function interview(id: string, i: number, title: Title, at: string, completed: boolean, notes = false) {
   return testInterview(`${id}-${i}`, {
     application_id: id,
-    kind,
+    category: CATEGORY_OF[title],
+    title,
     at,
     completed,
     how_it_went: notes ? "Went well; asked about trade-offs." : null,
@@ -47,14 +68,14 @@ function completedInterviews(
   done: NonNullable<Plan["done"]>,
 ) {
   return done.map((entry, i) => {
-    const [kind, notes] = Array.isArray(entry) ? entry : [entry];
+    const [title, notes] = Array.isArray(entry) ? entry : [entry];
     const daysAgo = Math.round(
       applied - ((i + 1) * (applied - 2)) / (done.length + 1),
     );
     return interview(
       id,
       i,
-      kind,
+      title,
       daysFromNow(-daysAgo, i % 2 === 1),
       true,
       Boolean(notes),
@@ -78,8 +99,8 @@ function app(company: string, title: string, plan: Plan = {}): Application {
   const applied = appliedDaysAgo ?? 7 + done.length * 7;
   const appliedOn = daysFromNow(-applied).slice(0, 10);
   const completed = completedInterviews(id, applied, done);
-  const upcoming = next.map(([kind, days], i) =>
-    interview(id, 10 + i, kind, daysFromNow(days, i % 2 === 0), false),
+  const upcoming = next.map(([title, days], i) =>
+    interview(id, 10 + i, title, daysFromNow(days, i % 2 === 0), false),
   );
   const isWaiting = !outcome && upcoming.length === 0;
   return application(id, {
@@ -109,7 +130,7 @@ const jobSearch: Application[] = [
   }),
   app("Shopify", "Senior Developer", {
     ...HYBRID_3,
-    done: [["recruiter_screen", "notes"]],
+    done: [["Recruiter Screen", "notes"]],
   }),
   app("Wealthsimple", "Senior Full-stack Developer", {
     location: "in_office",
@@ -125,7 +146,7 @@ const jobSearch: Application[] = [
   }),
   app("Clio", "Senior Software Developer, Platform", {
     location: "in_office",
-    done: ["recruiter_screen", "hiring_manager"],
+    done: ["Recruiter Screen", "Hiring Manager"],
   }),
   app("1Password", "Developer, Web Experience", { appliedDaysAgo: 1 }),
   app("Faire", "Software Engineer, Growth", {
@@ -137,112 +158,112 @@ const jobSearch: Application[] = [
   }),
 
   // Interview scheduled: one or more upcoming, some far along.
-  app("Notion", "Full-stack Engineer", { next: [["recruiter_screen", 1]] }),
+  app("Notion", "Full-stack Engineer", { next: [["Recruiter Screen", 1]] }),
   app("Datadog", "Software Engineer", {
     ...HYBRID_2,
-    done: [["recruiter_screen", "notes"]],
-    next: [["technical", 2]],
+    done: [["Recruiter Screen", "notes"]],
+    next: [["Technical", 2]],
   }),
   app("Figma", "Senior Engineer", {
     ...HYBRID_3,
     done: [
-      ["recruiter_screen", "notes"],
-      "hiring_manager",
-      ["technical", "notes"],
+      ["Recruiter Screen", "notes"],
+      "Hiring Manager",
+      ["Technical", "notes"],
     ],
-    next: [["onsite_loop", 4]],
+    next: [["Onsite Loop", 4]],
   }),
   app("Linear", "Product Engineer", {
     done: [
-      "informal_chat",
-      "recruiter_screen",
-      ["technical", "notes"],
-      "fe_system_design",
+      "Informal Chat",
+      "Recruiter Screen",
+      ["Technical", "notes"],
+      "FE System Design",
     ],
-    next: [["behavioural", 3]],
+    next: [["Behavioural", 3]],
   }),
   app("Airtable", "Frontend Engineer", {
     ...HYBRID_2,
-    done: ["recruiter_screen"],
-    next: [["hiring_manager", 5]],
+    done: ["Recruiter Screen"],
+    next: [["Hiring Manager", 5]],
   }),
   app("Asana", "Software Engineer", {
     ...HYBRID_3,
     done: [
-      "recruiter_screen",
-      "hiring_manager",
-      "coding_challenge",
-      "technical",
-      "fe_system_design",
-      "behavioural",
+      "Recruiter Screen",
+      "Hiring Manager",
+      "Coding Challenge",
+      "Technical",
+      "FE System Design",
+      "Behavioural",
     ],
     next: [
-      ["technical", 6],
-      ["leadership", 6],
+      ["Technical", 6],
+      ["Leadership", 6],
     ],
   }),
   app("Okta", "Engineering Manager", {
     done: [
-      ["recruiter_screen", "notes"],
-      "hiring_manager",
-      "people_management",
-      ["be_system_design", "notes"],
-      "leadership",
+      ["Recruiter Screen", "notes"],
+      "Hiring Manager",
+      "People Management",
+      ["BE System Design", "notes"],
+      "Leadership",
     ],
     next: [
-      ["cross_functional_interview", 8],
-      ["be_system_design", 10],
+      ["Cross-Functional Interview", 8],
+      ["BE System Design", 10],
     ],
   }),
   app("Vercel", "Senior Software Engineer, Next.js", {
-    done: ["recruiter_screen", ["ai_assisted_coding_challenge", "notes"]],
-    next: [["technical_deep_dive", 2]],
+    done: ["Recruiter Screen", ["AI Assisted Coding Challenge", "notes"]],
+    next: [["Technical Deep-Dive", 2]],
   }),
   app("Ada", "Staff Frontend Engineer", {
     location: "in_office",
-    done: ["recruiter_screen"],
+    done: ["Recruiter Screen"],
     next: [
-      ["fe_system_design", 7],
-      ["strategy_and_values_alignment", 9],
-      ["hiring_manager", 12],
+      ["FE System Design", 7],
+      ["Strategy & Values Alignment", 9],
+      ["Hiring Manager", 12],
     ],
   }),
   app("Benevity", "Software Developer II", {
     location: "in_office",
-    next: [["informal_chat", 0]],
+    next: [["Informal Chat", 0]],
   }),
   app("Thinkific", "Senior Developer", {
     location: "in_office",
-    done: ["recruiter_screen"],
-    next: [["coding_challenge", 15]],
+    done: ["Recruiter Screen"],
+    next: [["Coding Challenge", 15]],
   }),
 
   // Offers, waiting on the job seeker's answer.
   app("Ramp", "Staff Engineer", {
     done: [
-      "recruiter_screen",
-      "hiring_manager",
-      "technical",
-      "be_system_design",
-      "onsite_loop",
-      "leadership",
+      "Recruiter Screen",
+      "Hiring Manager",
+      "Technical",
+      "BE System Design",
+      "Onsite Loop",
+      "Leadership",
     ],
     outcome: "offer",
   }),
   app("Wave", "Senior Software Engineer", {
     ...HYBRID_2,
-    done: ["recruiter_screen", ["technical", "notes"], "behavioural"],
+    done: ["Recruiter Screen", ["Technical", "notes"], "Behavioural"],
     outcome: "offer",
   }),
 
   // Done without an Offer: shown with "Show done".
   app("Atlassian", "Senior Frontend Engineer", {
-    done: ["recruiter_screen", "technical"],
+    done: ["Recruiter Screen", "Technical"],
     outcome: "rejected",
   }),
   app("Slack", "Software Engineer", {
     ...HYBRID_3,
-    done: ["recruiter_screen"],
+    done: ["Recruiter Screen"],
     outcome: "position_filled",
   }),
   app("Twilio", "Frontend Engineer", {
@@ -250,16 +271,16 @@ const jobSearch: Application[] = [
     outcome: "no_open_position",
   }),
   app("Dropbox", "Senior Engineer", {
-    done: ["recruiter_screen", "hiring_manager"],
+    done: ["Recruiter Screen", "Hiring Manager"],
     outcome: "withdrawn",
   }),
   app("Coinbase", "Software Engineer, Payments", {
-    done: [["informal_chat", "notes"]],
+    done: [["Informal Chat", "notes"]],
     outcome: "not_the_right_fit",
   }),
   app("Instacart", "Senior Software Engineer", {
     location: "in_office",
-    done: ["recruiter_screen", "onsite_loop"],
+    done: ["Recruiter Screen", "Onsite Loop"],
     outcome: "rejected",
   }),
 ];

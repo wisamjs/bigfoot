@@ -94,10 +94,10 @@ describe("SaveStatus", () => {
   });
 
   it("says what is saving and when it's saved, naming it for screen readers", () => {
-    const { rerender } = render(<SaveStatus status={{ phase: "saving" }} label="Interview 2 kind" />);
-    expect(screen.getByRole("status")).toHaveTextContent("Interview 2 kind: Saving…");
-    rerender(<SaveStatus status={{ phase: "saved", run: 1 }} label="Interview 2 kind" />);
-    expect(screen.getByRole("status")).toHaveTextContent("Interview 2 kind: Saved");
+    const { rerender } = render(<SaveStatus status={{ phase: "saving" }} label="Interview 2 title" />);
+    expect(screen.getByRole("status")).toHaveTextContent("Interview 2 title: Saving…");
+    rerender(<SaveStatus status={{ phase: "saved", run: 1 }} label="Interview 2 title" />);
+    expect(screen.getByRole("status")).toHaveTextContent("Interview 2 title: Saved");
   });
 
   it("takes its own words, such as Adding… and Added", () => {

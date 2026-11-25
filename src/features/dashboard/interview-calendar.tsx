@@ -9,7 +9,7 @@ import { CalendarBigfoot, ClockBigfoot } from "@/features/shell/illustrations";
 import { interviewHref } from "@/features/applications/routes";
 import { useIsClient } from "@/hooks/use-is-client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { INTERVIEW_OPTIONS, type DatedInterview } from "@/lib/applications";
+import type { DatedInterview } from "@/lib/applications";
 import {
   dayKey,
   groupByDay,
@@ -303,7 +303,6 @@ function PickedDay({ date, items, now }: { date: Date; items: DatedInterview[]; 
 
 function PickedInterview({ item: { application, interview }, past }: { item: DatedInterview; past: boolean }) {
   const at = new Date(interview.at);
-  const kind = INTERVIEW_OPTIONS[interview.kind].label;
   return (
     <li>
       <Link
@@ -312,7 +311,7 @@ function PickedInterview({ item: { application, interview }, past }: { item: Dat
       >
         <span className={`min-w-0 flex-1 break-words ${past ? "" : "text-heading"}`}>
           <span className="sr-only">Open Interview: </span>
-          {timeFormat.format(at)} · {kind} · {application.company}
+          {timeFormat.format(at)} · {interview.title} · {application.company}
         </span>
         <ChevronRight className="size-4 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden />
       </Link>
@@ -371,7 +370,6 @@ function Agenda({
  */
 function AgendaItem({ item: { application, interview }, past }: { item: DatedInterview; past: boolean }) {
   const at = new Date(interview.at);
-  const kind = INTERVIEW_OPTIONS[interview.kind];
   return (
     <li>
       <Link
@@ -381,7 +379,7 @@ function AgendaItem({ item: { application, interview }, past }: { item: DatedInt
         {/* The link's name, in full; the row below is the same, laid out for the eye (WCAG 2.5.3:
             a name from the content, not an aria-label that leaves the visible text out). */}
         <span className="sr-only">
-          {`Open Interview: ${application.company}, ${kind.label}, ${dayFormat.format(at)} at ${timeFormat.format(at)}`}
+          {`Open Interview: ${application.company}, ${interview.title}, ${dayFormat.format(at)} at ${timeFormat.format(at)}`}
         </span>
         <time
           aria-hidden
@@ -392,7 +390,7 @@ function AgendaItem({ item: { application, interview }, past }: { item: DatedInt
           <span className="text-xl font-bold leading-[1.1]">{at.getDate()}</span>
         </time>
         <span aria-hidden className="flex min-w-0 flex-1 flex-col gap-px">
-          <span className={`break-words font-semibold ${past ? "text-body" : "text-heading"}`}>{kind.label}</span>
+          <span className={`break-words font-semibold ${past ? "text-body" : "text-heading"}`}>{interview.title}</span>
           <span className="break-words text-sm text-body">
             {application.company} · {application.title}
           </span>

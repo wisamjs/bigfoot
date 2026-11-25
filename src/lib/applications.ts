@@ -24,25 +24,26 @@ export type Location = (typeof LOCATIONS)[number];
 export const OFFICE_DAYS = [1, 2, 3, 4] as const;
 export type OfficeDays = (typeof OFFICE_DAYS)[number];
 
-/** Listed in the order they usually happen in a hiring process. */
-export const INTERVIEW_KINDS = [
-  "informal_chat",
-  "recruiter_screen",
+/**
+ * Interview category (GLOSSARY.md, docs/adr/0007): what an Interview assesses. Fixed, so a Takeaway
+ * for next time can match across Applications on it. Listed roughly in the order they happen.
+ */
+export const INTERVIEW_CATEGORIES = [
+  "recruiter",
   "hiring_manager",
   "technical",
-  "behavioural",
-  "leadership",
-  "onsite_loop",
-  "ai_assisted_coding_challenge",
-  "coding_challenge",
-  "fe_system_design",
-  "be_system_design",
-  "technical_deep_dive",
-  "cross_functional_interview",
-  "strategy_and_values_alignment",
+  "system_design",
+  "project_deep_dive",
   "people_management",
+  "project_delivery",
+  "collaboration",
+  "culture",
+  "decision_maker",
 ] as const;
-export type InterviewKind = (typeof INTERVIEW_KINDS)[number];
+export type InterviewCategory = (typeof INTERVIEW_CATEGORIES)[number];
+
+/** The longest Interview title the API stores, in characters. */
+export const INTERVIEW_TITLE_MAX_LENGTH = 200;
 
 /** Interview notes (GLOSSARY.md): three optional plain-text fields on an Interview, in the order they're written. */
 export const INTERVIEW_NOTES_FIELDS = ["what_they_asked", "how_it_went", "takeaway"] as const;
@@ -78,7 +79,10 @@ export const APPLICATION_MAX_LENGTHS = {
 export type Interview = {
   id: string;
   application_id: string;
-  kind: InterviewKind;
+  /** Interview category: what the Interview assesses. */
+  category: InterviewCategory;
+  /** Interview title: the job seeker's own name for it, never blank. */
+  title: string;
   /** ISO timestamp, required (docs/adr/0005). */
   at: string;
   /** Interview notes, What they asked: the questions, one per line; null when there are none. */
@@ -135,7 +139,7 @@ export type ApplicationFields = Omit<
 >;
 
 /** What a form sends: `at` is null while no date and time has been given, and validation refuses it. */
-export type InterviewFields = Pick<Interview, "kind" | InterviewNotesField | "prep_notes"> & { at: string | null };
+export type InterviewFields = Pick<Interview, "category" | "title" | InterviewNotesField | "prep_notes"> & { at: string | null };
 
 /** Whether an Interview has Interview notes: any of the three fields has text. */
 export function hasInterviewNotes(interview: Pick<Interview, InterviewNotesField>): boolean {
@@ -179,23 +183,31 @@ export const OUTCOME_OPTIONS: Record<Outcome, Option> = {
   not_the_right_fit: { label: "Not the Right Fit" },
 };
 
-export const INTERVIEW_OPTIONS: Record<InterviewKind, Option> = {
-  informal_chat: { label: "Informal Chat" },
-  recruiter_screen: { label: "Recruiter Screen" },
+export const INTERVIEW_CATEGORY_OPTIONS: Record<InterviewCategory, Option> = {
+  recruiter: { label: "Recruiter" },
   hiring_manager: { label: "Hiring Manager" },
   technical: { label: "Technical" },
-  behavioural: { label: "Behavioural" },
-  leadership: { label: "Leadership" },
-  onsite_loop: { label: "Onsite Loop" },
-  ai_assisted_coding_challenge: { label: "AI Assisted Coding Challenge" },
-  coding_challenge: { label: "Coding Challenge" },
-  fe_system_design: { label: "FE System Design" },
-  be_system_design: { label: "BE System Design" },
-  technical_deep_dive: { label: "Technical Deep-Dive" },
-  cross_functional_interview: { label: "Cross-Functional Interview" },
-  strategy_and_values_alignment: { label: "Strategy & Values Alignment" },
+  system_design: { label: "System Design" },
+  project_deep_dive: { label: "Project Deep-dive" },
   people_management: { label: "People Management" },
+  project_delivery: { label: "Project Delivery" },
+  collaboration: { label: "Collaboration" },
+  culture: { label: "Culture" },
+  decision_maker: { label: "Decision Maker" },
 };
+
+/** An Interview category's name, which is also where a new Interview's title starts. */
+export function categoryLabel(category: InterviewCategory): string {
+  return INTERVIEW_CATEGORY_OPTIONS[category].label;
+}
+
+/**
+ * The title after the category changes from `from` to `to`: it follows the category while it is
+ * still the category's name (or blank), and stays as the job seeker wrote it once they've edited it.
+ */
+export function titleForCategory(title: string, from: InterviewCategory, to: InterviewCategory): string {
+  return title.trim() === "" || title === categoryLabel(from) ? categoryLabel(to) : title;
+}
 
 export function isDone(app: Application) {
   return app.status === "done";
@@ -374,10 +386,10 @@ export function noteBlocks(notes: string | null): NoteBlock[] {
 /**
  * A Takeaway for next time shown on an upcoming Interview's prep (BIG-181), or, read the other way,
  * an upcoming Interview a completed one's takeaway shows on. `rule` says which rule linked them:
- * `same_application`, or `same_kind`, the same Interview kind at another Application.
+ * `same_application`, or `same_category`, the same Interview category at another Application.
  */
 export type PrepTakeaway = {
-  rule: "same_application" | "same_kind";
+  rule: "same_application" | "same_category";
   application: Pick<Application, "id" | "company">;
   interview: Interview;
 };
@@ -404,7 +416,7 @@ function latest(candidates: DatedInterview[], counts: (i: Interview) => boolean)
 function linked(own: DatedInterview | null | undefined, elsewhere: DatedInterview | null | undefined): PrepTakeaway[] {
   const rules = [
     { rule: "same_application" as const, match: own },
-    { rule: "same_kind" as const, match: elsewhere },
+    { rule: "same_category" as const, match: elsewhere },
   ];
   return rules.flatMap(({ rule, match }) =>
     match ? [{ rule, application: { id: match.application.id, company: match.application.company }, interview: match.interview }] : [],
@@ -420,7 +432,7 @@ function findTakeaways(
 ): PrepTakeaway[] {
   const own = latest(dated(app, app.interviews), counts);
   const elsewhere = latest(
-    apps.filter((a) => a.id !== app.id).flatMap((a) => dated(a, a.interviews.filter((i) => i.kind === interview.kind))),
+    apps.filter((a) => a.id !== app.id).flatMap((a) => dated(a, a.interviews.filter((i) => i.category === interview.category))),
     counts,
   );
   return linked(own, elsewhere);
@@ -430,7 +442,7 @@ function findTakeaways(
  * The takeaways an upcoming Interview's prep shows (BIG-181), at most two, nothing stored about
  * where a takeaway goes: first, from the latest completed Interview of the same Application that
  * has a Takeaway for next time; then, from the job seeker's latest completed Interview of the same
- * kind at another Application, Done ones included (a lesson from a rejected Application is still a
+ * category at another Application, Done ones included (a lesson from a rejected Application is still a
  * lesson). The two rules never pick the same Interview, as the second looks only at other
  * Applications, so each takeaway shows once.
  */
@@ -451,7 +463,7 @@ export function prepLookBack(apps: Application[], app: Application, interview: I
 /**
  * Where a completed Interview's Takeaway for next time shows (BIG-181), prepTakeaways read the
  * other way, as if it has one: the soonest upcoming Interview of its Application whose prep shows
- * it, and the soonest upcoming Interview of the same kind at another In Progress Application whose
+ * it, and the soonest upcoming Interview of the same category at another In Progress Application whose
  * prep shows it. Empty for an upcoming Interview, and when neither exists yet or a later
  * takeaway shows instead.
  */
@@ -465,7 +477,7 @@ export function takeawayShowsOn(apps: Application[], app: Application, interview
   const own = dated(app, upcomingInterviews(app)).find((target) => showsOn(target, "same_application"));
   const elsewhere = getUpcoming(apps).find(
     (target) =>
-      target.application.id !== app.id && target.interview.kind === interview.kind && showsOn(target, "same_kind"),
+      target.application.id !== app.id && target.interview.category === interview.category && showsOn(target, "same_category"),
   );
   return linked(own, elsewhere);
 }

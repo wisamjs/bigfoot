@@ -6,10 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { ApplicationWhen, InterviewWhen } from "@/features/applications/application-when";
 import { applicationHref } from "@/features/applications/routes";
 import { SampleBadge } from "@/features/applications/sample-badge";
-import { COMPLETED_MARK, INTERVIEW_TONE, OUTCOME_TONE } from "@/features/applications/status-tone";
+import { CATEGORY_TONE, COMPLETED_MARK, OUTCOME_TONE } from "@/features/applications/status-tone";
 import { useIsClient } from "@/hooks/use-is-client";
 import {
-  INTERVIEW_OPTIONS,
+  categoryLabel,
   locationText,
   OUTCOME_OPTIONS,
   upcomingInterviews,
@@ -28,7 +28,7 @@ export const rowBorderClasses = "[&>td]:border-t [&>td]:border-line";
 
 /**
  * One Application in the Applications table, answering "what's next here?": company and role,
- * Progress (its group and a mark per completed Interview), Next (each upcoming Interview's kind,
+ * Progress (its group and a mark per completed Interview), Next (each upcoming Interview's title,
  * "Waiting since", or its Outcome once Done) and Location. A linked row opens its Application page
  * and ends in a chevron saying so.
  */
@@ -119,7 +119,7 @@ function Progress({ job, group }: { job: Application; group: string }) {
 
 /**
  * What comes next: the Outcome of a Done Application other than an Offer, each upcoming Interview's
- * kind (soonest first, its date on hover and to screen readers), and "Waiting since".
+ * title (soonest first, its date on hover and to screen readers), and "Waiting since".
  */
 function Next({ job }: { job: Application }) {
   const upcoming = upcomingInterviews(job);
@@ -145,16 +145,20 @@ function Next({ job }: { job: Application }) {
 
 const hoverFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 
-/** An upcoming Interview's kind badge; its date shows on hover and is read after the kind. */
+/**
+ * An upcoming Interview's title as a badge in its category's colour; its category and date show on
+ * hover, and are read after the title.
+ */
 function UpcomingInterview({ interview }: { interview: Interview }) {
   // The server can't know the viewer's time zone, so the date is added after hydration.
   const isClient = useIsClient();
-  const when = isClient ? hoverFormat.format(new Date(interview.at)) : undefined;
+  const category = categoryLabel(interview.category);
+  const when = isClient ? `${category} · ${hoverFormat.format(new Date(interview.at))}` : category;
   return (
     <li title={when} className="inline-flex">
-      <Badge tone={INTERVIEW_TONE[interview.kind]}>{INTERVIEW_OPTIONS[interview.kind].label}</Badge>
+      <Badge tone={CATEGORY_TONE[interview.category]}>{interview.title}</Badge>
       <span className="sr-only">
-        , <InterviewWhen at={interview.at} />
+        , {category}, <InterviewWhen at={interview.at} />
       </span>
     </li>
   );

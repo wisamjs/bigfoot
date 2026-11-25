@@ -19,8 +19,8 @@ def create_application(client, headers, **fields):
     return res.json()
 
 
-def add(client, headers, application, kind="technical", at=PAST):
-    body = {"kind": kind, "at": at.isoformat()}
+def add(client, headers, application, category="technical", at=PAST, title=None):
+    body = {"category": category, "title": title or category.replace("_", " ").title(), "at": at.isoformat()}
     res = client.post(f"/applications/{application['id']}/interviews", json=body, headers=headers)
     assert res.status_code == 201, res.text
     return res.json()
@@ -35,35 +35,46 @@ def reread(client, headers, application):
 # Create and read
 
 
-def test_an_interview_has_a_required_kind_and_date_and_time(client, token):
+def test_an_interview_has_a_required_category_title_and_date_and_time(client, token):
     app = create_application(client, token())
-    dated = add(client, token(), app, "technical", FUTURE)
+    dated = add(client, token(), app, "system_design", FUTURE, title="  Retrospective System Design ")
     assert dated["application_id"] == app["id"] and dated["completed"] is False
+    assert (dated["category"], dated["title"]) == ("system_design", "Retrospective System Design")
 
 
 @pytest.mark.parametrize("at", [None, "2026-11-20", "", "not a date"])
 def test_create_needs_a_date_and_time(client, token, at):
     app = create_application(client, token())
-    body = {"kind": "technical", **({} if at is None else {"at": at})}
+    body = {"category": "technical", "title": "Technical", **({} if at is None else {"at": at})}
     res = client.post(f"/applications/{app['id']}/interviews", json=body, headers=token())
     assert res.status_code == 422
     assert [e["loc"] for e in res.json()["detail"]] == [["body", "at"]]
 
 
-def test_every_kind_is_accepted_and_kinds_can_repeat(client, token):
+def test_every_category_is_accepted_and_categories_can_repeat(client, token):
     app = create_application(client, token())
-    for kind in [
-        "informal_chat", "recruiter_screen", "hiring_manager", "technical", "behavioural", "leadership",
-        "onsite_loop", "ai_assisted_coding_challenge", "coding_challenge", "fe_system_design",
-        "be_system_design", "technical_deep_dive", "cross_functional_interview",
-        "strategy_and_values_alignment", "people_management", "technical",
+    for category in [
+        "recruiter", "hiring_manager", "technical", "system_design", "project_deep_dive", "people_management",
+        "project_delivery", "collaboration", "culture", "decision_maker", "technical",
     ]:  # fmt: skip
-        add(client, token(), app, kind)
-    assert len(client.get(f"/applications/{app['id']}/interviews", headers=token()).json()) == 16
+        add(client, token(), app, category)
+    assert len(client.get(f"/applications/{app['id']}/interviews", headers=token()).json()) == 11
 
 
 @pytest.mark.parametrize(
-    "body", [{}, {"kind": "waiting"}, {"kind": "scheduled"}, {"kind": None}, {"kind": "technical", "title": "x"}]
+    "body",
+    [
+        {},
+        {"title": "Technical", "at": FUTURE.isoformat()},
+        {"category": "technical", "at": FUTURE.isoformat()},
+        {"category": "technical", "title": "  ", "at": FUTURE.isoformat()},
+        {"category": "technical", "title": "x" * 201, "at": FUTURE.isoformat()},
+        {"category": "onsite_loop", "title": "Onsite", "at": FUTURE.isoformat()},
+        {"category": None, "title": "Technical", "at": FUTURE.isoformat()},
+        # `kind` was renamed to `category` with no alias (docs/adr/0007).
+        {"kind": "technical", "title": "Technical", "at": FUTURE.isoformat()},
+        {"kind": "technical", "category": "technical", "title": "Technical", "at": FUTURE.isoformat()},
+    ],
 )
 def test_create_rejects_invalid_interviews(client, token, body):
     app = create_application(client, token())
@@ -72,16 +83,16 @@ def test_create_rejects_invalid_interviews(client, token, body):
 
 def test_interviews_are_ordered_by_date_alone(client, token):
     app = create_application(client, token())
-    add(client, token(), app, "onsite_loop", FUTURE)
+    add(client, token(), app, "hiring_manager", FUTURE)
     add(client, token(), app, "technical", PAST)
-    kinds = [i["kind"] for i in client.get(f"/applications/{app['id']}/interviews", headers=token()).json()]
-    assert kinds == ["technical", "onsite_loop"]
-    assert [i["kind"] for i in reread(client, token(), app)["interviews"]] == kinds
+    titles = [i["title"] for i in client.get(f"/applications/{app['id']}/interviews", headers=token()).json()]
+    assert titles == ["Technical", "Hiring Manager"]
+    assert [i["title"] for i in reread(client, token(), app)["interviews"]] == titles
 
 
 def test_completed_is_derived_from_the_date(client, token):
     app = create_application(client, token())
-    add(client, token(), app, "recruiter_screen", PAST)
+    add(client, token(), app, "recruiter", PAST)
     add(client, token(), app, "technical", FUTURE)
     interviews = reread(client, token(), app)["interviews"]
     assert [i["completed"] for i in interviews] == [True, False]
@@ -90,15 +101,18 @@ def test_completed_is_derived_from_the_date(client, token):
 # Update and delete
 
 
-def test_patch_changes_the_kind_and_date(client, token):
+def test_patch_changes_the_category_title_and_date(client, token):
     app = create_application(client, token())
     interview = add(client, token(), app, "technical", FUTURE)
     url = f"/applications/{app['id']}/interviews/{interview['id']}"
-    changed = client.patch(url, json={"kind": "onsite_loop"}, headers=token()).json()
-    assert changed["kind"] == "onsite_loop" and changed["at"] == interview["at"]
+    changed = client.patch(url, json={"category": "hiring_manager"}, headers=token()).json()
+    assert (changed["category"], changed["title"], changed["at"]) == ("hiring_manager", "Technical", interview["at"])
+    renamed = client.patch(url, json={"title": " Strategic Alignment "}, headers=token()).json()
+    assert (renamed["category"], renamed["title"]) == ("hiring_manager", "Strategic Alignment")
     moved = client.patch(url, json={"at": PAST.isoformat()}, headers=token()).json()
     assert datetime.fromisoformat(moved["at"]) == PAST and moved["completed"] is True
-    assert client.patch(url, json={"kind": None}, headers=token()).status_code == 422
+    for body in [{"category": None}, {"title": None}, {"title": " "}, {"kind": "technical"}]:
+        assert client.patch(url, json=body, headers=token()).status_code == 422
 
 
 @pytest.mark.parametrize("at", [None, "2026-11-20"])
@@ -115,7 +129,7 @@ def test_patch_cannot_clear_the_date_or_drop_its_time(client, token, at):
 def test_a_missing_interview_is_not_found(client, token):
     app = create_application(client, token())
     url = f"/applications/{app['id']}/interviews/00000000-0000-0000-0000-000000000000"
-    assert client.patch(url, json={"kind": "leadership"}, headers=token()).status_code == 404
+    assert client.patch(url, json={"category": "culture"}, headers=token()).status_code == 404
 
 
 # Interview notes
@@ -143,14 +157,15 @@ def test_each_notes_field_is_optional_and_can_be_added_changed_and_cleared_alone
 
     assert client.patch(url, json={field: "Went well."}, headers=token()).json()[field] == "Went well."
     # Changing another field leaves the notes alone.
-    assert client.patch(url, json={"kind": "leadership"}, headers=token()).json()[field] == "Went well."
+    assert client.patch(url, json={"category": "culture"}, headers=token()).json()[field] == "Went well."
     assert client.patch(url, json={field: None}, headers=token()).json()[field] is None
 
 
 def test_notes_can_be_given_when_adding_an_interview(client, token):
     app = create_application(client, token())
     body = {
-        "kind": "technical",
+        "category": "technical",
+        "title": "Technical",
         "at": FUTURE.isoformat(),
         "what_they_asked": "Why us?\nWhy now?",
         "how_it_went": "  Bring ID.\n",
@@ -186,7 +201,7 @@ def test_notes_fields_have_limits(client, token, field, limit):
 
 def test_deleting_an_interview_deletes_all_its_notes(client, token, settings):
     app = create_application(client, token())
-    kept = add(client, token(), app, "recruiter_screen")
+    kept = add(client, token(), app, "recruiter")
     gone = add(client, token(), app, "technical")
     notes = {"what_they_asked": "Q", "how_it_went": "Kept", "takeaway": "T"}
     client.patch(notes_url(app, kept), json=notes, headers=token())
@@ -221,7 +236,7 @@ def test_prep_notes_are_separate_from_notes_and_can_be_added_changed_and_cleared
 
 def test_prep_notes_can_be_given_when_adding_an_interview(client, token):
     app = create_application(client, token())
-    body = {"kind": "technical", "at": FUTURE.isoformat(), "prep_notes": "  Bring ID.\n"}
+    body = {"category": "technical", "title": "Technical", "at": FUTURE.isoformat(), "prep_notes": "  Bring ID.\n"}
     res = client.post(f"/applications/{app['id']}/interviews", json=body, headers=token())
     assert res.status_code == 201 and res.json()["prep_notes"] == "Bring ID." and res.json()["how_it_went"] is None
 
@@ -247,7 +262,7 @@ def test_deleting_an_interview_deletes_its_prep_notes(client, token, settings):
     from tests.conftest import TEST_SCHEMA
 
     app = create_application(client, token())
-    kept = add(client, token(), app, "recruiter_screen")
+    kept = add(client, token(), app, "recruiter")
     gone = add(client, token(), app, "technical")
     client.patch(notes_url(app, kept), json={"prep_notes": "Kept"}, headers=token())
     client.patch(notes_url(app, gone), json={"prep_notes": "Gone"}, headers=token())
@@ -286,10 +301,10 @@ def test_other_job_seekers_cannot_touch_interviews(client, token):
     interview = add(client, token("alice"), app)
     base = f"/applications/{app['id']}/interviews"
     assert client.get(base, headers=token("bob")).status_code == 404
-    body = {"kind": "technical", "at": FUTURE.isoformat()}
+    body = {"category": "technical", "title": "Technical", "at": FUTURE.isoformat()}
     assert client.post(base, json=body, headers=token("bob")).status_code == 404
     assert (
-        client.patch(f"{base}/{interview['id']}", json={"kind": "leadership"}, headers=token("bob")).status_code == 404
+        client.patch(f"{base}/{interview['id']}", json={"category": "culture"}, headers=token("bob")).status_code == 404
     )
     assert client.delete(f"{base}/{interview['id']}", headers=token("bob")).status_code == 404
     assert len(reread(client, token("alice"), app)["interviews"]) == 1
@@ -300,7 +315,7 @@ def test_an_interview_is_found_only_under_its_own_application(client, token):
     other = create_application(client, token(), company="Other")
     interview = add(client, token(), mine)
     url = f"/applications/{other['id']}/interviews/{interview['id']}"
-    assert client.patch(url, json={"kind": "leadership"}, headers=token()).status_code == 404
+    assert client.patch(url, json={"category": "culture"}, headers=token()).status_code == 404
     assert client.delete(url, headers=token()).status_code == 404
 
 
@@ -314,7 +329,7 @@ def test_a_new_application_is_waiting_since_it_was_applied(client, token):
 
 def test_waiting_since_the_last_completed_interview(client, token):
     app = create_application(client, token(), applied_on="2026-10-02")
-    add(client, token(), app, "recruiter_screen", LONG_PAST)
+    add(client, token(), app, "recruiter", LONG_PAST)
     add(client, token(), app, "technical", PAST)
     waiting = reread(client, token(), app)
     assert waiting["is_waiting"] is True
@@ -330,7 +345,7 @@ def test_an_upcoming_interview_ends_the_wait(client, token):
 
 def test_cancelling_the_upcoming_interview_resumes_the_wait(client, token):
     app = create_application(client, token())
-    add(client, token(), app, "recruiter_screen", PAST)
+    add(client, token(), app, "recruiter", PAST)
     upcoming = add(client, token(), app, "technical", FUTURE)
     client.delete(f"/applications/{app['id']}/interviews/{upcoming['id']}", headers=token())
     after = reread(client, token(), app)
@@ -365,13 +380,13 @@ def test_an_application_can_have_at_most_50_interviews(settings, client, token):
     with psycopg.connect(settings.database_url, prepare_threshold=None, autocommit=True) as conn:
         conn.execute(sql.SQL("set search_path to {}").format(sql.Identifier(TEST_SCHEMA)))
         conn.execute(
-            "insert into interviews (application_id, kind, at)"
-            " select %s, 'technical', now() from generate_series(1, 49)",
+            "insert into interviews (application_id, category, title, at)"
+            " select %s, 'technical', 'Technical', now() from generate_series(1, 49)",
             (application["id"],),
         )
     add(client, token(), application)
 
-    body = {"kind": "technical", "at": FUTURE.isoformat()}
+    body = {"category": "technical", "title": "Technical", "at": FUTURE.isoformat()}
     res = client.post(f"/applications/{application['id']}/interviews", json=body, headers=token())
 
     assert res.status_code == 409

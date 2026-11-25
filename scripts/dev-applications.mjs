@@ -34,25 +34,25 @@ function at(days, hour) {
   return d.toISOString();
 }
 
-// Interviews are [kind, days from today, hour]; negative days are completed. Every Interview has a
+// Interviews are [category, title, days from today, hour]; negative days are completed. Every Interview has a
 // date and time (docs/adr/0005).
 function applications() {
   const applied_on = at(-14, 9).slice(0, 10);
   return [
-    { company: "Notion", title: "Full-stack Engineer", location: "remote", interviews: [["recruiter_screen", 1, 15]] },
-    { company: "Datadog", title: "Software Engineer", location: "hybrid", office_days: 3, interviews: [["recruiter_screen", -5, 11], ["technical", 2, 14]] },
-    { company: "Figma", title: "Senior Engineer", location: "in_office", interviews: [["technical", -3, 10], ["onsite_loop", 5, 10]] },
-    { company: "Linear", title: "Product Engineer", location: "hybrid", office_days: 2, interviews: [["hiring_manager", -4, 13], ["behavioural", 6, 11]] },
-    { company: "Airtable", title: "Frontend Engineer", interviews: [["hiring_manager", 2, 10]] },
-    { company: "Asana", title: "Software Engineer", interviews: [["recruiter_screen", -2, 9], ["technical", 2, 16], ["leadership", 9, 16]] },
-    // The longest kind, so captures and a11y always see how a label wraps beside its date.
-    { company: "Okta", title: "Engineering Manager", interviews: [["cross_functional_interview", 3, 16], ["be_system_design", 4, 11]] },
+    { company: "Notion", title: "Full-stack Engineer", location: "remote", interviews: [["recruiter", "Recruiter Screen", 1, 15]] },
+    { company: "Datadog", title: "Software Engineer", location: "hybrid", office_days: 3, interviews: [["recruiter", "Recruiter Screen", -5, 11], ["technical", "Technical", 2, 14]] },
+    { company: "Figma", title: "Senior Engineer", location: "in_office", interviews: [["technical", "Technical", -3, 10], ["system_design", "Retrospective System Design", 5, 10]] },
+    { company: "Linear", title: "Product Engineer", location: "hybrid", office_days: 2, interviews: [["hiring_manager", "Hiring Manager", -4, 13], ["culture", "Values", 6, 11]] },
+    { company: "Airtable", title: "Frontend Engineer", interviews: [["hiring_manager", "Hiring Manager", 2, 10]] },
+    { company: "Asana", title: "Software Engineer", interviews: [["recruiter", "Recruiter Screen", -2, 9], ["technical", "Technical", 2, 16], ["people_management", "Leadership", 9, 16]] },
+    // A long title, so captures and a11y always see how a title wraps beside its date.
+    { company: "Okta", title: "Engineering Manager", interviews: [["decision_maker", "Strategic Alignment with Sr Director", 3, 16], ["system_design", "BE System Design", 4, 11]] },
     { company: "Stripe", title: "Software Engineer II", location: "remote", interviews: [] },
-    { company: "Shopify", title: "Senior Developer", location: "hybrid", interviews: [["informal_chat", -1, 12]] },
-    { company: "Ramp", title: "Staff Engineer", status: "done", outcome: "offer", interviews: [["onsite_loop", -6, 10]] },
+    { company: "Shopify", title: "Senior Developer", location: "hybrid", interviews: [["recruiter", "Informal Chat", -1, 12]] },
+    { company: "Ramp", title: "Staff Engineer", status: "done", outcome: "offer", interviews: [["hiring_manager", "Final Onsite", -6, 10]] },
     // Done today (the API dates it), with an Outcome note, so its Outcome card shows every part (BIG-182).
-    { company: "Vercel", title: "Frontend Engineer", status: "done", outcome: "rejected", outcome_note: "They went with an internal candidate.", interviews: [["technical", -8, 10]] },
-    { company: "Plaid", title: "Software Engineer", status: "done", outcome: "withdrawn", interviews: [["recruiter_screen", -10, 10]] },
+    { company: "Vercel", title: "Frontend Engineer", status: "done", outcome: "rejected", outcome_note: "They went with an internal candidate.", interviews: [["technical", "Technical", -8, 10]] },
+    { company: "Plaid", title: "Software Engineer", status: "done", outcome: "withdrawn", interviews: [["recruiter", "Recruiter Screen", -10, 10]] },
       // Each has a salary, which the Application page hides behind Reveal.
   ].map((a) => ({ applied_on, salary: "$150k–$180k", ...a }));
 }
@@ -67,8 +67,8 @@ export async function addTestApplications(jobSeekerId = TEST_JOB_SEEKER_ID) {
   }
   for (const { interviews, ...fields } of applications()) {
     const application = await call(jobSeekerId, "POST", "/applications", fields);
-    for (const [kind, days, hour] of interviews) {
-      const body = { kind, at: at(days, hour) };
+    for (const [category, title, days, hour] of interviews) {
+      const body = { category, title, at: at(days, hour) };
       // Every completed Interview has Interview notes, so cards show the notes mark.
       if (days < 0) {
         body.what_they_asked = "Tell me about a past project.\nHow do you test your work?";
@@ -76,7 +76,7 @@ export async function addTestApplications(jobSeekerId = TEST_JOB_SEEKER_ID) {
         body.takeaway = "Have a question ready about the team.";
       }
       // Technical Interviews also have Prep notes, so the Before card and the folded Prep notes show (BIG-180).
-      if (kind === "technical") body.prep_notes = "Review the caching chapter.\nDraw the diagram first.\nAsk about the on-call rotation.";
+      if (category === "technical") body.prep_notes = "Review the caching chapter.\nDraw the diagram first.\nAsk about the on-call rotation.";
       await call(jobSeekerId, "POST", `/applications/${application.id}/interviews`, body);
     }
   }

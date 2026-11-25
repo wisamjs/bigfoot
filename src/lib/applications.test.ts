@@ -20,8 +20,9 @@ import {
   getStats,
   getUpcoming,
   nextUp,
-  INTERVIEW_KINDS,
-  INTERVIEW_OPTIONS,
+  categoryLabel,
+  INTERVIEW_CATEGORIES,
+  INTERVIEW_CATEGORY_OPTIONS,
   lastCompletedInterview,
   LOCATION_OPTIONS,
   LOCATIONS,
@@ -30,16 +31,17 @@ import {
   OUTCOME_OPTIONS,
   outcomeSummary,
   takeaways,
+  titleForCategory,
   OUTCOMES,
   STATUS_OPTIONS,
   STATUSES,
   type Application,
   type Interview,
-  type InterviewKind,
+  type InterviewCategory,
 } from "./applications";
 
 function interview(id: string, at: string, completed: boolean): Interview {
-  return { id, application_id: "a", kind: "technical", at, what_they_asked: null, how_it_went: null, takeaway: null, prep_notes: null, completed, created_at: "", updated_at: "" };
+  return { id, application_id: "a", category: "technical", title: "Technical", at, what_they_asked: null, how_it_went: null, takeaway: null, prep_notes: null, completed, created_at: "", updated_at: "" };
 }
 
 function application(id: string, overrides: Partial<Application>): Application {
@@ -231,7 +233,7 @@ describe.each([
   ["Status", STATUSES, STATUS_OPTIONS],
   ["Outcome", OUTCOMES, OUTCOME_OPTIONS],
   ["Location", LOCATIONS, LOCATION_OPTIONS],
-  ["InterviewKind", INTERVIEW_KINDS, INTERVIEW_OPTIONS],
+  ["InterviewCategory", INTERVIEW_CATEGORIES, INTERVIEW_CATEGORY_OPTIONS],
 ] as const)("%s options", (name, values, options) => {
   it("match the API's allowed values, in order", () => {
     expect(values).toEqual(pythonLiteral(name));
@@ -242,6 +244,17 @@ describe.each([
     const labels = Object.values(options).map((o) => o.label);
     expect(new Set(labels).size).toBe(labels.length);
     expect(labels.every((label) => label.trim() !== "")).toBe(true);
+  });
+});
+
+describe("titleForCategory", () => {
+  it("follows the category while the title is still the old category's name, or blank", () => {
+    expect(titleForCategory("Recruiter", "recruiter", "system_design")).toBe("System Design");
+    expect(titleForCategory(" ", "recruiter", "culture")).toBe("Culture");
+  });
+
+  it("keeps a title the job seeker wrote", () => {
+    expect(titleForCategory("Retrospective System Design", "system_design", "technical")).toBe("Retrospective System Design");
   });
 });
 
@@ -326,33 +339,38 @@ describe("Interview notes", () => {
 });
 
 describe("prepTakeaways", () => {
-  /** A completed Interview on a November day, of a kind, with a takeaway or none. */
-  const done = (id: string, day: number, kind: InterviewKind, takeaway: string | null = null): Interview => ({
+  /** A completed Interview on a November day, of a category, with a takeaway or none. Its title is its category's name. */
+  const done = (id: string, day: number, category: InterviewCategory, takeaway: string | null = null): Interview => ({
     ...interview(id, `2026-11-${String(day).padStart(2, "0")}T15:00:00Z`, true),
-    kind,
+    category,
+    title: categoryLabel(category),
     takeaway,
   });
-  const ahead = (id: string, kind: InterviewKind): Interview => ({ ...interview(id, "2026-12-01T15:00:00Z", false), kind });
+  const ahead = (id: string, category: InterviewCategory): Interview => ({
+    ...interview(id, "2026-12-01T15:00:00Z", false),
+    category,
+    title: categoryLabel(category),
+  });
 
-  const deepDive = ahead("deep-dive", "technical_deep_dive");
+  const deepDive = ahead("deep-dive", "project_deep_dive");
   const lumen = application("lumen", {
     company: "Lumen Bio",
     interviews: [
-      done("screen", 6, "recruiter_screen", "Ask about the team first."),
+      done("screen", 6, "recruiter", "Ask about the team first."),
       done("manager", 13, "hiring_manager", "Lead with the decision."),
-      done("chat", 14, "informal_chat", "  "),
+      done("chat", 14, "recruiter", "  "),
       deepDive,
     ],
   });
   const fernway = application("fernway", {
     company: "Fernway Health",
-    interviews: [done("old-dive", 3, "technical_deep_dive", "Draw the diagram first."), done("new-dive", 10, "technical_deep_dive", "Name the trade-off.")],
+    interviews: [done("old-dive", 3, "project_deep_dive", "Draw the diagram first."), done("new-dive", 10, "project_deep_dive", "Name the trade-off.")],
   });
   const summary = (takeaways: ReturnType<typeof prepTakeaways>) =>
     takeaways.map((t) => [t.rule, t.application.company, t.interview.id]);
 
   it("is nothing when no completed Interview has a takeaway", () => {
-    const quiet = application("quiet", { interviews: [done("screen", 6, "recruiter_screen"), deepDive] });
+    const quiet = application("quiet", { interviews: [done("screen", 6, "recruiter"), deepDive] });
     expect(prepTakeaways([quiet], quiet, deepDive)).toEqual([]);
   });
 
@@ -360,35 +378,49 @@ describe("prepTakeaways", () => {
     expect(summary(prepTakeaways([lumen], lumen, deepDive))).toEqual([["same_application", "Lumen Bio", "manager"]]);
   });
 
-  it("takes only the latest of the same kind at another Application when its own has none", () => {
+  it("takes only the latest of the same category at another Application when its own has none", () => {
     const quiet = application("quiet", { interviews: [deepDive] });
-    expect(summary(prepTakeaways([quiet, fernway], quiet, deepDive))).toEqual([["same_kind", "Fernway Health", "new-dive"]]);
+    expect(summary(prepTakeaways([quiet, fernway], quiet, deepDive))).toEqual([["same_category", "Fernway Health", "new-dive"]]);
   });
 
   it("shows both, the same Application's first, carrying only the Application's id and company", () => {
     const takeaways = prepTakeaways([fernway, lumen], lumen, deepDive);
     expect(summary(takeaways)).toEqual([
       ["same_application", "Lumen Bio", "manager"],
-      ["same_kind", "Fernway Health", "new-dive"],
+      ["same_category", "Fernway Health", "new-dive"],
     ]);
     expect(takeaways[1].application).toEqual({ id: "fernway", company: "Fernway Health" });
   });
 
-  it("shows an Interview both rules could point at once, looking elsewhere for the same kind", () => {
+  it("shows an Interview both rules could point at once, looking elsewhere for the same category", () => {
     const second = ahead("second", "hiring_manager");
     const own = application("own", { interviews: [done("first", 12, "hiring_manager", "Slow down."), second] });
     const other = application("other", { interviews: [done("theirs", 5, "hiring_manager", "Bring numbers.")] });
     expect(summary(prepTakeaways([own, other], own, second))).toEqual([
       ["same_application", "own", "first"],
-      ["same_kind", "other", "theirs"],
+      ["same_category", "other", "theirs"],
     ]);
     expect(summary(prepTakeaways([own], own, second))).toEqual([["same_application", "own", "first"]]);
+  });
+
+  it("matches another Application's Interview by category, whatever the titles say", () => {
+    const retro = { ...ahead("retro", "system_design"), title: "Retrospective System Design" };
+    const quiet = application("quiet", { interviews: [retro] });
+    const other = application("other", {
+      company: "Other",
+      interviews: [
+        { ...done("fe", 9, "system_design", "Start from the user."), title: "FE System Design" },
+        // Same title, another category: not a match.
+        { ...done("named-alike", 11, "technical", "Not this one."), title: "Retrospective System Design" },
+      ],
+    });
+    expect(summary(prepTakeaways([quiet, other], quiet, retro))).toEqual([["same_category", "Other", "fe"]]);
   });
 
   it("counts an Interview whose own Application is Done", () => {
     const rejected = { ...fernway, status: "done" as const, outcome: "rejected" as const };
     const quiet = application("quiet", { interviews: [deepDive] });
-    expect(summary(prepTakeaways([rejected, quiet], quiet, deepDive))).toEqual([["same_kind", "Fernway Health", "new-dive"]]);
+    expect(summary(prepTakeaways([rejected, quiet], quiet, deepDive))).toEqual([["same_category", "Fernway Health", "new-dive"]]);
   });
 });
 
@@ -420,24 +452,24 @@ describe("prepLookBack", () => {
 
 describe("takeawayShowsOn", () => {
   const at = (day: number) => `2026-${day > 30 ? "12" : "11"}-${String(day > 30 ? day - 30 : day).padStart(2, "0")}T15:00:00Z`;
-  const make = (id: string, day: number, kind: InterviewKind, completed: boolean, takeaway: string | null = null): Interview => ({
+  const make = (id: string, day: number, category: InterviewCategory, completed: boolean, takeaway: string | null = null): Interview => ({
     ...interview(id, at(day), completed),
-    kind,
+    category,
     takeaway,
   });
   const manager = make("manager", 13, "hiring_manager", true);
   const lumen = application("lumen", {
     company: "Lumen Bio",
-    interviews: [manager, make("deep-dive", 32, "technical_deep_dive", false), make("leadership", 39, "leadership", false)],
+    interviews: [manager, make("deep-dive", 32, "project_deep_dive", false), make("people_management", 39, "people_management", false)],
   });
   const tilth = application("tilth", { company: "Tilth Agritech", interviews: [make("tilth-manager", 31, "hiring_manager", false)] });
   const targets = (showsOn: ReturnType<typeof takeawayShowsOn>) =>
     showsOn.map((t) => [t.rule, t.application.company, t.interview.id]);
 
-  it("is the next Interview of its Application and the next of its kind elsewhere, as if it had a takeaway", () => {
+  it("is the next Interview of its Application and the next of its category elsewhere, as if it had a takeaway", () => {
     expect(targets(takeawayShowsOn([lumen, tilth], lumen, manager))).toEqual([
       ["same_application", "Lumen Bio", "deep-dive"],
-      ["same_kind", "Tilth Agritech", "tilth-manager"],
+      ["same_category", "Tilth Agritech", "tilth-manager"],
     ]);
   });
 
@@ -454,7 +486,7 @@ describe("takeawayShowsOn", () => {
     expect(takeawayShowsOn([alone], alone, manager)).toEqual([]);
     const later = make("later", 20, "hiring_manager", true, "Newer lesson.");
     const other = application("other", { interviews: [later] });
-    const superseded = { ...lumen, interviews: [manager, make("chat", 15, "informal_chat", true, "Newer."), ...upcomingInterviews(lumen)] };
+    const superseded = { ...lumen, interviews: [manager, make("chat", 15, "recruiter", true, "Newer."), ...upcomingInterviews(lumen)] };
     expect(targets(takeawayShowsOn([superseded, tilth, other], superseded, manager))).toEqual([]);
   });
 

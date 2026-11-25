@@ -9,12 +9,12 @@ import type { Application, Interview, PrepLookBack, PrepTakeaway } from "@/lib/a
 import { interviewErrors, isValid } from "@/lib/validation";
 
 /**
- * The Interview page under its "← <company>" link (BIG-178): the heading (kind, date, badges, Edit
+ * The Interview page under its "← <company>" link (BIG-178): the heading (title, date, badges, Edit
  * details and ⋯ with Delete Interview), the Application's Interviews as a strip with this one
  * outlined, then the notes cards (BIG-179, BIG-180). Before the Interview: Prep notes, then Interview
  * notes (What they asked, How it went and Takeaway for next time) waiting for afterwards. Once it
  * is completed: Interview notes, then Prep notes folded below them. Each reads as text until edited
- * and saves by itself with its own save status. Leaving with the kind, the date, an Interview notes
+ * and saves by itself with its own save status. Leaving with the category, the title, the date, an Interview notes
  * field or Prep notes not yet saved asks first: the page puts this inside UnsavedChanges.
  * The page works out, from every Application, what an upcoming Interview's prep looks back at
  * (`lookBack`) and where a completed one's takeaway shows (`showsOn`) (BIG-181).

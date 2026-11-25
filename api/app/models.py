@@ -14,6 +14,7 @@ from app.domain import (
     COMPANY_MAX_LENGTH,
     HOW_IT_WENT_MAX_LENGTH,
     INTERVIEW_PREP_NOTES_MAX_LENGTH,
+    INTERVIEW_TITLE_MAX_LENGTH,
     OFFICE_DAYS_MAX,
     OFFICE_DAYS_MIN,
     OUTCOME_NOTE_MAX_LENGTH,
@@ -22,7 +23,7 @@ from app.domain import (
     TAKEAWAY_MAX_LENGTH,
     TITLE_MAX_LENGTH,
     WHAT_THEY_ASKED_MAX_LENGTH,
-    InterviewKind,
+    InterviewCategory,
     Location,
     Outcome,
     Status,
@@ -66,6 +67,7 @@ RequiredText = Annotated[str, AfterValidator(_required_text)]
 # Lengths are checked as sent, before the ends are trimmed. The database checks them too.
 Company = Annotated[str, Field(max_length=COMPANY_MAX_LENGTH), AfterValidator(_required_text)]
 Title = Annotated[str, Field(max_length=TITLE_MAX_LENGTH), AfterValidator(_required_text)]
+InterviewTitle = Annotated[str, Field(max_length=INTERVIEW_TITLE_MAX_LENGTH), AfterValidator(_required_text)]
 OfficeDays = Annotated[int, Field(ge=OFFICE_DAYS_MIN, le=OFFICE_DAYS_MAX)]
 Salary = Annotated[str | None, Field(max_length=SALARY_MAX_LENGTH), AfterValidator(_optional_text)]
 PostingUrl = Annotated[str | None, Field(max_length=POSTING_URL_MAX_LENGTH), AfterValidator(_posting_url)]
@@ -122,7 +124,16 @@ OUTCOME_NOTE = (
     "there is none."
 )
 EXAMPLE_OUTCOME_NOTE = "They went with an internal candidate."
-KIND = "What sort of conversation the Interview is (GLOSSARY.md, Interview kind)."
+CATEGORY = (
+    "What the Interview assesses (GLOSSARY.md, Interview category, docs/adr/0007): recruiter, hiring_manager, "
+    "technical, system_design, project_deep_dive, people_management, project_delivery, collaboration, culture or "
+    "decision_maker."
+)
+INTERVIEW_TITLE = (
+    "The Interview's name in the job seeker's own words (GLOSSARY.md, Interview title), at most "
+    f"{INTERVIEW_TITLE_MAX_LENGTH} characters. Required; the ends are trimmed."
+)
+EXAMPLE_INTERVIEW_TITLE = "Retrospective System Design"
 AT = "When the Interview happens: a date and time, with a time zone. Required (docs/adr/0005)."
 # Interview notes (GLOSSARY.md) are these three fields together.
 WHAT_THEY_ASKED = (
@@ -259,7 +270,8 @@ class InterviewCreate(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    kind: InterviewKind = Field(description=KIND, examples=["technical"])
+    category: InterviewCategory = Field(description=CATEGORY, examples=["system_design"])
+    title: InterviewTitle = Field(description=INTERVIEW_TITLE, examples=[EXAMPLE_INTERVIEW_TITLE])
     at: InterviewAt = Field(description=AT, examples=["2026-11-20T17:00:00Z"])
     what_they_asked: WhatTheyAsked = Field(
         default=None, description=f"{WHAT_THEY_ASKED} Blank is stored as null.", examples=[None]
@@ -279,7 +291,14 @@ class InterviewPatch(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    kind: InterviewKind | None = Field(default=None, description=f"{KIND} Cannot be cleared.", examples=["onsite_loop"])
+    category: InterviewCategory | None = Field(
+        default=None, description=f"{CATEGORY} Cannot be cleared.", examples=["hiring_manager"]
+    )
+    title: InterviewTitle | None = Field(
+        default=None,
+        description=f"{INTERVIEW_TITLE} Cannot be cleared.",
+        examples=["Strategic Alignment with Sr Director"],
+    )
     at: InterviewAt | None = Field(
         default=None, description=f"{AT} Cannot be cleared.", examples=["2026-11-27T15:30:00Z"]
     )
@@ -305,9 +324,10 @@ class InterviewPatch(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def _kind_not_cleared(self) -> "InterviewPatch":
-        if "kind" in self.model_fields_set and self.kind is None:
-            raise ValueError("kind cannot be cleared")
+    def _category_and_title_not_cleared(self) -> "InterviewPatch":
+        for field in ("category", "title"):
+            if field in self.model_fields_set and getattr(self, field) is None:
+                raise ValueError(f"{field} cannot be cleared")
         return self
 
 
@@ -316,7 +336,8 @@ class Interview(BaseModel):
 
     id: UUID
     application_id: UUID = Field(description="The Application this Interview belongs to.")
-    kind: InterviewKind = Field(description=KIND, examples=["technical"])
+    category: InterviewCategory = Field(description=CATEGORY, examples=["system_design"])
+    title: str = Field(description=INTERVIEW_TITLE, examples=[EXAMPLE_INTERVIEW_TITLE])
     at: datetime = Field(description=AT, examples=["2026-11-20T17:00:00Z"])
     what_they_asked: str | None = Field(description=WHAT_THEY_ASKED, examples=[EXAMPLE_WHAT_THEY_ASKED])
     how_it_went: str | None = Field(description=HOW_IT_WENT, examples=[EXAMPLE_HOW_IT_WENT])

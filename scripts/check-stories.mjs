@@ -15,6 +15,7 @@ export const SHOWN_IN = {
   "src/features/applications/application-when.tsx": "src/features/applications/application-list.stories.tsx",
   "src/features/applications/details-fields.tsx": "src/features/applications/new-application-form.stories.tsx",
   "src/features/applications/details-form.tsx": "src/features/applications/application-editor.stories.tsx",
+  "src/features/applications/category-badge.tsx": "src/features/applications/interview-heading.stories.tsx",
   "src/features/applications/change-status-menu.tsx": "src/features/applications/application-editor.stories.tsx",
   "src/features/applications/editable-heading.tsx": "src/features/applications/interview-heading.stories.tsx",
   "src/features/applications/date-tile.tsx": "src/features/applications/application-editor.stories.tsx",

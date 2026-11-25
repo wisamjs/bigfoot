@@ -34,11 +34,18 @@ export const MissingFields: Story = {
   },
 };
 
-/** The kind, the date and time, and How it went create the Interview. */
+/**
+ * The category (its name filling in the title), a title in the job seeker's words, the date and
+ * time, and How it went create the Interview.
+ */
 export const Add: Story = {
   args: { applicationId: "datadog" },
   play: async ({ canvas, userEvent }) => {
-    await userEvent.selectOptions(canvas.getByRole("combobox", { name: /^Kind/ }), "technical");
+    await userEvent.selectOptions(canvas.getByRole("combobox", { name: /^Category/ }), "system_design");
+    const title = canvas.getByRole("textbox", { name: /^Title/ });
+    await expect(title).toHaveValue("System Design");
+    await userEvent.clear(title);
+    await userEvent.type(title, "Retrospective System Design");
     await userEvent.click(canvas.getByRole("button", { name: /^Date, / }));
     await userEvent.click(within(await screen.findByRole("grid")).getByText("15"));
     await userEvent.type(canvas.getByLabelText("Time"), "14:30");
@@ -47,7 +54,11 @@ export const Add: Story = {
     await waitFor(() =>
       expect(createInterviewAction).toHaveBeenCalledWith(
         "datadog",
-        expect.objectContaining({ kind: "technical", how_it_went: "Bring the system design notes" }),
+        expect.objectContaining({
+          category: "system_design",
+          title: "Retrospective System Design",
+          how_it_went: "Bring the system design notes",
+        }),
       ),
     );
   },

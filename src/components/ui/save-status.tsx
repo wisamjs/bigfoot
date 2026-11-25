@@ -5,7 +5,7 @@ import type { SaveStatus as Status } from "@/hooks/use-save-status";
 /**
  * A save's status, beside the field or button that started it: a spinner and "Saving…", then a
  * check and "Saved" that fades out, or the error with a Retry. Screen readers hear the first two
- * politely and the error at once, each prefixed with `label` ("Interview 2 kind: Saved").
+ * politely and the error at once, each prefixed with `label` ("Interview 2 title: Saved").
  * The live region is always rendered, so the first status is announced too.
  */
 export function SaveStatus({

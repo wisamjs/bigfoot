@@ -34,7 +34,7 @@ from app.models import (
 )
 
 APPLICATION = {"company": "Northwind", "title": "Engineer"}
-INTERVIEW = {"kind": "technical", "at": "2026-11-20T17:00:00Z"}
+INTERVIEW = {"category": "technical", "title": "Technical", "at": "2026-11-20T17:00:00Z"}
 DONE = {"status": "done", "outcome": "offer"}
 
 
@@ -257,13 +257,28 @@ def test_an_interview_at_a_datetime_object_is_kept():
     assert InterviewCreate.model_validate(INTERVIEW | {"at": at}).at == at
 
 
-def test_an_interview_needs_a_kind_and_a_date():
-    assert errors(InterviewCreate, {}) == ["kind: Field required", "at: Field required"]
+def test_an_interview_needs_a_category_a_title_and_a_date():
+    assert errors(InterviewCreate, {}) == [
+        "category: Field required",
+        "title: Field required",
+        "at: Field required",
+    ]
 
 
-def test_an_interview_kind_is_one_of_the_choices():
-    [error] = errors(InterviewCreate, INTERVIEW | {"kind": "chat"})
-    assert error.startswith("kind: Input should be 'informal_chat', 'recruiter_screen'")
+def test_an_interview_category_is_one_of_the_choices():
+    [error] = errors(InterviewCreate, INTERVIEW | {"category": "onsite_loop"})
+    assert error.startswith("category: Input should be 'recruiter', 'hiring_manager'")
+
+
+def test_an_interview_no_longer_takes_a_kind():
+    assert errors(InterviewCreate, INTERVIEW | {"kind": "technical"}) == ["kind: Extra inputs are not permitted"]
+
+
+def test_an_interview_title_is_trimmed_required_and_capped():
+    assert InterviewCreate.model_validate(INTERVIEW | {"title": "  Retro  "}).title == "Retro"
+    assert errors(InterviewCreate, INTERVIEW | {"title": " "}) == ["title: Value error, must not be blank"]
+    [error] = errors(InterviewCreate, INTERVIEW | {"title": "x" * 201})
+    assert error.startswith("title: String should have at most 200 characters")
 
 
 def test_blank_interview_notes_are_null():
@@ -278,11 +293,12 @@ def test_blank_interview_notes_are_null():
     )
 
 
-def test_an_interview_patch_cannot_clear_the_date_or_kind():
+def test_an_interview_patch_cannot_clear_the_date_category_or_title():
     assert errors(InterviewPatch, {"at": None}) == [
         "at: Value error, cannot be cleared: an Interview always has a date and time"
     ]
-    assert errors(InterviewPatch, {"kind": None}) == ["Value error, kind cannot be cleared"]
+    assert errors(InterviewPatch, {"category": None}) == ["Value error, category cannot be cleared"]
+    assert errors(InterviewPatch, {"title": None}) == ["Value error, title cannot be cleared"]
 
 
 def test_an_interview_patch_can_move_the_date_and_clear_the_notes():

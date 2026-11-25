@@ -30,7 +30,7 @@ beforeEach(() => {
 });
 
 // 15:00 UTC on November 1st: the calendar opens on November, wherever the tests run.
-const technical = interview("i1", { application_id: "birch", kind: "technical", at: "2026-11-01T15:00:00Z" });
+const technical = interview("i1", { application_id: "birch", category: "technical", title: "Technical", at: "2026-11-01T15:00:00Z" });
 const birch = application("birch", { company: "Birch", title: "Senior Engineer", interviews: [technical] });
 
 /** The Interview page's guarded column: the heading, the strip and the notes under one UnsavedChanges. */
@@ -49,12 +49,19 @@ const editButton = () => screen.getByRole("button", { name: "Edit details" });
 const form = () => screen.getByRole("form", { name: "Edit details" });
 
 describe("the Interview page heading", () => {
-  it("shows the company and role, the kind as the title, and the date and time", () => {
+  it("shows the company and role, the title with its category, and the date and time", () => {
     openPage();
     expect(screen.getByText("Birch · Senior Engineer")).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1, name: "Technical" })).toBeInTheDocument();
     // eslint-disable-next-line testing-library/no-node-access -- the date is a <time>, which has no role to query by.
     expect(document.querySelector("h1 ~ p time")).toHaveAttribute("datetime", technical.at);
+  });
+
+  it("shows the job seeker's own title, with its category as a tag", () => {
+    const paired = { ...technical, title: "Pair Programming" };
+    openPage(paired, application("birch", { company: "Birch", interviews: [paired] }));
+    expect(screen.getByRole("heading", { level: 1, name: "Pair Programming" })).toBeInTheDocument();
+    expect(screen.getByText("Technical")).toBeInTheDocument();
   });
 
   it("says how far off a coming Interview is, and how long ago a completed one was", () => {
@@ -79,25 +86,58 @@ describe("the Interview page heading", () => {
     expect(screen.getByText(/^Completed · /)).toHaveClass("bg-success-soft");
   });
 
-  it("turns the kind and the date into fields, with focus on the kind", async () => {
+  it("turns the category, the title and the date into fields, with focus on the category", async () => {
     const { user } = openPage();
     await user.click(editButton());
-    expect(screen.getByLabelText(/^Kind/)).toHaveFocus();
-    expect(screen.getByLabelText(/^Kind/)).toHaveValue("technical");
+    expect(screen.getByLabelText(/^Category/)).toHaveFocus();
+    expect(screen.getByLabelText(/^Category/)).toHaveValue("technical");
+    expect(within(form()).getByLabelText(/^Title/)).toHaveValue("Technical");
     expect(screen.getByRole("group", { name: "Date and time" })).toBeInTheDocument();
-    // The notes card has no kind.
-    expect(screen.getAllByLabelText(/^Kind/)).toHaveLength(1);
+    // The notes card has no category.
+    expect(screen.getAllByLabelText(/^Category/)).toHaveLength(1);
   });
 
-  it("saves a new kind on Enter, shows it, and gives focus back to the edit button", async () => {
+  it("saves a new category on Enter, its name following as the title, and gives focus back to the edit button", async () => {
     const { user } = openPage();
     await user.click(editButton());
-    await user.selectOptions(screen.getByLabelText(/^Kind/), "behavioural");
+    await user.selectOptions(screen.getByLabelText(/^Category/), "culture");
+    expect(within(form()).getByLabelText(/^Title/)).toHaveValue("Culture");
     await user.keyboard("{Enter}");
 
-    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { kind: "behavioural" });
-    expect(await screen.findByRole("heading", { level: 1, name: "Behavioural" })).toBeInTheDocument();
+    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { category: "culture", title: "Culture" });
+    expect(await screen.findByRole("heading", { level: 1, name: "Culture" })).toBeInTheDocument();
     await waitFor(() => expect(editButton()).toHaveFocus());
+  });
+
+  it("saves a title in the job seeker's words, trimmed, and keeps it when the category changes", async () => {
+    const { user } = openPage();
+    await user.click(editButton());
+    const title = within(form()).getByLabelText(/^Title/);
+    await user.clear(title);
+    await user.type(title, "  Retrospective System Design ");
+    await user.selectOptions(screen.getByLabelText(/^Category/), "system_design");
+    expect(title).toHaveValue("  Retrospective System Design ");
+    await user.click(within(form()).getByRole("button", { name: "Save" }));
+
+    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", {
+      category: "system_design",
+      title: "Retrospective System Design",
+    });
+    expect(await screen.findByRole("heading", { level: 1, name: "Retrospective System Design" })).toBeInTheDocument();
+    expect(screen.getByText("System Design")).toBeInTheDocument();
+  });
+
+  it("refuses an empty title, says why, focuses it and sends nothing", async () => {
+    const { user } = openPage();
+    await user.click(editButton());
+    const title = within(form()).getByLabelText(/^Title/);
+    await user.clear(title);
+    await user.click(within(form()).getByRole("button", { name: "Save" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Enter the title.");
+    expect(title).toHaveFocus();
+    expect(title).toHaveAttribute("aria-invalid", "true");
+    expect(actions.updateInterviewAction).not.toHaveBeenCalled();
   });
 
   it("doesn't save on opening the date picker, then saves the picked date with its time", async () => {
@@ -128,10 +168,10 @@ describe("the Interview page heading", () => {
   it("saves on leaving the fields", async () => {
     const { user } = openPage();
     await user.click(editButton());
-    await user.selectOptions(screen.getByLabelText(/^Kind/), "leadership");
+    await user.selectOptions(screen.getByLabelText(/^Category/), "people_management");
     // A completed Interview with no notes opens with its notes fields.
     await user.click(screen.getByLabelText("How it went"));
-    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { kind: "leadership" });
+    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { category: "people_management", title: "People Management" });
   });
 
   it("refuses a cleared date, says why and sends nothing", async () => {
@@ -146,10 +186,10 @@ describe("the Interview page heading", () => {
     expect(actions.updateInterviewAction).not.toHaveBeenCalled();
   });
 
-  it("puts back the saved kind and date on Escape, without saving", async () => {
+  it("puts back the saved category, title and date on Escape, without saving", async () => {
     const { user } = openPage();
     await user.click(editButton());
-    await user.selectOptions(screen.getByLabelText(/^Kind/), "leadership");
+    await user.selectOptions(screen.getByLabelText(/^Category/), "people_management");
     await user.keyboard("{Escape}");
 
     expect(screen.queryByRole("form")).not.toBeInTheDocument();
@@ -161,7 +201,7 @@ describe("the Interview page heading", () => {
   it("puts them back on Cancel too", async () => {
     const { user } = openPage();
     await user.click(editButton());
-    await user.selectOptions(screen.getByLabelText(/^Kind/), "leadership");
+    await user.selectOptions(screen.getByLabelText(/^Category/), "people_management");
     await user.click(within(form()).getByRole("button", { name: "Cancel" }));
     expect(screen.getByRole("heading", { level: 1, name: "Technical" })).toBeInTheDocument();
     expect(actions.updateInterviewAction).not.toHaveBeenCalled();
@@ -182,7 +222,7 @@ describe("the Interview page heading", () => {
     // The save on leaving the fields hangs, so the change is still unsaved when the link is followed.
     vi.mocked(actions.updateInterviewAction).mockReturnValue(new Promise(() => {}));
     await user.click(editButton());
-    await user.selectOptions(screen.getByLabelText(/^Kind/), "leadership");
+    await user.selectOptions(screen.getByLabelText(/^Category/), "people_management");
     await user.click(screen.getByRole("link", { name: "Dashboard" }));
     expect(await screen.findByRole("button", { name: "Keep editing" })).toHaveFocus();
   });
@@ -214,12 +254,12 @@ describe("the Interview page heading", () => {
     await user.click(screen.getByRole("button", { name: "More actions, Technical" }));
     await user.click(screen.getByRole("menuitem", { name: "Edit details" }));
     expect(form()).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Kind/)).toHaveFocus();
+    expect(screen.getByLabelText(/^Category/)).toHaveFocus();
   });
 
   it("outlines this Interview on the strip, with every segment linking to its page", async () => {
-    const first = interview("i0", { application_id: "birch", kind: "recruiter_screen", at: "2026-10-20T15:00:00Z" });
-    const last = interview("i2", { application_id: "birch", kind: "leadership", completed: false, at: new Date(Date.now() + 3 * 86_400_000).toISOString() });
+    const first = interview("i0", { application_id: "birch", category: "recruiter", title: "Recruiter Screen", at: "2026-10-20T15:00:00Z" });
+    const last = interview("i2", { application_id: "birch", category: "people_management", title: "Leadership", completed: false, at: new Date(Date.now() + 3 * 86_400_000).toISOString() });
     openPage(technical, application("birch", { company: "Birch", interviews: [first, technical, last] }));
     const segments = within(screen.getByRole("list", { name: "Interviews by date" })).getAllByRole("link");
     expect(segments.map((link) => link.getAttribute("href"))).toEqual([

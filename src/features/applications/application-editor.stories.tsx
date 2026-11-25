@@ -29,14 +29,14 @@ const lumen = application("lumen", {
   interviews: [
     interview("screen", {
       application_id: "lumen",
-      kind: "recruiter_screen",
+      category: "recruiter", title: "Recruiter Screen",
       at: daysFromNow(-17, 10),
       how_it_went:
         "Quick walkthrough of my last team and how I ran quarterly planning. Two squads, 11 engineers, reporting to the Director of Platform. Band lines up with what I asked for.\n\nNext: hiring manager.",
     }),
     interview("manager", {
       application_id: "lumen",
-      kind: "hiring_manager",
+      category: "hiring_manager", title: "Hiring Manager",
       at: daysFromNow(-10, 11),
       what_they_asked:
         "Tell me about a time you had to let someone go.\nHow do you decide what your team does not build?\nWhat does a good first 90 days look like here?",
@@ -44,8 +44,8 @@ const lumen = application("lumen", {
         "Dug into how I handle underperformance and how I split time between hands-on work and people work. The incident story landed well.\n\nRambled on the roadmap question. Next time: lead with the decision, then the trade-off.",
       takeaway: "Lead with the decision, then the trade-off, then what I would measure.",
     }),
-    interview("deep-dive", { application_id: "lumen", kind: "technical_deep_dive", at: daysFromNow(2, 11), completed: false }),
-    interview("leadership", { application_id: "lumen", kind: "leadership", at: daysFromNow(9, 13), completed: false }),
+    interview("deep-dive", { application_id: "lumen", category: "project_deep_dive", title: "Technical Deep-Dive", at: daysFromNow(2, 11), completed: false }),
+    interview("leadership", { application_id: "lumen", category: "people_management", title: "Leadership", at: daysFromNow(9, 13), completed: false }),
   ],
 });
 
@@ -86,7 +86,7 @@ const fernway = application("fernway", {
   interviews: [
     interview("fernway-dive", {
       application_id: "fernway",
-      kind: "technical_deep_dive",
+      category: "project_deep_dive", title: "Technical Deep-Dive",
       at: daysFromNow(-30, 14),
       takeaway: "Draw the system before talking through it.",
     }),
@@ -125,7 +125,7 @@ export const Default: Story = {
     const takeaways = within(within(next).getByRole("list", { name: "Takeaways for this Interview" })).getAllByRole("listitem");
     await expect(takeaways).toHaveLength(2);
     await expect(takeaways[0]).toHaveTextContent(/^Takeaway from Hiring Manager · .+Lead with the decision/);
-    await expect(takeaways[1]).toHaveTextContent("From your last Technical Deep-Dive · Fernway HealthDraw the system");
+    await expect(takeaways[1]).toHaveTextContent("From your last Project Deep-dive · Fernway HealthDraw the system");
     await expect(within(within(next).getByRole("list", { name: "They asked last time" })).getAllByRole("listitem")).toHaveLength(3);
     await expect(within(next).queryByText(/Carried forward/)).not.toBeInTheDocument();
     await expect(canvas.getByText("Interview scheduled")).toBeVisible();

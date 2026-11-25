@@ -1,5 +1,6 @@
 """Migrations that change what job seekers already recorded: Interviews (BIG-38), Locations, requiring an
-Interview's date (BIG-139), splitting Interview notes (BIG-179) and the Done date and Outcome note (BIG-182)."""
+Interview's date (BIG-139), splitting Interview notes (BIG-179), the Done date and Outcome note (BIG-182) and
+Interview category and title (BIG-189)."""
 
 from datetime import UTC
 
@@ -116,7 +117,10 @@ def test_the_database_requires_an_interviews_date(settings):
         conn.execute(sql.SQL("set search_path to {}").format(sql.Identifier(TEST_SCHEMA)))
         application = _add_application(conn)
         with pytest.raises(psycopg.errors.NotNullViolation):
-            conn.execute("insert into interviews (application_id, kind) values (%s, 'technical')", (application,))
+            conn.execute(
+                "insert into interviews (application_id, category, title) values (%s, 'technical', 'Technical')",
+                (application,),
+            )
 
 
 @pytest.mark.rebuilds_schema
@@ -230,3 +234,66 @@ def test_the_done_date_migration_leaves_existing_done_applications_without_one(s
         conn.execute("update applications set done_on = applied_on, outcome_note = 'Not now.' where company = 'Ended'")
 
     assert rows == [("Ended", "done", None, None), ("Going", "in_progress", None, None)]
+
+
+CATEGORY = "20261127000000_replace_interview_kind_with_category_and_title.sql"
+
+# The project's mapping table (BIG-189): every old kind, its label as the title, and its category.
+KIND_TO_CATEGORY_AND_TITLE = {
+    "informal_chat": ("recruiter", "Informal Chat"),
+    "recruiter_screen": ("recruiter", "Recruiter Screen"),
+    "hiring_manager": ("hiring_manager", "Hiring Manager"),
+    "technical": ("technical", "Technical"),
+    "coding_challenge": ("technical", "Coding Challenge"),
+    "ai_assisted_coding_challenge": ("technical", "AI Assisted Coding Challenge"),
+    "fe_system_design": ("system_design", "FE System Design"),
+    "be_system_design": ("system_design", "BE System Design"),
+    "technical_deep_dive": ("project_deep_dive", "Technical Deep-Dive"),
+    "people_management": ("people_management", "People Management"),
+    "leadership": ("people_management", "Leadership"),
+    "behavioural": ("culture", "Behavioural"),
+    "cross_functional_interview": ("collaboration", "Cross-Functional Interview"),
+    "strategy_and_values_alignment": ("decision_maker", "Strategy & Values Alignment"),
+    "onsite_loop": ("hiring_manager", "Onsite Loop"),
+}
+
+
+@pytest.mark.rebuilds_schema
+def test_every_interview_kind_becomes_a_category_and_keeps_its_label_as_the_title(settings):
+    before = [m for m in sorted(MIGRATIONS.glob("*.sql")) if m.name < CATEGORY]
+    schema = sql.Identifier(TEST_SCHEMA)
+    with psycopg.connect(settings.database_url, prepare_threshold=None, autocommit=True) as conn:
+        conn.execute(sql.SQL("drop schema if exists {} cascade").format(schema))
+        conn.execute(sql.SQL("create schema {}").format(schema))
+        conn.execute(sql.SQL("set search_path to {}").format(schema))
+        for migration in before:
+            conn.execute(migration.read_text())
+
+        application = _add_application(conn)
+        for kind in KIND_TO_CATEGORY_AND_TITLE:
+            conn.execute(
+                "insert into interviews (application_id, kind, at, how_it_went)"
+                " values (%s, %s, '2026-09-15T16:00:00Z', %s)",
+                (application, kind, f"Notes on {kind}"),
+            )
+
+        conn.execute((MIGRATIONS / CATEGORY).read_text())
+
+        rows = conn.execute("select category, title, how_it_went from interviews").fetchall()
+        kind_left = conn.execute(
+            "select count(*) from information_schema.columns"
+            " where table_schema = %s and table_name = 'interviews' and column_name = 'kind'",
+            (TEST_SCHEMA,),
+        ).fetchone()[0]
+        # Only the ten categories, and a title that isn't blank, are stored from now on.
+        for column, value in [("category", "onsite_loop"), ("title", " "), ("title", "x" * 201)]:
+            with pytest.raises(psycopg.errors.CheckViolation):
+                conn.execute(sql.SQL("update interviews set {} = %s").format(sql.Identifier(column)), (value,))
+        with pytest.raises(psycopg.errors.NotNullViolation):
+            conn.execute("update interviews set title = null")
+        conn.execute("update interviews set category = 'project_delivery', title = 'Delivery'")
+
+    assert sorted(rows) == sorted(
+        (category, title, f"Notes on {kind}") for kind, (category, title) in KIND_TO_CATEGORY_AND_TITLE.items()
+    )
+    assert kind_left == 0

@@ -80,9 +80,9 @@ describe("applicationsCsv", () => {
           outcome_note: "They went with an internal candidate.",
           is_sample: true,
           interviews: [
-            { id: "i1", application_id: "a1", kind: "recruiter_screen", at: ts, what_they_asked: "Why us?\nSalary range?", how_it_went: "Friendly, asked about salary.", takeaway: null, prep_notes: "Know the salary range.", completed: true, created_at: ts, updated_at: ts },
-            { id: "i2", application_id: "a1", kind: "technical", at: ts, what_they_asked: null, how_it_went: null, takeaway: null, prep_notes: null, completed: true, created_at: ts, updated_at: ts },
-            { id: "i3", application_id: "a1", kind: "fe_system_design", at: ts, what_they_asked: null, how_it_went: "Drew the cache late.\nStart with the diagram.", takeaway: "Diagram first.", prep_notes: null, completed: true, created_at: ts, updated_at: ts },
+            { id: "i1", application_id: "a1", category: "recruiter", title: "Recruiter Screen", at: ts, what_they_asked: "Why us?\nSalary range?", how_it_went: "Friendly, asked about salary.", takeaway: null, prep_notes: "Know the salary range.", completed: true, created_at: ts, updated_at: ts },
+            { id: "i2", application_id: "a1", category: "technical", title: "Technical", at: ts, what_they_asked: null, how_it_went: null, takeaway: null, prep_notes: null, completed: true, created_at: ts, updated_at: ts },
+            { id: "i3", application_id: "a1", category: "system_design", title: "Retrospective System Design", at: ts, what_they_asked: null, how_it_went: "Drew the cache late.\nStart with the diagram.", takeaway: "Diagram first.", prep_notes: null, completed: true, created_at: ts, updated_at: ts },
           ],
         }),
         application({ company: "Second" }),
@@ -102,13 +102,15 @@ describe("applicationsCsv", () => {
       Outcome: "Not the Right Fit",
       "Done date": "2026-11-16",
       "Outcome note": "They went with an internal candidate.",
-      Interviews: "Recruiter Screen (2026-11-02T15:00:00Z); Technical (2026-11-02T15:00:00Z); FE System Design (2026-11-02T15:00:00Z)",
-      "What they asked": "Recruiter Screen (2026-11-02T15:00:00Z): Why us?\nSalary range?",
+      Interviews:
+        "Recruiter Screen (Recruiter, 2026-11-02T15:00:00Z); Technical (Technical, 2026-11-02T15:00:00Z); " +
+        "Retrospective System Design (System Design, 2026-11-02T15:00:00Z)",
+      "What they asked": "Recruiter Screen (Recruiter, 2026-11-02T15:00:00Z): Why us?\nSalary range?",
       "How it went":
-        "Recruiter Screen (2026-11-02T15:00:00Z): Friendly, asked about salary.\n\n" +
-        "FE System Design (2026-11-02T15:00:00Z): Drew the cache late.\nStart with the diagram.",
-      "Takeaway for next time": "FE System Design (2026-11-02T15:00:00Z): Diagram first.",
-      "Prep notes": "Recruiter Screen (2026-11-02T15:00:00Z): Know the salary range.",
+        "Recruiter Screen (Recruiter, 2026-11-02T15:00:00Z): Friendly, asked about salary.\n\n" +
+        "Retrospective System Design (System Design, 2026-11-02T15:00:00Z): Drew the cache late.\nStart with the diagram.",
+      "Takeaway for next time": "Retrospective System Design (System Design, 2026-11-02T15:00:00Z): Diagram first.",
+      "Prep notes": "Recruiter Screen (Recruiter, 2026-11-02T15:00:00Z): Know the salary range.",
       "Sample Application": "Yes",
       Created: "2026-11-02T15:00:00Z",
       Updated: "2026-11-02T15:00:00Z",
@@ -155,7 +157,7 @@ describe("dataExportJson", () => {
   };
 
   it("holds the profile, every Application field (is_sample, the Done date, the Outcome note, Interview notes and Prep notes included) and Access token names and dates", () => {
-    const noted = { id: "i1", application_id: "a1", kind: "technical", at: ts, what_they_asked: "Why us?", how_it_went: "Went well.", takeaway: "Smile.", prep_notes: "Review caching.", completed: true, created_at: ts, updated_at: ts } as const;
+    const noted = { id: "i1", application_id: "a1", category: "technical", title: "Pair Programming", at: ts, what_they_asked: "Why us?", how_it_went: "Went well.", takeaway: "Smile.", prep_notes: "Review caching.", completed: true, created_at: ts, updated_at: ts } as const;
     const app = application({
       is_sample: true,
       status: "done",
@@ -194,6 +196,8 @@ describe("dataExportJson", () => {
     });
     expect(data.applications[0]).toMatchObject({ done_on: "2026-11-16", outcome_note: "They went with an internal candidate." });
     expect(data.applications[0].interviews[0]).toMatchObject({
+      category: "technical",
+      title: "Pair Programming",
       what_they_asked: "Why us?",
       how_it_went: "Went well.",
       takeaway: "Smile.",

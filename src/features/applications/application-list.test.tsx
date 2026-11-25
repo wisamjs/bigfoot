@@ -7,8 +7,8 @@ const waiting = application("Acme");
 const scheduled = application("Birch", {
   is_waiting: false,
   interviews: [
-    interview("past", { at: "2026-11-02T15:00:00Z", completed: true, kind: "recruiter_screen" }),
-    interview("next", { at: "2027-01-05T15:00:00Z", completed: false, kind: "technical" }),
+    interview("past", { at: "2026-11-02T15:00:00Z", completed: true, category: "recruiter", title: "Recruiter Screen" }),
+    interview("next", { at: "2027-01-05T15:00:00Z", completed: false, category: "technical", title: "Technical" }),
   ],
 });
 const offer = application("Cedar", { status: "done", outcome: "offer", is_waiting: false });
@@ -58,7 +58,7 @@ describe("ApplicationList", () => {
   });
 
   it("marks completed Interviews green while In Progress and grey once Done (BIG-177)", () => {
-    const past = interview("u-past", { at: "2026-11-02T15:00:00Z", completed: true, kind: "recruiter_screen" });
+    const past = interview("u-past", { at: "2026-11-02T15:00:00Z", completed: true, category: "recruiter", title: "Recruiter Screen" });
     render(<ApplicationList applications={[scheduled, { ...rejected, interviews: [past] }]} showDone />);
     // Each row draws Progress twice: under the role on a phone, and in its own column.
     // eslint-disable-next-line testing-library/no-node-access -- the marks are decoration (aria-hidden), with no role or text to query by.
@@ -75,22 +75,22 @@ describe("ApplicationList", () => {
     expect(screen.getByText(/Open Applications show up here/)).toBeInTheDocument();
   });
 
-  it("shows each upcoming Interview's kind, soonest first, with its date for screen readers", () => {
+  it("shows each upcoming Interview's title, soonest first, with its category and date for screen readers", () => {
     const app = application("Birch", {
       is_waiting: false,
       interviews: [
-        interview("past", { at: "2026-11-02T15:00:00Z", completed: true, kind: "recruiter_screen" }),
-        interview("am", { at: "2027-01-05T15:00:00Z", completed: false, kind: "hiring_manager" }),
-        interview("pm", { at: "2027-01-05T19:00:00Z", completed: false, kind: "technical" }),
+        interview("past", { at: "2026-11-02T15:00:00Z", completed: true, category: "recruiter", title: "Recruiter Screen" }),
+        interview("am", { at: "2027-01-05T15:00:00Z", completed: false, category: "hiring_manager", title: "Final Round" }),
+        interview("pm", { at: "2027-01-05T19:00:00Z", completed: false, category: "technical", title: "Technical" }),
       ],
     });
     render(<ApplicationList applications={[app]} />);
     const upcoming = within(screen.getByRole("list", { name: "Upcoming Interviews" })).getAllByRole("listitem");
     expect(upcoming.map((li) => li.textContent)).toEqual([
-      expect.stringMatching(/^Hiring Manager, Jan 5/),
-      expect.stringMatching(/^Technical, Jan 5/),
+      expect.stringMatching(/^Final Round, Hiring Manager, Jan 5/),
+      expect.stringMatching(/^Technical, Technical, Jan 5/),
     ]);
-    expect(upcoming[0]).toHaveAttribute("title", expect.stringMatching(/Jan 5, 2027/));
+    expect(upcoming[0]).toHaveAttribute("title", expect.stringMatching(/^Hiring Manager · Jan 5, 2027/));
     expect(screen.queryByText("Recruiter Screen")).not.toBeInTheDocument();
   });
 
