@@ -42,7 +42,7 @@ afterEach(() => {
 const birch = application("birch", {
   company: "Birch",
   location: "remote",
-  interviews: [interview("i1", { application_id: "birch", kind: "technical" })],
+  interviews: [interview("i1", { application_id: "birch", category: "technical", title: "Technical" })],
 });
 
 /** A valid detail to type: the Job posting URL, which Birch has none of. */

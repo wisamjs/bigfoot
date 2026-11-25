@@ -2,25 +2,22 @@ import { ArrowRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { buttonClasses } from "@/components/ui/button-classes";
 import { DaysFromToday, InterviewDayTime } from "@/features/applications/application-when";
+import { CategoryBadge } from "@/features/applications/category-badge";
 import { DateTile } from "@/features/applications/date-tile";
 import { NO_LOOK_BACK } from "@/features/applications/interview-notes-form";
 import { PrepLookBack } from "@/features/applications/prep-look-back";
 import { interviewHref } from "@/features/applications/routes";
-import {
-  INTERVIEW_OPTIONS,
-  type Application,
-  type Interview,
-  type PrepLookBack as LookBack,
-} from "@/lib/applications";
+import type { Application, Interview, PrepLookBack as LookBack } from "@/lib/applications";
 
 /**
- * The Application's next Interview, first on its page (BIG-174): when it is, its kind, and Open
+ * The Application's next Interview, first on its page (BIG-174): when it is, its title and
+ * category, and Open
  * Interview. Under them, what its prep looks back at (BIG-181): up to two takeaways and They
  * asked last time, as on its Interview page. Then its Prep notes, or Add Prep notes to start them
  * on its Interview page: the card is there to get ready, and Interview notes come after (BIG-187).
  *
  * On the dashboard (`on="dashboard"`, BIG-183), the job seeker's soonest upcoming Interview: the
- * line under its kind names the company and role too.
+ * line under its title names the company and role too.
  */
 export function NextInterviewCard({
   app,
@@ -34,7 +31,6 @@ export function NextInterviewCard({
   on?: "application" | "dashboard";
 }) {
   const href = interviewHref(app.id, interview.id);
-  const kind = INTERVIEW_OPTIONS[interview.kind].label;
   const dashboard = on === "dashboard";
   const prepNotes = interview.prep_notes;
   return (
@@ -48,11 +44,14 @@ export function NextInterviewCard({
             <DaysFromToday date={interview.at} />
           </p>
           <h2 id="next-up-title" className="m-0 mt-1 break-words text-2xl font-bold leading-[1.2] text-heading">
-            {kind}
+            {interview.title}
           </h2>
-          <p className="m-0 mt-1 break-words text-base text-body">
-            {dashboard && `${app.company} · ${app.title} · `}
-            <InterviewDayTime at={interview.at} weekday="long" />
+          <p className="m-0 mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 break-words text-base text-body">
+            <CategoryBadge category={interview.category} />
+            <span className="min-w-0">
+              {dashboard && `${app.company} · ${app.title} · `}
+              <InterviewDayTime at={interview.at} weekday="long" />
+            </span>
           </p>
         </div>
         <Link

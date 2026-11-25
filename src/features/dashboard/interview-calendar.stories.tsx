@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect } from "storybook/test";
 import { AddInterviewLink } from "@/features/applications/add-links";
-import type { DatedInterview, InterviewKind } from "@/lib/applications";
+import type { DatedInterview, InterviewCategory } from "@/lib/applications";
 import { dayKey, monthParam, monthStart } from "@/lib/calendar";
 import { previewApplications } from "@/lib/mock-data";
 import { DashboardCard } from "./dashboard-card";
@@ -12,26 +12,29 @@ import { InterviewCalendar, InterviewCalendarSkeleton } from "./interview-calend
 
 const DAY = 24 * 60 * 60 * 1000;
 
-/** An Interview of the sample Application `id`, `days` from now (negative is past), at 10:00 local time. */
-function on(id: string, kind: InterviewKind, days: number): DatedInterview {
+/**
+ * An Interview of the sample Application `id`, its category and title, `days` from now (negative is
+ * past), at 10:00 local time.
+ */
+function on(id: string, [category, title]: [InterviewCategory, string], days: number): DatedInterview {
   const application = previewApplications.find((a) => a.id === id)!;
   const at = new Date(Date.now() + days * DAY);
   at.setHours(10, 0, 0, 0);
   const iso = at.toISOString();
   return {
     application,
-    interview: { ...application.interviews[0], id: `${id}-${kind}-${days}`, kind, at: iso, completed: days < 0 },
+    interview: { ...application.interviews[0], id: `${id}-${category}-${days}`, category, title, at: iso, completed: days < 0 },
   };
 }
 
 const interviews = [
-  on("datadog", "recruiter_screen", -6),
-  on("linear", "hiring_manager", -2),
-  on("stripe", "recruiter_screen", 1),
-  on("datadog", "technical", 2),
-  on("linear", "technical", 2),
-  on("figma", "onsite_loop", 5),
-  on("notion", "recruiter_screen", 9),
+  on("datadog", ["recruiter", "Recruiter Screen"], -6),
+  on("linear", ["hiring_manager", "Hiring Manager"], -2),
+  on("stripe", ["recruiter", "Recruiter Screen"], 1),
+  on("datadog", ["technical", "Technical"], 2),
+  on("linear", ["technical", "Pair Programming"], 2),
+  on("figma", ["system_design", "Retrospective System Design"], 5),
+  on("notion", ["recruiter", "Recruiter Screen"], 9),
 ];
 
 const meta = {
@@ -110,9 +113,15 @@ export const Busy: Story = {
   args: {
     interviews: [
       ...interviews,
-      ...(["behavioural", "leadership", "technical", "people_management", "onsite_loop"] as const).map((kind, i) =>
-        on(previewApplications[i].id, kind, 3 + i),
-      ),
+      ...(
+        [
+          ["culture", "Culture"],
+          ["people_management", "Leadership"],
+          ["technical", "Technical"],
+          ["people_management", "People Management"],
+          ["decision_maker", "Strategic Alignment with Sr Director"],
+        ] as const
+      ).map(([category, title], i) => on(previewApplications[i].id, [category, title], 3 + i)),
     ],
   },
 };

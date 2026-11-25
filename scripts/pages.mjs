@@ -4,7 +4,7 @@
 //   params, application, interview
 //             what fills a dynamic route's [id] and [interviewId] (scripts/page-path.mjs); a page
 //             with `application` is opened by a job seeker holding scripts/dev-applications.mjs's
-//             Applications, and `interview` names the kind of one of that Application's Interviews
+//             Applications, and `interview` names the title of one of that Application's Interviews
 //   redirect  the page must redirect instead (a11y skips it): a path means an HTTP redirect there
 //             (src/proxy.ts: signed-out visitors go to /sign-in with `next`); true allows the
 //             redirect a page streams while it renders
@@ -110,7 +110,7 @@ export const PAGES = [
     path: "/applications/[id]/interviews/[interviewId]",
     signedIn: true,
     application: "Vercel",
-    interview: "technical",
+    interview: "Technical",
     expect: "Done · Rejected",
     states: [
       {
@@ -160,7 +160,7 @@ export const PAGES = [
     path: "/applications/[id]/interviews/[interviewId]",
     signedIn: true,
     application: "Figma",
-    interview: "technical",
+    interview: "Technical",
     expect: "Shows on the prep for your next Technical",
   },
   {
@@ -169,7 +169,7 @@ export const PAGES = [
     path: "/applications/[id]/interviews/[interviewId]",
     signedIn: true,
     application: "Datadog",
-    interview: "technical",
+    interview: "Technical",
     expect: "They asked last time",
     states: [
       {

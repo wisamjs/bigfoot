@@ -7,13 +7,13 @@ import { OutcomeCard } from "./outcome-card";
 // Interviews card. Dates are fixed: the card only counts days between two dates.
 const screen = interview("screen", {
   application_id: "birch",
-  kind: "recruiter_screen",
+  category: "recruiter", title: "Recruiter Screen",
   at: "2026-11-03T15:00:00Z",
   takeaway: "Ask the recruiter about internal candidates early.",
 });
 const manager = interview("manager", {
   application_id: "birch",
-  kind: "hiring_manager",
+  category: "hiring_manager", title: "Hiring Manager",
   at: "2026-11-12T16:00:00Z",
   takeaway: "Have a 2-minute version of the reorg story ready.",
 });

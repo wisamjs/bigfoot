@@ -22,10 +22,10 @@ const lumen = application("lumen", {
   is_waiting: false,
   waiting_since: null,
   interviews: [
-    interview("screen", { application_id: "lumen", kind: "recruiter_screen", at: daysFromNow(-17, 10), how_it_went: "Quick walkthrough of my last team." }),
+    interview("screen", { application_id: "lumen", category: "recruiter", title: "Recruiter Screen", at: daysFromNow(-17, 10), how_it_went: "Quick walkthrough of my last team." }),
     interview("manager", {
       application_id: "lumen",
-      kind: "hiring_manager",
+      category: "hiring_manager", title: "Hiring Manager",
       at: daysFromNow(-10, 11),
       what_they_asked:
         "Tell me about a time you had to let someone go.\nHow do you decide what your team does not build?\nWhat does a good first 90 days look like here?",
@@ -33,8 +33,8 @@ const lumen = application("lumen", {
         "Dug into how I handle underperformance and how I split time between hands-on work and people work. The incident story landed well: clear timeline, what I changed after.\n\nRambled on the roadmap question.",
       takeaway: "Lead with the decision, then the trade-off, then what I would measure.",
     }),
-    interview("deep-dive", { application_id: "lumen", kind: "technical_deep_dive", at: daysFromNow(2, 11), completed: false }),
-    interview("leadership", { application_id: "lumen", kind: "leadership", at: daysFromNow(9, 13), completed: false }),
+    interview("deep-dive", { application_id: "lumen", category: "project_deep_dive", title: "Technical Deep-Dive", at: daysFromNow(2, 11), completed: false }),
+    interview("leadership", { application_id: "lumen", category: "people_management", title: "Leadership", at: daysFromNow(9, 13), completed: false }),
   ],
 });
 const [, completed, upcoming] = lumen.interviews;
@@ -45,7 +45,7 @@ const tilth = application("tilth", {
   company: "Tilth Agritech",
   is_waiting: false,
   waiting_since: null,
-  interviews: [interview("tilth-manager", { application_id: "tilth", kind: "hiring_manager", at: daysFromNow(1, 10), completed: false })],
+  interviews: [interview("tilth-manager", { application_id: "tilth", category: "hiring_manager", title: "Hiring Manager", at: daysFromNow(1, 10), completed: false })],
 });
 const fernway = application("fernway", {
   company: "Fernway Health",
@@ -55,7 +55,7 @@ const fernway = application("fernway", {
   interviews: [
     interview("fernway-dive", {
       application_id: "fernway",
-      kind: "technical_deep_dive",
+      category: "project_deep_dive", title: "Technical Deep-Dive",
       at: daysFromNow(-30, 14),
       takeaway: "Draw the system before talking through it.",
     }),
@@ -145,7 +145,7 @@ export const UpcomingWithTakeaways: Story = {
     await expect(takeaways).toHaveLength(2);
     await expect(await within(takeaways[0]).findByText(/^[A-Z][a-z]{2} \d+$/)).toBeVisible();
     await expect(takeaways[0]).toHaveTextContent("Lead with the decision, then the trade-off, then what I would measure.");
-    await expect(takeaways[1]).toHaveTextContent("From your last Technical Deep-Dive · Fernway Health");
+    await expect(takeaways[1]).toHaveTextContent("From your last Project Deep-dive · Fernway Health");
     await expect(within(within(prep).getByRole("list", { name: "They asked last time" })).getAllByRole("listitem")).toHaveLength(3);
     await expect(within(prep).getByRole("button", { name: "Add Prep notes" })).toBeVisible();
   },

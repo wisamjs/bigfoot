@@ -29,7 +29,7 @@ beforeEach(() => {
   );
 });
 
-const technical = interview("i1", { application_id: "birch", kind: "technical", how_it_went: "Asked about caching" });
+const technical = interview("i1", { application_id: "birch", category: "technical", title: "Technical", how_it_went: "Asked about caching" });
 const birch = application("birch", { company: "Birch", interviews: [technical] });
 
 /** The page puts the editor inside UnsavedChanges, with the heading. */
@@ -111,7 +111,7 @@ describe("the Interview page", () => {
   });
 
   it("leaves the notes out of the warning when there are none", async () => {
-    const bare = interview("i1", { application_id: "birch", kind: "technical" });
+    const bare = interview("i1", { application_id: "birch", category: "technical", title: "Technical" });
     // Completed with no notes: the fields are open already.
     const { user } = openPage(application("birch", { company: "Birch", interviews: [bare] }), bare);
     await user.click(screen.getByRole("button", { name: /^More actions/ }));
@@ -143,7 +143,7 @@ describe("the Interview page", () => {
 
 describe("Interview notes", () => {
   // Upcoming, so it starts with Add Interview notes rather than open fields.
-  const blank = interview("i1", { application_id: "oak", kind: "recruiter_screen", completed: false });
+  const blank = interview("i1", { application_id: "oak", category: "recruiter", title: "Recruiter Screen", completed: false });
   const oak = application("oak", { company: "Oak", interviews: [blank] });
 
   // The pause before notes save is a timer; user-event's own delays keep running with the clock.
@@ -357,7 +357,7 @@ describe("Prep notes", () => {
   const dateOf = (iso: string) => new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(iso));
 
   function page(overrides: Parameters<typeof interview>[1]) {
-    const current = interview("i1", { application_id: "elm", kind: "technical", ...overrides });
+    const current = interview("i1", { application_id: "elm", category: "technical", title: "Technical", ...overrides });
     return openPage(application("elm", { company: "Elm", interviews: [current] }), current);
   }
 
@@ -483,14 +483,14 @@ describe("takeaways that apply (BIG-181)", () => {
   const daysFromNow = (days: number) => new Date(Date.now() + days * DAY).toISOString();
   const manager = interview("manager", {
     application_id: "lumen",
-    kind: "hiring_manager",
+    category: "hiring_manager", title: "Hiring Manager",
     at: daysFromNow(-10),
     what_they_asked: "Why us?\nWhy now?",
     takeaway: "Lead with the decision.",
   });
-  const deepDive = interview("deep-dive", { application_id: "lumen", kind: "technical_deep_dive", at: daysFromNow(2), completed: false });
+  const deepDive = interview("deep-dive", { application_id: "lumen", category: "project_deep_dive", title: "Technical Deep-Dive", at: daysFromNow(2), completed: false });
   const lumen = application("lumen", { company: "Lumen Bio", interviews: [manager, deepDive] });
-  const tilthManager = interview("tilth-manager", { application_id: "tilth", kind: "hiring_manager", at: daysFromNow(1), completed: false });
+  const tilthManager = interview("tilth-manager", { application_id: "tilth", category: "hiring_manager", title: "Hiring Manager", at: daysFromNow(1), completed: false });
   const tilth = application("tilth", { company: "Tilth Agritech", interviews: [tilthManager] });
   const apps = [lumen, tilth];
 

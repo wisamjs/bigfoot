@@ -53,10 +53,10 @@ def onboard(request: Request, job_seeker: SignedInJobSeekerId) -> Onboarding:
                     ),
                     list(values.values()),
                 ).fetchone()["id"]
-                for kind, at in interviews:
+                for category, title, at in interviews:
                     conn.execute(
-                        "insert into interviews (application_id, kind, at) values (%s, %s, %s)",
-                        (application_id, kind, at),
+                        "insert into interviews (application_id, category, title, at) values (%s, %s, %s, %s)",
+                        (application_id, category, title, at),
                     )
         conn.execute("update job_seekers set samples_seeded_at = now() where job_seeker_id = %s", (job_seeker,))
     return Onboarding(samples_seeded=not has_applications)

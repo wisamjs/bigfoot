@@ -65,9 +65,9 @@ describe("dashboard Server Actions", () => {
       ok: false,
       fieldErrors: { title: "Enter the title." },
     });
-    expect(await updateInterviewAction("app-1", "int-1", { kind: "<script>" as never })).toMatchObject({
+    expect(await updateInterviewAction("app-1", "int-1", { category: "<script>" as never })).toMatchObject({
       ok: false,
-      fieldErrors: { kind: "Choose an Interview kind." },
+      fieldErrors: { category: "Choose an Interview category." },
     });
     expect(api.updateApplication).not.toHaveBeenCalled();
     expect(api.createApplication).not.toHaveBeenCalled();

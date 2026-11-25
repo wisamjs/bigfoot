@@ -710,7 +710,7 @@
           "Interviews"
         ],
         "summary": "Add an Interview",
-        "description": "Add an Interview to an Application. The kind and the date and time are required; kinds can\nrepeat, and Interview notes and Prep notes are optional. The number of Interviews per Application is capped\n(409).",
+        "description": "Add an Interview to an Application. The category, title and date and time are required;\ncategories and titles can repeat, and Interview notes and Prep notes are optional. The number of\nInterviews per Application is capped (409).",
         "operationId": "create_interview_applications__application_id__interviews_post",
         "security": [
           {
@@ -804,7 +804,7 @@
           "Interviews"
         ],
         "summary": "Edit an Interview",
-        "description": "Change an Interview's kind, date, Interview notes or Prep notes.\n\nOnly the fields sent change; send null for `what_they_asked`, `how_it_went`, `takeaway` or `prep_notes` to\nclear it. The date can't be cleared.",
+        "description": "Change an Interview's category, title, date, Interview notes or Prep notes.\n\nOnly the fields sent change; send null for `what_they_asked`, `how_it_went`, `takeaway` or `prep_notes` to\nclear it. The category, title and date can't be cleared.",
         "operationId": "update_interview_applications__application_id__interviews__interview_id__patch",
         "security": [
           {
@@ -1723,29 +1723,32 @@
             "title": "Application Id",
             "description": "The Application this Interview belongs to."
           },
-          "kind": {
+          "category": {
             "type": "string",
             "enum": [
-              "informal_chat",
-              "recruiter_screen",
+              "recruiter",
               "hiring_manager",
               "technical",
-              "behavioural",
-              "leadership",
-              "onsite_loop",
-              "ai_assisted_coding_challenge",
-              "coding_challenge",
-              "fe_system_design",
-              "be_system_design",
-              "technical_deep_dive",
-              "cross_functional_interview",
-              "strategy_and_values_alignment",
-              "people_management"
+              "system_design",
+              "project_deep_dive",
+              "people_management",
+              "project_delivery",
+              "collaboration",
+              "culture",
+              "decision_maker"
             ],
-            "title": "Kind",
-            "description": "What sort of conversation the Interview is (GLOSSARY.md, Interview kind).",
+            "title": "Category",
+            "description": "What the Interview assesses (GLOSSARY.md, Interview category, docs/adr/0007): recruiter, hiring_manager, technical, system_design, project_deep_dive, people_management, project_delivery, collaboration, culture or decision_maker.",
             "examples": [
-              "technical"
+              "system_design"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "The Interview's name in the job seeker's own words (GLOSSARY.md, Interview title), at most 200 characters. Required; the ends are trimmed.",
+            "examples": [
+              "Retrospective System Design"
             ]
           },
           "at": {
@@ -1840,7 +1843,8 @@
         "required": [
           "id",
           "application_id",
-          "kind",
+          "category",
+          "title",
           "at",
           "what_they_asked",
           "how_it_went",
@@ -1855,29 +1859,33 @@
       },
       "InterviewCreate": {
         "properties": {
-          "kind": {
+          "category": {
             "type": "string",
             "enum": [
-              "informal_chat",
-              "recruiter_screen",
+              "recruiter",
               "hiring_manager",
               "technical",
-              "behavioural",
-              "leadership",
-              "onsite_loop",
-              "ai_assisted_coding_challenge",
-              "coding_challenge",
-              "fe_system_design",
-              "be_system_design",
-              "technical_deep_dive",
-              "cross_functional_interview",
-              "strategy_and_values_alignment",
-              "people_management"
+              "system_design",
+              "project_deep_dive",
+              "people_management",
+              "project_delivery",
+              "collaboration",
+              "culture",
+              "decision_maker"
             ],
-            "title": "Kind",
-            "description": "What sort of conversation the Interview is (GLOSSARY.md, Interview kind).",
+            "title": "Category",
+            "description": "What the Interview assesses (GLOSSARY.md, Interview category, docs/adr/0007): recruiter, hiring_manager, technical, system_design, project_deep_dive, people_management, project_delivery, collaboration, culture or decision_maker.",
             "examples": [
-              "technical"
+              "system_design"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Title",
+            "description": "The Interview's name in the job seeker's own words (GLOSSARY.md, Interview title), at most 200 characters. Required; the ends are trimmed.",
+            "examples": [
+              "Retrospective System Design"
             ]
           },
           "at": {
@@ -1957,7 +1965,8 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "kind",
+          "category",
+          "title",
           "at"
         ],
         "title": "InterviewCreate",
@@ -1965,36 +1974,47 @@
       },
       "InterviewPatch": {
         "properties": {
-          "kind": {
+          "category": {
             "anyOf": [
               {
                 "type": "string",
                 "enum": [
-                  "informal_chat",
-                  "recruiter_screen",
+                  "recruiter",
                   "hiring_manager",
                   "technical",
-                  "behavioural",
-                  "leadership",
-                  "onsite_loop",
-                  "ai_assisted_coding_challenge",
-                  "coding_challenge",
-                  "fe_system_design",
-                  "be_system_design",
-                  "technical_deep_dive",
-                  "cross_functional_interview",
-                  "strategy_and_values_alignment",
-                  "people_management"
+                  "system_design",
+                  "project_deep_dive",
+                  "people_management",
+                  "project_delivery",
+                  "collaboration",
+                  "culture",
+                  "decision_maker"
                 ]
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Kind",
-            "description": "What sort of conversation the Interview is (GLOSSARY.md, Interview kind). Cannot be cleared.",
+            "title": "Category",
+            "description": "What the Interview assesses (GLOSSARY.md, Interview category, docs/adr/0007): recruiter, hiring_manager, technical, system_design, project_deep_dive, people_management, project_delivery, collaboration, culture or decision_maker. Cannot be cleared.",
             "examples": [
-              "onsite_loop"
+              "hiring_manager"
+            ]
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title",
+            "description": "The Interview's name in the job seeker's own words (GLOSSARY.md, Interview title), at most 200 characters. Required; the ends are trimmed. Cannot be cleared.",
+            "examples": [
+              "Strategic Alignment with Sr Director"
             ]
           },
           "at": {

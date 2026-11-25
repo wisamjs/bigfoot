@@ -3,7 +3,6 @@
 import { Lightbulb } from "lucide-react";
 import { useIsClient } from "@/hooks/use-is-client";
 import {
-  INTERVIEW_OPTIONS,
   OUTCOME_OPTIONS,
   outcomeSummary,
   parseDay,
@@ -61,7 +60,7 @@ export function OutcomeCard({ app }: { app: Application }) {
                 <div className="min-w-0">
                   <p className="m-0 break-words text-base text-heading">{text}</p>
                   <p className="m-0 mt-1 text-sm text-body">
-                    From {INTERVIEW_OPTIONS[from.kind].label}
+                    From {from.title}
                     {isClient && ` · ${dayFormat.format(new Date(from.at))}`}
                   </p>
                 </div>

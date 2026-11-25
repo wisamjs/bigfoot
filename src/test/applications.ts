@@ -7,7 +7,7 @@ export function interview(id: string, overrides: Partial<Interview> = {}): Inter
   return {
     id,
     application_id: "a",
-    kind: "technical",
+    category: "technical", title: "Technical",
     at: "2026-11-01T15:00:00Z",
     what_they_asked: null,
     how_it_went: null,

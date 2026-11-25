@@ -8,7 +8,7 @@ import { interviewHref } from "@/features/applications/routes";
 import { useToday } from "@/hooks/use-today";
 import {
   calendarDaysBetween,
-  INTERVIEW_OPTIONS,
+  categoryLabel,
   relativeDays,
   type PrepLookBack as LookBack,
   type PrepTakeaway,
@@ -37,9 +37,12 @@ export function PrepLookBack({ lookBack }: { lookBack: LookBack }) {
   );
 }
 
-/** One takeaway in its box: where it came from, then the takeaway. */
+/**
+ * One takeaway in its box: where it came from, then the takeaway. One from this Application names
+ * its Interview by title; one from elsewhere by the category they share: "From your last Hiring
+ * Manager · Lumen Bio".
+ */
 function TakeawayBox({ takeaway: { rule, application, interview } }: { takeaway: PrepTakeaway }) {
-  const kind = INTERVIEW_OPTIONS[interview.kind].label;
   return (
     <li className="flex min-w-0 gap-3 rounded-card bg-surface p-4">
       <Lightbulb className="mt-0.5 size-5 shrink-0 text-fg-brand" aria-hidden />
@@ -47,13 +50,13 @@ function TakeawayBox({ takeaway: { rule, application, interview } }: { takeaway:
         <p className="m-0 text-sm text-body">
           {rule === "same_application" ? (
             <>
-              Takeaway from {kind}
+              Takeaway from {interview.title}
               <Dot />
               <ShortDay at={interview.at} />
             </>
           ) : (
             <>
-              From your last {kind}
+              From your last {categoryLabel(interview.category)}
               <Dot />
               {application.company}
             </>
@@ -99,7 +102,7 @@ function TheyAskedLastTime({ questions }: { questions: string[] }) {
  * Where a completed Interview's Takeaway for next time shows (BIG-181), one link per upcoming
  * Interview, to its page: "Shows on the prep for Technical Deep-Dive · in 2 days →" (the next
  * Interview of this Application) and "Shows on the prep for your next Hiring Manager · Tilth
- * Agritech, tomorrow →" (the next of the same kind elsewhere). Nothing when neither exists yet.
+ * Agritech, tomorrow →" (the next of the same category elsewhere). Nothing when neither exists yet.
  */
 export function TakeawayShowsOn({ showsOn }: { showsOn: PrepTakeaway[] }) {
   const today = useToday();
@@ -107,7 +110,6 @@ export function TakeawayShowsOn({ showsOn }: { showsOn: PrepTakeaway[] }) {
   return (
     <ul aria-label="Shows on the prep for" className="m-0 mt-3 flex list-none flex-col gap-1 p-0 text-sm leading-[1.4]">
       {showsOn.map(({ rule, application, interview }) => {
-        const kind = INTERVIEW_OPTIONS[interview.kind].label;
         const when = today ? relativeDays(calendarDaysBetween(today, new Date(interview.at))) : null;
         return (
           <li key={rule}>
@@ -118,8 +120,8 @@ export function TakeawayShowsOn({ showsOn }: { showsOn: PrepTakeaway[] }) {
             >
               <span className="break-words">
                 {rule === "same_application"
-                  ? `Shows on the prep for ${kind}${when ? ` · ${when}` : ""}`
-                  : `Shows on the prep for your next ${kind} · ${application.company}${when ? `, ${when}` : ""}`}
+                  ? `Shows on the prep for ${interview.title}${when ? ` · ${when}` : ""}`
+                  : `Shows on the prep for your next ${categoryLabel(interview.category)} · ${application.company}${when ? `, ${when}` : ""}`}
                 <ArrowRight className="ml-1 inline size-4 align-[-0.2em]" aria-hidden />
               </span>
             </Link>

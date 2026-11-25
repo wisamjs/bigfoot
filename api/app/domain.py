@@ -22,23 +22,22 @@ Outcome = Literal[
     "not_the_right_fit",
 ]
 
-InterviewKind = Literal[
-    "informal_chat",
-    "recruiter_screen",
+# Interview category (GLOSSARY.md, docs/adr/0007): what an Interview assesses. Fixed, so a
+# Takeaway for next time can match across Applications on it.
+InterviewCategory = Literal[
+    "recruiter",
     "hiring_manager",
     "technical",
-    "behavioural",
-    "leadership",
-    "onsite_loop",
-    "ai_assisted_coding_challenge",
-    "coding_challenge",
-    "fe_system_design",
-    "be_system_design",
-    "technical_deep_dive",
-    "cross_functional_interview",
-    "strategy_and_values_alignment",
+    "system_design",
+    "project_deep_dive",
     "people_management",
+    "project_delivery",
+    "collaboration",
+    "culture",
+    "decision_maker",
 ]
+# Interview title: the job seeker's own name for an Interview, required.
+INTERVIEW_TITLE_MAX_LENGTH = 200
 
 # Interview notes are three plain-text fields. What they asked and How it went are generous enough
 # that nobody writing by hand reaches them; Takeaway for next time is one short line.

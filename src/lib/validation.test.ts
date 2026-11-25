@@ -127,50 +127,60 @@ describe("applicationErrors", () => {
 });
 
 describe("interviewErrors", () => {
-  it("accepts a kind, a timestamp, and each Interview notes field up to its limit", () => {
+  it("accepts a category, a title, a timestamp, and each Interview notes field up to its limit", () => {
     const notes = {
       what_they_asked: "a".repeat(INTERVIEW_NOTES_MAX_LENGTHS.what_they_asked),
       how_it_went: "a".repeat(INTERVIEW_NOTES_MAX_LENGTHS.how_it_went),
       takeaway: "a".repeat(INTERVIEW_NOTES_MAX_LENGTHS.takeaway),
     };
-    expect(interviewErrors({ kind: "technical", at: "2026-12-01T15:00:00.000Z", ...notes }, { creating: true })).toEqual(
+    expect(interviewErrors({ category: "technical", title: "Technical", at: "2026-12-01T15:00:00.000Z", ...notes }, { creating: true })).toEqual(
       {},
     );
     expect(interviewErrors({ what_they_asked: null, how_it_went: null, takeaway: null })).toEqual({});
   });
 
-  it("refuses an unknown kind, a date that isn't one, and notes over the limit", () => {
+  it("refuses an unknown category, a blank or long title, a date that isn't one, and notes over the limit", () => {
     expect(
       interviewErrors({
-        kind: "<script>",
+        category: "<script>",
+        title: "a".repeat(201),
         at: "tomorrow",
         what_they_asked: "a".repeat(20_001),
         how_it_went: "a".repeat(20_001),
         takeaway: "a".repeat(501),
       }),
     ).toEqual({
-      kind: "Choose an Interview kind.",
+      category: "Choose an Interview category.",
+      title: "Title can be at most 200 characters.",
       at: "Enter a date and time.",
       what_they_asked: "What they asked can be at most 20,000 characters.",
       how_it_went: "How it went can be at most 20,000 characters.",
       takeaway: "Takeaway for next time can be at most 500 characters.",
     });
-    // The single field they replaced is no longer one Bigfoot stores.
+    // The single field they replaced is no longer one Bigfoot stores, nor is the kind (docs/adr/0007).
     expect(interviewErrors({ notes: "Old" })).toEqual({ notes: "This isn’t a field Bigfoot stores." });
+    expect(interviewErrors({ kind: "technical" })).toEqual({ kind: "This isn’t a field Bigfoot stores." });
+    expect(interviewErrors({ title: "  " })).toEqual({ title: "Enter the title." });
+    expect(interviewErrors({ category: "onsite_loop" })).toEqual({ category: "Choose an Interview category." });
   });
 
-  it("needs the kind and a date and time on a new Interview, never just a date", () => {
+  it("needs the category, the title and a date and time on a new Interview, never just a date", () => {
     expect(interviewErrors({}, { creating: true })).toEqual({
-      kind: "Choose an Interview kind.",
+      category: "Choose an Interview category.",
+      title: "Enter the title.",
       at: "Enter the date and time.",
     });
-    expect(interviewErrors({ kind: "technical", at: "2026-12-01" }, { creating: true })).toEqual({
+    expect(interviewErrors({ category: "technical", title: "Technical", at: "2026-12-01" }, { creating: true })).toEqual({
       at: "Enter a date and time.",
     });
   });
 
-  it("refuses clearing the date of an Interview", () => {
+  it("refuses clearing the date, the category or the title of an Interview", () => {
     expect(interviewErrors({ at: null })).toEqual({ at: "Enter the date and time." });
+    expect(interviewErrors({ category: null, title: null })).toEqual({
+      category: "Choose an Interview category.",
+      title: "Enter the title.",
+    });
     expect(interviewErrors({ at: "" })).toEqual({ at: "Enter the date and time." });
   });
 

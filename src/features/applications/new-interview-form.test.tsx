@@ -59,10 +59,14 @@ describe("Add Interview", () => {
     expect(within(form!).getByLabelText("Application")).toHaveValue("oak");
   });
 
-  it("marks Application, Kind and Date and time required, and starts with no time", () => {
+  it("marks Application, Category, Title and Date and time required, and starts with no time", () => {
     const { form } = openAdd();
     expect(form).toHaveTextContent("* Required");
     expect(within(form!).getByLabelText("Application")).toBeRequired();
+    expect(within(form!).getByLabelText("Category")).toBeRequired();
+    expect(within(form!).getByLabelText("Category")).toHaveValue("recruiter");
+    expect(within(form!).getByLabelText("Title")).toBeRequired();
+    expect(within(form!).getByLabelText("Title")).toHaveValue("Recruiter");
     expect(within(form!).getByRole("group", { name: "Date and time" })).toBeInTheDocument();
     expect(within(form!).getByLabelText("Time")).toHaveValue("");
     expect(within(form!).getByLabelText("How it went")).not.toBeRequired();
@@ -101,25 +105,55 @@ describe("Add Interview", () => {
     const { user, form } = openAdd(undefined, "oak");
     await pickDate(user, form!, "09:00");
     await user.click(within(form!).getByRole("button", { name: "Add Interview" }));
-    expect(actions.createInterviewAction).toHaveBeenCalledWith("oak", expect.objectContaining({ kind: "informal_chat" }));
+    expect(actions.createInterviewAction).toHaveBeenCalledWith("oak", expect.objectContaining({ category: "recruiter", title: "Recruiter" }));
     expect(push).toHaveBeenCalledExactlyOnceWith("/applications/oak");
   });
 
   it("opened from the dashboard, adds the Interview to the chosen Application, then goes back to the dashboard", async () => {
     const { user, form } = openAdd();
     await user.selectOptions(within(form!).getByLabelText("Application"), "cedar");
-    await user.selectOptions(within(form!).getByLabelText("Kind"), "technical");
+    await user.selectOptions(within(form!).getByLabelText("Category"), "technical");
+    // The title follows the category until it's edited.
+    expect(within(form!).getByLabelText("Title")).toHaveValue("Technical");
     await pickDate(user, form!, "14:30");
     await user.type(within(form!).getByLabelText("How it went"), "  Went well  ");
     await user.click(within(form!).getByRole("button", { name: "Add Interview" }));
 
     const now = new Date();
     expect(actions.createInterviewAction).toHaveBeenCalledWith("cedar", {
-      kind: "technical",
+      category: "technical",
+      title: "Technical",
       at: new Date(now.getFullYear(), now.getMonth(), 15, 14, 30).toISOString(),
       how_it_went: "Went well",
     });
     expect(push).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("keeps a title the job seeker wrote when the category changes, and sends it trimmed", async () => {
+    const { user, form } = openAdd(undefined, "oak");
+    const title = within(form!).getByLabelText("Title");
+    await user.clear(title);
+    await user.type(title, " Retrospective System Design ");
+    await user.selectOptions(within(form!).getByLabelText("Category"), "system_design");
+    expect(title).toHaveValue(" Retrospective System Design ");
+    await pickDate(user, form!, "09:00");
+    await user.click(within(form!).getByRole("button", { name: "Add Interview" }));
+    expect(actions.createInterviewAction).toHaveBeenCalledWith(
+      "oak",
+      expect.objectContaining({ category: "system_design", title: "Retrospective System Design" }),
+    );
+  });
+
+  it("refuses an empty title, beside the field, and saves nothing", async () => {
+    const { user, form } = openAdd(undefined, "oak");
+    await user.clear(within(form!).getByLabelText("Title"));
+    await pickDate(user, form!, "09:00");
+    await user.click(within(form!).getByRole("button", { name: "Add Interview" }));
+    const title = within(form!).getByLabelText("Title");
+    expect(title).toBeInvalid();
+    expect(title).toHaveAccessibleDescription("Enter the title.");
+    expect(title).toHaveFocus();
+    expect(actions.createInterviewAction).not.toHaveBeenCalled();
   });
 
   it("stays on the page and shows why adding failed", async () => {

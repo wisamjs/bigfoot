@@ -44,7 +44,7 @@ export function EditableHeading({
   display: ReactNode;
   /** The form's accessible name, such as "Edit details". */
   editLabel: string;
-  /** What the save status is for, such as "Kind and date". */
+  /** What the save status is for, such as "Category, title and date". */
   statusLabel: string;
   editing: boolean;
   onSave: () => void;

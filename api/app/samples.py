@@ -4,7 +4,7 @@ time they load the dashboard, to show how Bigfoot works before they add their ow
 Companies are made up. Dates are relative to when the job seeker is onboarded: applied in the
 past few weeks, with an Interview a few days ahead so the Interviews calendar isn't empty. Each
 sample shows a different state: one with a completed and an upcoming Interview, one new and
-Waiting, one Done with an Offer, one Done with Rejected.
+Waiting, one Done with an Offer, one Done with Rejected. Each Interview is (category, title, at).
 """
 
 from datetime import datetime, time, timedelta
@@ -23,7 +23,10 @@ def sample_applications(now: datetime) -> list[dict[str, Any]]:
             "company": "Northwind Robotics",
             "title": "Frontend Engineer",
             "applied_on": today - timedelta(days=12),
-            "interviews": [("recruiter_screen", at(-6)), ("technical", at(3))],
+            "interviews": [
+                ("recruiter", "Recruiter Screen", at(-6)),
+                ("system_design", "Frontend System Design", at(3)),
+            ],
         },
         {
             "company": "Juniper Labs",
@@ -37,7 +40,11 @@ def sample_applications(now: datetime) -> list[dict[str, Any]]:
             "applied_on": today - timedelta(days=26),
             "status": "done",
             "outcome": "offer",
-            "interviews": [("recruiter_screen", at(-20)), ("technical", at(-13)), ("onsite_loop", at(-5))],
+            "interviews": [
+                ("recruiter", "Recruiter Screen", at(-20)),
+                ("technical", "Pair Programming", at(-13)),
+                ("hiring_manager", "Hiring Manager", at(-5)),
+            ],
         },
         {
             "company": "Cedarline",
@@ -45,6 +52,6 @@ def sample_applications(now: datetime) -> list[dict[str, Any]]:
             "applied_on": today - timedelta(days=19),
             "status": "done",
             "outcome": "rejected",
-            "interviews": [("recruiter_screen", at(-11))],
+            "interviews": [("recruiter", "Recruiter Screen", at(-11))],
         },
     ]

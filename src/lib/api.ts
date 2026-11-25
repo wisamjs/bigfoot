@@ -77,7 +77,7 @@ const FIELD_LABELS: Record<string, string> = {
   outcome: "Outcome",
   done_on: "Done date",
   outcome_note: "Outcome note",
-  kind: "Interview kind",
+  category: "Interview category",
   at: "Interview date",
   what_they_asked: "What they asked",
   how_it_went: "How it went",

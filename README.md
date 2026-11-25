@@ -35,7 +35,7 @@ A script can read and change your Applications and Interviews without a browser,
      -d '{"kind": "technical", "at": "2026-11-20T17:00:00Z"}'
    ```
 
-Bigfoot doesn't match calendar events to Applications: a script finds the Application itself (for example by `company` in the list) and adds the Interview to it. Every route, field and Interview kind is in [`api/openapi.json`](api/openapi.json), and you can browse them locally ([Try the API](#try-the-api)).
+Bigfoot doesn't match calendar events to Applications: a script finds the Application itself (for example by `company` in the list) and adds the Interview to it. Every route, field and Interview category is in [`api/openapi.json`](api/openapi.json), and you can browse them locally ([Try the API](#try-the-api)).
 
 A token can do anything to your Applications and Interviews, so treat it like a password. It can't delete your account or manage tokens. It expires a year after you create it; revoke it on the Account page at any time. A revoked, expired or mistyped token gets `401`.
 

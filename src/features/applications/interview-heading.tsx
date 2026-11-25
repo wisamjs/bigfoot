@@ -20,6 +20,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { useSaveStatus } from "@/hooks/use-save-status";
 import { useToday } from "@/hooks/use-today";
 import { DeleteInterviewDialog } from "@/features/applications/application-dialogs";
+import { CategoryBadge } from "@/features/applications/category-badge";
 import { InterviewWhenLong } from "@/features/applications/application-when";
 import { EditableHeading } from "@/features/applications/editable-heading";
 import { fromLocalInput, toLocalInput } from "@/features/applications/local-datetime";
@@ -27,24 +28,29 @@ import { OUTCOME_TONE } from "@/features/applications/status-tone";
 import { useUnsavedChanges } from "@/features/applications/unsaved-changes";
 import {
   calendarDaysBetween,
-  INTERVIEW_KINDS,
-  INTERVIEW_OPTIONS,
+  categoryLabel,
+  INTERVIEW_CATEGORIES,
+  INTERVIEW_TITLE_MAX_LENGTH,
   OUTCOME_OPTIONS,
   parseDay,
   relativeDays,
   STATUS_OPTIONS,
   type Application,
   type Interview,
+  titleForCategory,
+  type InterviewCategory,
   type InterviewFields,
-  type InterviewKind,
 } from "@/lib/applications";
 import { interviewErrors, isValid, type FieldErrors } from "@/lib/validation";
 
-type Saved = Pick<Interview, "kind" | "at">;
-type Values = { kind: InterviewKind } & DateAndTime;
+type Saved = Pick<Interview, "category" | "title" | "at">;
+type Values = Pick<Interview, "category" | "title"> & DateAndTime;
+
+/** What the save status and Retry name: the fields Edit details changes. */
+const STATUS_LABEL = "Category, title and date";
 
 function valuesOf(saved: Saved): Values {
-  return { kind: saved.kind, ...splitDateTime(toLocalInput(saved.at)) };
+  return { category: saved.category, title: saved.title, ...splitDateTime(toLocalInput(saved.at)) };
 }
 
 /** The date and time as a datetime-local value; "" without a date. */
@@ -55,7 +61,8 @@ function localOf(values: DateAndTime) {
 /** What differs from what's saved. A date without a time is no date: no time is assumed. */
 function changesOf(values: Values, saved: Saved): Partial<InterviewFields> {
   const changes: Partial<InterviewFields> = {};
-  if (values.kind !== saved.kind) changes.kind = values.kind;
+  if (values.category !== saved.category) changes.category = values.category;
+  if (values.title.trim() !== saved.title) changes.title = values.title.trim();
   if (localOf(values) !== toLocalInput(saved.at)) {
     changes.at = values.date && values.time ? fromLocalInput(localOf(values)) : null;
   }
@@ -63,26 +70,28 @@ function changesOf(values: Values, saved: Saved): Partial<InterviewFields> {
 }
 
 /**
- * The Interview page's heading (BIG-178): the company and role, the Interview kind as the title,
- * its date and time with the year, and badges for where it stands ("Upcoming · in 2 days",
+ * The Interview page's heading (BIG-178): the company and role, the Interview title, its date
+ * and time with the year, and badges for its Interview category and where it stands ("Upcoming · in 2 days",
  * "Completed · 10 days ago") and, once the Application is Done, its "Done · Rejected". On the right,
- * Edit details turns the kind and the date into fields in place (EditableHeading) and ⋯ holds
+ * Edit details turns the category, the title and the date into fields in place (EditableHeading) and ⋯ holds
  * Delete Interview, which asks first and goes back to the Application page. On a phone, Edit details
  * folds into ⋯. Enter, Save, or leaving the fields saves what changed, checked first with the API's
- * rules: the date can't be cleared and no time is assumed (docs/adr/0005). A problem shows beside
+ * rules: the title and date can't be cleared and no time is assumed (docs/adr/0005). The title follows
+ * a new category while it is still the old category's name. A problem shows beside
  * its field and sends nothing. Escape and Cancel put back what was saved. Leaving the page with a
  * change not yet saved asks first (UnsavedChanges).
  */
 export function InterviewHeading({ app, interview }: { app: Application; interview: Interview }) {
   const id = useId();
-  const saved: Saved = { kind: interview.kind, at: interview.at };
+  const saved: Saved = { category: interview.category, title: interview.title, at: interview.at };
   const [shown, setShown] = useState(saved);
   const [seen, setSeen] = useState(saved);
   const [editing, setEditing] = useState(false);
   const [values, setValues] = useState(() => valuesOf(saved));
   const [errors, setErrors] = useState<FieldErrors>({});
   const tracker = useSaveStatus();
-  const kindRef = useRef<HTMLSelectElement>(null);
+  const categoryRef = useRef<HTMLSelectElement>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
   const editRef = useRef<HTMLButtonElement>(null);
   const moreRef = useRef<HTMLButtonElement>(null);
   const [deleting, setDeleting] = useState<Interview | null>(null);
@@ -91,14 +100,20 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
   const dateId = `${id}-at`;
 
   // Taken in when it changes elsewhere, set during render the way React advises for state that follows a prop.
-  if (saved.kind !== seen.kind || saved.at !== seen.at) {
+  if (saved.category !== seen.category || saved.title !== seen.title || saved.at !== seen.at) {
     setSeen(saved);
     setShown(saved);
   }
 
   const changed = editing && Object.keys(changesOf(values, shown)).length > 0;
   const focusDate = () => document.getElementById(dateId)?.focus();
-  useUnsavedChanges(changed, () => (errors.at && !errors.kind ? focusDate() : kindRef.current?.focus()));
+  const focusProblem = (problems: FieldErrors) => {
+    if (problems.category) categoryRef.current?.focus();
+    else if (problems.title) titleRef.current?.focus();
+    else if (problems.at) focusDate();
+    else categoryRef.current?.focus();
+  };
+  useUnsavedChanges(changed, () => focusProblem(errors));
 
   function startEditing() {
     setValues(valuesOf(shown));
@@ -121,8 +136,7 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
     const problems = interviewErrors(changes);
     setErrors(problems);
     if (!isValid(problems)) {
-      if (problems.kind) kindRef.current?.focus();
-      else focusDate();
+      focusProblem(problems);
       return;
     }
     const result = await tracker.run(async () => {
@@ -131,12 +145,16 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
       return outcome;
     });
     if (result.ok) {
-      setShown((prev) => ({ kind: changes.kind ?? prev.kind, at: changes.at ?? prev.at }));
+      setShown((prev) => ({
+        category: changes.category ?? prev.category,
+        title: changes.title ?? prev.title,
+        at: changes.at ?? prev.at,
+      }));
       stopEditing();
     }
   }
 
-  const kind = INTERVIEW_OPTIONS[shown.kind].label;
+  const title = shown.title;
   const display = (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
@@ -144,16 +162,17 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
           {app.company} · {app.title}
         </p>
         <h1 className="m-0 mt-1 break-words text-[32px] font-bold leading-[1.1] tracking-[-0.02em] text-heading md:text-[44px]">
-          {kind}
+          {title}
         </h1>
         <p className="m-0 mt-2 text-base leading-[1.6] text-body md:text-lg">
           <InterviewWhenLong at={shown.at} />
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
+          <CategoryBadge category={shown.category} />
           <WhenBadge app={app} at={shown.at} completed={interview.completed} />
           <DoneBadge app={app} />
         </div>
-        <SaveStatus status={tracker.status} label="Kind and date" onRetry={tracker.retry} />
+        <SaveStatus status={tracker.status} label={STATUS_LABEL} onRetry={tracker.retry} />
       </div>
       <div className="flex shrink-0 items-center gap-3">
         <Button ref={editRef} variant="secondary" className="hidden sm:inline-flex" onClick={startEditing}>
@@ -161,7 +180,7 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
           Edit details
         </Button>
         <MoreMenu
-          label={`More actions, ${kind}`}
+          label={`More actions, ${title}`}
           triggerRef={moreRef}
           showEdit={!wide}
           onEdit={startEditing}
@@ -180,10 +199,10 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
 
   return (
     <EditableHeading
-      title={kind}
+      title={title}
       display={display}
       editLabel="Edit details"
-      statusLabel="Kind and date"
+      statusLabel={STATUS_LABEL}
       editing={editing}
       onSave={() => void save()}
       onCancel={() => {
@@ -194,27 +213,45 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
       tracker={tracker}
       errors={errors}
     >
-      <Field label="Kind" required id={`${id}-kind`} error={errors.kind}>
+      <Field label="Category" required id={`${id}-category`} error={errors.category}>
         <select
-          ref={kindRef}
-          id={`${id}-kind`}
-          value={values.kind}
+          ref={categoryRef}
+          id={`${id}-category`}
+          value={values.category}
           required
           // eslint-disable-next-line jsx-a11y/no-autofocus -- Pressing the edit button is the request to change these.
           autoFocus
           onChange={(e) => {
-            setValues((prev) => ({ ...prev, kind: e.target.value as InterviewKind }));
-            setErrors((prev) => ({ ...prev, kind: undefined }));
+            const category = e.target.value as InterviewCategory;
+            setValues((prev) => ({ ...prev, category, title: titleForCategory(prev.title, prev.category, category) }));
+            setErrors((prev) => ({ ...prev, category: undefined }));
           }}
           className={inputClasses}
-          {...invalidProps(`${id}-kind-error`, errors.kind)}
+          {...invalidProps(`${id}-category-error`, errors.category)}
         >
-          {INTERVIEW_KINDS.map((kind) => (
-            <option key={kind} value={kind}>
-              {INTERVIEW_OPTIONS[kind].label}
+          {INTERVIEW_CATEGORIES.map((category) => (
+            <option key={category} value={category}>
+              {categoryLabel(category)}
             </option>
           ))}
         </select>
+      </Field>
+      <Field label="Title" required id={`${id}-title`} error={errors.title}>
+        <input
+          ref={titleRef}
+          id={`${id}-title`}
+          value={values.title}
+          required
+          maxLength={INTERVIEW_TITLE_MAX_LENGTH}
+          autoComplete="off"
+          onChange={(e) => {
+            const title = e.target.value;
+            setValues((prev) => ({ ...prev, title }));
+            setErrors((prev) => ({ ...prev, title: undefined }));
+          }}
+          className={inputClasses}
+          {...invalidProps(`${id}-title-error`, errors.title)}
+        />
       </Field>
       <div>
         <div className="mb-2 block text-sm font-medium text-heading">

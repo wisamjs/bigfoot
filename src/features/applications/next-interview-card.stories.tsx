@@ -16,7 +16,7 @@ const daysFromNow = (days: number, hour = 15) => {
 
 const deepDive = interview("deep-dive", {
   application_id: "lumen",
-  kind: "technical_deep_dive",
+  category: "project_deep_dive", title: "Technical Deep-Dive",
   at: daysFromNow(1, 11),
   completed: false,
 });
@@ -28,7 +28,7 @@ const lumen = application("lumen", {
   interviews: [
     interview("manager", {
       application_id: "lumen",
-      kind: "hiring_manager",
+      category: "hiring_manager", title: "Hiring Manager",
       at: daysFromNow(-10, 11),
       takeaway: "Lead with the decision, then the trade-off, then what I would measure.",
     }),
@@ -45,7 +45,7 @@ const fernway = application("fernway", {
   interviews: [
     interview("fernway-dive", {
       application_id: "fernway",
-      kind: "technical_deep_dive",
+      category: "project_deep_dive", title: "Technical Deep-Dive",
       at: daysFromNow(-30, 14),
       takeaway: "Draw the system before talking through it.",
     }),

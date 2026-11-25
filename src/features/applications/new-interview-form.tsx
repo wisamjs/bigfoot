@@ -17,21 +17,34 @@ import { PLACEHOLDERS } from "@/features/applications/placeholders";
 import { ADD_APPLICATION_HREF, applicationHref } from "@/features/applications/routes";
 import { UnsavedChanges, useUnsavedChanges } from "@/features/applications/unsaved-changes";
 import {
-  INTERVIEW_KINDS,
+  categoryLabel,
+  INTERVIEW_CATEGORIES,
   INTERVIEW_NOTES_MAX_LENGTHS,
-  INTERVIEW_OPTIONS,
+  INTERVIEW_TITLE_MAX_LENGTH,
+  titleForCategory,
   type Application,
-  type InterviewKind,
+  type InterviewCategory,
 } from "@/lib/applications";
 import { interviewErrors, isValid, summarize, type FieldErrors } from "@/lib/validation";
 
 /** Each field's control id, after the form's own id, in the order focus looks for an error. */
-const CONTROLS = { application: "application", kind: "kind", date: "at", time: "at-time", how_it_went: "how-it-went" } as const;
+const CONTROLS = {
+  application: "application",
+  category: "category",
+  title: "title",
+  date: "at",
+  time: "at-time",
+  how_it_went: "how-it-went",
+} as const;
 type Control = keyof typeof CONTROLS;
+
+/** Where the category starts: the first conversation in most hiring processes. */
+const FIRST_CATEGORY: InterviewCategory = "recruiter";
 
 /**
  * An Interview that doesn't exist yet, on the Add Interview page: the Application it belongs to,
- * its kind, its date and time (both required, no time assumed), and How it went (Interview notes;
+ * its Interview category, its title (filled in from the category until the job seeker edits it),
+ * its date and time (both required, no time assumed), and How it went (Interview notes;
  * the other two fields are written on its Interview page). Adding it
  * goes back to the Application page it was opened from, or to the dashboard. With no Applications,
  * it explains that an Interview needs one.
@@ -59,7 +72,8 @@ function NewInterviewFields({
   const router = useRouter();
   const tracker = useSaveStatus();
   const [applicationId, setApplicationId] = useState(chosen);
-  const [kind, setKind] = useState<InterviewKind>("informal_chat");
+  const [category, setCategory] = useState<InterviewCategory>(FIRST_CATEGORY);
+  const [title, setTitle] = useState(() => categoryLabel(FIRST_CATEGORY));
   const [at, setAt] = useState<DateAndTime>({ date: "", time: "" });
   const [howItWent, setHowItWent] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors<Control>>({});
@@ -71,7 +85,8 @@ function NewInterviewFields({
   const changed = (
     [
       ["application", applicationId !== chosen],
-      ["kind", kind !== "informal_chat"],
+      ["category", category !== FIRST_CATEGORY],
+      ["title", title !== categoryLabel(category)],
       ["date", at.date !== ""],
       ["time", at.time !== ""],
       ["how_it_went", howItWent !== ""],
@@ -103,11 +118,17 @@ function NewInterviewFields({
   }
 
   /** What's missing or wrong, each keyed by the control it belongs beside. */
-  function check(fields: { kind: InterviewKind; at: string | null; how_it_went: string | null }): FieldErrors<Control> {
+  function check(fields: {
+    category: InterviewCategory;
+    title: string;
+    at: string | null;
+    how_it_went: string | null;
+  }): FieldErrors<Control> {
     const errors: FieldErrors<Control> = {};
     if (!applicationId) errors.application = "Choose the Application this Interview belongs to.";
     const api = interviewErrors(fields, { creating: true });
-    if (api.kind) errors.kind = api.kind;
+    if (api.category) errors.category = api.category;
+    if (api.title) errors.title = api.title;
     if (!at.date) errors.date = "Pick the date and enter the time.";
     else if (!at.time) errors.time = "Enter the time.";
     else if (api.at) errors.date = api.at;
@@ -120,7 +141,8 @@ function NewInterviewFields({
     // The submit button is only aria-disabled while saving, so it keeps focus; refuse a second submit here.
     if (tracker.saving) return;
     const fields = {
-      kind,
+      category,
+      title: title.trim(),
       at: at.date && at.time ? fromLocalInput(`${at.date}T${at.time}`) : null,
       how_it_went: howItWent.trim() || null,
     };
@@ -187,24 +209,41 @@ function NewInterviewFields({
           )}
         </select>
       </Field>
-      <Field id={`${id}-kind`} label="Kind" required error={fieldErrors.kind}>
+      <Field id={`${id}-category`} label="Category" required error={fieldErrors.category}>
         <select
-          id={`${id}-kind`}
-          value={kind}
+          id={`${id}-category`}
+          value={category}
           required
           onChange={(e) => {
-            setKind(e.target.value as InterviewKind);
-            clear("kind");
+            const next = e.target.value as InterviewCategory;
+            setCategory(next);
+            setTitle((prev) => titleForCategory(prev, category, next));
+            clear("category");
           }}
           className={inputClasses}
-          {...invalidProps(`${id}-kind-error`, fieldErrors.kind)}
+          {...invalidProps(`${id}-category-error`, fieldErrors.category)}
         >
-          {INTERVIEW_KINDS.map((value) => (
+          {INTERVIEW_CATEGORIES.map((value) => (
             <option key={value} value={value}>
-              {INTERVIEW_OPTIONS[value].label}
+              {categoryLabel(value)}
             </option>
           ))}
         </select>
+      </Field>
+      <Field id={`${id}-title`} label="Title" required error={fieldErrors.title}>
+        <input
+          id={`${id}-title`}
+          value={title}
+          required
+          maxLength={INTERVIEW_TITLE_MAX_LENGTH}
+          autoComplete="off"
+          onChange={(e) => {
+            setTitle(e.target.value);
+            clear("title");
+          }}
+          className={inputClasses}
+          {...invalidProps(`${id}-title-error`, fieldErrors.title)}
+        />
       </Field>
       {/* Two controls under one label, so a fieldset; each names itself "Date" and "Time". */}
       <fieldset aria-labelledby={`${id}-at-label`} className="m-0 min-w-0 border-0 p-0">

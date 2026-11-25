@@ -16,11 +16,12 @@ const daysFromNow = (days: number, hour = 15) => {
 
 const upcoming = interview("deep-dive", {
   application_id: "lumen",
-  kind: "technical_deep_dive",
+  category: "project_deep_dive",
+  title: "Technical Deep-Dive",
   at: daysFromNow(2, 11),
   completed: false,
 });
-const completed = interview("manager", { application_id: "lumen", kind: "hiring_manager", at: daysFromNow(-10, 11) });
+const completed = interview("manager", { application_id: "lumen", category: "hiring_manager", title: "Hiring Manager", at: daysFromNow(-10, 11) });
 const lumen = application("lumen", {
   company: "Lumen Bio",
   title: "Engineering Manager, ML Platform",
@@ -36,10 +37,14 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Coming up: the kind as the title, its date and time with the year, and a blue "Upcoming · in 2 days". */
+/**
+ * Coming up: its title, its date and time with the year, and its category tag beside a blue
+ * "Upcoming · in 2 days".
+ */
 export const Upcoming: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("heading", { level: 1, name: "Technical Deep-Dive" })).toBeVisible();
+    await expect(canvas.getByText("Project Deep-dive")).toBeVisible();
     await expect(await canvas.findByText("Upcoming · in 2 days")).toBeVisible();
   },
 };
@@ -61,25 +66,58 @@ export const DoneApplication: Story = {
   },
 };
 
-/** Edit details turns the kind and the date into fields, with focus on Kind. */
-export const Editing: Story = {
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole("button", { name: "Edit details" }));
-    await expect(canvas.getByRole("combobox", { name: /^Kind/ })).toHaveFocus();
+/** A title in the job seeker's own words, long enough to wrap, with its category beside it. */
+export const OwnTitle: Story = {
+  args: {
+    interview: { ...upcoming, category: "decision_maker", title: "Strategic Alignment with the Sr Director of Platform" },
+  },
+  play: async ({ canvas }) => {
+    await expect(
+      canvas.getByRole("heading", { level: 1, name: "Strategic Alignment with the Sr Director of Platform" }),
+    ).toBeVisible();
+    await expect(canvas.getByText("Decision Maker")).toBeVisible();
   },
 };
 
-/** A new kind saves on Save. */
-export const SaveKind: Story = {
+/** Edit details turns the category, the title and the date into fields, with focus on Category. */
+export const Editing: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: "Edit details" }));
-    const kind = canvas.getByRole("combobox", { name: /^Kind/ });
-    const other = upcoming.kind === "leadership" ? "behavioural" : "leadership";
-    await userEvent.selectOptions(kind, other);
+    await expect(canvas.getByRole("combobox", { name: /^Category/ })).toHaveFocus();
+    await expect(canvas.getByRole("textbox", { name: /^Title/ })).toHaveValue("Technical Deep-Dive");
+  },
+};
+
+/** A new category and title save together on Save; a title the job seeker wrote stays as written. */
+export const SaveCategoryAndTitle: Story = {
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Edit details" }));
+    await userEvent.selectOptions(canvas.getByRole("combobox", { name: /^Category/ }), "system_design");
+    const title = canvas.getByRole("textbox", { name: /^Title/ });
+    await expect(title).toHaveValue("Technical Deep-Dive");
+    await userEvent.clear(title);
+    await userEvent.type(title, "Retrospective System Design");
     await userEvent.click(canvas.getByRole("button", { name: "Save" }));
     await waitFor(() =>
-      expect(actions.updateInterviewAction).toHaveBeenCalledWith("lumen", upcoming.id, { kind: other }),
+      expect(actions.updateInterviewAction).toHaveBeenCalledWith("lumen", upcoming.id, {
+        category: "system_design",
+        title: "Retrospective System Design",
+      }),
     );
+  },
+};
+
+/** An empty title isn't saved: it says why beside the field. */
+export const EmptyTitle: Story = {
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Edit details" }));
+    const title = canvas.getByRole("textbox", { name: /^Title/ });
+    await userEvent.clear(title);
+    await userEvent.click(canvas.getByRole("button", { name: "Save" }));
+    await expect(await canvas.findByRole("alert")).toHaveTextContent("Enter the title.");
+    await expect(title).toHaveAccessibleDescription("Enter the title.");
+    await expect(title).toHaveFocus();
+    await expect(actions.updateInterviewAction).not.toHaveBeenCalled();
   },
 };
 

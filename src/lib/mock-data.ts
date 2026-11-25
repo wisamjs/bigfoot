@@ -1,17 +1,21 @@
 // Made-up Applications for the landing-page preview. The dashboard reads real data from the API.
-import type { Application, InterviewKind } from "@/lib/applications";
+import type { Application, InterviewCategory } from "@/lib/applications";
 
-/** Past (completed) Interviews of the given kinds, and optionally an upcoming one. */
+/** An Interview as its category and title. */
+type Entry = [InterviewCategory, string];
+
+/** Past (completed) Interviews, and optionally an upcoming one. */
 function sample(
   id: string,
   company: string,
   title: string,
-  options: { done?: InterviewKind[]; next?: InterviewKind; offer?: boolean } = {},
+  options: { done?: Entry[]; next?: Entry; offer?: boolean } = {},
 ): Application {
-  const interview = (kind: InterviewKind, i: number, completed: boolean) => ({
+  const interview = ([category, title]: Entry, i: number, completed: boolean) => ({
     id: `${id}-${i}`,
     application_id: id,
-    kind,
+    category,
+    title,
     at: completed ? `2026-11-0${i + 2}T17:00:00Z` : "2099-01-01T17:00:00Z",
     what_they_asked: null,
     how_it_went: null,
@@ -22,7 +26,7 @@ function sample(
     updated_at: "2026-11-01T00:00:00Z",
   });
   const interviews = [
-    ...(options.done ?? []).map((kind, i) => interview(kind, i, true)),
+    ...(options.done ?? []).map((entry, i) => interview(entry, i, true)),
     ...(options.next ? [interview(options.next, 9, false)] : []),
   ];
   return {
@@ -48,10 +52,10 @@ function sample(
 }
 
 export const previewApplications: Application[] = [
-  sample("stripe", "Stripe", "Software Engineer II", { next: "recruiter_screen" }),
-  sample("notion", "Notion", "Full-stack Engineer", { next: "recruiter_screen" }),
-  sample("datadog", "Datadog", "Software Engineer", { done: ["recruiter_screen"], next: "technical" }),
-  sample("linear", "Linear", "Product Engineer", { done: ["hiring_manager"], next: "technical" }),
-  sample("figma", "Figma", "Senior Engineer", { done: ["technical"], next: "onsite_loop" }),
-  sample("ramp", "Ramp", "Staff Engineer", { done: ["onsite_loop"], offer: true }),
+  sample("stripe", "Stripe", "Software Engineer II", { next: ["recruiter", "Recruiter Screen"] }),
+  sample("notion", "Notion", "Full-stack Engineer", { next: ["recruiter", "Recruiter Screen"] }),
+  sample("datadog", "Datadog", "Software Engineer", { done: [["recruiter", "Recruiter Screen"]], next: ["technical", "Technical"] }),
+  sample("linear", "Linear", "Product Engineer", { done: [["hiring_manager", "Hiring Manager"]], next: ["technical", "Pair Programming"] }),
+  sample("figma", "Figma", "Senior Engineer", { done: [["technical", "Technical"]], next: ["system_design", "System Design"] }),
+  sample("ramp", "Ramp", "Staff Engineer", { done: [["hiring_manager", "Final Onsite"]], offer: true }),
 ];

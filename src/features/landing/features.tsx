@@ -12,7 +12,7 @@ const features: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: ListChecks,
     title: "Interviews",
-    body: "Log each Interview with its kind and date. Each Application shows its next one and how many are completed.",
+    body: "Log each Interview with its own title, its category and its date. Each Application shows its next one and how many are completed.",
   },
   {
     icon: CalendarDays,

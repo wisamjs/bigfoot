@@ -114,14 +114,16 @@ def test_an_access_token_reads_and_writes_my_applications_and_interviews(client,
     assert changed.status_code == 200, changed.text
 
     interviews = f"/applications/{application_id}/interviews"
-    interview = client.post(interviews, json={"kind": "technical", "at": "2026-11-20T17:00:00Z"}, headers=headers)
+    interview = client.post(
+        interviews, json={"category": "technical", "title": "Technical", "at": "2026-11-20T17:00:00Z"}, headers=headers
+    )
     assert interview.status_code == 201, interview.text
-    moved = client.patch(f"{interviews}/{interview.json()['id']}", json={"kind": "onsite_loop"}, headers=headers)
+    moved = client.patch(f"{interviews}/{interview.json()['id']}", json={"category": "hiring_manager"}, headers=headers)
     assert moved.status_code == 200, moved.text
 
     [application] = client.get("/applications", headers=headers).json()
     assert application["location"] == "remote"
-    assert [i["kind"] for i in application["interviews"]] == ["onsite_loop"]
+    assert [i["category"] for i in application["interviews"]] == ["hiring_manager"]
     # The web token for the same job seeker sees the same data: both name alice.
     assert client.get("/applications", headers=token("alice")).json() == [application]
 
@@ -133,7 +135,7 @@ def test_an_access_token_reaches_nobody_elses_data(client, token):
     alice = bearer(create(client, token("alice"))["token"])
     bobs = client.post("/applications", json={"company": "Bob's", "title": "Engineer"}, headers=token("bob")).json()
     interviews = f"/applications/{bobs['id']}/interviews"
-    interview = {"kind": "technical", "at": "2026-11-20T17:00:00Z"}
+    interview = {"category": "technical", "title": "Technical", "at": "2026-11-20T17:00:00Z"}
     interview_id = client.post(interviews, json=interview, headers=token("bob")).json()["id"]
     bobs_interview = f"{interviews}/{interview_id}"
 
@@ -142,11 +144,11 @@ def test_an_access_token_reaches_nobody_elses_data(client, token):
     assert client.delete(f"/applications/{bobs['id']}", headers=alice).status_code == 404
     assert client.get(interviews, headers=alice).status_code == 404
     assert client.post(interviews, json=interview, headers=alice).status_code == 404
-    assert client.patch(bobs_interview, json={"kind": "onsite_loop"}, headers=alice).status_code == 404
+    assert client.patch(bobs_interview, json={"category": "hiring_manager"}, headers=alice).status_code == 404
     assert client.delete(bobs_interview, headers=alice).status_code == 404
     [unchanged] = client.get("/applications", headers=token("bob")).json()
     assert unchanged["company"] == "Bob's"
-    assert [i["kind"] for i in unchanged["interviews"]] == ["technical"]
+    assert [i["category"] for i in unchanged["interviews"]] == ["technical"]
 
 
 def test_using_a_token_updates_last_used(client, token):
