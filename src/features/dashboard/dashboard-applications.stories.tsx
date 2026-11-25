@@ -13,7 +13,7 @@ const done = [
 
 const meta = {
   component: DashboardApplications,
-  args: { applications: [...previewApplications, ...done] },
+  args: { applications: [...previewApplications(), ...done] },
   parameters: { nextjs: { navigation: { pathname: "/dashboard" } } },
 } satisfies Meta<typeof DashboardApplications>;
 
@@ -37,7 +37,7 @@ export const ShowDone: Story = {
 };
 
 /** No Done Applications: no Show done and no line. */
-export const NoneDone: Story = { args: { applications: previewApplications } };
+export const NoneDone: Story = { args: { applications: previewApplications() } };
 
 /** No Applications yet: Bigfoot and a first Add button. */
 export const Empty: Story = {

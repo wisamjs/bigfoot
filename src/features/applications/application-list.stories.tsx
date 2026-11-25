@@ -365,7 +365,7 @@ export const Empty: Story = { args: { applications: [] } };
 /** Sample Applications, which a new job seeker starts with, carry a Sample badge. */
 export const Sample: Story = {
   args: {
-    applications: previewApplications.map((a) => ({ ...a, is_sample: true })),
+    applications: previewApplications().map((a) => ({ ...a, is_sample: true })),
   },
 };
 
@@ -379,5 +379,5 @@ export const RowsOpenTheApplication: Story = {
 
 /** The landing page's decorative copy: hidden from screen readers, not interactive. */
 export const Decorative: Story = {
-  args: { applications: previewApplications, linked: false, decorative: true },
+  args: { applications: previewApplications(), linked: false, decorative: true },
 };

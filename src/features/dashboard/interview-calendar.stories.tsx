@@ -17,7 +17,7 @@ const DAY = 24 * 60 * 60 * 1000;
  * past), at 10:00 local time.
  */
 function on(id: string, [category, title]: [InterviewCategory, string], days: number): DatedInterview {
-  const application = previewApplications.find((a) => a.id === id)!;
+  const application = previewApplications().find((a) => a.id === id)!;
   const at = new Date(Date.now() + days * DAY);
   at.setHours(10, 0, 0, 0);
   const iso = at.toISOString();
@@ -121,7 +121,7 @@ export const Busy: Story = {
           ["people_management", "People Management"],
           ["decision_maker", "Strategic Alignment with Sr Director"],
         ] as const
-      ).map(([category, title], i) => on(previewApplications[i].id, [category, title], 3 + i)),
+      ).map(([category, title], i) => on(previewApplications()[i].id, [category, title], 3 + i)),
     ],
   },
 };
