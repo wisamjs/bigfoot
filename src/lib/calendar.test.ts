@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayKey, groupByDay, inWindow, monthOffset, monthParam, monthStart, monthWeeks, monthWindow, upcomingWindow } from "./calendar";
+import { dayKey, groupByDay, inWindow, monthOffset, monthParam, monthStart, monthWeeks, monthWindow, upcomingWindow, weekOf } from "./calendar";
 
 const monthName = (month: number) => new Intl.DateTimeFormat(undefined, { month: "long" }).format(new Date(2026, month, 1));
 
@@ -155,5 +155,28 @@ describe("monthParam and monthOffset", () => {
 
   it.each([null, "", "2026-13", "2026-1", "november", "2026-12-04"])("reads %s as this month", (param) => {
     expect(monthOffset(param, today)).toBe(0);
+  });
+});
+
+describe("weekOf", () => {
+  it("is the Monday-first week holding the date, across a month's end, every day one to pick", () => {
+    // Saturday 28 November 2026: Monday 23 to Sunday 29.
+    expect(weekOf(new Date(2026, 10, 28, 15)).map((d) => d.key)).toEqual([
+      "2026-11-23",
+      "2026-11-24",
+      "2026-11-25",
+      "2026-11-26",
+      "2026-11-27",
+      "2026-11-28",
+      "2026-11-29",
+    ]);
+    // Wednesday 2 December 2026 starts in November.
+    const week = weekOf(new Date(2026, 11, 2));
+    expect(week[0].key).toBe("2026-11-30");
+    expect(week.every((d) => d.inMonth)).toBe(true);
+  });
+
+  it("starts on the day itself when it is a Monday", () => {
+    expect(weekOf(new Date(2026, 10, 23))[0].key).toBe("2026-11-23");
   });
 });

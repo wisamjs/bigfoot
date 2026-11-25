@@ -5,17 +5,16 @@ import { AccountMenu } from "@/features/shell/account-menu";
 import { Wordmark } from "@/features/shell/wordmark";
 import type { CurrentUser } from "@/lib/dal";
 
-const links = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/account", label: "Account" },
-] as const;
+// Account is reached from the avatar's menu, not the nav (BIG-195).
+const links = [{ href: "/dashboard", label: "Dashboard" }] as const;
 
 /**
  * Header for signed-in pages (BIG-173): the wordmark, the signed-in pages as pills, and the job
  * seeker's avatar, which opens the Account menu with Sign out. Without a user (a page's loading
- * state) it is the same header with a shape where the avatar goes.
+ * state) it is the same header with a shape where the avatar goes. A page not in the nav (Account)
+ * leaves `current` out and highlights nothing.
  */
-export function AppHeader({ user, current }: { user?: CurrentUser; current: (typeof links)[number]["href"] }) {
+export function AppHeader({ user, current }: { user?: CurrentUser; current?: (typeof links)[number]["href"] }) {
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-card">
       <Container className="flex h-[72px] items-center gap-2 sm:gap-8">

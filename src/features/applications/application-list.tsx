@@ -5,6 +5,7 @@ import {
   ApplicationRow,
   cellClasses,
   locationCellClasses,
+  nextCellClasses,
   progressCellClasses,
   rowBorderClasses,
 } from "@/features/applications/application-row";
@@ -50,7 +51,7 @@ export function ApplicationList({ applications, showDone = false, linked = false
           <tbody>
             {groups.flatMap((group) =>
               group.applications.map((job) => (
-                <ApplicationRow key={job.id} job={job} group={group.label} linked={linked} />
+                <ApplicationRow key={job.id} job={job} group={group} linked={linked} />
               )),
             )}
           </tbody>
@@ -70,7 +71,7 @@ function TableHead({ flush = false }: { flush?: boolean }) {
         <th scope="col" className={`${cellClasses} ${progressCellClasses}`}>
           Progress
         </th>
-        <th scope="col" className={cellClasses}>
+        <th scope="col" className={`${cellClasses} ${nextCellClasses}`}>
           Next
         </th>
         <th scope="col" className={`${cellClasses} ${locationCellClasses}`}>
@@ -106,7 +107,7 @@ export function ApplicationListSkeleton({ flush = false }: { flush?: boolean }) 
               <td className={`${cellClasses} ${progressCellClasses}`}>
                 <Skeleton className="h-3 w-24" />
               </td>
-              <td className={cellClasses}>
+              <td className={`${cellClasses} ${nextCellClasses}`}>
                 <Skeleton className="h-5 w-24" />
               </td>
               <td className={`${cellClasses} ${locationCellClasses}`}>

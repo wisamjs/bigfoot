@@ -296,15 +296,40 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * A job search a few weeks in: one table, ordered by what each Application is waiting on. An In
- * Progress row marks each completed Interview in green, and says nothing of its Interview notes,
- * which the Application page shows (BIG-185).
+ * A job search a few weeks in: one table, ordered by what each Application is waiting on. Progress
+ * is a coloured label (Waiting with its days, Interview scheduled, Offer) and a mark per Interview:
+ * completed in green, the next in the brand colour, later ones muted (BIG-195). It says nothing of
+ * Interview notes, which the Application page shows (BIG-185). Next is the soonest Interview's
+ * title over when it is, in the brand colour today or tomorrow, with "+N later"; while Waiting,
+ * "Nothing booked" over Waiting since in the warning colour.
  */
 export const Default: Story = {
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement, canvas }) => {
     await expect(progressMarks(canvasElement, "Clio")).not.toHaveLength(0);
     await expect(progressMarks(canvasElement, "Clio").every((mark) => mark.classList.contains("bg-fg-success-strong"))).toBe(true);
+    // Okta: five completed, the next, and one later.
+    const okta = progressMarks(canvasElement, "Okta").map((mark) => mark.className);
+    await expect(okta.at(-2)).toContain("bg-brand");
+    await expect(okta.at(-1)).toContain("bg-line-medium");
     await expect(canvasElement.querySelector("svg.lucide-notebook-pen")).toBeNull();
+    await expect(canvas.getAllByText(/^Waiting · \d+ days?$/)[0]).toHaveClass("text-fg-warning");
+    await expect(canvas.getAllByText("Nothing booked").length).toBeGreaterThan(0);
+  },
+};
+
+/**
+ * On a phone, each row stacks (BIG-195): the company, "role · Location", the Progress label with
+ * its marks beside it, then Next on one line, with the chevron on the right.
+ */
+export const Phone: Story = {
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("columnheader", { name: "Application" })).toBeVisible();
+    await expect(canvas.queryByRole("columnheader", { name: "Next" })).not.toBeInTheDocument();
+    // Shopify's role line takes its Location on a phone.
+    const role = canvas.getAllByText(/^Senior Developer/)[0];
+    await expect(role).toHaveTextContent("Senior Developer · Hybrid - 3x a Week");
+    await expect(role).toBeVisible();
   },
 };
 
@@ -320,10 +345,10 @@ export const ShowDone: Story = {
   },
 };
 
-/** A row's completed-Interview marks in its Progress. */
+/** A row's Interview marks in its Progress column. */
 function progressMarks(canvasElement: HTMLElement, company: string) {
   const row = canvasElement.querySelector(`tr[data-application-id="${company.toLowerCase()}"]`);
-  return [...(row?.querySelectorAll("span.rounded-full") ?? [])];
+  return [...(row?.querySelectorAll("td:nth-child(2) [data-mark]") ?? [])];
 }
 
 /** A new job seeker's first few Applications. */

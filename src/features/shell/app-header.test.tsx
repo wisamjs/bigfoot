@@ -29,7 +29,7 @@ describe("AppHeader", () => {
 
   it("opens the menu from the keyboard", async () => {
     const keyboard = userEvent.setup();
-    render(<AppHeader user={user} current="/account" />);
+    render(<AppHeader user={user} />);
     screen.getByRole("button", { name: /^Account menu/ }).focus();
     await keyboard.keyboard("{Enter}");
     expect(screen.getByRole("menu")).toBeInTheDocument();
@@ -37,13 +37,21 @@ describe("AppHeader", () => {
 });
 
 describe("AppHeader without a user", () => {
-  it("keeps the real nav, with a shape where the avatar goes", () => {
+  it("keeps the real nav, without Account, with a shape where the avatar goes", () => {
     render(<AppHeader current="/dashboard" />);
     const nav = screen.getByRole("navigation", { name: "Signed in" });
     expect(within(nav).getByRole("link", { name: "Dashboard" })).toHaveAttribute("aria-current", "page");
-    expect(within(nav).getByRole("link", { name: "Account" })).toBeInTheDocument();
+    expect(within(nav).queryByRole("link", { name: "Account" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Account menu/ })).not.toBeInTheDocument();
     expect(screen.getByRole("banner").querySelectorAll(".skeleton")).toHaveLength(1);
+  });
+});
+
+describe("AppHeader on a page outside the nav", () => {
+  it("highlights nothing", () => {
+    render(<AppHeader user={user} />);
+    const nav = screen.getByRole("navigation", { name: "Signed in" });
+    expect(within(nav).getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current");
   });
 });
 

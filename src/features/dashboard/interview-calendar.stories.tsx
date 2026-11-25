@@ -139,5 +139,35 @@ export const LongText: Story = {
   },
 };
 
+const phone = { viewport: { value: "mobile1", isRotated: false } };
+
+/**
+ * On a phone (BIG-195): this week's row of days, Monday first, with "Show month". The agenda puts
+ * how far off each Interview is over its time; the soonest one's date is filled in the brand
+ * colour, and "Tomorrow" is in the brand colour too.
+ */
+export const Phone: Story = {
+  globals: phone,
+  play: async ({ canvas }) => {
+    const week = canvas.getByRole("table", { name: "This week" });
+    await expect(week).toBeVisible();
+    await expect(canvas.queryByRole("heading", { name: /\d{4}$/ })).not.toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "Show month" })).toBeVisible();
+    await expect(canvas.getByText("Tomorrow")).toHaveClass("text-fg-brand");
+    await expect(canvas.getAllByText(/^In \d+ days$/).length).toBeGreaterThan(0);
+  },
+};
+
+/** On a phone after "Show month": the month grid, with "Show this week" to go back. */
+export const PhoneMonth: Story = {
+  globals: phone,
+  parameters: { nextjs: { navigation: { pathname: "/dashboard", query: { calendar: "month" } } } },
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByRole("table", { name: "This week" })).not.toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "Next month" })).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "Show this week" })).toBeVisible();
+  },
+};
+
 /** What the server sends until the browser knows the job seeker's time zone. */
 export const Loading: Story = { render: () => <InterviewCalendarSkeleton /> };

@@ -32,21 +32,30 @@ export const toneClasses: Record<Tone, string> = {
   gray: "bg-tone-gray border-tone-gray-line text-tone-gray-fg",
 };
 
+/**
+ * A label in a tone's colours. It wraps in a narrow parent unless `nowrap`; `dot` leads it with a
+ * dot in its text colour (as the dashboard's Progress labels do, BIG-195).
+ */
 export function Badge({
   tone = "neutral",
   pill = false,
+  dot = false,
+  nowrap = false,
   children,
 }: {
   tone?: Tone;
   pill?: boolean;
+  dot?: boolean;
+  nowrap?: boolean;
   children: ReactNode;
 }) {
   return (
     <span
       className={`inline-flex w-auto items-center gap-1 border px-1.5 py-0.5 text-xs font-medium leading-4 ${
         pill ? "rounded-full px-2.5" : "rounded-control"
-      } ${toneClasses[tone]}`}
+      } ${nowrap ? "whitespace-nowrap" : ""} ${toneClasses[tone]}`}
     >
+      {dot && <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-current" />}
       {children}
     </span>
   );
