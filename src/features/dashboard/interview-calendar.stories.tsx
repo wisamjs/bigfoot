@@ -17,7 +17,7 @@ const DAY = 24 * 60 * 60 * 1000;
  * past), at 10:00 local time.
  */
 function on(id: string, [category, title]: [InterviewCategory, string], days: number): DatedInterview {
-  const application = previewApplications.find((a) => a.id === id)!;
+  const application = previewApplications().find((a) => a.id === id)!;
   const at = new Date(Date.now() + days * DAY);
   at.setHours(10, 0, 0, 0);
   const iso = at.toISOString();
@@ -121,7 +121,7 @@ export const Busy: Story = {
           ["people_management", "People Management"],
           ["decision_maker", "Strategic Alignment with Sr Director"],
         ] as const
-      ).map(([category, title], i) => on(previewApplications[i].id, [category, title], 3 + i)),
+      ).map(([category, title], i) => on(previewApplications()[i].id, [category, title], 3 + i)),
     ],
   },
 };
@@ -136,6 +136,36 @@ export const LongText: Story = {
         title: "Principal Staff Software Engineer, Developer Platform and Infrastructure",
       },
     })),
+  },
+};
+
+const phone = { viewport: { value: "mobile1", isRotated: false } };
+
+/**
+ * On a phone (BIG-195): this week's row of days, Monday first, with "Show month". The agenda puts
+ * how far off each Interview is over its time; the soonest one's date is filled in the brand
+ * colour, and "Tomorrow" is in the brand colour too.
+ */
+export const Phone: Story = {
+  globals: phone,
+  play: async ({ canvas }) => {
+    const week = canvas.getByRole("table", { name: "This week" });
+    await expect(week).toBeVisible();
+    await expect(canvas.queryByRole("heading", { name: /\d{4}$/ })).not.toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "Show month" })).toBeVisible();
+    await expect(canvas.getByText("Tomorrow")).toHaveClass("text-fg-brand");
+    await expect(canvas.getAllByText(/^In \d+ days$/).length).toBeGreaterThan(0);
+  },
+};
+
+/** On a phone after "Show month": the month grid, with "Show this week" to go back. */
+export const PhoneMonth: Story = {
+  globals: phone,
+  parameters: { nextjs: { navigation: { pathname: "/dashboard", query: { calendar: "month" } } } },
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByRole("table", { name: "This week" })).not.toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "Next month" })).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "Show this week" })).toBeVisible();
   },
 };
 

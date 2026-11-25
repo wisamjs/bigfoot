@@ -35,6 +35,8 @@
   --line-medium: #d9b3c9;
   --line-brand-subtle: #e3aec9;
   --line-brand: #4f1135;
+  /* The dashboard's cards (BIG-195): brand-tinted, and a step lighter than --line-brand-subtle in dark mode, where that is too close to --card to see. */
+  --line-card: #e3aec9;
 
   /* Loading shapes (.skeleton): a step away from every surface they sit on */
   --skeleton: #e3c6d7;
@@ -147,6 +149,7 @@
     --line-medium: #4a1632;
     --line-brand-subtle: #4f1135;
     --line-brand: #e59cc4;
+    --line-card: #6e2a55;
 
     --skeleton: #5c1f40;
 
@@ -220,6 +223,7 @@
   --color-line: var(--line);
   --color-line-medium: var(--line-medium);
   --color-line-brand-subtle: var(--line-brand-subtle);
+  --color-line-card: var(--line-card);
   --color-line-brand: var(--line-brand);
 
   --color-success-soft: var(--success-soft);

@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { ApplicationList } from "@/features/applications/application-list";
 import { buttonClasses } from "@/components/ui/button-classes";
 import { Container } from "@/components/ui/container";
-import { previewApplications } from "@/lib/mock-data";
+import { HeroPreview } from "@/features/landing/hero-preview";
 
 export function Hero() {
   return (
@@ -26,7 +25,7 @@ export function Hero() {
         </div>
 
         <div className="mt-16">
-          <ApplicationList decorative applications={previewApplications} />
+          <HeroPreview />
         </div>
       </Container>
     </section>

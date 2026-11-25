@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useIsClient } from "@/hooks/use-is-client";
 import { DaysFromToday } from "@/features/applications/application-when";
 import { interviewHref } from "@/features/applications/routes";
-import { COMPLETED_MARK } from "@/features/applications/status-tone";
+import { interviewMark } from "@/features/applications/status-tone";
 import { nextInterview, type Application, type Interview, type Status } from "@/lib/applications";
 
 const dayFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
@@ -81,7 +81,7 @@ function Segment({
   next: boolean;
   current: boolean;
 }) {
-  const bar = interview.completed ? COMPLETED_MARK[status] : next ? "bg-brand" : "bg-line-medium";
+  const bar = interviewMark(interview, status, next);
   const title = interview.title;
   return (
     <li className="min-w-0">

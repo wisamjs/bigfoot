@@ -39,6 +39,15 @@ export function monthWeeks(start: Date): CalendarDay[][] {
   return weeks;
 }
 
+/** The week, Monday first, that holds `date`, any day of it can be picked (the phone's week row, BIG-195). */
+export function weekOf(date: Date): CalendarDay[] {
+  const monday = new Date(date.getFullYear(), date.getMonth(), date.getDate() - ((date.getDay() + 6) % 7));
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+    return { date: day, key: dayKey(day), inMonth: true };
+  });
+}
+
 /** The most Interviews the Interviews agenda lists before it narrows its window. */
 export const AGENDA_LIMIT = 5;
 

@@ -207,6 +207,72 @@ describe("InterviewCalendar", () => {
   });
 });
 
+describe("InterviewCalendar on a phone (BIG-195)", () => {
+  beforeEach(() => {
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query: string) =>
+        ({ matches: !query.includes("min-width"), addEventListener: () => {}, removeEventListener: () => {} }) as unknown as MediaQueryList,
+    );
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("shows this week, Monday first, with today picked and days with Interviews named", () => {
+    render(<InterviewCalendar interviews={interviewsOn(21, 25)} />);
+    const week = screen.getByRole("table", { name: "This week" });
+    const days = within(week).getAllByRole("button");
+    expect(days).toHaveLength(7);
+    expect(days[0]).toHaveAccessibleName(/November 16$/);
+    expect(days[6]).toHaveAccessibleName(/November 22$/);
+    expect(within(week).getByRole("button", { pressed: true })).toHaveAccessibleName(/November 20$/);
+    expect(within(week).getByRole("button", { name: /November 21, 1 Interview$/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Next month" })).not.toBeInTheDocument();
+  });
+
+  it("picks a day of the week as the month grid does", async () => {
+    const user = userEvent.setup();
+    render(<InterviewCalendar interviews={interviewsOn(21, 25)} />);
+    await user.click(screen.getByRole("button", { name: /November 21, 1 Interview$/ }));
+    expect(screen.getByRole("button", { name: /November 21, 1 Interview$/ })).toHaveAttribute("aria-pressed", "true");
+    expect(pickedDay()).toHaveTextContent(/Company 0/);
+    expect(window.location.search).toBe("?day=2026-11-21");
+    expect(screen.getByRole("table", { name: "This week" })).toBeInTheDocument();
+  });
+
+  it("opens the month grid with Show month, kept in the URL for Back, and returns with Show this week", async () => {
+    const user = userEvent.setup();
+    render(<InterviewCalendar interviews={interviewsOn(21, 25)} />);
+    await user.click(screen.getByRole("button", { name: "Show month" }));
+    expect(window.location.search).toBe("?calendar=month");
+    expect(screen.queryByRole("table", { name: "This week" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: new RegExp(`^${monthName(10)} 2026$`) })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /November 3$/ }));
+    expect(pickedDay()).toHaveTextContent("No Interviews this day.");
+    await user.click(screen.getByRole("button", { name: "Show this week" }));
+    expect(window.location.search).toBe("");
+    expect(screen.getByRole("table", { name: "This week" })).toBeInTheDocument();
+  });
+
+  it("shows the month grid for another month or a day outside this week", () => {
+    window.history.replaceState(null, "", "/dashboard?day=2026-11-25");
+    render(<InterviewCalendar interviews={interviewsOn(21, 25)} />);
+    expect(screen.queryByRole("table", { name: "This week" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /November 25, 1 Interview$/ })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("lists each Interview with how far off it is over its time, the soonest in the brand colour", () => {
+    render(<InterviewCalendar interviews={interviewsOn(21, 25)} />);
+    const [soonest, later] = agendaItems();
+    expect(within(soonest).getByText("Tomorrow")).toHaveClass("text-fg-brand");
+    expect(within(soonest).getByText("Company 0")).toBeInTheDocument();
+    expect(within(soonest).getByText(/^10:00/)).toBeInTheDocument();
+    expect(within(later).getByText("In 5 days")).not.toHaveClass("text-fg-brand");
+    expect(within(soonest).getByRole("link")).toHaveAccessibleName(/^Open Interview: Company 0, Technical, Saturday, November 21 at 10:00/);
+  });
+});
+
 describe("InterviewCalendarSkeleton", () => {
   it("draws a five-week month and four agenda items, hidden from assistive tech", () => {
     // Skeleton shapes are aria-hidden, with no role or text, so this checks the DOM itself.

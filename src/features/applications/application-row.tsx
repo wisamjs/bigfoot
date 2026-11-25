@@ -3,15 +3,20 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { ApplicationWhen, InterviewWhen } from "@/features/applications/application-when";
+import { InterviewWhen } from "@/features/applications/application-when";
 import { applicationHref } from "@/features/applications/routes";
 import { SampleBadge } from "@/features/applications/sample-badge";
-import { CATEGORY_TONE, COMPLETED_MARK, OUTCOME_TONE } from "@/features/applications/status-tone";
+import { GROUP_TONE, interviewMark, OUTCOME_TONE } from "@/features/applications/status-tone";
 import { useIsClient } from "@/hooks/use-is-client";
+import { useToday } from "@/hooks/use-today";
 import {
+  calendarDaysBetween,
   categoryLabel,
   locationText,
+  nextInterview,
   OUTCOME_OPTIONS,
+  parseDay,
+  relativeDays,
   upcomingInterviews,
   type Application,
   type ApplicationGroup,
@@ -20,27 +25,27 @@ import {
 
 /** A cell of the Applications table, also drawn in skeleton shape while the list loads. */
 export const cellClasses = "px-2 py-3 align-middle sm:px-3";
-/** Location gives way first on a narrow screen, then Progress moves under the role. */
+/**
+ * On a phone, each row stacks everything in its first cell (BIG-195), so Progress and Next have no
+ * column; Location gives way on a narrow screen until md.
+ */
 export const locationCellClasses = "hidden md:table-cell";
 export const progressCellClasses = "hidden sm:table-cell";
+export const nextCellClasses = "hidden sm:table-cell";
 /** Rows are divided by their cells' top borders: a border on a <tr> doesn't draw in border-separate. */
 export const rowBorderClasses = "[&>td]:border-t [&>td]:border-line";
 
+type Group = Pick<ApplicationGroup, "id" | "label">;
+
 /**
  * One Application in the Applications table, answering "what's next here?": company and role,
- * Progress (its group and a mark per completed Interview), Next (each upcoming Interview's title,
- * "Waiting since", or its Outcome once Done) and Location. A linked row opens its Application page
- * and ends in a chevron saying so.
+ * Progress (its group as a coloured label and a mark per Interview), Next (the soonest upcoming
+ * Interview and when, "Nothing booked" while Waiting, or its Outcome once Done) and Location. On a
+ * phone the row stacks: company, "role · Location", Progress, then Next on one line (BIG-195). A
+ * linked row opens its Application page and ends in a chevron saying so.
  */
-export function ApplicationRow({
-  job,
-  group,
-  linked = false,
-}: {
-  job: Application;
-  group: ApplicationGroup["label"];
-  linked?: boolean;
-}) {
+export function ApplicationRow({ job, group, linked = false }: { job: Application; group: Group; linked?: boolean }) {
+  const location = locationText(job);
   return (
     <tr
       data-application-id={job.id}
@@ -50,21 +55,25 @@ export function ApplicationRow({
       <td className={cellClasses}>
         <p className="m-0 text-sm font-medium leading-5 text-heading">{linked ? <RowLink job={job} /> : job.company}</p>
         <div className="flex flex-wrap items-center gap-2">
-          <p className="m-0 text-xs leading-4 text-body">{job.title}</p>
+          <p className="m-0 text-xs leading-4 text-body">
+            {job.title}
+            {location && <span className="sm:hidden"> · {location}</span>}
+          </p>
           {job.is_sample && <SampleBadge />}
         </div>
-        <div className="mt-1.5 sm:hidden">
-          <Progress job={job} group={group} />
+        <div className="mt-2 flex flex-col gap-1.5 sm:hidden">
+          <Progress job={job} group={group} inline />
+          <NextLine job={job} />
         </div>
       </td>
       <td className={`${cellClasses} ${progressCellClasses}`}>
         <Progress job={job} group={group} />
       </td>
-      <td className={cellClasses}>
+      <td className={`${cellClasses} ${nextCellClasses}`}>
         <Next job={job} />
       </td>
       <td className={`${cellClasses} ${locationCellClasses} text-sm text-heading`}>
-        {locationText(job) ?? <span className="text-body-subtle">—</span>}
+        {location ?? <span className="text-body-subtle">—</span>}
       </td>
       <td className={`${cellClasses} w-px pl-0 text-right sm:pl-0`}>
         {linked && (
@@ -95,71 +104,201 @@ function RowLink({ job }: { job: Application }) {
 }
 
 /**
- * The row's group ("Interview scheduled"), with one mark per completed Interview under it: green
- * while the Application is In Progress, grey once it is Done (BIG-177).
+ * The row's group as a coloured label ("Waiting · 13 days", "Interview scheduled", "Offer"), with a
+ * mark per Interview by date: green when completed (grey once the Application is Done, BIG-177),
+ * the brand colour for the next, muted for later ones, as on the Application page's strip. Beside
+ * the label on a phone (`inline`), under it in the Progress column.
  */
-function Progress({ job, group }: { job: Application; group: string }) {
-  const completed = job.interviews.filter((interview) => interview.completed);
+function Progress({ job, group, inline = false }: { job: Application; group: Group; inline?: boolean }) {
   return (
-    <div className="text-xs text-body">
-      <p className="m-0">{group}</p>
-      {completed.length > 0 && (
-        <p className="m-0 mt-1 flex flex-wrap items-center gap-1">
-          {completed.map((interview) => (
-            <span key={interview.id} aria-hidden className={`h-1 w-4 rounded-full ${COMPLETED_MARK[job.status]}`} />
-          ))}
-          <span className="sr-only">
-            {completed.length} completed {completed.length === 1 ? "Interview" : "Interviews"}
-          </span>
-        </p>
-      )}
+    <div className={`flex items-center gap-x-2 gap-y-1.5 ${inline ? "flex-wrap" : "flex-col items-start"}`}>
+      <Badge tone={GROUP_TONE[group.id]} pill dot nowrap>
+        {group.id === "waiting" ? <WaitingFor job={job} /> : group.label}
+      </Badge>
+      <Marks job={job} />
     </div>
   );
 }
 
+/** "Waiting · 13 days": the days since Waiting since. Just "Waiting" until hydration, which can't know the viewer's day. */
+function WaitingFor({ job }: { job: Application }) {
+  const today = useToday();
+  if (!today || !job.waiting_since) return <>Waiting</>;
+  const days = calendarDaysBetween(parseDay(job.waiting_since), today);
+  return (
+    <>
+      Waiting · {days} {days === 1 ? "day" : "days"}
+    </>
+  );
+}
+
+function Marks({ job }: { job: Application }) {
+  if (job.interviews.length === 0) return null;
+  const next = job.status === "in_progress" ? nextInterview(job) : null;
+  const completed = job.interviews.filter((interview) => interview.completed).length;
+  return (
+    <p className="m-0 flex flex-wrap items-center gap-1">
+      {job.interviews.map((interview) => (
+        <span
+          key={interview.id}
+          aria-hidden
+          data-mark
+          className={`h-1 w-4 rounded-full ${interviewMark(interview, job.status, interview.id === next?.id)}`}
+        />
+      ))}
+      <span className="sr-only">
+        {completed} of {job.interviews.length} {job.interviews.length === 1 ? "Interview" : "Interviews"} completed
+      </span>
+    </p>
+  );
+}
+
 /**
- * What comes next: the Outcome of a Done Application other than an Offer, each upcoming Interview's
- * title (soonest first, its date on hover and to screen readers), and "Waiting since".
+ * What comes next, in two lines (BIG-195): the soonest upcoming Interview's title, then its day and
+ * time (in the brand colour today or tomorrow) and "+1 later" when more are booked. While Waiting,
+ * "Nothing booked" over the Waiting since date in the warning colour. A Done Application other than
+ * an Offer shows its Outcome. Each upcoming Interview's category and date show on hover and are read
+ * to screen readers.
  */
 function Next({ job }: { job: Application }) {
   const upcoming = upcomingInterviews(job);
   const outcome = job.outcome && job.outcome !== "offer" ? job.outcome : null;
+  const hover = useHoverText(upcoming);
 
-  if (!outcome && upcoming.length === 0 && !job.is_waiting) {
-    return <span className="text-sm text-body-subtle">—</span>;
+  if (outcome) return <Badge tone={OUTCOME_TONE[outcome]}>{OUTCOME_OPTIONS[outcome].label}</Badge>;
+  if (upcoming.length > 0) {
+    const [first, ...later] = upcoming;
+    return (
+      <div title={hover} className="text-xs">
+        <p className="m-0 text-sm font-semibold text-heading">{first.title}</p>
+        <p className="m-0 mt-0.5">
+          <NextWhen at={first.at} />
+          {later.length > 0 && <span className="text-body"> · +{later.length} later</span>}
+        </p>
+        <UpcomingForScreenReaders interviews={upcoming} />
+      </div>
+    );
   }
+  if (job.is_waiting) {
+    return (
+      <div className="text-xs">
+        <p className="m-0 text-sm font-semibold text-heading">Nothing booked</p>
+        <p className="m-0 mt-0.5 text-fg-warning">
+          <WaitingSince job={job} />
+        </p>
+      </div>
+    );
+  }
+  return <span className="text-sm text-body-subtle">—</span>;
+}
+
+/** Next on a phone, on one line: "Hiring Manager · tomorrow 2:00 PM", "Nothing booked · Waiting since Nov 10", or the Outcome. */
+function NextLine({ job }: { job: Application }) {
+  const upcoming = upcomingInterviews(job);
+  const outcome = job.outcome && job.outcome !== "offer" ? job.outcome : null;
+  const hover = useHoverText(upcoming);
+
+  if (outcome) {
+    return (
+      <span className="flex">
+        <Badge tone={OUTCOME_TONE[outcome]}>{OUTCOME_OPTIONS[outcome].label}</Badge>
+      </span>
+    );
+  }
+  if (upcoming.length > 0) {
+    const [first, ...later] = upcoming;
+    return (
+      <p title={hover} className="m-0 text-xs">
+        <span className="font-semibold text-heading">{first.title}</span>
+        <span className="text-body"> · </span>
+        <NextWhen at={first.at} short />
+        {later.length > 0 && <span className="text-body"> · +{later.length} later</span>}
+        <UpcomingForScreenReaders interviews={upcoming} />
+      </p>
+    );
+  }
+  if (job.is_waiting) {
+    return (
+      <p className="m-0 text-xs">
+        <span className="font-semibold text-heading">Nothing booked</span>
+        <span className="text-body"> · </span>
+        <span className="text-fg-warning">
+          <WaitingSince job={job} />
+        </span>
+      </p>
+    );
+  }
+  return null;
+}
+
+const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
+const weekdayTimeFormat = new Intl.DateTimeFormat(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" });
+const dayTimeFormat = new Intl.DateTimeFormat(undefined, {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+});
+const sinceFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
+
+/**
+ * When the next Interview is, in the brand colour today or tomorrow: "Tomorrow · 2:00 PM", "In 2
+ * days · Wed 11:00 AM", "In 11 days · Fri, Dec 4, 9:30 AM". `short`, for a phone's one line:
+ * "tomorrow 2:00 PM", "in 2 days". Nothing until hydration, which can't know the viewer's time zone.
+ */
+function NextWhen({ at, short = false }: { at: string; short?: boolean }) {
+  const today = useToday();
+  if (!today) return <span className="inline-block h-4" />;
+  const date = new Date(at);
+  const days = calendarDaysBetween(today, date);
+  const soon = days <= 1;
+  const relative = relativeDays(days);
+  const text = short
+    ? soon
+      ? `${relative} ${timeFormat.format(date)}`
+      : relative
+    : `${relative.charAt(0).toUpperCase()}${relative.slice(1)} · ${(soon ? timeFormat : days < 7 ? weekdayTimeFormat : dayTimeFormat).format(date)}`;
   return (
-    <div className="flex flex-col items-start gap-1.5 text-xs text-body">
-      {outcome && <Badge tone={OUTCOME_TONE[outcome]}>{OUTCOME_OPTIONS[outcome].label}</Badge>}
-      {upcoming.length > 0 && (
-        <ul aria-label="Upcoming Interviews" className="m-0 flex list-none flex-wrap gap-1.5 p-0">
-          {upcoming.map((interview) => (
-            <UpcomingInterview key={interview.id} interview={interview} />
-          ))}
-        </ul>
-      )}
-      {job.is_waiting && <ApplicationWhen app={job} />}
-    </div>
+    <time aria-hidden dateTime={at} className={soon ? "font-medium text-fg-brand" : "text-body"}>
+      {text}
+    </time>
   );
+}
+
+/** "Waiting since Nov 10": the last completed Interview, or the applied date. */
+function WaitingSince({ job }: { job: Application }) {
+  const isClient = useIsClient();
+  if (!isClient || !job.waiting_since) return null;
+  return <>Waiting since {sinceFormat.format(parseDay(job.waiting_since))}</>;
 }
 
 const hoverFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 
-/**
- * An upcoming Interview's title as a badge in its category's colour; its category and date show on
- * hover, and are read after the title.
- */
-function UpcomingInterview({ interview }: { interview: Interview }) {
-  // The server can't know the viewer's time zone, so the date is added after hydration.
+/** Each upcoming Interview's title, category and date, one per line, for the hover tooltip. */
+function useHoverText(interviews: Interview[]): string | undefined {
+  // The server can't know the viewer's time zone, so the dates are added after hydration.
   const isClient = useIsClient();
-  const category = categoryLabel(interview.category);
-  const when = isClient ? `${category} · ${hoverFormat.format(new Date(interview.at))}` : category;
+  if (interviews.length === 0) return undefined;
+  return interviews
+    .map((interview) => {
+      const category = categoryLabel(interview.category);
+      return isClient ? `${interview.title} · ${category} · ${hoverFormat.format(new Date(interview.at))}` : `${interview.title} · ${category}`;
+    })
+    .join("\n");
+}
+
+/** The upcoming Interviews as screen readers hear them, soonest first: title, category and date. */
+function UpcomingForScreenReaders({ interviews }: { interviews: Interview[] }) {
   return (
-    <li title={when} className="inline-flex">
-      <Badge tone={CATEGORY_TONE[interview.category]}>{interview.title}</Badge>
-      <span className="sr-only">
-        , {category}, <InterviewWhen at={interview.at} />
-      </span>
-    </li>
+    <span className="sr-only">
+      <span>{interviews.length === 1 ? "Upcoming Interview: " : "Upcoming Interviews: "}</span>
+      {interviews.map((interview, i) => (
+        <span key={interview.id}>
+          {i > 0 && "; "}
+          {interview.title}, {categoryLabel(interview.category)}, <InterviewWhen at={interview.at} />
+        </span>
+      ))}
+    </span>
   );
 }

@@ -1,5 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { application, interview } from "@/test/applications";
 import { ApplicationList, ApplicationListSkeleton } from "./application-list";
 
@@ -15,15 +15,41 @@ const offer = application("Cedar", { status: "done", outcome: "offer", is_waitin
 const rejected = application("Umbrella", { status: "done", outcome: "rejected", is_waiting: false });
 const all = [waiting, scheduled, offer, rejected];
 
-/** Each body row's company and Progress group, in order. */
+beforeEach(() => {
+  // Friday 20 November 2026, mid-afternoon. Only Date is faked, so user events still run.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(2026, 10, 20, 15, 0));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+/** A local time on a day of November 2026, as an ISO timestamp. */
+function nov(day: number, hour = 14) {
+  return new Date(2026, 10, day, hour, 0).toISOString();
+}
+
+/** Each body row's company and Progress label, in order. */
 function rows() {
   return screen
     .getAllByRole("row")
     .slice(1)
     .map((row) => {
       const cells = within(row).getAllByRole("cell");
-      return [cells[0].querySelector("p")?.textContent, cells[1].querySelector("p")?.textContent];
+      return [cells[0].querySelector("p")?.textContent, cells[1].querySelector("span")?.textContent];
     });
+}
+
+/** A row's cell: 0 Application (with the phone's stacked copy), 1 Progress, 2 Next, 3 Location. */
+function cell(company: string, n: number) {
+  return within(row(company)).getAllByRole("cell")[n];
+}
+
+/** The classes of each Interview's mark in a cell's Progress. */
+function marks(container: HTMLElement) {
+  // The marks are decoration (aria-hidden), with no role or text to query by.
+  return [...container.querySelectorAll("[data-mark]")].map((mark) => mark.className);
 }
 
 /** A row by its company. */
@@ -46,7 +72,7 @@ describe("ApplicationList", () => {
   it("orders rows Waiting, Interview scheduled and Offer, leaving other Done ones off", () => {
     render(<ApplicationList applications={all} />);
     expect(rows()).toEqual([
-      ["Acme", "Waiting"],
+      ["Acme", "Waiting · 19 days"],
       ["Birch", "Interview scheduled"],
       ["Cedar", "Offer"],
     ]);
@@ -57,16 +83,36 @@ describe("ApplicationList", () => {
     expect(rows().at(-1)).toEqual(["Umbrella", "Done"]);
   });
 
-  it("marks completed Interviews green while In Progress and grey once Done (BIG-177)", () => {
+  it("marks every Interview: completed green, the next in the brand colour, later ones muted", () => {
+    const app = application("Birch", {
+      is_waiting: false,
+      interviews: [
+        interview("done", { at: nov(2), completed: true }),
+        interview("next", { at: nov(23), completed: false }),
+        interview("later", { at: nov(30), completed: false }),
+      ],
+    });
+    render(<ApplicationList applications={[app]} />);
+    const [completed, next, later] = marks(cell("Birch", 1));
+    expect(completed).toContain("bg-fg-success-strong");
+    expect(next).toContain("bg-brand");
+    expect(later).toContain("bg-line-medium");
+    expect(within(cell("Birch", 1)).getByText("1 of 3 Interviews completed")).toBeInTheDocument();
+    // The phone's stacked copy marks them the same way.
+    expect(marks(cell("Birch", 0))).toEqual([completed, next, later]);
+  });
+
+  it("marks a Done Application's completed Interviews grey (BIG-177)", () => {
     const past = interview("u-past", { at: "2026-11-02T15:00:00Z", completed: true, category: "recruiter", title: "Recruiter Screen" });
-    render(<ApplicationList applications={[scheduled, { ...rejected, interviews: [past] }]} showDone />);
-    // Each row draws Progress twice: under the role on a phone, and in its own column.
-    // eslint-disable-next-line testing-library/no-node-access -- the marks are decoration (aria-hidden), with no role or text to query by.
-    const marks = (company: string) => [...row(company).querySelectorAll("span.rounded-full")].map((mark) => mark.className);
-    expect(marks("Birch")).toHaveLength(2);
-    expect(marks("Birch").every((mark) => mark.includes("bg-fg-success-strong"))).toBe(true);
-    expect(marks("Umbrella")).toHaveLength(2);
-    expect(marks("Umbrella").every((mark) => mark.includes("bg-tone-gray-fg"))).toBe(true);
+    render(<ApplicationList applications={[{ ...rejected, interviews: [past] }]} showDone />);
+    expect(marks(cell("Umbrella", 1))).toEqual([expect.stringContaining("bg-tone-gray-fg")]);
+  });
+
+  it("labels Progress by group, each in its own colour", () => {
+    render(<ApplicationList applications={all} showDone />);
+    expect(within(cell("Acme", 1)).getByText("Waiting · 19 days")).toHaveClass("text-fg-warning");
+    expect(within(cell("Birch", 1)).getByText("Interview scheduled")).toHaveClass("text-tone-blue-fg");
+    expect(within(cell("Cedar", 1)).getByText("Offer")).toHaveClass("text-fg-success-strong");
   });
 
   it("explains the list when there's nothing to show", () => {
@@ -85,13 +131,39 @@ describe("ApplicationList", () => {
       ],
     });
     render(<ApplicationList applications={[app]} />);
-    const upcoming = within(screen.getByRole("list", { name: "Upcoming Interviews" })).getAllByRole("listitem");
-    expect(upcoming.map((li) => li.textContent)).toEqual([
-      expect.stringMatching(/^Final Round, Hiring Manager, Jan 5/),
-      expect.stringMatching(/^Technical, Technical, Jan 5/),
-    ]);
-    expect(upcoming[0]).toHaveAttribute("title", expect.stringMatching(/^Hiring Manager · Jan 5, 2027/));
+    const next = cell("Birch", 2);
+    expect(within(next).getByText("Final Round")).toHaveClass("font-semibold", "text-heading");
+    expect(within(next).getByText(/^\s*·\s*\+1 later$/)).toBeInTheDocument();
+    expect(next).toHaveTextContent(/Upcoming Interviews: Final Round, Hiring Manager, Jan 5.*; Technical, Technical, Jan 5/);
+    // eslint-disable-next-line testing-library/no-node-access -- the hover text is on Next's wrapper.
+    expect(next.firstElementChild).toHaveAttribute("title", expect.stringMatching(/^Final Round · Hiring Manager · Jan 5, 2027/));
     expect(screen.queryByText("Recruiter Screen")).not.toBeInTheDocument();
+  });
+
+  it("puts the next Interview's day and time in the brand colour when it is today or tomorrow", () => {
+    const soon = application("Birch", { is_waiting: false, interviews: [interview("t", { at: nov(21), completed: false })] });
+    const later = application("Cedar", { is_waiting: false, interviews: [interview("l", { at: nov(25), completed: false })] });
+    render(<ApplicationList applications={[soon, later]} />);
+    expect(within(cell("Birch", 2)).getByText(/^Tomorrow · /)).toHaveClass("text-fg-brand");
+    expect(within(cell("Cedar", 2)).getByText(/^In 5 days · /)).toHaveClass("text-body");
+    // On a phone, Next on one line.
+    expect(within(cell("Birch", 0)).getByText(/^tomorrow /)).toHaveClass("text-fg-brand");
+    expect(within(cell("Cedar", 0)).getByText("in 5 days")).toBeInTheDocument();
+  });
+
+  it("says Nothing booked while Waiting, with Waiting since in the warning colour", () => {
+    render(<ApplicationList applications={[waiting]} />);
+    expect(within(cell("Acme", 2)).getByText("Nothing booked")).toBeInTheDocument();
+    expect(within(cell("Acme", 2)).getByText("Waiting since Nov 1")).toHaveClass("text-fg-warning");
+  });
+
+  it("stacks a phone's row: role · Location, Progress, then Next", () => {
+    const hybrid = { ...waiting, location: "hybrid" as const, office_days: 3 };
+    render(<ApplicationList applications={[hybrid]} />);
+    const first = cell("Acme", 0);
+    expect(within(first).getByText("Engineer")).toHaveTextContent("Engineer · Hybrid - 3x a Week");
+    expect(within(first).getByText("Waiting · 19 days")).toBeInTheDocument();
+    expect(within(first).getByText("Nothing booked")).toBeInTheDocument();
   });
 
   it("marks each completed Interview without showing or counting its Interview notes", () => {
@@ -105,15 +177,15 @@ describe("ApplicationList", () => {
     });
     render(<ApplicationList applications={[app]} />);
     // The Progress column and its phone-width copy under the role.
-    expect(screen.getAllByText("3 completed Interviews")).toHaveLength(2);
+    expect(screen.getAllByText("3 of 3 Interviews completed")).toHaveLength(2);
     expect(screen.queryByText(/Asked about caching/)).not.toBeInTheDocument();
     expect(screen.queryByText(/with notes/)).not.toBeInTheDocument();
-    expect(within(row("Birch")).getByText(/Waiting since/)).toBeInTheDocument();
+    expect(within(cell("Birch", 2)).getByText(/Waiting since/)).toBeInTheDocument();
   });
 
   it("shows a Done row's Outcome in Next, but not an Offer's, which Progress already says", () => {
     render(<ApplicationList applications={[offer, rejected]} showDone />);
-    expect(within(row("Umbrella")).getByText("Rejected")).toBeInTheDocument();
+    expect(within(cell("Umbrella", 2)).getByText("Rejected")).toBeInTheDocument();
     expect(within(within(row("Cedar")).getAllByRole("cell")[2]).getByText("—")).toBeInTheDocument();
   });
 

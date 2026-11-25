@@ -49,6 +49,7 @@ export const ON_PAGE = {
   "src/features/landing/features.tsx": "/",
   "src/features/landing/footer.tsx": "/",
   "src/features/landing/hero.tsx": "/",
+  "src/features/landing/hero-preview.tsx": "/",
   "src/features/landing/navbar.tsx": "/",
   "src/features/legal/legal.tsx": "/privacy",
   "src/features/shell/app-footer.tsx": "/dashboard",

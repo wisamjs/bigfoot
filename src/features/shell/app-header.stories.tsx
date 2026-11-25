@@ -30,8 +30,14 @@ export const Default: Story = {
   },
 };
 
-/** On the Account page. */
-export const Account: Story = { args: { current: "/account" } };
+/** On the Account page, which isn't in the nav (it's in the avatar's menu): nothing is highlighted. */
+export const Account: Story = {
+  args: { current: undefined },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current");
+    await expect(canvas.queryByRole("link", { name: "Account" })).not.toBeInTheDocument();
+  },
+};
 
 /** The avatar's menu, open: who is signed in, Account and Sign out. Sign out calls its action. */
 export const MenuOpen: Story = {

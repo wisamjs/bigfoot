@@ -58,7 +58,7 @@ function AccountLayout({
 }) {
   return (
     <>
-      <AppHeader user={user} current="/account" />
+      <AppHeader user={user} />
       <main id="main" className="py-12">
         <Container>
           <div className="mx-auto flex max-w-[768px] flex-col gap-8">

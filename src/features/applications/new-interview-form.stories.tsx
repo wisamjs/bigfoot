@@ -8,7 +8,7 @@ import { NewInterviewForm } from "./new-interview-form";
 // mocked (src/app/applications/__mocks__/actions.ts) and succeed unless a story says otherwise.
 const meta = {
   component: NewInterviewForm,
-  args: { applications: previewApplications },
+  args: { applications: previewApplications() },
   decorators: [(Story) => <div className="max-w-2xl">{Story()}</div>],
 } satisfies Meta<typeof NewInterviewForm>;
 
@@ -85,7 +85,7 @@ export const LongText: Story = {
     applicationId: "long",
     applications: [
       {
-        ...previewApplications[0],
+        ...previewApplications()[0],
         id: "long",
         company: "Northern Lights Software Engineering Co-operative of British Columbia",
         title: "Senior Staff Software Engineer, Developer Experience and Internal Platform Tooling",

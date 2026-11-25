@@ -8,8 +8,9 @@ import { rememberDashboardView } from "@/features/shell/dashboard-link";
 import { CalendarBigfoot, ClockBigfoot } from "@/features/shell/illustrations";
 import { interviewHref } from "@/features/applications/routes";
 import { useIsClient } from "@/hooks/use-is-client";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { DatedInterview } from "@/lib/applications";
+import { calendarDaysBetween, relativeDays, type DatedInterview } from "@/lib/applications";
 import {
   dayKey,
   groupByDay,
@@ -20,6 +21,7 @@ import {
   monthWeeks,
   monthWindow,
   upcomingWindow,
+  weekOf,
   type CalendarDay,
 } from "@/lib/calendar";
 
@@ -27,20 +29,25 @@ const monthFormat = new Intl.DateTimeFormat(undefined, { month: "long", year: "n
 const weekdayFormat = new Intl.DateTimeFormat(undefined, { weekday: "short" });
 const weekdayLongFormat = new Intl.DateTimeFormat(undefined, { weekday: "long" });
 const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" });
+const shortMonthFormat = new Intl.DateTimeFormat(undefined, { month: "short" });
 const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
 
 function interviewCount(n: number) {
   return `${n} ${n === 1 ? "Interview" : "Interviews"}`;
 }
 
-/** The dashboard's search params for the calendar's month (`2026-12`) and picked day (`2026-12-04`). */
+/**
+ * The dashboard's search params for the calendar's month (`2026-12`), picked day (`2026-12-04`), and
+ * on a phone, whether "Show month" swapped this week's row for the month grid (`calendar=month`).
+ */
 const MONTH_PARAM = "month";
 const DAY_PARAM = "day";
+const SHOW_MONTH_PARAM = "calendar";
 
 /** The month and day in the URL as a search string, "" for this month with today picked. */
 function viewSearch(params: URLSearchParams): string {
   const view = new URLSearchParams();
-  for (const name of [MONTH_PARAM, DAY_PARAM]) {
+  for (const name of [MONTH_PARAM, DAY_PARAM, SHOW_MONTH_PARAM]) {
     const value = params.get(name);
     if (value) view.set(name, value);
   }
@@ -59,17 +66,25 @@ function useCalendarView() {
   // "← Dashboard" on the other pages goes back to this view.
   useEffect(() => rememberDashboardView(search), [search]);
 
-  function setView(start: Date | null, day: string | null) {
+  /** `showMonth` left out keeps the phone's choice of week row or month grid as it is. */
+  function setView(start: Date | null, day: string | null, showMonth?: boolean) {
     const next = new URLSearchParams(window.location.search);
     if (start) next.set(MONTH_PARAM, monthParam(start));
     else next.delete(MONTH_PARAM);
     if (day) next.set(DAY_PARAM, day);
     else next.delete(DAY_PARAM);
+    if (showMonth === true) next.set(SHOW_MONTH_PARAM, "month");
+    else if (showMonth === false) next.delete(SHOW_MONTH_PARAM);
     const query = next.toString();
     window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
   }
 
-  return { month: params.get(MONTH_PARAM), day: params.get(DAY_PARAM), setView };
+  return {
+    month: params.get(MONTH_PARAM),
+    day: params.get(DAY_PARAM),
+    showMonth: params.get(SHOW_MONTH_PARAM) === "month",
+    setView,
+  };
 }
 
 /** The local day a `YYYY-MM-DD` key names, or null for anything else. */
@@ -93,18 +108,22 @@ function agendaTitle(span: string) {
  * another month's Interviews, or for this month the widest upcoming window that holds five (BIG-72).
  * With nothing to list this month, Bigfoot says why: no Interviews yet, or `waiting` Applications
  * waiting to hear back.
+ * On a phone (BIG-195) the grid gives way to this week's row of days, with "Show month" for the
+ * grid; another month, or a picked day outside this week, shows the grid too. The phone's agenda
+ * puts how far off each Interview is over its time, and fills the soonest one's date in the brand
+ * colour.
  * Days and times are the job seeker's own, so the calendar renders only in the browser; the server
  * sends InterviewCalendarSkeleton, the same layout in skeleton shapes.
  */
 export function InterviewCalendar({ interviews, waiting = 0 }: { interviews: DatedInterview[]; waiting?: number }) {
   const isClient = useIsClient();
   const view = useCalendarView();
+  const wide = useMediaQuery("(min-width: 640px)");
 
   if (!isClient) return <InterviewCalendarSkeleton />;
 
   // eslint-disable-next-line @eslint-react/purity -- today is read on each render on purpose: the calendar renders only in the browser (isClient above), and a stored date would go stale past midnight.
   const now = new Date();
-  const todayKey = dayKey(now);
   const offset = monthOffset(view.month, now);
   const start = monthStart(now, offset);
   const byDay = groupByDay(interviews, (d) => d.interview.at);
@@ -113,34 +132,10 @@ export function InterviewCalendar({ interviews, waiting = 0 }: { interviews: Dat
   // byDay is already in date and time order.
   const agendaItems = [...byDay.values()].flat().filter((d) => inWindow(d.interview.at, agendaWindow));
 
-  // This month and today are the default view, so they stay out of the URL.
-  const goTo = (next: number) => view.setView(next === 0 ? null : monthStart(now, next), null);
-  const pick = (key: string) => view.setView(offset === 0 ? null : start, key === todayKey ? null : key);
-
   return (
     <div className="flex flex-col">
       <div className="flex flex-col gap-3 px-4 pb-4 sm:px-6">
-        <div className="flex items-center justify-between gap-3">
-          <button type="button" className={arrowClasses} onClick={() => goTo(offset - 1)}>
-            <ChevronLeft className="size-[18px]" aria-hidden />
-            <span className="sr-only">Previous month</span>
-          </button>
-          <h3 id="calendar-month" aria-live="polite" className="m-0 text-base font-semibold text-heading">
-            {monthFormat.format(start)}
-          </h3>
-          <button type="button" className={arrowClasses} onClick={() => goTo(offset + 1)}>
-            <ChevronRight className="size-[18px]" aria-hidden />
-            <span className="sr-only">Next month</span>
-          </button>
-        </div>
-        <MonthGrid
-          weeks={monthWeeks(start)}
-          byDay={byDay}
-          now={now}
-          todayKey={todayKey}
-          pickedKey={dayKey(picked)}
-          onPick={pick}
-        />
+        <DayPicker view={view} wide={wide} now={now} offset={offset} picked={picked} byDay={byDay} />
         <PickedDay date={picked} items={byDay.get(dayKey(picked)) ?? []} now={now} />
       </div>
 
@@ -152,8 +147,111 @@ export function InterviewCalendar({ interviews, waiting = 0 }: { interviews: Dat
         hasInterviews={interviews.length > 0}
         waiting={waiting}
         now={now}
+        phone={!wide}
       />
     </div>
+  );
+}
+
+type CalendarView = ReturnType<typeof useCalendarView>;
+
+/**
+ * The days to pick from: the month grid under its name and arrows, or on a phone this week's row
+ * with "Show month" (BIG-195). A phone shows the grid for another month or a picked day outside
+ * this week, with "Show this week" to go back.
+ */
+function DayPicker({
+  view,
+  wide,
+  now,
+  offset,
+  picked,
+  byDay,
+}: {
+  view: CalendarView;
+  wide: boolean;
+  now: Date;
+  offset: number;
+  picked: Date;
+  byDay: DayInterviews;
+}) {
+  const todayKey = dayKey(now);
+  const pickedKey = dayKey(picked);
+  const start = monthStart(now, offset);
+  // This month and today are the default view, so they stay out of the URL.
+  const goTo = (next: number) => view.setView(next === 0 ? null : monthStart(now, next), null);
+  const pick = (key: string) => view.setView(offset === 0 ? null : start, key === todayKey ? null : key);
+
+  const week = weekOf(now);
+  const inWeek = week.some((d) => d.key === pickedKey);
+  if (wide || view.showMonth || offset !== 0 || !inWeek) {
+    const showWeek = () => view.setView(null, inWeek && pickedKey !== todayKey ? pickedKey : null, false);
+    return (
+      <>
+        <MonthHeader start={start} onGo={(step) => goTo(offset + step)} />
+        <MonthGrid weeks={monthWeeks(start)} byDay={byDay} now={now} todayKey={todayKey} pickedKey={pickedKey} onPick={pick} />
+        {!wide && <ViewToggle onClick={showWeek}>Show this week</ViewToggle>}
+      </>
+    );
+  }
+  return (
+    <>
+      <WeekRow week={week} byDay={byDay} now={now} todayKey={todayKey} pickedKey={pickedKey} onPick={pick} />
+      <ViewToggle onClick={() => view.setView(null, view.day, true)}>Show month</ViewToggle>
+    </>
+  );
+}
+
+/** The month's name between its arrows. */
+function MonthHeader({ start, onGo }: { start: Date; onGo: (step: number) => void }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <button type="button" className={arrowClasses} onClick={() => onGo(-1)}>
+        <ChevronLeft className="size-[18px]" aria-hidden />
+        <span className="sr-only">Previous month</span>
+      </button>
+      <h3 id="calendar-month" aria-live="polite" className="m-0 text-base font-semibold text-heading">
+        {monthFormat.format(start)}
+      </h3>
+      <button type="button" className={arrowClasses} onClick={() => onGo(1)}>
+        <ChevronRight className="size-[18px]" aria-hidden />
+        <span className="sr-only">Next month</span>
+      </button>
+    </div>
+  );
+}
+
+/** "Show month" under the phone's week row, or "Show this week" under the grid it opened. */
+function ViewToggle({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="touch-target self-start rounded-control font-medium text-fg-brand underline-offset-4 transition-colors hover:text-fg-brand-strong hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+    >
+      {children}
+    </button>
+  );
+}
+
+/** The phone's calendar until "Show month" (BIG-195): this week, Monday first, as one row of the grid's day tiles. */
+function WeekRow({
+  week,
+  byDay,
+  now,
+  todayKey,
+  pickedKey,
+  onPick,
+}: {
+  week: CalendarDay[];
+  byDay: DayInterviews;
+  now: Date;
+  todayKey: string;
+  pickedKey: string;
+  onPick: (key: string) => void;
+}) {
+  return (
+    <DayTable label="This week" weeks={[week]} byDay={byDay} now={now} todayKey={todayKey} pickedKey={pickedKey} onPick={onPick} />
   );
 }
 
@@ -175,8 +273,41 @@ function MonthGrid({
   onPick: (key: string) => void;
 }) {
   return (
+    <DayTable
+      labelledBy="calendar-month"
+      weeks={weeks}
+      byDay={byDay}
+      now={now}
+      todayKey={todayKey}
+      pickedKey={pickedKey}
+      onPick={onPick}
+    />
+  );
+}
+
+/** Weeks of day tiles under their weekdays: the month grid, or the phone's week row. */
+function DayTable({
+  weeks,
+  labelledBy,
+  label,
+  byDay,
+  now,
+  todayKey,
+  pickedKey,
+  onPick,
+}: {
+  weeks: CalendarDay[][];
+  labelledBy?: string;
+  label?: string;
+  byDay: DayInterviews;
+  now: Date;
+  todayKey: string;
+  pickedKey: string;
+  onPick: (key: string) => void;
+}) {
+  return (
     // On a phone the grid reaches into the card's padding, so each day is a 44px touch target.
-    <table aria-labelledby="calendar-month" className="-mx-2 w-[calc(100%+1rem)] table-fixed border-collapse sm:mx-0 sm:w-full">
+    <table aria-labelledby={labelledBy} aria-label={label} className="-mx-2 w-[calc(100%+1rem)] table-fixed border-collapse sm:mx-0 sm:w-full">
       <thead>
         <tr>
           {weeks[0].map((d) => (
@@ -328,6 +459,7 @@ function Agenda({
   hasInterviews,
   waiting,
   now,
+  phone,
 }: {
   span: string;
   items: DatedInterview[];
@@ -336,7 +468,9 @@ function Agenda({
   hasInterviews: boolean;
   waiting: number;
   now: Date;
+  phone: boolean;
 }) {
+  const soonest = items.find((d) => new Date(d.interview.at) >= now);
   if (items.length === 0 && isThisMonth) {
     return <NothingScheduled waiting={waiting} monthHasInterviews={monthHasInterviews} />;
   }
@@ -356,9 +490,19 @@ function Agenda({
         <span className="text-[13px] text-body">{interviewCount(items.length)}</span>
       </div>
       <ul className="m-0 flex list-none flex-col gap-0.5 px-1 pb-3 sm:px-3">
-        {items.map((d) => (
-          <AgendaItem key={d.interview.id} item={d} past={new Date(d.interview.at) < now} />
-        ))}
+        {items.map((d) =>
+          phone ? (
+            <PhoneAgendaItem
+              key={d.interview.id}
+              item={d}
+              past={new Date(d.interview.at) < now}
+              soonest={d.interview.id === soonest?.interview.id}
+              now={now}
+            />
+          ) : (
+            <AgendaItem key={d.interview.id} item={d} past={new Date(d.interview.at) < now} />
+          ),
+        )}
       </ul>
     </section>
   );
@@ -402,6 +546,55 @@ function AgendaItem({ item: { application, interview }, past }: { item: DatedInt
           className="size-4 shrink-0 text-body transition-transform duration-200 group-hover:translate-x-0.5"
           aria-hidden
         />
+      </Link>
+    </li>
+  );
+}
+
+/**
+ * One Interview in a phone's agenda (BIG-195): its date tile (month and day), title and company,
+ * and on the right how far off it is over its time. The soonest upcoming one's tile is filled in the
+ * brand colour, with "Today" or "Tomorrow" in the brand colour too.
+ */
+function PhoneAgendaItem({
+  item: { application, interview },
+  past,
+  soonest,
+  now,
+}: {
+  item: DatedInterview;
+  past: boolean;
+  soonest: boolean;
+  now: Date;
+}) {
+  const at = new Date(interview.at);
+  const days = calendarDaysBetween(now, at);
+  const relative = relativeDays(days);
+  const tile = soonest ? "bg-brand text-on-brand" : past ? "bg-card-strong text-body" : "border border-line-card text-heading";
+  return (
+    <li>
+      <Link
+        href={interviewHref(application.id, interview.id)}
+        className={`${agendaItemClasses} transition-colors duration-200 hover:bg-card-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand`}
+      >
+        <span className="sr-only">
+          {`Open Interview: ${application.company}, ${interview.title}, ${dayFormat.format(at)} at ${timeFormat.format(at)}`}
+        </span>
+        <time aria-hidden dateTime={interview.at} className={`${dateTileClasses} ${tile}`}>
+          <span className="text-[11px] font-bold uppercase tracking-[0.06em]">{shortMonthFormat.format(at)}</span>
+          <span className="text-xl font-bold leading-[1.1]">{at.getDate()}</span>
+        </time>
+        <span aria-hidden className="flex min-w-0 flex-1 flex-col gap-px">
+          <span className={`break-words font-semibold ${past ? "text-body" : "text-heading"}`}>{interview.title}</span>
+          <span className="break-words text-sm text-body">{application.company}</span>
+        </span>
+        <span aria-hidden className="flex shrink-0 flex-col items-end gap-px whitespace-nowrap text-sm text-body">
+          <span className={soonest && days >= 0 && days <= 1 ? "font-semibold text-fg-brand" : "text-heading"}>
+            {relative.charAt(0).toUpperCase()}
+            {relative.slice(1)}
+          </span>
+          <span>{timeFormat.format(at)}</span>
+        </span>
       </Link>
     </li>
   );
