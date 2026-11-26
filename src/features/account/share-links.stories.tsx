@@ -57,9 +57,12 @@ export const NoLinks: Story = { args: { links: [] } };
 /** Two people can follow along: one has opened the link today, one hasn't yet. */
 export const LinksActive: Story = {};
 
+/** The last minute of today, local time: later than now whenever the story runs, and still today. */
+const lastMinuteToday = () => new Date(new Date().setHours(23, 59, 59, 999)).toISOString();
+
 /** On its last day, the expiry is in the warning colour, with the time it stops. */
 export const ExpiresToday: Story = {
-  args: { links: [{ ...momAndDad, expires_at: at(2 * HOUR) }] },
+  args: { links: [{ ...momAndDad, expires_at: lastMinuteToday() }] },
   play: async ({ canvas }) => {
     await expect(await canvas.findByText(/^Expires today, /)).toBeVisible();
   },
