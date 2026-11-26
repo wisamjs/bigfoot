@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Bigfoot API",
-    "description": "Bigfoot's data API: a job seeker's Applications and their Interviews, in Supabase Postgres.\n\nEvery route but `/health` needs `Authorization: Bearer <token>`, and reads and writes only the data\nof the job seeker the token names. There are two kinds of token:\n\n- **Access token** (`AccessToken`): a secret starting with `bigfoot_` that a job seeker creates on\n  their Account page and gives a script, such as a cron job. It works on the Applications and\n  Interviews routes, expires after a year, and can be revoked\n  ([ADR 0003](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0003-access-tokens-open-fastapi-to-scripts.md)).\n- **Web token** (`WebToken`): a short-lived JWT the Next.js server signs for the signed-in job\n  seeker. The browser itself never calls this API. Web tokens work on every route, and are the only\n  way to use the Account and Access tokens routes\n  ([ADR 0001](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0001-fastapi-behind-nextjs-with-authjs.md)).\n\nTerms such as Application, Interview, Waiting, Sample Application and Access token are defined in\n[GLOSSARY.md](https://github.com/wisamjs/bigfoot/blob/main/GLOSSARY.md).\n\nTo try a request, click **Authorize** and paste an Access token from the Account page, or a web\ntoken from `node scripts/dev-api-token.mjs`.\n",
+    "description": "Bigfoot's data API: a job seeker's Applications and their Interviews, in Supabase Postgres.\n\nEvery route but `/health` needs `Authorization: Bearer <token>`, and reads and writes only the data\nof the job seeker the token names. There are two kinds of token:\n\n- **Access token** (`AccessToken`): a secret starting with `bigfoot_` that a job seeker creates on\n  their Account page and gives a script, such as a cron job. It works on the Applications and\n  Interviews routes, expires after a year, and can be revoked\n  ([ADR 0003](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0003-access-tokens-open-fastapi-to-scripts.md)).\n- **Web token** (`WebToken`): a short-lived JWT the Next.js server signs for the signed-in job\n  seeker. The browser itself never calls this API. Web tokens work on every route, and are the only\n  way to use the Account, Access tokens and Share links routes\n  ([ADR 0001](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0001-fastapi-behind-nextjs-with-authjs.md)).\n\nTerms such as Application, Interview, Waiting, Sample Application and Access token are defined in\n[GLOSSARY.md](https://github.com/wisamjs/bigfoot/blob/main/GLOSSARY.md).\n\nTo try a request, click **Authorize** and paste an Access token from the Account page, or a web\ntoken from `node scripts/dev-api-token.mjs`.\n",
     "version": "0.1.0"
   },
   "paths": {
@@ -136,7 +136,7 @@
           "Account"
         ],
         "summary": "Delete the job seeker's account",
-        "description": "Delete the job seeker, all of their Applications and all of their Access tokens, in one transaction.\n\nIdempotent: deleting an account that is already gone succeeds and logs nothing. Signing\nin again afterwards makes a new job seeker, who receives Sample Applications again.",
+        "description": "Delete the job seeker, all of their Applications, Access tokens and Share links, in one transaction.\n\nIdempotent: deleting an account that is already gone succeeds and logs nothing. Signing\nin again afterwards makes a new job seeker, who receives Sample Applications again.",
         "operationId": "delete_account_me_delete",
         "responses": {
           "204": {
@@ -339,6 +339,378 @@
           },
           "404": {
             "description": "No Access token with this id belongs to the job seeker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/share-links": {
+      "get": {
+        "tags": [
+          "Share links"
+        ],
+        "summary": "List the job seeker's Share links",
+        "description": "Every Share link of the job seeker, oldest first, expired ones included. Never the Passcodes.",
+        "operationId": "list_share_links_me_share_links_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ShareLink"
+                  },
+                  "type": "array",
+                  "title": "Response List Share Links Me Share Links Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The bearer token is an Access token, which can't use Account routes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WebToken": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Share links"
+        ],
+        "summary": "Create a Share link",
+        "description": "Create a Share link that expires in 7 days, and return its Passcode, this once. Bigfoot stores\nonly a hash of the Passcode, so a forgotten one can't be shown again: change it instead.",
+        "operationId": "create_share_link_me_share_links_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareLinkCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewShareLink"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The bearer token is an Access token, which can't use Account routes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The job seeker already has 10.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WebToken": []
+          }
+        ]
+      }
+    },
+    "/me/share-links/{share_link_id}/renew": {
+      "post": {
+        "tags": [
+          "Share links"
+        ],
+        "summary": "Renew a Share link",
+        "description": "Make the Share link work for 7 days from now (not 7 more days), expired or not. Its link and\nPasscode stay the same.",
+        "operationId": "renew_share_link_me_share_links__share_link_id__renew_post",
+        "security": [
+          {
+            "WebToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "share_link_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{10}$",
+              "description": "The Share link's id: 10 URL-safe characters.",
+              "title": "Share Link Id"
+            },
+            "description": "The Share link's id: 10 URL-safe characters."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareLink"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The bearer token is an Access token, which can't use Account routes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Share link with this id belongs to the job seeker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/share-links/{share_link_id}/passcode": {
+      "put": {
+        "tags": [
+          "Share links"
+        ],
+        "summary": "Change a Share link's Passcode",
+        "description": "Set a new Passcode and return it, this once. Every Viewer of the link is signed out: their\ncookies name the old passcode version. The link and its expiry stay the same.",
+        "operationId": "change_passcode_me_share_links__share_link_id__passcode_put",
+        "security": [
+          {
+            "WebToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "share_link_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{10}$",
+              "description": "The Share link's id: 10 URL-safe characters.",
+              "title": "Share Link Id"
+            },
+            "description": "The Share link's id: 10 URL-safe characters."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasscodeChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewShareLink"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The bearer token is an Access token, which can't use Account routes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Share link with this id belongs to the job seeker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/share-links/{share_link_id}": {
+      "delete": {
+        "tags": [
+          "Share links"
+        ],
+        "summary": "Stop sharing a Share link",
+        "description": "Delete the Share link: it stops working straight away and leaves the list. This can't be undone.",
+        "operationId": "stop_sharing_me_share_links__share_link_id__delete",
+        "security": [
+          {
+            "WebToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "share_link_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{10}$",
+              "description": "The Share link's id: 10 URL-safe characters.",
+              "title": "Share Link Id"
+            },
+            "description": "The Share link's id: 10 URL-safe characters."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The bearer token is an Access token, which can't use Account routes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Share link with this id belongs to the job seeker.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2221,6 +2593,94 @@
         "title": "NewAccessToken",
         "description": "An Access token as returned once, when it is created."
       },
+      "NewShareLink": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "10 URL-safe characters: the link is `/s/<id>`.",
+            "examples": [
+              "k7Qm2x9PaB"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Who the link is for, as the job seeker wrote it.",
+            "examples": [
+              "Mom & Dad"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "passcode_set_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Passcode Set At",
+            "description": "When the Passcode was last set: at creation, or by Change passcode.",
+            "examples": [
+              "2026-11-20T17:00:00Z"
+            ]
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At",
+            "description": "When the link stops working: 7 days after it was created or last renewed.",
+            "examples": [
+              "2026-11-27T17:00:00Z"
+            ]
+          },
+          "last_opened_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Opened At",
+            "description": "When a Viewer last opened the link; null until one does.",
+            "examples": [
+              "2026-11-21T13:12:00Z"
+            ]
+          },
+          "expired": {
+            "type": "boolean",
+            "title": "Expired",
+            "description": "Derived, never stored: `expires_at` has passed, so the link no longer opens.",
+            "examples": [
+              false
+            ]
+          },
+          "passcode": {
+            "type": "string",
+            "title": "Passcode",
+            "description": "The Passcode, shown only in this response.",
+            "examples": [
+              "maple-river-42"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "created_at",
+          "passcode_set_at",
+          "expires_at",
+          "last_opened_at",
+          "expired",
+          "passcode"
+        ],
+        "title": "NewShareLink",
+        "description": "A Share link as returned when it is created or its Passcode changes: the one time the Passcode is shown."
+      },
       "Onboarding": {
         "properties": {
           "samples_seeded": {
@@ -2234,6 +2694,137 @@
           "samples_seeded"
         ],
         "title": "Onboarding"
+      },
+      "PasscodeChange": {
+        "properties": {
+          "passcode": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Passcode",
+            "description": "The Passcode (GLOSSARY.md) a Viewer types to open the Share link: 8 to 128 characters, kept exactly as sent. Bigfoot stores only an argon2id hash of it.",
+            "examples": [
+              "maple-river-42"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "passcode"
+        ],
+        "title": "PasscodeChange",
+        "description": "A Share link's new Passcode."
+      },
+      "ShareLink": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "10 URL-safe characters: the link is `/s/<id>`.",
+            "examples": [
+              "k7Qm2x9PaB"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Who the link is for, as the job seeker wrote it.",
+            "examples": [
+              "Mom & Dad"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "passcode_set_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Passcode Set At",
+            "description": "When the Passcode was last set: at creation, or by Change passcode.",
+            "examples": [
+              "2026-11-20T17:00:00Z"
+            ]
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At",
+            "description": "When the link stops working: 7 days after it was created or last renewed.",
+            "examples": [
+              "2026-11-27T17:00:00Z"
+            ]
+          },
+          "last_opened_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Opened At",
+            "description": "When a Viewer last opened the link; null until one does.",
+            "examples": [
+              "2026-11-21T13:12:00Z"
+            ]
+          },
+          "expired": {
+            "type": "boolean",
+            "title": "Expired",
+            "description": "Derived, never stored: `expires_at` has passed, so the link no longer opens.",
+            "examples": [
+              false
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "created_at",
+          "passcode_set_at",
+          "expires_at",
+          "last_opened_at",
+          "expired"
+        ],
+        "title": "ShareLink",
+        "description": "A private link a job seeker makes so a Viewer can follow their search (GLOSSARY.md). Never\nincludes the Passcode: Bigfoot stores only its hash."
+      },
+      "ShareLinkCreate": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Label",
+            "description": "Who the link is for, so the job seeker can tell their links apart. Only they see it.",
+            "examples": [
+              "Mom & Dad"
+            ]
+          },
+          "passcode": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Passcode",
+            "description": "The Passcode (GLOSSARY.md) a Viewer types to open the Share link: 8 to 128 characters, kept exactly as sent. Bigfoot stores only an argon2id hash of it.",
+            "examples": [
+              "maple-river-42"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "label",
+          "passcode"
+        ],
+        "title": "ShareLinkCreate",
+        "description": "A new Share link: who it's for and its Passcode. It always expires 7 days after it is created."
       },
       "ValidationError": {
         "properties": {
@@ -2298,6 +2889,10 @@
     {
       "name": "Access tokens",
       "description": "Secrets that let a job seeker's scripts use the API as them. Web tokens only."
+    },
+    {
+      "name": "Share links",
+      "description": "Private links that let a Viewer follow the job seeker's search, each with its own Passcode. Web tokens only."
     },
     {
       "name": "Applications",

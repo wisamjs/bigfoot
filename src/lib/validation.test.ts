@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { XSS_TEXT, XSS_URLS } from "@/test/xss";
-import { ACCESS_TOKEN_NAME_MAX } from "./account";
+import { ACCESS_TOKEN_NAME_MAX, PASSCODE_MAX_LENGTH, PASSCODE_MIN_LENGTH, SHARE_LINK_LABEL_MAX, SHARE_LINKS_MAX } from "./account";
 import { APPLICATION_MAX_LENGTHS, INTERVIEW_NOTES_MAX_LENGTHS, OFFICE_DAYS } from "./applications";
 import {
   accessTokenNameError,
@@ -10,6 +10,8 @@ import {
   interviewErrors,
   isHttpUrl,
   isValid,
+  passcodeError,
+  shareLinkLabelError,
   summarize,
 } from "./validation";
 
@@ -24,6 +26,13 @@ function pythonNumber(name: string, file = "api/app/domain.py") {
 }
 
 describe("limits", () => {
+  it("of Share links are the API's", () => {
+    expect(SHARE_LINK_LABEL_MAX).toBe(pythonNumber("SHARE_LINK_LABEL_MAX", "api/app/models.py"));
+    expect(PASSCODE_MIN_LENGTH).toBe(pythonNumber("PASSCODE_MIN_LENGTH", "api/app/models.py"));
+    expect(PASSCODE_MAX_LENGTH).toBe(pythonNumber("PASSCODE_MAX_LENGTH", "api/app/models.py"));
+    expect(SHARE_LINKS_MAX).toBe(pythonNumber("SHARE_LINKS_MAX", "api/app/models.py"));
+  });
+
   it("are the API's, so the forms and the API agree", () => {
     expect(APPLICATION_MAX_LENGTHS).toEqual({
       company: pythonNumber("COMPANY_MAX_LENGTH"),
@@ -245,5 +254,37 @@ describe("dateOrderError", () => {
     expect(dateOrderError({ applied_on: "2026-11-16" }, saved, today)).toBeNull();
     expect(dateOrderError({ applied_on: "2026-11-17" }, saved, today)).toBe("The applied date can’t be after the Done date.");
     expect(dateOrderError({ applied_on: "2026-11-30" }, { ...saved, done_on: null }, today)).toBeNull();
+  });
+});
+
+describe("shareLinkLabelError", () => {
+  it("accepts a label up to the limit, including any XSS payload, which shows as text", () => {
+    expect(shareLinkLabelError("Mom & Dad")).toBeNull();
+    expect(shareLinkLabelError("a".repeat(SHARE_LINK_LABEL_MAX))).toBeNull();
+    for (const payload of XSS_TEXT) expect(shareLinkLabelError(payload)).toBeNull();
+  });
+
+  it("needs a label that isn't blank, too long or reordered by control characters", () => {
+    expect(shareLinkLabelError(" ")).toBe("Say who the link is for.");
+    expect(shareLinkLabelError(null)).toBe("Say who the link is for.");
+    expect(shareLinkLabelError("a".repeat(SHARE_LINK_LABEL_MAX + 1))).toBe("Who it’s for can be at most 100 characters.");
+    expect(shareLinkLabelError("Mom\u202e")).toBe("Use only characters you can see.");
+  });
+});
+
+describe("passcodeError", () => {
+  it("accepts 8 to 128 characters, kept as typed", () => {
+    expect(passcodeError("maple-river-42")).toBeNull();
+    expect(passcodeError(" a b c d ")).toBeNull();
+    expect(passcodeError("p".repeat(PASSCODE_MIN_LENGTH))).toBeNull();
+    expect(passcodeError("p".repeat(PASSCODE_MAX_LENGTH))).toBeNull();
+  });
+
+  it("refuses one that is missing, blank, too short, too long or has control characters", () => {
+    expect(passcodeError(null)).toBe("Choose a passcode, or press Suggest.");
+    expect(passcodeError("          ")).toBe("Choose a passcode, or press Suggest.");
+    expect(passcodeError("p".repeat(PASSCODE_MIN_LENGTH - 1))).toBe("Use at least 8 characters.");
+    expect(passcodeError("p".repeat(PASSCODE_MAX_LENGTH + 1))).toBe("Passcode can be at most 128 characters.");
+    expect(passcodeError("maple\triver")).toBe("Use only characters you can see.");
   });
 });

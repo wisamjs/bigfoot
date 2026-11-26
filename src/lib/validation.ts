@@ -3,7 +3,7 @@
 // errors beside each field, and the Server Actions run them again, because anyone can call those
 // with any values. FastAPI and the database still check everything; this only answers sooner.
 
-import { ACCESS_TOKEN_NAME_MAX } from "@/lib/account";
+import { ACCESS_TOKEN_NAME_MAX, PASSCODE_MAX_LENGTH, PASSCODE_MIN_LENGTH, SHARE_LINK_LABEL_MAX } from "@/lib/account";
 import {
   APPLICATION_MAX_LENGTHS,
   INTERVIEW_CATEGORIES,
@@ -241,6 +241,21 @@ export function accessTokenNameError(name: unknown): string | null {
   const problem = requiredText(name, "Name", ACCESS_TOKEN_NAME_MAX);
   if (problem) return problem;
   return CONTROL_CHARACTERS.test(name as string) ? "Use only characters you can see in the name." : null;
+}
+
+/** What's wrong with a new Share link's label, as the API checks it; null when it's fine. */
+export function shareLinkLabelError(label: unknown): string | null {
+  if (typeof label !== "string" || label.trim() === "") return "Say who the link is for.";
+  if (label.length > SHARE_LINK_LABEL_MAX) return tooLong("Who it’s for", SHARE_LINK_LABEL_MAX);
+  return CONTROL_CHARACTERS.test(label) ? "Use only characters you can see." : null;
+}
+
+/** What's wrong with a Passcode, as the API checks it; null when it's fine. Kept exactly as typed. */
+export function passcodeError(passcode: unknown): string | null {
+  if (typeof passcode !== "string" || passcode.trim() === "") return "Choose a passcode, or press Suggest.";
+  if (passcode.length < PASSCODE_MIN_LENGTH) return `Use at least ${PASSCODE_MIN_LENGTH} characters.`;
+  if (passcode.length > PASSCODE_MAX_LENGTH) return tooLong("Passcode", PASSCODE_MAX_LENGTH);
+  return CONTROL_CHARACTERS.test(passcode) ? "Use only characters you can see." : null;
 }
 
 /** True when there is nothing to fix. */

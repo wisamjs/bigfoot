@@ -18,7 +18,7 @@ import {
   SERVER_LOG_RETENTION,
 } from "@/lib/legal/privacy";
 import { SUBPROCESSORS } from "@/lib/legal/subprocessors";
-import { ACCESS_TOKEN_LIFETIME } from "@/lib/account";
+import { ACCESS_TOKEN_LIFETIME, SHARE_LINK_LIFETIME_DAYS } from "@/lib/account";
 import { SESSION_MAX_AGE_DAYS } from "@/lib/session";
 
 export const metadata: Metadata = {
@@ -110,6 +110,14 @@ export default function PrivacyPage() {
           you give it, when you created it, when it was last used and when it expires. We store a
           one-way hash of the token’s secret, not the secret itself, so we cannot show it to you
           again or use it ourselves.
+        </p>
+        <h3 className={h3}>Share links, if you make any</h3>
+        <p>
+          A Share link is a private link you make on your Account page, so someone you choose can
+          follow your search. For each one, we store who it is for (the label you write), when you
+          made it, when you last set its passcode, when it expires and when it was last opened. We
+          store a one-way hash of its passcode, not the passcode itself, so we cannot show it to
+          you again.
         </p>
         <h3 className={h3}>Technical information</h3>
         <p>
@@ -245,6 +253,11 @@ export default function PrivacyPage() {
             Account page until you revoke it.
           </li>
           <li>
+            <strong>Share links:</strong> until you stop sharing them, or until you delete your
+            account. A link stops working {SHARE_LINK_LIFETIME_DAYS} days after you make or renew
+            it, but stays on your Account page until you stop sharing it.
+          </li>
+          <li>
             <strong>Backups:</strong> our database is backed up daily, and each backup is kept for{" "}
             {BACKUP_DAYS} days. Deleted data leaves the backups within {BACKUP_DAYS} days.
           </li>
@@ -292,7 +305,7 @@ export default function PrivacyPage() {
           <li>
             <strong>Delete it.</strong> Delete any Application in your dashboard. Delete your
             account on your <A href="/account">Account page</A>: it removes you, all of your
-            Applications and all of your Access tokens straight away, and signs you out.
+            Applications, Access tokens and Share links straight away, and signs you out.
           </li>
           <li>
             <strong>Withdraw consent.</strong> Delete your account on your{" "}

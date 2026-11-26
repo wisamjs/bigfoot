@@ -9,9 +9,12 @@ Both resolve to the same job seeker id, so routes scope their queries the same w
 import hashlib
 import re
 import secrets
+import string
 from typing import Annotated
 
 import jwt
+from argon2 import PasswordHasher
+from argon2.low_level import Type
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -64,6 +67,26 @@ def access_token_hash(token: str) -> str:
     """How access_tokens stores a secret: a SHA-256 hex digest. Unsalted and fast is enough because
     the secret is random, not chosen by a person, and the digest is what the lookup matches on."""
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+# A Share link's id (GLOSSARY.md): 10 characters from the URL-safe base64 alphabet, 60 random bits.
+# It is the link's path, so a Viewer needs both it and the Passcode (docs/adr/0008).
+SHARE_LINK_ID_ALPHABET = string.ascii_letters + string.digits + "-_"
+SHARE_LINK_ID_LENGTH = 10
+SHARE_LINK_ID_PATTERN = re.compile(rf"^[A-Za-z0-9_-]{{{SHARE_LINK_ID_LENGTH}}}$")
+
+# argon2id with argon2-cffi's defaults (RFC 9106's low-memory profile): a Passcode is chosen by a
+# person, so it gets a slow, salted hash, unlike an Access token's random secret.
+_passcode_hasher = PasswordHasher(type=Type.ID)
+
+
+def new_share_link_id() -> str:
+    return "".join(secrets.choice(SHARE_LINK_ID_ALPHABET) for _ in range(SHARE_LINK_ID_LENGTH))
+
+
+def passcode_hash(passcode: str) -> str:
+    """How share_links stores a Passcode: an argon2id hash in PHC form, with its own salt."""
+    return _passcode_hasher.hash(passcode)
 
 
 def _token(credentials: Credentials) -> str:

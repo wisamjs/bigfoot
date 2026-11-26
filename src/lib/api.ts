@@ -84,6 +84,8 @@ const FIELD_LABELS: Record<string, string> = {
   takeaway: "Takeaway for next time",
   prep_notes: "Prep notes",
   name: "Name",
+  label: "Who it’s for",
+  passcode: "Passcode",
 };
 
 /**
@@ -164,6 +166,46 @@ export function createAccessToken(jobSeekerId: string, name: string) {
 
 export function revokeAccessToken(jobSeekerId: string, id: string) {
   return request<void>(jobSeekerId, `/me/access-tokens/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+/** A Share link (GLOSSARY.md) as the API lists it: never the Passcode, which Bigfoot doesn't store. */
+export type ShareLink = {
+  /** 10 URL-safe characters: the link is `/s/<id>`. */
+  id: string;
+  label: string;
+  /** ISO timestamps. */
+  created_at: string;
+  passcode_set_at: string;
+  expires_at: string;
+  last_opened_at: string | null;
+  /** Derived by the API: `expires_at` has passed, so the link no longer opens. */
+  expired: boolean;
+};
+
+/** A Share link as returned when created or when its Passcode changes: the one time `passcode` is shown. */
+export type NewShareLink = ShareLink & { passcode: string };
+
+export function listShareLinks(jobSeekerId: string) {
+  return request<ShareLink[]>(jobSeekerId, "/me/share-links");
+}
+
+export function createShareLink(jobSeekerId: string, label: string, passcode: string) {
+  return request<NewShareLink>(jobSeekerId, "/me/share-links", { method: "POST", body: { label, passcode } });
+}
+
+export function renewShareLink(jobSeekerId: string, id: string) {
+  return request<ShareLink>(jobSeekerId, `/me/share-links/${encodeURIComponent(id)}/renew`, { method: "POST" });
+}
+
+export function changeShareLinkPasscode(jobSeekerId: string, id: string, passcode: string) {
+  return request<NewShareLink>(jobSeekerId, `/me/share-links/${encodeURIComponent(id)}/passcode`, {
+    method: "PUT",
+    body: { passcode },
+  });
+}
+
+export function stopSharing(jobSeekerId: string, id: string) {
+  return request<void>(jobSeekerId, `/me/share-links/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 export function listApplications(jobSeekerId: string) {

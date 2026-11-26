@@ -22,6 +22,9 @@ APPLICATION_COLUMNS = (
 COLUMNS = sql.SQL(APPLICATION_COLUMNS)
 # `expired` is derived on every read, never stored, like an Interview's `completed`.
 ACCESS_TOKEN_COLUMNS = sql.SQL("id, name, created_at, last_used_at, expires_at, expires_at <= now() as expired")
+SHARE_LINK_COLUMNS = sql.SQL(
+    "id, label, created_at, passcode_set_at, expires_at, last_opened_at, expires_at <= now() as expired"
+)
 INTERVIEW_COLUMNS = sql.SQL(
     "id, application_id, category, title, at, what_they_asked, how_it_went, takeaway, prep_notes, created_at,"
     " updated_at"

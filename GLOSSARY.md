@@ -11,12 +11,28 @@ The product itself. Refer to the software by name. The name comes from the brand
 _Avoid_: the application, the platform; hunt words as nouns (sighting, trail, tracks)
 
 **Job seeker**:
-The person running a job search in Bigfoot: its user. A job seeker has one account, created the first time they sign in with Google; there is no separate sign-up. On the Account page they can download a copy of their data (a CSV of their Applications, or JSON with their profile, every Application and their Access tokens' names and dates; both include Interview notes and Prep notes), manage their Access tokens and delete their account. Deleting the account removes the job seeker and all of their Applications, Interviews, Interview notes, Prep notes and Access tokens.
+The person running a job search in Bigfoot: its user. A job seeker has one account, created the first time they sign in with Google; there is no separate sign-up. On the Account page they can make and manage Share links, download a copy of their data (a CSV of their Applications, or JSON with their profile, every Application, their Share links' labels and dates and their Access tokens' names and dates; both include Interview notes and Prep notes), manage their Access tokens and delete their account. Deleting the account removes the job seeker and all of their Applications, Interviews, Interview notes, Prep notes, Access tokens and Share links.
 _Avoid_: user, owner, candidate, applicant
 
 **Access token**:
 A secret a job seeker creates on the Account page and gives a script, such as a cron job, so it can use Bigfoot's API as them without a browser. It reads and writes that job seeker's Applications and Interviews, and nothing else: it can't delete the account or manage Access tokens. A job seeker names each one and can have several. Bigfoot shows the secret once, when the token is created, and stores only a hash of it. The Account page lists each token's name and when it was created, last used and expires. A token expires one year after it is created. Revoking one stops it working straight away and removes it from the list; this can't be undone.
 _Avoid_: API key, personal access token, PAT, credential; delete (a token is revoked)
+
+**Share link**:
+A private link a job seeker makes on the Account page so someone can follow their search without signing in. Each has a label saying who it's for, which only the job seeker sees, and its own Passcode. It shows its Viewer the job seeker's Journey and nothing else, and can't change anything. It expires 7 days after it is made; Renew makes it last 7 days from then, keeping the same link and Passcode. Stop sharing deletes it, and anyone viewing it is cut off straight away. A job seeker can have up to 10. The Account page lists each one's label, when it was made, when its Passcode was set, when it was last opened and when it expires.
+_Avoid_: share URL, public link, invite; revoke (a Share link is stopped)
+
+**Viewer**:
+_Planned_ (BIG-197). Someone a job seeker gave a Share link and its Passcode to, such as a parent. A Viewer has no account and can only read the Journey; pressing Lock, or the link being stopped, expiring or getting a new Passcode, sends them back to the Passcode page.
+_Avoid_: guest, visitor, follower, user
+
+**Passcode**:
+The secret a job seeker chooses for one Share link, at least 8 characters and easy to say out loud, like maple-river-42. Bigfoot shows it once, when it is set, and stores only a hash of it. Five wrong tries lock the link for 15 minutes (_Planned_, BIG-197). Change passcode sets a new one and signs every Viewer out.
+_Avoid_: password, PIN
+
+**Journey**:
+_Planned_ (BIG-197). A job seeker's search as a Viewer sees it, at the Share link's URL, headed "Wisam's Journey": counts of Offers to decide, Interviews in the next 2 weeks, Interviews completed this month and Applications waiting to hear back; the next Interview; a month calendar; and where each Application stands. It covers In Progress Applications and Offers only, with Interview titles and categories, and never shows salary, job postings, Prep notes, Interview notes, Outcome notes or other Done Applications. Times are in the Viewer's own time zone.
+_Avoid_: shared view, shared dashboard, public page, progress page
 
 **Application**:
 One role at one company that the job seeker has applied to. It is added on the Add Application page, opened by the dashboard's Add Application button: company, title and applied date are required (the applied date starts at today), Location and job posting are optional; the salary is added on the Application page. Adding it opens its Application page, which asks "Got an Interview lined up? Add it here." and puts focus on Add Interview.
@@ -125,10 +141,6 @@ _Avoid_: chatbot, agent, copilot, AI
 **AI access**:
 _Planned_ (BIG-60). Whether, and how much, a job seeker may use the Assistant and other AI features: None, Limited or Full. Every job seeker starts at None. Full is still limited, only less so.
 _Avoid_: admin, beta, allowlist, feature flag
-
-**Access token**:
-_Planned_ (BIG-57). A secret a job seeker creates on the Account page so a script or terminal can read and change their Applications without signing in with Google. It can be revoked at any time, and deleting the account revokes it.
-_Avoid_: API key, password
 
 **Insight**:
 _Planned_ (BIG-66). One observation about a job seeker's Applications, such as which Interview category their Rejected Applications ended after. Bigfoot computes it from their Applications and Interviews, and it always names the Applications behind it. The Assistant puts an Insight into words but never computes one.

@@ -22,11 +22,16 @@ from app.domain import (
 )
 from app.models import (
     ACCESS_TOKEN_NAME_MAX,
+    PASSCODE_MAX_LENGTH,
+    PASSCODE_MIN_LENGTH,
+    SHARE_LINK_LABEL_MAX,
     AccessTokenCreate,
     ApplicationCreate,
     ApplicationPatch,
     InterviewCreate,
     InterviewPatch,
+    PasscodeChange,
+    ShareLinkCreate,
     check_done,
     check_office_days,
     check_outcome,
@@ -83,6 +88,8 @@ CAPS = [
     (InterviewCreate, INTERVIEW, "takeaway", TAKEAWAY_MAX_LENGTH, lambda n: "k" * n),
     (InterviewCreate, INTERVIEW, "prep_notes", INTERVIEW_PREP_NOTES_MAX_LENGTH, lambda n: "p" * n),
     (AccessTokenCreate, {}, "name", ACCESS_TOKEN_NAME_MAX, lambda n: "n" * n),
+    (ShareLinkCreate, {"passcode": "maple-river-42"}, "label", SHARE_LINK_LABEL_MAX, lambda n: "l" * n),
+    (PasscodeChange, {}, "passcode", PASSCODE_MAX_LENGTH, lambda n: "p" * n),
 ]
 
 
@@ -333,3 +340,38 @@ def test_an_access_token_name_refuses_control_characters(char):
 
 def test_an_access_token_name_keeps_other_unicode():
     assert AccessTokenCreate.model_validate({"name": "Café ☕ 日本"}).name == "Café ☕ 日本"
+
+
+SHARE_LINK = {"label": "Mom & Dad", "passcode": "maple-river-42"}
+
+
+def test_a_share_link_needs_a_label_and_a_passcode_and_nothing_else():
+    assert errors(ShareLinkCreate, {}) == ["label: Field required", "passcode: Field required"]
+    assert errors(ShareLinkCreate, SHARE_LINK | {"label": "  "}) == ["label: Value error, must not be blank"]
+    assert errors(ShareLinkCreate, SHARE_LINK | {"expires_at": "2027-01-01"}) == [
+        "expires_at: Extra inputs are not permitted"
+    ]
+    assert ShareLinkCreate.model_validate(SHARE_LINK | {"label": "  Mom & Dad  "}).label == "Mom & Dad"
+
+
+def test_a_passcode_is_at_least_8_characters_and_kept_exactly_as_sent():
+    short = "p" * (PASSCODE_MIN_LENGTH - 1)
+    assert errors(PasscodeChange, {"passcode": short}) == [
+        f"passcode: String should have at least {PASSCODE_MIN_LENGTH} characters"
+    ]
+    assert PasscodeChange.model_validate({"passcode": " maple river "}).passcode == " maple river "
+    assert errors(PasscodeChange, {"passcode": " " * 10}) == ["passcode: Value error, must not be blank"]
+
+
+@pytest.mark.parametrize("model", [ShareLinkCreate, PasscodeChange])
+def test_a_passcode_refuses_control_characters(model):
+    body = SHARE_LINK if model is ShareLinkCreate else {}
+    assert errors(model, body | {"passcode": "maple-\u202e-river-42"}) == [
+        "passcode: Value error, must not contain control characters"
+    ]
+
+
+def test_a_share_link_label_refuses_control_characters():
+    assert errors(ShareLinkCreate, SHARE_LINK | {"label": "Mom\u202e"}) == [
+        "label: Value error, must not contain control characters"
+    ]

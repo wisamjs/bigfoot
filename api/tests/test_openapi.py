@@ -33,6 +33,7 @@ def test_every_operation_has_a_summary_description_and_tag(schema):
         assert operation.get("tags") in (
             ["Account"],
             ["Access tokens"],
+            ["Share links"],
             ["Applications"],
             ["Interviews"],
             ["Health"],
@@ -45,7 +46,7 @@ def test_every_operation_but_health_needs_a_token_and_documents_401(schema):
             assert "security" not in operation
             continue
         assert "401" in operation["responses"], name
-        if operation["tags"] in (["Account"], ["Access tokens"]):
+        if operation["tags"] in (["Account"], ["Access tokens"], ["Share links"]):
             # A script can't reach the account: web tokens only, and an Access token gets 403.
             assert operation["security"] == [{"WebToken": []}], name
             assert "403" in operation["responses"], name

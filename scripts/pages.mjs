@@ -277,6 +277,27 @@ export const PAGES = [
         steps: [{ click: "button", text: "Revoke" }],
         expect: "will stop working straight away",
       },
+      // Share links (BIG-196): the test job seeker has one, "Mom & Dad" (scripts/dev-applications.mjs).
+      {
+        name: "share-link-created",
+        steps: [
+          { click: "button", text: "Share with someone else" },
+          { fill: 'input[name="label"]', value: "Uncle Sami" },
+          { click: "button", text: "Suggest" },
+          { click: "button", text: "Create link" },
+        ],
+        expect: "You’ll only see this passcode now.",
+      },
+      {
+        name: "change-passcode",
+        steps: [{ click: "button", text: "Change passcode" }],
+        expect: "Anyone viewing this link is signed out",
+      },
+      {
+        name: "stop-sharing-confirmation",
+        steps: [{ click: "button", text: "Stop sharing" }],
+        expect: "The link stops working straight away.",
+      },
     ],
   },
 ];

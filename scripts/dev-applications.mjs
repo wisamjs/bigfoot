@@ -94,22 +94,31 @@ async function removeTestAccessTokens(jobSeekerId) {
   for (const t of existing) await call(jobSeekerId, "DELETE", `/me/access-tokens/${t.id}`);
 }
 
+/** Stops every Share link `jobSeekerId` has, including any a page state created. */
+async function removeTestShareLinks(jobSeekerId) {
+  const existing = await call(jobSeekerId, "GET", "/me/share-links");
+  for (const link of existing) await call(jobSeekerId, "DELETE", `/me/share-links/${link.id}`);
+}
+
 /**
- * Runs `fn` with `jobSeekerId` holding exactly these Applications and one Access token (so the
- * Account page has one to list and revoke), emptied again afterwards.
+ * Runs `fn` with `jobSeekerId` holding exactly these Applications, one Access token and one Share
+ * link (so the Account page has one of each to list, change and stop), emptied again afterwards.
  * Filled before their first dashboard visit, so onboarding never adds Sample Applications.
  */
 export async function withTestApplications(jobSeekerId, fn) {
   // Clear anything a crashed run left.
   await removeTestApplications(jobSeekerId);
   await removeTestAccessTokens(jobSeekerId);
+  await removeTestShareLinks(jobSeekerId);
   await addTestApplications(jobSeekerId);
   await call(jobSeekerId, "POST", "/me/access-tokens", { name: "Calendar cron job" });
+  await call(jobSeekerId, "POST", "/me/share-links", { label: "Mom & Dad", passcode: "maple-river-42" });
   try {
     return await fn();
   } finally {
     await removeTestApplications(jobSeekerId);
     await removeTestAccessTokens(jobSeekerId);
+    await removeTestShareLinks(jobSeekerId);
   }
 }
 

@@ -30,6 +30,11 @@ from app.domain import (
 )
 
 ACCESS_TOKEN_NAME_MAX = 100  # also a check constraint on access_tokens.name
+SHARE_LINK_LABEL_MAX = 100  # also a check constraint on share_links.label
+PASSCODE_MIN_LENGTH = 8
+PASSCODE_MAX_LENGTH = 128
+SHARE_LINKS_MAX = 10
+EXAMPLE_PASSCODE = "maple-river-42"
 URL_PATTERN = re.compile(r"^https?://\S+$", re.IGNORECASE)
 
 
@@ -60,6 +65,13 @@ def _no_control_characters(value: str) -> str:
     """Rejects control characters, including bidirectional ones, so a name shows as it is stored."""
     if any(char in BIDI_CONTROLS or unicodedata.category(char) == "Cc" for char in value):
         raise ValueError("must not contain control characters")
+    return value
+
+
+def _not_blank(value: str) -> str:
+    """Rejects text that is only whitespace, without trimming it: a Passcode is kept exactly as sent."""
+    if not value.strip():
+        raise ValueError("must not be blank")
     return value
 
 
@@ -163,6 +175,9 @@ INTERVIEW_ORDER_DESCRIPTION = "Ordered by date."
 ApplicationId = Annotated[UUID, Path(description="The Application's id.")]
 InterviewId = Annotated[UUID, Path(description="The Interview's id.")]
 AccessTokenId = Annotated[UUID, Path(description="The Access token's id.")]
+ShareLinkId = Annotated[
+    str, Path(description="The Share link's id: 10 URL-safe characters.", pattern=r"^[A-Za-z0-9_-]{10}$")
+]
 
 
 class ErrorMessage(BaseModel):
@@ -420,6 +435,72 @@ class NewAccessToken(AccessToken):
         description="The secret to send as `Authorization: Bearer …`. Shown only in this response.",
         examples=[f"{ACCESS_TOKEN_PREFIX}3q2-7wQx0yJm5kV9nRb8sT1uZc4dEfGhIjKlMnOpQr"],
     )
+
+
+Passcode = Annotated[
+    str,
+    Field(
+        min_length=PASSCODE_MIN_LENGTH,
+        max_length=PASSCODE_MAX_LENGTH,
+        description=(
+            f"The Passcode (GLOSSARY.md) a Viewer types to open the Share link: {PASSCODE_MIN_LENGTH} to "
+            f"{PASSCODE_MAX_LENGTH} characters, kept exactly as sent. Bigfoot stores only an argon2id hash of it."
+        ),
+        examples=[EXAMPLE_PASSCODE],
+    ),
+    AfterValidator(_not_blank),
+    AfterValidator(_no_control_characters),
+]
+
+
+class ShareLinkCreate(BaseModel):
+    """A new Share link: who it's for and its Passcode. It always expires 7 days after it is created."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    label: Annotated[RequiredText, AfterValidator(_no_control_characters)] = Field(
+        max_length=SHARE_LINK_LABEL_MAX,
+        description="Who the link is for, so the job seeker can tell their links apart. Only they see it.",
+        examples=["Mom & Dad"],
+    )
+    passcode: Passcode
+
+
+class PasscodeChange(BaseModel):
+    """A Share link's new Passcode."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    passcode: Passcode
+
+
+class ShareLink(BaseModel):
+    """A private link a job seeker makes so a Viewer can follow their search (GLOSSARY.md). Never
+    includes the Passcode: Bigfoot stores only its hash."""
+
+    id: str = Field(description="10 URL-safe characters: the link is `/s/<id>`.", examples=["k7Qm2x9PaB"])
+    label: str = Field(description="Who the link is for, as the job seeker wrote it.", examples=["Mom & Dad"])
+    created_at: datetime
+    passcode_set_at: datetime = Field(
+        description="When the Passcode was last set: at creation, or by Change passcode.",
+        examples=["2026-11-20T17:00:00Z"],
+    )
+    expires_at: datetime = Field(
+        description="When the link stops working: 7 days after it was created or last renewed.",
+        examples=["2026-11-27T17:00:00Z"],
+    )
+    last_opened_at: datetime | None = Field(
+        description="When a Viewer last opened the link; null until one does.", examples=["2026-11-21T13:12:00Z"]
+    )
+    expired: bool = Field(
+        description="Derived, never stored: `expires_at` has passed, so the link no longer opens.", examples=[False]
+    )
+
+
+class NewShareLink(ShareLink):
+    """A Share link as returned when it is created or its Passcode changes: the one time the Passcode is shown."""
+
+    passcode: str = Field(description="The Passcode, shown only in this response.", examples=[EXAMPLE_PASSCODE])
 
 
 class Onboarding(BaseModel):

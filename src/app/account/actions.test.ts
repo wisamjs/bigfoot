@@ -3,12 +3,29 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "@/lib/api";
 import { signOut } from "@/auth";
 import { findCurrentUser } from "@/lib/dal";
-import { createAccessTokenAction, deleteAccountAction, revokeAccessTokenAction } from "./actions";
+import {
+  changePasscodeAction,
+  createAccessTokenAction,
+  createShareLinkAction,
+  deleteAccountAction,
+  renewShareLinkAction,
+  revokeAccessTokenAction,
+  stopSharingAction,
+} from "./actions";
 
 // The API client is mocked at its module, keeping ApiError real so actions can tell it apart.
 vi.mock("@/lib/api", async () => {
   const { ApiError } = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
-  return { ApiError, createAccessToken: vi.fn(), revokeAccessToken: vi.fn(), deleteAccount: vi.fn() };
+  return {
+    ApiError,
+    createAccessToken: vi.fn(),
+    revokeAccessToken: vi.fn(),
+    deleteAccount: vi.fn(),
+    createShareLink: vi.fn(),
+    renewShareLink: vi.fn(),
+    changeShareLinkPasscode: vi.fn(),
+    stopSharing: vi.fn(),
+  };
 });
 vi.mock("@/lib/dal", () => ({ findCurrentUser: vi.fn() }));
 vi.mock("next/cache", () => ({ refresh: vi.fn(), updateTag: vi.fn() }));
@@ -119,6 +136,144 @@ describe("revokeAccessTokenAction", () => {
 
     vi.mocked(api.revokeAccessToken).mockRejectedValue(new api.ApiError(500, "Request failed (500)"));
     expect(await revokeAccessTokenAction("t1")).toEqual({ ok: false, error: "Request failed (500)" });
+  });
+});
+
+const shareLink = {
+  id: "k7Qm2x9PaB",
+  label: "Mom & Dad",
+  created_at: "2026-11-20T12:00:00Z",
+  passcode_set_at: "2026-11-20T12:00:00Z",
+  expires_at: "2026-11-27T12:00:00Z",
+  last_opened_at: null,
+  expired: false,
+};
+
+function shareForm(label: string | null, passcode: string | null) {
+  const data = new FormData();
+  if (label !== null) data.set("label", label);
+  if (passcode !== null) data.set("passcode", passcode);
+  return data;
+}
+
+describe("createShareLinkAction", () => {
+  const created = { ...shareLink, passcode: "maple-river-42" };
+
+  it("creates the link as the signed-in job seeker, returns its Passcode and refreshes the list", async () => {
+    vi.mocked(api.createShareLink).mockResolvedValue(created);
+    expect(await createShareLinkAction(nothing, shareForm("Mom & Dad", "maple-river-42"))).toEqual({ error: null, created });
+    expect(api.createShareLink).toHaveBeenCalledWith("seeker-1", "Mom & Dad", "maple-river-42");
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it("asks a signed-out job seeker to sign in again, without calling the API", async () => {
+    vi.mocked(findCurrentUser).mockResolvedValue(null);
+    expect(await createShareLinkAction(nothing, shareForm("Mom", "maple-river-42"))).toEqual({
+      error: "Your session has ended. Sign in again.",
+      created: null,
+    });
+    expect(api.createShareLink).not.toHaveBeenCalled();
+  });
+
+  it("checks both fields with the form's rules, without calling the API, because anyone can call it", async () => {
+    expect(await createShareLinkAction(nothing, shareForm(null, "short"))).toEqual({
+      error: null,
+      labelError: "Say who the link is for.",
+      passcodeError: "Use at least 8 characters.",
+      created: null,
+    });
+    expect(await createShareLinkAction(nothing, shareForm("Mom", null))).toMatchObject({ labelError: null });
+    expect(api.createShareLink).not.toHaveBeenCalled();
+  });
+
+  it("passes on the API's message, such as the 10-link limit, and says no link was created otherwise", async () => {
+    vi.mocked(api.createShareLink).mockRejectedValue(new api.ApiError(409, "You can share with up to 10 people."));
+    expect(await createShareLinkAction(nothing, shareForm("Mom", "maple-river-42"))).toEqual({
+      error: "You can share with up to 10 people.",
+      created: null,
+    });
+
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(api.createShareLink).mockRejectedValue(new TypeError("fetch failed"));
+    expect((await createShareLinkAction(nothing, shareForm("Mom", "maple-river-42"))).error).toMatch(/No link was created/);
+    expect(log).toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
+  });
+});
+
+describe("renewShareLinkAction", () => {
+  it("renews the link as the signed-in job seeker, then refreshes the list", async () => {
+    vi.mocked(api.renewShareLink).mockResolvedValue(shareLink);
+    expect(await renewShareLinkAction("k7Qm2x9PaB")).toEqual({ ok: true, link: shareLink });
+    expect(api.renewShareLink).toHaveBeenCalledWith("seeker-1", "k7Qm2x9PaB");
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it("asks a signed-out job seeker to sign in again", async () => {
+    vi.mocked(findCurrentUser).mockResolvedValue(null);
+    expect(await renewShareLinkAction("k7Qm2x9PaB")).toEqual({ ok: false, error: "Your session has ended. Sign in again." });
+    expect(api.renewShareLink).not.toHaveBeenCalled();
+  });
+
+  it("reports a failure without refreshing", async () => {
+    vi.mocked(api.renewShareLink).mockRejectedValue(new api.ApiError(404, "Share link not found"));
+    expect(await renewShareLinkAction("k7Qm2x9PaB")).toEqual({ ok: false, error: "Share link not found" });
+    expect(refresh).not.toHaveBeenCalled();
+  });
+});
+
+describe("changePasscodeAction", () => {
+  it("sets the new Passcode as the signed-in job seeker and returns it once", async () => {
+    const changed = { ...shareLink, passcode: "otter-lake-77" };
+    vi.mocked(api.changeShareLinkPasscode).mockResolvedValue(changed);
+    expect(await changePasscodeAction("k7Qm2x9PaB", "otter-lake-77")).toEqual({ ok: true, link: changed });
+    expect(api.changeShareLinkPasscode).toHaveBeenCalledWith("seeker-1", "k7Qm2x9PaB", "otter-lake-77");
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it("checks the Passcode first, and asks a signed-out job seeker to sign in again", async () => {
+    expect(await changePasscodeAction("k7Qm2x9PaB", "short")).toEqual({ ok: false, error: "Use at least 8 characters." });
+    vi.mocked(findCurrentUser).mockResolvedValue(null);
+    expect(await changePasscodeAction("k7Qm2x9PaB", "otter-lake-77")).toEqual({
+      ok: false,
+      error: "Your session has ended. Sign in again.",
+    });
+    expect(api.changeShareLinkPasscode).not.toHaveBeenCalled();
+  });
+
+  it("says the Passcode was not changed when the server can't be reached", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(api.changeShareLinkPasscode).mockRejectedValue(new TypeError("fetch failed"));
+    expect(await changePasscodeAction("k7Qm2x9PaB", "otter-lake-77")).toEqual({
+      ok: false,
+      error: expect.stringMatching(/The passcode was not changed/),
+    });
+  });
+});
+
+describe("stopSharingAction", () => {
+  it("stops sharing as the signed-in job seeker, then refreshes the list", async () => {
+    expect(await stopSharingAction("k7Qm2x9PaB")).toEqual({ ok: true });
+    expect(api.stopSharing).toHaveBeenCalledWith("seeker-1", "k7Qm2x9PaB");
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it("treats a link that is already gone as stopped", async () => {
+    vi.mocked(api.stopSharing).mockRejectedValue(new api.ApiError(404, "Share link not found"));
+    expect(await stopSharingAction("k7Qm2x9PaB")).toEqual({ ok: true });
+  });
+
+  it("asks a signed-out job seeker to sign in again", async () => {
+    vi.mocked(findCurrentUser).mockResolvedValue(null);
+    expect(await stopSharingAction("k7Qm2x9PaB")).toEqual({ ok: false, error: "Your session has ended. Sign in again." });
+    expect(api.stopSharing).not.toHaveBeenCalled();
+  });
+
+  it("reports a failure without refreshing, so the link still shows", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(api.stopSharing).mockRejectedValue(new TypeError("fetch failed"));
+    expect(await stopSharingAction("k7Qm2x9PaB")).toEqual({ ok: false, error: expect.stringMatching(/The link still works/) });
+    expect(refresh).not.toHaveBeenCalled();
   });
 });
 

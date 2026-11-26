@@ -11,7 +11,7 @@ import {
   type Application,
   type Interview,
 } from "@/lib/applications";
-import type { AccessToken, JobSeekerRecord } from "@/lib/api";
+import type { AccessToken, JobSeekerRecord, ShareLink } from "@/lib/api";
 import type { CurrentUser } from "@/lib/dal";
 
 export const EXPORT_FORMATS = ["csv", "json"] as const;
@@ -113,14 +113,15 @@ export function applicationsCsv(applications: Application[]) {
 
 /**
  * Everything Bigfoot holds about the job seeker: their profile, every Application field (each
- * Interview's Interview notes and Prep notes included), and their Access tokens' names and dates. Never a token's secret:
- * Bigfoot stores only a hash of it.
+ * Interview's Interview notes and Prep notes included), their Access tokens' names and dates, and their Share links' labels and dates. Never a
+ * token's secret or a Share link's Passcode: Bigfoot stores only a hash of each.
  */
 export function dataExportJson(
   user: CurrentUser,
   record: JobSeekerRecord | null,
   applications: Application[],
   accessTokens: AccessToken[],
+  shareLinks: ShareLink[],
   now: Date,
 ) {
   const data = {
@@ -143,6 +144,14 @@ export function dataExportJson(
         expires_at,
       }),
     ),
+    // Labels and dates only: Bigfoot never has a Passcode to give, and its hash stays in the database.
+    share_links: shareLinks.map(({ label, created_at, passcode_set_at, expires_at, last_opened_at }) => ({
+      label,
+      created_at,
+      passcode_set_at,
+      expires_at,
+      last_opened_at,
+    })),
   };
   return `${JSON.stringify(data, null, 2)}\n`;
 }
