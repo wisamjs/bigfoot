@@ -33,12 +33,32 @@ INTERVIEW_COLUMNS = sql.SQL(
 INTERVIEW_ORDER = sql.SQL("order by at, created_at, id")
 
 
-def interview_view(row: dict[str, Any], now: datetime) -> Interview:
-    return Interview(**row, completed=row["at"] <= now)
+def interview_view(row: dict[str, Any], participants: list[dict[str, Any]], now: datetime) -> Interview:
+    return Interview(**row, participants=participants, completed=row["at"] <= now)
 
 
-def _application(row: dict[str, Any], interviews: list[dict[str, Any]], now: datetime) -> Application:
-    views = [interview_view(i, now) for i in interviews]
+def participants_of(conn: Any, interview_ids: list[UUID]) -> dict[UUID, list[dict[str, Any]]]:
+    """Each Interview's Participants, in the order the job seeker listed them; [] for one with none."""
+    by_interview: dict[UUID, list[dict[str, Any]]] = {interview_id: [] for interview_id in interview_ids}
+    if interview_ids:
+        rows = conn.execute(
+            "select ip.interview_id, p.id, p.role, p.name from interview_participants ip"
+            " join participants p on p.id = ip.participant_id"
+            " where ip.interview_id = any(%s) order by ip.interview_id, ip.position",
+            (interview_ids,),
+        ).fetchall()
+        for row in rows:
+            by_interview[row.pop("interview_id")].append(row)
+    return by_interview
+
+
+def interview_views(conn: Any, rows: list[dict[str, Any]], now: datetime) -> list[Interview]:
+    """The Interviews of these rows with their Participants."""
+    participants = participants_of(conn, [row["id"] for row in rows])
+    return [interview_view(row, participants[row["id"]], now) for row in rows]
+
+
+def _application(row: dict[str, Any], views: list[Interview], now: datetime) -> Application:
     waiting = row["status"] == "in_progress" and not any(not i.completed for i in views)
     since: datetime | date | None = None
     if waiting:
@@ -49,7 +69,7 @@ def _application(row: dict[str, Any], interviews: list[dict[str, Any]], now: dat
 def application_views(conn: Any, rows: list[dict[str, Any]]) -> list[Application]:
     """Attach each row's Interviews and derived Waiting data, reading the clock once."""
     now = datetime.now(UTC)
-    by_application: dict[UUID, list[dict[str, Any]]] = {row["id"]: [] for row in rows}
+    by_application: dict[UUID, list[Interview]] = {row["id"]: [] for row in rows}
     if rows:
         interviews = conn.execute(
             sql.SQL("select {} from interviews where application_id = any(%s) {}").format(
@@ -57,8 +77,8 @@ def application_views(conn: Any, rows: list[dict[str, Any]]) -> list[Application
             ),
             ([row["id"] for row in rows],),
         ).fetchall()
-        for interview in interviews:
-            by_application[interview["application_id"]].append(interview)
+        for interview in interview_views(conn, interviews, now):
+            by_application[interview.application_id].append(interview)
     return [_application(row, by_application[row["id"]], now) for row in rows]
 
 

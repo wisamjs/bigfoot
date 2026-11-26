@@ -13,10 +13,17 @@ import { useSaveStatus } from "@/hooks/use-save-status";
 import { AddFormActions } from "@/features/applications/add-form-actions";
 import { FormAlert } from "@/features/applications/details-fields";
 import { fromLocalInput } from "@/features/applications/local-datetime";
+import {
+  ParticipantsField,
+  participantInputs,
+  participantsProblem,
+  type ParticipantDraft,
+} from "@/features/applications/participants-field";
 import { PLACEHOLDERS } from "@/features/applications/placeholders";
 import { ADD_APPLICATION_HREF, applicationHref } from "@/features/applications/routes";
 import { UnsavedChanges, useUnsavedChanges } from "@/features/applications/unsaved-changes";
 import {
+  applicationParticipants,
   categoryLabel,
   INTERVIEW_CATEGORIES,
   INTERVIEW_NOTES_MAX_LENGTHS,
@@ -24,8 +31,9 @@ import {
   titleForCategory,
   type Application,
   type InterviewCategory,
+  type ParticipantInput,
 } from "@/lib/applications";
-import { interviewErrors, isValid, summarize, type FieldErrors } from "@/lib/validation";
+import { interviewErrors, isValid, participantsError, summarize, type FieldErrors } from "@/lib/validation";
 
 /** Each field's control id, after the form's own id, in the order focus looks for an error. */
 const CONTROLS = {
@@ -34,6 +42,7 @@ const CONTROLS = {
   title: "title",
   date: "at",
   time: "at-time",
+  participants: "participants",
   how_it_went: "how-it-went",
 } as const;
 type Control = keyof typeof CONTROLS;
@@ -44,7 +53,8 @@ const FIRST_CATEGORY: InterviewCategory = "recruiter";
 /**
  * An Interview that doesn't exist yet, on the Add Interview page: the Application it belongs to,
  * its Interview category, its title (filled in from the category until the job seeker edits it),
- * its date and time (both required, no time assumed), and How it went (Interview notes;
+ * its date and time (both required, no time assumed), who the job seeker is meeting (at least one
+ * Participant, picked from the Application's or added), and How it went (Interview notes;
  * the other two fields are written on its Interview page). Adding it
  * goes back to the Application page it was opened from, or to the dashboard. With no Applications,
  * it explains that an Interview needs one.
@@ -76,6 +86,10 @@ function NewInterviewFields({
   const [title, setTitle] = useState(() => categoryLabel(FIRST_CATEGORY));
   const [at, setAt] = useState<DateAndTime>({ date: "", time: "" });
   const [howItWent, setHowItWent] = useState("");
+  // One blank row to start, keyed the same on the server and in the browser.
+  const [participants, setParticipants] = useState<ParticipantDraft[]>([{ key: "first", role: "", name: "" }]);
+  // The row a Participants problem is about, to mark it.
+  const [participantsKey, setParticipantsKey] = useState<string | undefined>();
   const [fieldErrors, setFieldErrors] = useState<FieldErrors<Control>>({});
   // What's wrong before anything is sent; errors from the save itself show in SaveStatus.
   const [invalid, setInvalid] = useState<string | null>(null);
@@ -89,11 +103,12 @@ function NewInterviewFields({
       ["title", title !== categoryLabel(category)],
       ["date", at.date !== ""],
       ["time", at.time !== ""],
+      ["participants", participantInputs(participants).inputs.length > 0 || participants.length !== 1],
       ["how_it_went", howItWent !== ""],
     ] as const
   ).find(([, differs]) => differs)?.[0];
   useUnsavedChanges(!added && changed !== undefined, () => {
-    if (changed) document.getElementById(`${id}-${CONTROLS[changed]}`)?.focus();
+    if (changed) focusControl(changed);
   });
 
   if (applications.length === 0) {
@@ -113,6 +128,16 @@ function NewInterviewFields({
   const inProgress = byCompany.filter((app) => app.status === "in_progress");
   const done = byCompany.filter((app) => app.status !== "in_progress");
 
+  /** Focus on a control; for Participants, the row with the problem, or else the first row or Add someone. */
+  function focusControl(name: Control, rowKey?: string) {
+    if (name === "participants") {
+      const key = rowKey ?? participants[0]?.key;
+      (document.getElementById(`${id}-participants-${key}-role`) ?? document.getElementById(`${id}-participants-add`))?.focus();
+      return;
+    }
+    document.getElementById(`${id}-${CONTROLS[name]}`)?.focus();
+  }
+
   function clear(...names: Control[]) {
     setFieldErrors((prev) => ({ ...prev, ...Object.fromEntries(names.map((name) => [name, undefined])) }));
   }
@@ -123,7 +148,8 @@ function NewInterviewFields({
     title: string;
     at: string | null;
     how_it_went: string | null;
-  }): FieldErrors<Control> {
+    participants: ParticipantInput[];
+  }, keys: string[]): FieldErrors<Control> {
     const errors: FieldErrors<Control> = {};
     if (!applicationId) errors.application = "Choose the Application this Interview belongs to.";
     const api = interviewErrors(fields, { creating: true });
@@ -132,6 +158,9 @@ function NewInterviewFields({
     if (!at.date) errors.date = "Pick the date and enter the time.";
     else if (!at.time) errors.time = "Enter the time.";
     else if (api.at) errors.date = api.at;
+    const people = participantsProblem(participantsError(fields.participants), keys);
+    setParticipantsKey(people?.key);
+    if (people) errors.participants = people.message;
     if (api.how_it_went) errors.how_it_went = api.how_it_went;
     return errors;
   }
@@ -140,19 +169,21 @@ function NewInterviewFields({
     e.preventDefault();
     // The submit button is only aria-disabled while saving, so it keeps focus; refuse a second submit here.
     if (tracker.saving) return;
+    const { inputs, keys } = participantInputs(participants);
     const fields = {
       category,
       title: title.trim(),
       at: at.date && at.time ? fromLocalInput(`${at.date}T${at.time}`) : null,
       how_it_went: howItWent.trim() || null,
+      participants: inputs,
     };
-    const errors = check(fields);
+    const errors = check(fields, keys);
     setFieldErrors(errors);
     if (!isValid(errors)) {
       // Each error beside its field, the first announced, and focus on that field.
       setInvalid(summarize(errors));
       const first = (Object.keys(CONTROLS) as Control[]).find((name) => errors[name]);
-      if (first) document.getElementById(`${id}-${CONTROLS[first]}`)?.focus();
+      if (first) focusControl(first, participantsProblem(participantsError(inputs), keys)?.key);
       return;
     }
     setInvalid(null);
@@ -191,6 +222,8 @@ function NewInterviewFields({
           required
           onChange={(e) => {
             setApplicationId(e.target.value);
+            // People picked from the other Application aren't this one's: they stay, as someone new.
+            setParticipants((prev) => prev.map(({ key, role, name }) => ({ key, role, name })));
             clear("application");
           }}
           className={inputClasses}
@@ -265,6 +298,17 @@ function NewInterviewFields({
         />
         <FieldError id={`${id}-at-error`} error={atError} />
       </fieldset>
+      <ParticipantsField
+        id={`${id}-participants`}
+        value={participants}
+        onChange={(next) => {
+          setParticipants(next);
+          setParticipantsKey(undefined);
+          clear("participants");
+        }}
+        known={applicationParticipants(applications.find((app) => app.id === applicationId) ?? { interviews: [] })}
+        problem={fieldErrors.participants ? { message: fieldErrors.participants, key: participantsKey } : undefined}
+      />
       <Field id={`${id}-how-it-went`} label="How it went" error={fieldErrors.how_it_went}>
         <textarea
           id={`${id}-how-it-went`}

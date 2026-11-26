@@ -45,6 +45,44 @@ export type InterviewCategory = (typeof INTERVIEW_CATEGORIES)[number];
 /** The longest Interview title the API stores, in characters. */
 export const INTERVIEW_TITLE_MAX_LENGTH = 200;
 
+/**
+ * Participant (GLOSSARY.md): someone from the company the job seeker meets in an Interview. A role is
+ * required, a name optional; a Participant belongs to one Application and can be in several of its Interviews.
+ */
+export type Participant = { id: string; role: string; name: string | null };
+
+/**
+ * A Participant as a form sends them: one already on the Application, by `id` (their role and name
+ * become these, on every Interview they're in), or someone new, without one.
+ */
+export type ParticipantInput = { id?: string; role: string; name: string | null };
+
+/** The longest role and name the API stores for a Participant, and the most an Interview can have. */
+export const PARTICIPANT_MAX_LENGTHS = { role: 200, name: 200 } as const;
+export const PARTICIPANTS_PER_INTERVIEW_MAX = 20;
+
+/** "Dana Lee (Recruiter)", or just "Recruiter" without a name: how the Interview page lists who's in it. */
+export function participantText({ role, name }: Pick<Participant, "role" | "name">): string {
+  return name ? `${name} (${role})` : role;
+}
+
+/** "Dana Lee · Recruiter", or "Recruiter": a Participant as a choice when adding them to another Interview. */
+export function participantOption({ role, name }: Pick<Participant, "role" | "name">): string {
+  return name ? `${name} · ${role}` : role;
+}
+
+/** "With Dana Lee (Recruiter), Sam (EM)": the Interview page heading's line; null when there's nobody. */
+export function withParticipants(participants: Pick<Participant, "role" | "name">[]): string | null {
+  return participants.length > 0 ? `With ${participants.map(participantText).join(", ")}` : null;
+}
+
+/** Everyone on an Application: each Participant once, in the order they first appear by date. */
+export function applicationParticipants(app: Pick<Application, "interviews">): Participant[] {
+  const seen = new Map<string, Participant>();
+  for (const interview of app.interviews) for (const p of interview.participants) if (!seen.has(p.id)) seen.set(p.id, p);
+  return [...seen.values()];
+}
+
 /** Interview notes (GLOSSARY.md): three optional plain-text fields on an Interview, in the order they're written. */
 export const INTERVIEW_NOTES_FIELDS = ["what_they_asked", "how_it_went", "takeaway"] as const;
 export type InterviewNotesField = (typeof INTERVIEW_NOTES_FIELDS)[number];
@@ -93,6 +131,8 @@ export type Interview = {
   takeaway: string | null;
   /** Prep notes: plain text the job seeker wrote to get ready for this Interview; null when there are none. */
   prep_notes: string | null;
+  /** Participants: who the job seeker meets, in the order they listed them; empty for one from before Bigfoot recorded them. */
+  participants: Participant[];
   /** Derived by the API: the date is in the past. */
   completed: boolean;
   created_at: string;
@@ -139,7 +179,10 @@ export type ApplicationFields = Omit<
 >;
 
 /** What a form sends: `at` is null while no date and time has been given, and validation refuses it. */
-export type InterviewFields = Pick<Interview, "category" | "title" | InterviewNotesField | "prep_notes"> & { at: string | null };
+export type InterviewFields = Pick<Interview, "category" | "title" | InterviewNotesField | "prep_notes"> & {
+  at: string | null;
+  participants: ParticipantInput[];
+};
 
 /** Whether an Interview has Interview notes: any of the three fields has text. */
 export function hasInterviewNotes(interview: Pick<Interview, InterviewNotesField>): boolean {
