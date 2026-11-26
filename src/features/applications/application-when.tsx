@@ -30,12 +30,20 @@ const shortWhenFormat = new Intl.DateTimeFormat(undefined, {
   minute: "2-digit",
 });
 
-/** One Interview's date and time with the year, as its own page's heading shows it. */
+const longDayFormat = new Intl.DateTimeFormat(undefined, {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
+/** One Interview's day, with the year, and time, "Fri, Nov 13, 2026 · 11:00 AM", as its own page's heading shows it. */
 export function InterviewWhenLong({ at }: { at: string }) {
   const isClient = useIsClient();
   // The server can't know the viewer's time zone, so the date renders after hydration.
   if (!isClient) return <span className="inline-block h-5 w-32 align-middle" />;
-  return <time dateTime={at}>{whenFormat.format(new Date(at))}</time>;
+  const date = new Date(at);
+  return <time dateTime={at}>{`${longDayFormat.format(date)} · ${timeFormat.format(date)}`}</time>;
 }
 
 /** One Interview's date and time, in the viewer's time zone, without the year. */
@@ -72,12 +80,14 @@ export function InterviewDayTime({ at, weekday = "short" }: { at: string; weekda
 
 /**
  * How far a date is from today, in the viewer's time zone: "in 2 days", "today", "26 days ago".
- * A date-only value (YYYY-MM-DD) counts from that calendar day. Nothing until hydration.
+ * A date-only value (YYYY-MM-DD) counts from that calendar day. `capitalize` starts it with a capital,
+ * to follow a " · ". Nothing until hydration.
  */
-export function DaysFromToday({ date }: { date: string }) {
+export function DaysFromToday({ date, capitalize = false }: { date: string; capitalize?: boolean }) {
   const today = useToday();
   if (!today) return null;
-  return <>{relativeDays(calendarDaysBetween(today, parseDay(date)))}</>;
+  const days = relativeDays(calendarDaysBetween(today, parseDay(date)));
+  return <>{capitalize ? days.charAt(0).toUpperCase() + days.slice(1) : days}</>;
 }
 
 const readyDayFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });

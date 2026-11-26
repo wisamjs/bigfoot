@@ -122,8 +122,8 @@ export const Default: Story = {
     await expect(await canvas.findAllByText(/ · Completed$/)).toHaveLength(2);
     await expect(completedBars(canvas, "bg-fg-success-strong")).toHaveLength(2);
     const segments = within(canvas.getByRole("list", { name: "Interviews by date" })).getAllByRole("link");
-    await expect(segments.map((s) => s.textContent?.match(/R\d · /)?.[0])).toEqual(["R1 · ", "R2 · ", "R3 · ", "R4 · "]);
-    await expect(segments[3]).toHaveAccessibleName(/Round 4: Leadership$/);
+    await expect(segments.map((s) => s.textContent?.match(/R\d/)?.[0])).toEqual(["R1", "R2", "R3", "R4"]);
+    await expect(segments[3]).toHaveAccessibleName(/^Round 4 · .*Leadership$/);
     await expect(canvas.getByRole("heading", { level: 2, name: "Round 3 · Technical Deep-Dive" })).toBeVisible();
     const next = canvas.getByRole("region", { name: "Round 3 · Technical Deep-Dive" });
     const takeaways = within(within(next).getByRole("list", { name: "Takeaways for this Interview" })).getAllByRole("listitem");

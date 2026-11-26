@@ -10,6 +10,7 @@ import {
   calendarDaysBetween,
   categoryLabel,
   relativeDays,
+  roundTitle,
   type PrepLookBack as LookBack,
   type PrepTakeaway,
 } from "@/lib/applications";
@@ -100,16 +101,16 @@ function TheyAskedLastTime({ questions }: { questions: string[] }) {
 
 /**
  * Where a completed Interview's Takeaway for next time shows (BIG-181), one link per upcoming
- * Interview, to its page: "Shows on the prep for Technical Deep-Dive · in 2 days →" (the next
- * Interview of this Application) and "Shows on the prep for your next Hiring Manager · Tilth
- * Agritech, tomorrow →" (the next of the same category elsewhere). Nothing when neither exists yet.
+ * Interview, to its page: "Shows on Round 3 · Technical Deep-Dive, in 2 days →" (the next
+ * Interview of this Application) and "Shows on your next Hiring Manager: Tilth Agritech,
+ * tomorrow →" (the next of the same category elsewhere, BIG-202). Nothing when neither exists yet.
  */
 export function TakeawayShowsOn({ showsOn }: { showsOn: PrepTakeaway[] }) {
   const today = useToday();
   if (showsOn.length === 0) return null;
   return (
-    <ul aria-label="Shows on the prep for" className="m-0 mt-3 flex list-none flex-col gap-1 p-0 text-sm leading-[1.4]">
-      {showsOn.map(({ rule, application, interview }) => {
+    <ul aria-label="Shows on" className="m-0 mt-3 flex list-none flex-col gap-1 p-0 text-sm leading-[1.4]">
+      {showsOn.map(({ rule, application, interview, round }) => {
         const when = today ? relativeDays(calendarDaysBetween(today, new Date(interview.at))) : null;
         return (
           <li key={rule}>
@@ -120,8 +121,8 @@ export function TakeawayShowsOn({ showsOn }: { showsOn: PrepTakeaway[] }) {
             >
               <span className="break-words">
                 {rule === "same_application"
-                  ? `Shows on the prep for ${interview.title}${when ? ` · ${when}` : ""}`
-                  : `Shows on the prep for your next ${categoryLabel(interview.category)} · ${application.company}${when ? `, ${when}` : ""}`}
+                  ? `Shows on ${roundTitle(round, interview.title)}${when ? `, ${when}` : ""}`
+                  : `Shows on your next ${categoryLabel(interview.category)}: ${application.company}${when ? `, ${when}` : ""}`}
                 <ArrowRight className="ml-1 inline size-4 align-[-0.2em]" aria-hidden />
               </span>
             </Link>

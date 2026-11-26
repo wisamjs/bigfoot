@@ -189,7 +189,7 @@ function NotesStatuses({
   );
 }
 
-/** The tertiary Edit button at a notes card's top right. */
+/** The Edit text button, in the brand colour (BIG-202), at a notes card's top right. */
 function EditButton({
   label,
   editRef,
@@ -200,10 +200,16 @@ function EditButton({
   onEdit: () => void;
 }) {
   return (
-    <Button ref={editRef} variant="tertiary" className="px-2.5" onClick={onEdit} aria-label={label}>
+    <button
+      ref={editRef}
+      type="button"
+      onClick={onEdit}
+      aria-label={label}
+      className="touch-target inline-flex items-center gap-1.5 rounded-control px-2 text-base font-semibold text-fg-brand transition-colors hover:text-fg-brand-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+    >
       <Pencil className="size-4" aria-hidden />
       Edit
-    </Button>
+    </button>
   );
 }
 
@@ -436,7 +442,7 @@ function TakeawayCard({ takeaway, showsOn }: { takeaway: string; showsOn: PrepTa
   return (
     <section
       aria-labelledby={headingId}
-      className="card flex min-w-0 gap-3 border-line-brand-subtle p-5 sm:p-6"
+      className="card flex min-w-0 gap-3 border-brand p-5 sm:p-6"
     >
       <Lightbulb className="mt-0.5 size-5 shrink-0 text-fg-brand" aria-hidden />
       <div className="min-w-0">
@@ -454,7 +460,7 @@ function TakeawayCard({ takeaway, showsOn }: { takeaway: string; showsOn: PrepTa
 function NotesText({ howItWent, whatTheyAsked }: { howItWent: string | null; whatTheyAsked: string | null }) {
   const asked = questions(whatTheyAsked);
   return (
-    <div className="flex min-w-0 flex-col gap-4 break-words text-base leading-[1.6] text-body">
+    <div className="flex min-w-0 flex-col gap-4 break-words text-base leading-[1.7] text-heading md:text-lg">
       {howItWent && <NoteBlocks notes={howItWent} />}
       {asked.length > 0 && <TheyAsked questions={asked} />}
     </div>
@@ -692,7 +698,7 @@ function PrepRead({
 }) {
   return (
     <>
-      <div className="flex min-w-0 flex-col gap-4 break-words text-base leading-[1.6] text-body">
+      <div className="flex min-w-0 flex-col gap-4 break-words text-base leading-[1.7] text-heading md:text-lg">
         <NoteBlocks notes={folded && !open ? firstLines(notes) : notes} />
       </div>
       {folded && (

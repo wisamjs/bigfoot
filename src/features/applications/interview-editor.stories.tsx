@@ -6,8 +6,8 @@ import { application, interview } from "@/test/applications";
 import { InterviewEditor } from "./interview-editor";
 import { UnsavedChanges } from "./unsaved-changes";
 
-// The Interview page under its "← <company>" link (BIG-178): the heading, the strip with this
-// Interview outlined, and the Prep notes and Interview notes (BIG-180). Dates are counted from today. Server Actions are
+// The Interview page under its "Dashboard / <company>" breadcrumb (BIG-178, BIG-202): the heading, the strip with this
+// Interview outlined, the Prep notes and Interview notes (BIG-180), and links to the Rounds either side. Dates are counted from today. Server Actions are
 // mocked (src/app/applications/__mocks__/actions.ts) and succeed unless a story says otherwise.
 const DAY = 86_400_000;
 const daysFromNow = (days: number, hour = 15) => {
@@ -82,12 +82,20 @@ type Story = StoryObj<typeof meta>;
 
 /**
  * Filled: a completed Interview, "Completed · 10 days ago", this one outlined on the strip, the
- * Takeaway for next time in its own card, How it went as text and They asked as a list.
+ * Takeaway for next time in its own card, How it went as text and They asked as a list, and links
+ * to Round 1 and Round 3 at the foot.
  */
 export const Completed: Story = {
   play: async ({ canvas }) => {
     await expect(await canvas.findByText("Completed · 10 days ago")).toBeVisible();
-    await expect(canvas.getByRole("link", { name: /^This interview · / })).toHaveAttribute("aria-current", "page");
+    await expect(canvas.getByRole("link", { name: /^Round \d · This interview · / })).toHaveAttribute("aria-current", "page");
+    // The foot links to the Rounds either side (BIG-202).
+    const rounds = canvas.getByRole("navigation", { name: "Other Rounds" });
+    await expect(within(rounds).getByRole("link", { name: "Previous: Round 1 · Recruiter Screen" })).toHaveAttribute(
+      "href",
+      "/applications/lumen/interviews/screen",
+    );
+    await expect(within(rounds).getByRole("link", { name: "Next: Round 3 · Technical Deep-Dive" })).toBeVisible();
     const takeaway = canvas.getByRole("region", { name: "Takeaway for next time" });
     await expect(takeaway).toHaveTextContent("Lead with the decision");
     const notes = canvas.getByRole("region", { name: "Interview notes" });
@@ -108,8 +116,8 @@ export const TakeawayShowsOnPrep: Story = {
     const takeaway = canvas.getByRole("region", { name: "Takeaway for next time" });
     const links = await within(takeaway).findAllByRole("link");
     await expect(links.map((link) => link.textContent)).toEqual([
-      "Shows on the prep for Technical Deep-Dive · in 2 days",
-      "Shows on the prep for your next Hiring Manager · Tilth Agritech, tomorrow",
+      "Shows on Round 3 · Technical Deep-Dive, in 2 days",
+      "Shows on your next Hiring Manager: Tilth Agritech, tomorrow",
     ]);
     await expect(links[0]).toHaveAttribute("href", "/applications/lumen/interviews/deep-dive");
   },
@@ -289,13 +297,15 @@ export const DoneApplication: Story = {
   },
 };
 
-/** On a phone: the segments, "Round 3 of 4" and a link to the next Interview, and Edit details in ⋯. */
+/** On a phone: the segments, "Round 3 of 4" and a link to the next Interview, Edit details in ⋯, and "R2 · …" at the foot. */
 export const Phone: Story = {
   args: { interview: lumen.interviews[2] },
   globals: { viewport: { value: "mobile1", isRotated: false } },
   play: async ({ canvas }) => {
     await expect(canvas.getByText("Round 3 of 4")).toBeVisible();
-    await expect(canvas.getByRole("link", { name: "Next: Leadership →" })).toBeVisible();
+    await expect(canvas.getByRole("link", { name: "Next: R4 · Leadership →" })).toBeVisible();
+    // The foot's links shorten to "R2 · …" on a phone.
+    await expect(canvas.getByRole("link", { name: "Previous: R2 · Hiring Manager" })).toBeVisible();
     // Hidden below sm, so it is out of the accessibility tree.
     await expect(canvas.queryByRole("button", { name: "Edit details" })).not.toBeInTheDocument();
   },

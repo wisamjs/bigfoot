@@ -161,7 +161,7 @@ export const PAGES = [
     signedIn: true,
     application: "Figma",
     interview: "Technical",
-    expect: "Shows on the prep for your next Technical",
+    expect: "Shows on your next Technical",
   },
   {
     // An upcoming Interview (BIG-180): the Before card with its Prep notes, the takeaways that

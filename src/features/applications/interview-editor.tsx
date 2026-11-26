@@ -5,6 +5,7 @@ import { useSaveStatus, type SaveTracker } from "@/hooks/use-save-status";
 import { InterviewHeading } from "@/features/applications/interview-heading";
 import { InterviewNotesForm, PrepNotesForm, type NotesFieldName } from "@/features/applications/interview-notes-form";
 import { InterviewProgress } from "@/features/applications/interview-progress";
+import { RoundNav } from "@/features/applications/round-nav";
 import type { Application, Interview, PrepLookBack, PrepTakeaway } from "@/lib/applications";
 import { interviewErrors, isValid } from "@/lib/validation";
 
@@ -13,7 +14,8 @@ import { interviewErrors, isValid } from "@/lib/validation";
  * details and ⋯ with Delete Interview), the Application's Interviews as a strip with this one
  * outlined, then the notes cards (BIG-179, BIG-180). Before the Interview: Prep notes, then Interview
  * notes (What they asked, How it went and Takeaway for next time) waiting for afterwards. Once it
- * is completed: Interview notes, then Prep notes folded below them. Each reads as text until edited
+ * is completed: Interview notes, then Prep notes folded below them. The cards span the page, and
+ * links to the Rounds either side end it (RoundNav, BIG-202). Each reads as text until edited
  * and saves by itself with its own save status. Leaving with the category, the title, the date, an Interview notes
  * field or Prep notes not yet saved asks first: the page puts this inside UnsavedChanges.
  * The page works out, from every Application, what an upcoming Interview's prep looks back at
@@ -64,7 +66,7 @@ export function InterviewEditor({
     <div className="flex flex-col gap-6 sm:gap-8">
       <InterviewHeading app={app} interview={interview} />
       <InterviewProgress app={app} current={interview.id} />
-      <div className="flex max-w-[768px] flex-col gap-6 sm:gap-8">
+      <div className="flex flex-col gap-6 sm:gap-8">
         {interview.completed ? (
           <>
             {interviewNotes}
@@ -77,6 +79,7 @@ export function InterviewEditor({
           </>
         )}
       </div>
+      <RoundNav app={app} interview={interview} />
     </div>
   );
 }

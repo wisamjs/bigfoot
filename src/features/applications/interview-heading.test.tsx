@@ -51,10 +51,11 @@ const form = () => screen.getByRole("form", { name: "Edit details" });
 describe("the Interview page heading", () => {
   it("shows the company and role, the title with its category, and the date and time", () => {
     openPage();
-    expect(screen.getByText("Birch · Senior Engineer")).toBeInTheDocument();
+    expect(screen.getByText((_, el) => el?.tagName === "P" && el.textContent === "Birch · Senior Engineer")).toBeInTheDocument();
+    expect(screen.getByText("Round 1", { selector: "p > span" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1, name: "Round 1 · Technical" })).toBeInTheDocument();
     // eslint-disable-next-line testing-library/no-node-access -- the date is a <time>, which has no role to query by.
-    expect(document.querySelector("h1 ~ p time")).toHaveAttribute("datetime", technical.at);
+    expect(document.querySelector("h1 ~ div time")).toHaveAttribute("datetime", technical.at);
   });
 
   it("shows the job seeker's own title, with its category as a tag", () => {
@@ -268,10 +269,10 @@ describe("the Interview page heading", () => {
       "/applications/birch/interviews/i2",
     ]);
     expect(segments.map((link) => link.getAttribute("aria-current"))).toEqual([null, "page", null]);
-    expect(await screen.findByText(/^This interview · /)).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /^Round 2 · This interview · / })).toHaveAttribute("aria-current", "page");
     // The phone's line: where this one falls and a link to the next.
     expect(screen.getByText("Round 2 of 3")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Next: Leadership →" })).toHaveAttribute("href", "/applications/birch/interviews/i2");
+    expect(screen.getByRole("link", { name: "Next: R3 · Leadership →" })).toHaveAttribute("href", "/applications/birch/interviews/i2");
   });
 
   it("has no link to a next Interview on the last one", () => {
