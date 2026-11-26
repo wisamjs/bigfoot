@@ -23,12 +23,14 @@ export function DateTile({ at, tone = "outline", className = "" }: { at: string;
   return (
     <span
       aria-hidden
-      className={`flex size-14 shrink-0 flex-col items-center justify-center rounded-card border leading-none ${TONES[tone]} ${className}`}
+      className={`flex size-14 shrink-0 flex-col items-center justify-center gap-1.5 rounded-control border ${TONES[tone]} ${className}`}
     >
-      <span className="text-[11px] font-bold uppercase tracking-[0.06em]">
+      {/* leading-none on both lines, so the glyphs, not their line boxes, are what gets centred;
+          pl matches the tracking after the last letter, so the month centres too. */}
+      <span className="pl-[0.06em] text-[11px] leading-none font-bold uppercase tracking-[0.06em]">
         {date ? monthFormat.format(date) : ""}
       </span>
-      <span className="mt-1 text-xl font-bold">{date ? date.getDate() : ""}</span>
+      <span className="text-xl leading-none font-bold">{date ? date.getDate() : ""}</span>
     </span>
   );
 }
