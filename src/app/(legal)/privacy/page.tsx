@@ -101,7 +101,7 @@ export default function PrivacyPage() {
         <p>
           Your Applications: the company, job title, posting link, location, salary, the date you
           applied, its Status and Outcome, once it is Done the date it ended and, if you write one,
-          an Outcome note (what the company said), and each Interview: its category, its title, its date and, if you give them, your Interview notes (what they asked, how it went and a takeaway for next
+          an Outcome note (what the company said), and each Interview: its category, its title, its date, the names and roles of people you interview with, which you enter, and, if you give them, your Interview notes (what they asked, how it went and a takeaway for next
           time) and your Prep notes, which hold whatever you write there.
         </p>
         <h3 className={h3}>Access tokens, if you create any</h3>
@@ -124,7 +124,7 @@ export default function PrivacyPage() {
           Someone who opens your Share link and types its passcode sees only what the Account
           page’s “They’ll see” box lists: your name, your In Progress Applications and Offers (the
           company, role and applied date), and each one’s Interviews (title, category and time).
-          They never see salaries, job postings, Locations, Prep notes, Interview notes, Outcome
+          They never see salaries, job postings, Locations, who you interview with, Prep notes, Interview notes, Outcome
           notes or Applications that ended without an Offer, and they can’t change anything.
         </p>
         <p>

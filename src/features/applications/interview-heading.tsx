@@ -1,6 +1,6 @@
 "use client";
 
-import { Ellipsis, Pencil, Trash2 } from "lucide-react";
+import { Ellipsis, Pencil, Trash2, UserPlus } from "lucide-react";
 import { useId, useRef, useState, type RefObject } from "react";
 import { deleteInterviewAndLeaveAction, updateInterviewAction } from "@/app/applications/actions";
 import { Badge } from "@/components/ui/badge";
@@ -24,9 +24,19 @@ import { CategoryBadge } from "@/features/applications/category-badge";
 import { InterviewWhenLong } from "@/features/applications/application-when";
 import { EditableHeading } from "@/features/applications/editable-heading";
 import { fromLocalInput, toLocalInput } from "@/features/applications/local-datetime";
+import {
+  ParticipantsField,
+  blankDraft,
+  draftsOf,
+  participantInputs,
+  participantsProblem,
+  type ParticipantDraft,
+  type ParticipantsProblem,
+} from "@/features/applications/participants-field";
 import { OUTCOME_TONE } from "@/features/applications/status-tone";
 import { useUnsavedChanges } from "@/features/applications/unsaved-changes";
 import {
+  applicationParticipants,
   calendarDaysBetween,
   categoryLabel,
   INTERVIEW_CATEGORIES,
@@ -39,19 +49,38 @@ import {
   type Application,
   type Interview,
   titleForCategory,
+  withParticipants,
   type InterviewCategory,
   type InterviewFields,
+  type Participant,
+  type ParticipantInput,
 } from "@/lib/applications";
-import { interviewErrors, isValid, type FieldErrors } from "@/lib/validation";
+import { interviewErrors, isValid, participantsError, type FieldErrors } from "@/lib/validation";
 
-type Saved = Pick<Interview, "category" | "title" | "at">;
-type Values = Pick<Interview, "category" | "title"> & DateAndTime;
+type Saved = Pick<Interview, "category" | "title" | "at" | "participants">;
+type Values = Pick<Interview, "category" | "title"> & DateAndTime & { participants: ParticipantDraft[] };
 
 /** What the save status and Retry name: the fields Edit details changes. */
-const STATUS_LABEL = "Category, title and date";
+const STATUS_LABEL = "Details";
 
 function valuesOf(saved: Saved): Values {
-  return { category: saved.category, title: saved.title, ...splitDateTime(toLocalInput(saved.at)) };
+  return {
+    category: saved.category,
+    title: saved.title,
+    ...splitDateTime(toLocalInput(saved.at)),
+    // An Interview from before Participants starts with a blank row to fill in.
+    participants: saved.participants.length > 0 ? draftsOf(saved.participants) : [blankDraft()],
+  };
+}
+
+/** Saved Participants as the API takes them, to compare with what the field would send. */
+function inputsOf(participants: Participant[]): ParticipantInput[] {
+  return participants.map(({ id, role, name }) => ({ id, role, name }));
+}
+
+/** Whether two lists of Participants say the same thing, in the same order. */
+function sameParticipants(a: Participant[], b: Participant[]) {
+  return JSON.stringify(inputsOf(a)) === JSON.stringify(inputsOf(b));
 }
 
 /** The date and time as a datetime-local value; "" without a date. */
@@ -67,6 +96,8 @@ function changesOf(values: Values, saved: Saved): Partial<InterviewFields> {
   if (localOf(values) !== toLocalInput(saved.at)) {
     changes.at = values.date && values.time ? fromLocalInput(localOf(values)) : null;
   }
+  const { inputs } = participantInputs(values.participants);
+  if (JSON.stringify(inputs) !== JSON.stringify(inputsOf(saved.participants))) changes.participants = inputs;
   return changes;
 }
 
@@ -75,8 +106,11 @@ function changesOf(values: Values, saved: Saved): Partial<InterviewFields> {
  * role, then its Round number ("Round 3", BIG-190) beside its Interview category, the Interview title,
  * and a line with its day and time ("Fri, Nov 13, 2026 · 11:00 AM") and badges for where it stands
  * ("Upcoming · in 2 days", "Completed · 10 days ago") and, once the Application is Done, its
- * "Done · Rejected". On the right, level with that line,
- * Edit details turns the category, the title and the date into fields in place (EditableHeading) and ⋯ holds
+ * "Done · Rejected". Under the title, who the job seeker is meeting ("With Dana Lee (Recruiter), Sam (EM)", BIG-191),
+ * or, for an Interview from before Participants, "Add who you’re meeting", which opens Edit details.
+ * On the right, level with that line,
+ * Edit details turns the category, the title, the date and the Participants into fields in place
+ * (EditableHeading); saving needs at least one Participant. ⋯ holds
  * Delete Interview, which asks first and goes back to the Application page. On a phone, Edit details
  * folds into ⋯. Enter, Save, or leaving the fields saves what changed, checked first with the API's
  * rules: the title and date can't be cleared and no time is assumed (docs/adr/0005). The title follows
@@ -86,12 +120,19 @@ function changesOf(values: Values, saved: Saved): Partial<InterviewFields> {
  */
 export function InterviewHeading({ app, interview }: { app: Application; interview: Interview }) {
   const id = useId();
-  const saved: Saved = { category: interview.category, title: interview.title, at: interview.at };
+  const saved: Saved = {
+    category: interview.category,
+    title: interview.title,
+    at: interview.at,
+    participants: interview.participants,
+  };
   const [shown, setShown] = useState(saved);
   const [seen, setSeen] = useState(saved);
   const [editing, setEditing] = useState(false);
   const [values, setValues] = useState(() => valuesOf(saved));
   const [errors, setErrors] = useState<FieldErrors>({});
+  // The Participants row a problem is about, to mark it.
+  const [participantsKey, setParticipantsKey] = useState<string | undefined>();
   const tracker = useSaveStatus();
   const categoryRef = useRef<HTMLSelectElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
@@ -103,43 +144,67 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
   const dateId = `${id}-at`;
 
   // Taken in when it changes elsewhere, set during render the way React advises for state that follows a prop.
-  if (saved.category !== seen.category || saved.title !== seen.title || saved.at !== seen.at) {
+  if (
+    saved.category !== seen.category ||
+    saved.title !== seen.title ||
+    saved.at !== seen.at ||
+    !sameParticipants(saved.participants, seen.participants)
+  ) {
     setSeen(saved);
     setShown(saved);
   }
 
   const changed = editing && Object.keys(changesOf(values, shown)).length > 0;
   const focusDate = () => document.getElementById(dateId)?.focus();
-  const focusProblem = (problems: FieldErrors) => {
+  const participantsId = `${id}-participants`;
+  const focusParticipants = (key?: string) =>
+    (
+      document.getElementById(`${participantsId}-${key ?? values.participants[0]?.key}-role`) ??
+      document.getElementById(`${participantsId}-add`)
+    )?.focus();
+  const focusProblem = (problems: FieldErrors, key?: string) => {
     if (problems.category) categoryRef.current?.focus();
     else if (problems.title) titleRef.current?.focus();
     else if (problems.at) focusDate();
+    else if (problems.participants) focusParticipants(key);
     else categoryRef.current?.focus();
   };
-  useUnsavedChanges(changed, () => focusProblem(errors));
+  useUnsavedChanges(changed, () => focusProblem(errors, participantsKey));
 
-  function startEditing() {
-    setValues(valuesOf(shown));
+  /** Opens Edit details; `toParticipants` puts focus in the Participants instead of the category. */
+  function startEditing(toParticipants = false) {
+    const next = valuesOf(shown);
+    setValues(next);
     setErrors({});
+    setParticipantsKey(undefined);
     setEditing(true);
+    if (toParticipants) {
+      requestAnimationFrame(() => document.getElementById(`${participantsId}-${next.participants[0].key}-role`)?.focus());
+    }
   }
 
   function stopEditing() {
     setEditing(false);
     setErrors({});
+    setParticipantsKey(undefined);
   }
 
   async function save() {
     if (tracker.saving) return;
     const changes = changesOf(values, shown);
-    if (Object.keys(changes).length === 0) {
+    // Edit details needs someone, even when only the title changes on an Interview from before Participants.
+    const { inputs, keys } = participantInputs(values.participants);
+    const people = participantsProblem(participantsError(inputs), keys);
+    if (Object.keys(changes).length === 0 && !people) {
       stopEditing();
       return;
     }
     const problems = interviewErrors(changes);
+    if (people) problems.participants = people.message;
     setErrors(problems);
+    setParticipantsKey(people?.key);
     if (!isValid(problems)) {
-      focusProblem(problems);
+      focusProblem(problems, people?.key);
       return;
     }
     const result = await tracker.run(async () => {
@@ -152,6 +217,10 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
         category: changes.category ?? prev.category,
         title: changes.title ?? prev.title,
         at: changes.at ?? prev.at,
+        // Until the page reloads with their ids, someone new is shown by what was typed.
+        participants: changes.participants
+          ? changes.participants.map((p, i) => ({ id: p.id ?? `new-${i}`, role: p.role, name: p.name }))
+          : prev.participants,
       }));
       stopEditing();
     }
@@ -174,6 +243,7 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
           <span className="sr-only">{`Round ${round} · `}</span>
           {title}
         </h1>
+        <Participants participants={shown.participants} onAdd={() => startEditing(true)} />
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
           <p className="m-0 text-base leading-[1.6] text-body md:text-lg">
             <InterviewWhenLong at={shown.at} />
@@ -184,7 +254,7 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
         <SaveStatus status={tracker.status} label={STATUS_LABEL} onRetry={tracker.retry} />
       </div>
       <div className="flex shrink-0 items-center gap-3">
-        <Button ref={editRef} variant="secondary" className="hidden sm:inline-flex" onClick={startEditing}>
+        <Button ref={editRef} variant="secondary" className="hidden sm:inline-flex" onClick={() => startEditing()}>
           <Pencil className="size-4" aria-hidden />
           Edit details
         </Button>
@@ -192,7 +262,7 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
           label={`More actions, ${title}`}
           triggerRef={moreRef}
           showEdit={!wide}
-          onEdit={startEditing}
+          onEdit={() => startEditing()}
           onDelete={() => setDeleting(interview)}
         />
       </div>
@@ -284,7 +354,31 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
         </fieldset>
         <FieldError id={`${dateId}-error`} error={errors.at} />
       </div>
+      <ParticipantsField
+        id={participantsId}
+        value={values.participants}
+        disabled={tracker.saving}
+        onChange={(participants) => {
+          setValues((prev) => ({ ...prev, participants }));
+          setErrors((prev) => ({ ...prev, participants: undefined }));
+          setParticipantsKey(undefined);
+        }}
+        known={applicationParticipants(app)}
+        problem={errors.participants ? ({ message: errors.participants, key: participantsKey } satisfies ParticipantsProblem) : undefined}
+      />
     </EditableHeading>
+  );
+}
+
+/** "With Dana Lee (Recruiter), Sam (EM)", or, when nobody is recorded yet, "Add who you’re meeting". */
+function Participants({ participants, onAdd }: { participants: Participant[]; onAdd: () => void }) {
+  const line = withParticipants(participants);
+  if (line) return <p className="m-0 mt-2 break-words text-base leading-[1.6] text-body md:text-lg">{line}</p>;
+  return (
+    <Button variant="tertiary" size="sm" className="mt-2 -ml-3" onClick={onAdd}>
+      <UserPlus className="size-4" aria-hidden />
+      Add who you’re meeting
+    </Button>
   );
 }
 

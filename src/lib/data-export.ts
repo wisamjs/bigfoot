@@ -7,6 +7,7 @@ import {
   INTERVIEW_NOTES_LABELS,
   categoryLabel,
   OUTCOME_OPTIONS,
+  participantText,
   STATUS_OPTIONS,
   type Application,
   type Interview,
@@ -68,6 +69,15 @@ const CSV_COLUMNS: {
     header: "Interviews",
     value: (a) => a.interviews.map(interviewName).join("; "),
   },
+  {
+    // Participants: a line per Interview that has any, named as in the Interviews column.
+    header: "Participants",
+    value: (a) =>
+      a.interviews
+        .filter((i) => i.participants.length > 0)
+        .map((i) => `${interviewName(i)}: ${i.participants.map(participantText).join(", ")}`)
+        .join("\n"),
+  },
   // Interview notes, a column for each field: one paragraph per Interview that has it, named as in
   // the Interviews column.
   ...INTERVIEW_NOTES_FIELDS.map((field) => ({
@@ -113,7 +123,7 @@ export function applicationsCsv(applications: Application[]) {
 
 /**
  * Everything Bigfoot holds about the job seeker: their profile, every Application field (each
- * Interview's Interview notes and Prep notes included), their Access tokens' names and dates, and their Share links' labels and dates. Never a
+ * Interview's Participants, Interview notes and Prep notes included), their Access tokens' names and dates, and their Share links' labels and dates. Never a
  * token's secret or a Share link's Passcode: Bigfoot stores only a hash of each.
  */
 export function dataExportJson(
