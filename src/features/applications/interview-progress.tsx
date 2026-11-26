@@ -107,7 +107,7 @@ function Segment({
               {" · "}
               <SegmentWhen interview={interview} current={current} />
             </span>
-            <span className={`mt-1 block truncate text-base ${current ? "font-bold text-heading" : "font-semibold text-body"}`}>
+            <span className={`mt-1 block text-base sm:truncate ${current ? "font-bold text-heading" : "font-semibold text-body"}`}>
               {title}
             </span>
           </span>
