@@ -30,7 +30,7 @@ export const InFlightMobile: Story = { ...inFlight, ...MOBILE };
 
 /** Nothing In Progress and no Offers. */
 const nothing: Story = {
-  args: { page: { kind: "journey", journey: { shared_by: user.name, applications: [] } } },
+  args: { page: { kind: "journey", journey: { shared_by: user.name, applications: [], other_completed_interviews: [] } } },
   play: async ({ canvas }) => {
     await expect(canvas.getByText("No Applications in progress right now.")).toBeVisible();
   },
