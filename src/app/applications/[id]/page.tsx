@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ApplicationEditor } from "@/features/applications/application-editor";
-import { DeletedNotice } from "@/features/applications/deleted-notice";
-import { AppHeader } from "@/features/shell/app-header";
-import { FormPage } from "@/features/shell/form-page";
-import { UnsavedChanges } from "@/features/applications/unsaved-changes";
+import { ApplicationPage, ApplicationPageSkeleton } from "@/features/applications/application-page";
 import { ADDED_PARAM } from "@/features/applications/routes";
 import { getApplications } from "@/lib/api";
 import { nextInterview, prepLookBack } from "@/lib/applications";
@@ -15,9 +11,9 @@ export const metadata: Metadata = {
   title: "Application · Bigfoot",
 };
 
-export default function ApplicationPage({ params, searchParams }: PageProps<"/applications/[id]">) {
+export default function Page({ params, searchParams }: PageProps<"/applications/[id]">) {
   return (
-    <Suspense fallback={<FormPage header={<AppHeader current="/dashboard" />} title="Application" wide />}>
+    <Suspense fallback={<ApplicationPageSkeleton />}>
       <Application params={params} searchParams={searchParams} />
     </Suspense>
   );
@@ -32,19 +28,12 @@ async function Application({ params, searchParams }: Pick<PageProps<"/applicatio
   if (!app) notFound();
   const next = nextInterview(app);
   return (
-    <FormPage
-      header={<AppHeader user={user} current="/dashboard" />}
-      title={app.company}
-      notice={<DeletedNotice />}
-      guard={UnsavedChanges}
-      wide
-    >
-      <ApplicationEditor
-        app={app}
-        justAdded={query[ADDED_PARAM] === "1"}
-        // Worked out here, from every Application, so only what shows reaches the browser.
-        lookBack={next ? prepLookBack(applications, app, next) : undefined}
-      />
-    </FormPage>
+    <ApplicationPage
+      user={user}
+      app={app}
+      justAdded={query[ADDED_PARAM] === "1"}
+      // Worked out here, from every Application, so only what shows reaches the browser.
+      lookBack={next ? prepLookBack(applications, app, next) : undefined}
+    />
   );
 }
