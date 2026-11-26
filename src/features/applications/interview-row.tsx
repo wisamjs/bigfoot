@@ -3,6 +3,7 @@
 import { Check, ChevronRight, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useId, useState } from "react";
+import { MarkdownView } from "@/components/ui/markdown-view";
 import { DaysFromToday, InterviewDayTime } from "@/features/applications/application-when";
 import { CategoryBadge } from "@/features/applications/category-badge";
 import { DateTile } from "@/features/applications/date-tile";
@@ -103,9 +104,7 @@ function Notes({ interview }: { interview: Interview }) {
     <div className="relative z-10 mt-3 flex flex-col items-start gap-3">
       <div id={id} className="flex min-w-0 flex-col gap-3 text-base leading-[1.6] text-heading">
         {parts.map((part, index) => (
-          <p key={part.key} className={`m-0 whitespace-pre-line break-words ${fold(index)}`}>
-            {part.text}
-          </p>
+          <MarkdownView key={part.key} markdown={part.text} headingLevel={4} className={fold(index)} />
         ))}
         {asked.length > 0 && <TheyAsked questions={asked} className={`break-words ${fold(parts.length)}`} />}
         {takeaway && (

@@ -168,23 +168,28 @@ WHAT_THEY_ASKED = (
     "What they asked (GLOSSARY.md, Interview notes): the questions the Interview asked, one per line, as plain "
     f"text of at most {WHAT_THEY_ASKED_MAX_LENGTH:,} characters. Null when there are none."
 )
+# How it went and Prep notes are Markdown (BIG-214); the limit counts the Markdown as stored.
+NOTES_MARKDOWN = (
+    "Markdown: `#` to `###` titles, **bold**, *italics*, <u>underline</u>, `- ` and `1. ` lists, and a newline as a "
+    "line break; other HTML in it is text."
+)
 HOW_IT_WENT = (
-    "How it went (GLOSSARY.md, Interview notes): what the job seeker wrote about this Interview, as plain text "
-    f"of at most {HOW_IT_WENT_MAX_LENGTH:,} characters. Null when there is none."
+    "How it went (GLOSSARY.md, Interview notes): what the job seeker wrote about this Interview, as "
+    f"{NOTES_MARKDOWN} At most {HOW_IT_WENT_MAX_LENGTH:,} characters of Markdown. Null when there is none."
 )
 TAKEAWAY = (
     "Takeaway for next time (GLOSSARY.md, Interview notes): one thing to do differently, as plain text of at "
     f"most {TAKEAWAY_MAX_LENGTH:,} characters. Null when there is none."
 )
 EXAMPLE_WHAT_THEY_ASKED = "How would you cache a feed?\nTell me about a disagreement with a designer."
-EXAMPLE_HOW_IT_WENT = "Friendly. The caching question ran long."
+EXAMPLE_HOW_IT_WENT = "**Friendly.** The caching question ran long.\n\n- Send a thank-you"
 EXAMPLE_TAKEAWAY = "Draw the diagram first."
 PREP_NOTES = (
     "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its "
-    f"Interview notes, as plain text of at most {INTERVIEW_PREP_NOTES_MAX_LENGTH:,} characters. "
+    f"Interview notes, as {NOTES_MARKDOWN} At most {INTERVIEW_PREP_NOTES_MAX_LENGTH:,} characters of Markdown. "
     "Null when there are none."
 )
-EXAMPLE_PREP_NOTES = "Review the caching chapter. Ask about the on-call rotation."
+EXAMPLE_PREP_NOTES = "# Review\n\nThe caching chapter.\n\n1. Ask about the on-call rotation."
 INTERVIEW_ORDER_DESCRIPTION = "Ordered by date."
 PARTICIPANT_ROLE = (
     f"What the Participant does at the company, in the job seeker's words, at most {PARTICIPANT_ROLE_MAX_LENGTH} "

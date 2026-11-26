@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/applications/actions";
 import type { Application } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
+import { typeRich } from "@/test/rich-text";
 import { ApplicationEditor } from "./application-editor";
 import { UnsavedChanges } from "./unsaved-changes";
 import { NewApplicationForm } from "./new-application-form";
@@ -345,14 +346,13 @@ describe("Add Interview", () => {
   const apps = [birch];
 
   it("asks once anything is entered, but not for the Application already chosen", async () => {
-    const user = userEvent.setup();
     render(
       <Page>
         <NewInterviewForm applications={apps} applicationId="birch" />
       </Page>,
     );
     expect(clickGoesThrough("Dashboard")).toBe(true);
-    await user.type(screen.getByLabelText("How it went"), "Prep");
+    await typeRich(screen.getByRole("textbox", { name: "How it went" }), "Prep");
     expect(clickGoesThrough("Dashboard")).toBe(false);
     expect(screen.getByText(PROMPT)).toBeInTheDocument();
   });

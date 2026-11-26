@@ -150,6 +150,24 @@ export const Default: Story = {
   },
 };
 
+/** A completed Interview's formatted How it went (BIG-214), inline in Completed: a title, bold and a numbered list. */
+export const FormattedNotes: Story = {
+  args: {
+    app: {
+      ...lumen,
+      interviews: lumen.interviews.map((i) =>
+        i.id === "screen" ? { ...i, how_it_went: "# Screen\n\n**Band** lines up.\n\n1. Send a thank-you\n2. Book the next round" } : i,
+      ),
+    },
+  },
+  play: async ({ canvas }) => {
+    const completed = canvas.getByRole("list", { name: "Completed" });
+    // Under the card's "Completed" h3, a title is an h4.
+    await expect(within(completed).getByRole("heading", { level: 4, name: "Screen" })).toBeVisible();
+    await expect(within(completed).getByText("Band").tagName).toBe("STRONG");
+  },
+};
+
 /** Waiting, with no Interviews yet: Bigfoot and a first Add Interview. */
 export const NoInterviews: Story = {
   args: { app: quillon },

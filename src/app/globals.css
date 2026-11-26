@@ -488,6 +488,50 @@ body {
     color: var(--heading);
   }
 
+  /*
+   * The notes editor's field (rich-text-editor.tsx, BIG-214): Tailwind's reset strips lists, and
+   * titles are paragraphs marked with their size, so the formats it writes look here as MarkdownView
+   * shows them; the placeholder shows in the empty first paragraph.
+   */
+  .rich-text > * + * {
+    margin-top: 0.5rem;
+  }
+  .rich-text [data-title="1"] {
+    font-size: var(--text-xl);
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .rich-text [data-title="2"] {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .rich-text [data-title="3"] {
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .rich-text ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+  }
+  .rich-text ol {
+    list-style: decimal;
+    padding-left: 1.25rem;
+  }
+  .rich-text li + li {
+    margin-top: 0.25rem;
+  }
+  .rich-text u {
+    text-underline-offset: 2px;
+  }
+  .rich-text p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    color: var(--body);
+    pointer-events: none;
+  }
+
   /* Card (cards.md): derived tone of the section surface. */
   .card {
     background: var(--card);

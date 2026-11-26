@@ -2437,9 +2437,9 @@
               }
             ],
             "title": "How It Went",
-            "description": "How it went (GLOSSARY.md, Interview notes): what the job seeker wrote about this Interview, as plain text of at most 20,000 characters. Null when there is none.",
+            "description": "How it went (GLOSSARY.md, Interview notes): what the job seeker wrote about this Interview, as Markdown: `#` to `###` titles, **bold**, *italics*, <u>underline</u>, `- ` and `1. ` lists, and a newline as a line break; other HTML in it is text. At most 20,000 characters of Markdown. Null when there is none.",
             "examples": [
-              "Friendly. The caching question ran long."
+              "**Friendly.** The caching question ran long.\n\n- Send a thank-you"
             ]
           },
           "takeaway": {
@@ -2467,9 +2467,9 @@
               }
             ],
             "title": "Prep Notes",
-            "description": "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its Interview notes, as plain text of at most 20,000 characters. Null when there are none.",
+            "description": "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its Interview notes, as Markdown: `#` to `###` titles, **bold**, *italics*, <u>underline</u>, `- ` and `1. ` lists, and a newline as a line break; other HTML in it is text. At most 20,000 characters of Markdown. Null when there are none.",
             "examples": [
-              "Review the caching chapter. Ask about the on-call rotation."
+              "# Review\n\nThe caching chapter.\n\n1. Ask about the on-call rotation."
             ]
           },
           "participants": {
@@ -2585,7 +2585,7 @@
               }
             ],
             "title": "How It Went",
-            "description": "How it went (GLOSSARY.md, Interview notes): what the job seeker wrote about this Interview, as plain text of at most 20,000 characters. Null when there is none. Blank is stored as null.",
+            "description": "How it went (GLOSSARY.md, Interview notes): what the job seeker wrote about this Interview, as Markdown: `#` to `###` titles, **bold**, *italics*, <u>underline</u>, `- ` and `1. ` lists, and a newline as a line break; other HTML in it is text. At most 20,000 characters of Markdown. Null when there is none. Blank is stored as null.",
             "examples": [
               null
             ]
@@ -2617,9 +2617,9 @@
               }
             ],
             "title": "Prep Notes",
-            "description": "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its Interview notes, as plain text of at most 20,000 characters. Null when there are none. Blank is stored as null.",
+            "description": "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its Interview notes, as Markdown: `#` to `###` titles, **bold**, *italics*, <u>underline</u>, `- ` and `1. ` lists, and a newline as a line break; other HTML in it is text. At most 20,000 characters of Markdown. Null when there are none. Blank is stored as null.",
             "examples": [
-              "Review the caching chapter. Ask about the on-call rotation."
+              "# Review\n\nThe caching chapter.\n\n1. Ask about the on-call rotation."
             ]
           },
           "participants": {
@@ -2743,9 +2743,9 @@
               }
             ],
             "title": "How It Went",
-            "description": "How it went (GLOSSARY.md, Interview notes): what the job seeker wrote about this Interview, as plain text of at most 20,000 characters. Null when there is none. Blank is stored as null.",
+            "description": "How it went (GLOSSARY.md, Interview notes): what the job seeker wrote about this Interview, as Markdown: `#` to `###` titles, **bold**, *italics*, <u>underline</u>, `- ` and `1. ` lists, and a newline as a line break; other HTML in it is text. At most 20,000 characters of Markdown. Null when there is none. Blank is stored as null.",
             "examples": [
-              "Friendly. The caching question ran long."
+              "**Friendly.** The caching question ran long.\n\n- Send a thank-you"
             ]
           },
           "takeaway": {
@@ -2775,9 +2775,9 @@
               }
             ],
             "title": "Prep Notes",
-            "description": "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its Interview notes, as plain text of at most 20,000 characters. Null when there are none. Blank is stored as null.",
+            "description": "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its Interview notes, as Markdown: `#` to `###` titles, **bold**, *italics*, <u>underline</u>, `- ` and `1. ` lists, and a newline as a line break; other HTML in it is text. At most 20,000 characters of Markdown. Null when there are none. Blank is stored as null.",
             "examples": [
-              "Review the caching chapter. Ask about the on-call rotation."
+              "# Review\n\nThe caching chapter.\n\n1. Ask about the on-call rotation."
             ]
           },
           "participants": {

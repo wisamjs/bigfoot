@@ -140,13 +140,14 @@ export const PAGES = [
         expect: "Done",
       },
       {
-        // How it went over the limit (typed past the field's maxLength, as a paste could) fails its
-        // check and are never sent, so they stay unsaved and leaving asks first. A save that went
-        // through would let the job seeker leave before the prompt could be checked.
+        // What they asked over the limit (typed past the field's maxLength, as a paste could) fails
+        // its check and is never sent, so it stays unsaved and leaving asks first. A save that went
+        // through would let the job seeker leave before the prompt could be checked. (How it went is
+        // a formatting editor, not a textarea, since BIG-214.)
         name: "interview-unsaved-changes-prompt",
         steps: [
           { click: 'button[aria-label="Edit Interview notes"]' },
-          { fill: 'textarea[id^="how_it_went-"]', value: "x".repeat(20_001) },
+          { fill: 'textarea[id^="what_they_asked-"]', value: "x".repeat(20_001) },
           // "← Vercel", back to the Interview's Application page (BIG-166).
           { click: "main a", text: "Vercel" },
         ],

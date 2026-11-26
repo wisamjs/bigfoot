@@ -107,6 +107,20 @@ export const TakeawaysWithoutPrepNotes: Story = {
   args: { app: lumen, interview: deepDive },
 };
 
+/** Formatted Prep notes (BIG-214): a title sits one level under the card's "Prep notes" heading, then bold and a list. */
+export const FormattedPrepNotes: Story = {
+  args: {
+    interview: { ...deepDive, prep_notes: "# Review\n\nThe **feature store** migration:\n\n1. Why we moved\n2. What broke" },
+    lookBack: { takeaways: [], theyAsked: null },
+  },
+  play: async ({ canvas }) => {
+    const card = canvas.getByRole("region", { name: "Round 2 · Technical Deep-Dive" });
+    await expect(within(card).getByRole("heading", { level: 4, name: "Review" })).toBeVisible();
+    await expect(within(card).getByText("feature store").tagName).toBe("STRONG");
+    await expect(within(card).getAllByRole("listitem")).toHaveLength(2);
+  },
+};
+
 /** Prep notes, but no takeaways apply. */
 export const PrepNotesWithoutTakeaways: Story = {
   args: { lookBack: { takeaways: [], theyAsked: null } },
