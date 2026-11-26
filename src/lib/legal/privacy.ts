@@ -2,10 +2,15 @@
 // reused (e.g. a dashboard notice when the policy changes).
 
 /** The date the current version of the policy takes effect (ISO yyyy-mm-dd). */
-export const PRIVACY_EFFECTIVE_DATE = "2026-11-26";
+export const PRIVACY_EFFECTIVE_DATE = "2026-11-27";
 
 /** Newest first. The first entry's date must equal PRIVACY_EFFECTIVE_DATE. */
 export const PRIVACY_CHANGES: readonly { date: string; summary: string }[] = [
+  {
+    date: "2026-11-27",
+    summary:
+      "Someone you give a Share link and its passcode can now open it and see your Journey: your name, your In Progress Applications and Offers, and their Interviews’ titles, categories and times, never salaries, job postings, Locations or notes. We now store your name with each Share link you make, when a link was last opened, and the time of each wrong passcode typed for it (deleted after 15 minutes). Opening a link sets a cookie in that person’s browser for that link only.",
+  },
   {
     date: "2026-11-26",
     summary:

@@ -14,6 +14,7 @@ import "./preview.css";
 sb.mock(import("../src/app/actions.ts"));
 sb.mock(import("../src/app/applications/actions.ts"));
 sb.mock(import("../src/app/account/actions.ts"));
+sb.mock(import("../src/app/journey/[id]/actions.ts"));
 
 type Theme = "dark" | "light";
 

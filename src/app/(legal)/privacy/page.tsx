@@ -93,9 +93,9 @@ export default function PrivacyPage() {
         <h3 className={h3}>From Google, when you sign in</h3>
         <p>
           Your name, email address, profile photo and Google account id. We never see your Google
-          password. We keep your name, email and photo only in your browser’s sign-in cookie, not in
-          our database. We store your Google account id in our database to know which Applications
-          are yours.
+          password. We keep your email and photo only in your browser’s sign-in cookie, not in our
+          database, and your name too, unless you make a Share link (below). We store your Google
+          account id in our database to know which Applications are yours.
         </p>
         <h3 className={h3}>What you enter</h3>
         <p>
@@ -117,7 +117,20 @@ export default function PrivacyPage() {
           follow your search. For each one, we store who it is for (the label you write), when you
           made it, when you last set its passcode, when it expires and when it was last opened. We
           store a one-way hash of its passcode, not the passcode itself, so we cannot show it to
-          you again.
+          you again. We also store your name with each link you make, so the person who opens it
+          sees who shared it.
+        </p>
+        <p>
+          Someone who opens your Share link and types its passcode sees only what the Account
+          page’s “They’ll see” box lists: your name, your In Progress Applications and Offers (the
+          company, role and applied date), and each one’s Interviews (title, category and time).
+          They never see salaries, job postings, Locations, Prep notes, Interview notes, Outcome
+          notes or Applications that ended without an Offer, and they can’t change anything.
+        </p>
+        <p>
+          When someone types a wrong passcode, we store the time of the try with the link, to
+          lock it after 5 wrong tries; each try is deleted after 15 minutes, or with the link.
+          We don’t store who opened a link or their IP address.
         </p>
         <h3 className={h3}>Technical information</h3>
         <p>
@@ -230,6 +243,12 @@ export default function PrivacyPage() {
           </li>
           <li>short-lived cookies that protect the sign-in process from forgery.</li>
         </ul>
+        <p>
+          When someone opens a Share link with its passcode, Bigfoot sets one more strictly
+          necessary cookie in their browser, for that link only. It holds a signed code naming the
+          link, and expires when the link does or when they press Lock. It stops working as soon as
+          you stop sharing the link or change its passcode.
+        </p>
         <p>We do not set analytics, advertising or tracking cookies.</p>
       </Section>
 

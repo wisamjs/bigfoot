@@ -196,6 +196,23 @@ export const INTERVIEW_CATEGORY_OPTIONS: Record<InterviewCategory, Option> = {
   decision_maker: { label: "Decision Maker" },
 };
 
+/**
+ * "What this is:" on a Journey's next Interview (BIG-197): each Interview category in plain words
+ * for a Viewer who doesn't know hiring jargon. Fixed text, without pronouns.
+ */
+export const INTERVIEW_CATEGORY_EXPLAINED: Record<InterviewCategory, string> = {
+  recruiter: "a first conversation with the company’s recruiter, about the role and whether it’s a fit.",
+  hiring_manager: "a conversation with the person this role reports to, about the work and how the team runs.",
+  technical: "a hands-on session solving technical problems, often by writing code.",
+  system_design: "designing a software system out loud, talking through the trade-offs.",
+  project_deep_dive: "a close look at one past project: the decisions, the problems and the results.",
+  people_management: "questions about leading people: hiring, feedback, growth and hard conversations.",
+  project_delivery: "questions about getting projects done: planning, priorities and surprises along the way.",
+  collaboration: "questions about working with other people and teams, disagreements included.",
+  culture: "a conversation about values and how the team works together.",
+  decision_maker: "a conversation with a senior leader, often the one who makes the final call.",
+};
+
 /** An Interview category's name, which is also where a new Interview's title starts. */
 export function categoryLabel(category: InterviewCategory): string {
   return INTERVIEW_CATEGORY_OPTIONS[category].label;

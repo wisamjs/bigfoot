@@ -11,6 +11,7 @@ from app.models import SHARE_LINKS_MAX
 from tests.conftest import TEST_SCHEMA
 
 PASSCODE = "maple-river-42"
+SHARED_BY = "Wisam Zaghal"
 LISTED = {"id", "label", "created_at", "passcode_set_at", "expires_at", "last_opened_at", "expired"}
 
 
@@ -22,7 +23,9 @@ def query(settings, statement, params=()):
 
 
 def create(client, headers, label="Mom & Dad", passcode=PASSCODE):
-    res = client.post("/me/share-links", json={"label": label, "passcode": passcode}, headers=headers)
+    res = client.post(
+        "/me/share-links", json={"label": label, "passcode": passcode, "shared_by": SHARED_BY}, headers=headers
+    )
     assert res.status_code == 201, res.text
     return res.json()
 
@@ -90,7 +93,9 @@ def test_a_job_seeker_can_have_at_most_10(settings, client, token):
     for n in range(SHARE_LINKS_MAX):
         create(client, token(), f"Link {n}")
 
-    res = client.post("/me/share-links", json={"label": "One more", "passcode": PASSCODE}, headers=token())
+    res = client.post(
+        "/me/share-links", json={"label": "One more", "passcode": PASSCODE, "shared_by": SHARED_BY}, headers=token()
+    )
 
     assert res.status_code == 409
     assert res.json() == {"detail": "You can share with up to 10 people. Stop sharing one to add another."}
@@ -116,7 +121,11 @@ def test_gives_up_when_every_id_drawn_is_taken(monkeypatch, client, token):
     monkeypatch.setattr(auth, "new_share_link_id", lambda: taken)
 
     with pytest.raises(RuntimeError, match="No free Share link id"):
-        client.post("/me/share-links", json={"label": "Uncle Sami", "passcode": PASSCODE}, headers=token())
+        client.post(
+            "/me/share-links",
+            json={"label": "Uncle Sami", "passcode": PASSCODE, "shared_by": SHARED_BY},
+            headers=token(),
+        )
 
 
 def test_renewing_makes_it_last_7_days_from_now_even_once_expired(settings, client, token):
@@ -221,7 +230,7 @@ def test_an_unknown_link_is_not_found(client, token, suffix):
 )
 def test_an_access_token_cannot_manage_share_links(settings, client, token, method, path):
     secret = client.post("/me/access-tokens", json={"name": "Cron"}, headers=token()).json()["token"]
-    body = {"label": "Mom", "passcode": PASSCODE} if method in ("POST", "PUT") else None
+    body = {"label": "Mom", "passcode": PASSCODE, "shared_by": SHARED_BY} if method in ("POST", "PUT") else None
 
     res = client.request(method, path, json=body, headers={"Authorization": f"Bearer {secret}"})
 

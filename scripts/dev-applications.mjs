@@ -94,6 +94,9 @@ async function removeTestAccessTokens(jobSeekerId) {
   for (const t of existing) await call(jobSeekerId, "DELETE", `/me/access-tokens/${t.id}`);
 }
 
+/** The test Share link's Passcode, which scripts/pages.mjs types to open its Journey. */
+export const TEST_PASSCODE = "maple-river-42";
+
 /** Stops every Share link `jobSeekerId` has, including any a page state created. */
 async function removeTestShareLinks(jobSeekerId) {
   const existing = await call(jobSeekerId, "GET", "/me/share-links");
@@ -112,7 +115,11 @@ export async function withTestApplications(jobSeekerId, fn) {
   await removeTestShareLinks(jobSeekerId);
   await addTestApplications(jobSeekerId);
   await call(jobSeekerId, "POST", "/me/access-tokens", { name: "Calendar cron job" });
-  await call(jobSeekerId, "POST", "/me/share-links", { label: "Mom & Dad", passcode: "maple-river-42" });
+  await call(jobSeekerId, "POST", "/me/share-links", {
+    label: "Mom & Dad",
+    passcode: TEST_PASSCODE,
+    shared_by: "Test User",
+  });
   try {
     return await fn();
   } finally {

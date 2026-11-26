@@ -13,7 +13,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { withTestApplications } from "./dev-applications.mjs";
 import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
-import { pagePath } from "./page-path.mjs";
+import { needsData, pagePath } from "./page-path.mjs";
 import { PAGES } from "./pages.mjs";
 import { ensureServers } from "./servers.mjs";
 
@@ -38,6 +38,12 @@ const checks = [
           ? (r) => r.body.includes("NEXT_REDIRECT")
           : (r) => r.status === 200 && r.body.includes(page.expect),
   })),
+  // Share links made before BIG-197 used /s/<id>; next.config.ts redirects them for good.
+  {
+    path: "/s/abcdefghij",
+    signedIn: false,
+    expect: (r) => r.status === 308 && new URL(r.location ?? "", base).pathname === "/journey/abcdefghij",
+  },
   { path: "/api/auth/providers", signedIn: false, expect: (r) => r.status === 200 && r.body.includes('"google"') },
   // The API rejects requests without a token from the Next.js server.
   { url: () => `${apiBase}/applications`, signedIn: false, expect: (r) => r.status === 401 },
@@ -62,14 +68,14 @@ function newLogErrors(offset) {
 
 const logOffset = existsSync(LOG) ? statSync(LOG).size : 0;
 const cookie = `${SESSION_COOKIE}=${await createTestSession()}`;
-const needsData = checks.some((check) => check.application);
-const dataCookie = needsData ? `${SESSION_COOKIE}=${await createTestSession(DATA_JOB_SEEKER_ID)}` : "";
+const holdsData = checks.some(needsData);
+const dataCookie = holdsData ? `${SESSION_COOKIE}=${await createTestSession(DATA_JOB_SEEKER_ID)}` : "";
 let failed = 0;
 
 /** The request headers for a check: signed out sends none, and a check on data uses the data user. */
 function headersFor(check) {
   if (!check.signedIn) return {};
-  return { cookie: check.application ? dataCookie : cookie };
+  return { cookie: needsData(check) ? dataCookie : cookie };
 }
 
 /** Runs one check, printing its result; true when it passed. */
@@ -103,7 +109,7 @@ async function runChecks() {
   }
 }
 
-if (needsData) await withTestApplications(DATA_JOB_SEEKER_ID, runChecks);
+if (holdsData) await withTestApplications(DATA_JOB_SEEKER_ID, runChecks);
 else await runChecks();
 
 // The dev server validates prerendering after responding; give the log a moment to flush.

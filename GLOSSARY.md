@@ -19,19 +19,19 @@ A secret a job seeker creates on the Account page and gives a script, such as a 
 _Avoid_: API key, personal access token, PAT, credential; delete (a token is revoked)
 
 **Share link**:
-A private link a job seeker makes on the Account page so someone can follow their search without signing in. Each has a label saying who it's for, which only the job seeker sees, and its own Passcode. It shows its Viewer the job seeker's Journey and nothing else, and can't change anything. It expires 7 days after it is made; Renew makes it last 7 days from then, keeping the same link and Passcode. Stop sharing deletes it, and anyone viewing it is cut off straight away. A job seeker can have up to 10. The Account page lists each one's label, when it was made, when its Passcode was set, when it was last opened and when it expires.
+A private link a job seeker makes on the Account page so someone can follow their search without signing in: `/journey/<id>`, with a random 10-character id (links made before BIG-197 used `/s/<id>`, which redirects). Each has a label saying who it's for, which only the job seeker sees, and its own Passcode. It shows its Viewer the job seeker's Journey and nothing else, and can't change anything. It expires 7 days after it is made; Renew makes it last 7 days from then, keeping the same link and Passcode. Stop sharing deletes it, and anyone viewing it is cut off straight away. A job seeker can have up to 10. The Account page lists each one's label, when it was made, when its Passcode was set, when it was last opened and when it expires.
 _Avoid_: share URL, public link, invite; revoke (a Share link is stopped)
 
 **Viewer**:
-_Planned_ (BIG-197). Someone a job seeker gave a Share link and its Passcode to, such as a parent. A Viewer has no account and can only read the Journey; pressing Lock, or the link being stopped, expiring or getting a new Passcode, sends them back to the Passcode page.
+Someone a job seeker gave a Share link and its Passcode to, such as a parent. A Viewer has no account and can only read the Journey. Pressing Lock, or the link getting a new Passcode, sends them back to the Passcode page; a stopped or expired link shows a page saying it no longer opens.
 _Avoid_: guest, visitor, follower, user
 
 **Passcode**:
-The secret a job seeker chooses for one Share link, at least 8 characters and easy to say out loud, like maple-river-42. Bigfoot shows it once, when it is set, and stores only a hash of it. Five wrong tries lock the link for 15 minutes (_Planned_, BIG-197). Change passcode sets a new one and signs every Viewer out.
+The secret a job seeker chooses for one Share link, at least 8 characters and easy to say out loud, like maple-river-42. Bigfoot shows it once, when it is set, and stores only a hash of it. Five wrong tries within 15 minutes lock the link until they are 15 minutes old. Change passcode sets a new one and signs every Viewer out.
 _Avoid_: password, PIN
 
 **Journey**:
-_Planned_ (BIG-197). A job seeker's search as a Viewer sees it, at the Share link's URL, headed "Wisam's Journey": counts of Offers to decide, Interviews in the next 2 weeks, Interviews completed this month and Applications waiting to hear back; the next Interview; a month calendar; and where each Application stands. It covers In Progress Applications and Offers only, with Interview titles and categories, and never shows salary, job postings, Prep notes, Interview notes, Outcome notes or other Done Applications. Times are in the Viewer's own time zone.
+A job seeker's search as a Viewer sees it, at the Share link's URL (`/journey/<id>`), headed "Wisam's Journey": counts of Offers to decide, Interviews in the next 2 weeks, Interviews completed this month and Applications waiting to hear back; the next Interview; a month calendar; and where each Application stands. It covers In Progress Applications and Offers only, with Interview titles and categories, and never shows salary, job postings, Prep notes, Interview notes, Outcome notes or other Done Applications. Times are in the Viewer's own time zone.
 _Avoid_: shared view, shared dashboard, public page, progress page
 
 **Application**:

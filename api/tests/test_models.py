@@ -25,11 +25,13 @@ from app.models import (
     PASSCODE_MAX_LENGTH,
     PASSCODE_MIN_LENGTH,
     SHARE_LINK_LABEL_MAX,
+    SHARED_BY_MAX,
     AccessTokenCreate,
     ApplicationCreate,
     ApplicationPatch,
     InterviewCreate,
     InterviewPatch,
+    PasscodeAttempt,
     PasscodeChange,
     ShareLinkCreate,
     check_done,
@@ -77,6 +79,7 @@ def test_optional_text_is_trimmed():
 
 
 # Each capped field: (model, the rest of a valid body, field, cap, a valid value of a given length).
+SHARE_LINK_BODY = {"label": "Mom", "passcode": "maple-river-42", "shared_by": "Wisam Zaghal"}
 CAPS = [
     (ApplicationCreate, APPLICATION, "company", COMPANY_MAX_LENGTH, lambda n: "c" * n),
     (ApplicationCreate, APPLICATION, "title", TITLE_MAX_LENGTH, lambda n: "t" * n),
@@ -88,7 +91,9 @@ CAPS = [
     (InterviewCreate, INTERVIEW, "takeaway", TAKEAWAY_MAX_LENGTH, lambda n: "k" * n),
     (InterviewCreate, INTERVIEW, "prep_notes", INTERVIEW_PREP_NOTES_MAX_LENGTH, lambda n: "p" * n),
     (AccessTokenCreate, {}, "name", ACCESS_TOKEN_NAME_MAX, lambda n: "n" * n),
-    (ShareLinkCreate, {"passcode": "maple-river-42"}, "label", SHARE_LINK_LABEL_MAX, lambda n: "l" * n),
+    (ShareLinkCreate, SHARE_LINK_BODY, "label", SHARE_LINK_LABEL_MAX, lambda n: "l" * n),
+    (ShareLinkCreate, SHARE_LINK_BODY, "shared_by", SHARED_BY_MAX, lambda n: "w" * n),
+    (PasscodeAttempt, {}, "passcode", PASSCODE_MAX_LENGTH, lambda n: "p" * n),
     (PasscodeChange, {}, "passcode", PASSCODE_MAX_LENGTH, lambda n: "p" * n),
 ]
 
@@ -342,11 +347,16 @@ def test_an_access_token_name_keeps_other_unicode():
     assert AccessTokenCreate.model_validate({"name": "Café ☕ 日本"}).name == "Café ☕ 日本"
 
 
-SHARE_LINK = {"label": "Mom & Dad", "passcode": "maple-river-42"}
+SHARE_LINK = {"label": "Mom & Dad", "passcode": "maple-river-42", "shared_by": "Wisam Zaghal"}
 
 
-def test_a_share_link_needs_a_label_and_a_passcode_and_nothing_else():
-    assert errors(ShareLinkCreate, {}) == ["label: Field required", "passcode: Field required"]
+def test_a_share_link_needs_a_label_a_passcode_and_who_shares_it_and_nothing_else():
+    assert errors(ShareLinkCreate, {}) == [
+        "label: Field required",
+        "passcode: Field required",
+        "shared_by: Field required",
+    ]
+    assert errors(ShareLinkCreate, SHARE_LINK | {"shared_by": " "}) == ["shared_by: Value error, must not be blank"]
     assert errors(ShareLinkCreate, SHARE_LINK | {"label": "  "}) == ["label: Value error, must not be blank"]
     assert errors(ShareLinkCreate, SHARE_LINK | {"expires_at": "2027-01-01"}) == [
         "expires_at: Extra inputs are not permitted"

@@ -143,6 +143,8 @@ const eslintConfig = defineConfig([
               // The Application page's empty states use shell's illustrations (BIG-174).
               applications: ["shell"],
               dashboard: ["applications", "shell"],
+              // The Journey shows Interviews as the job seeker's pages do: date tiles, Progress marks (BIG-197).
+              journey: ["applications", "shell"],
               landing: ["applications", "auth", "shell"],
               shell: ["auth"],
             }).map(([from, to]) => ({

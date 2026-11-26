@@ -20,7 +20,7 @@ import { dialogKeyboardProblems, enterState, launchChrome, openPage, skipLinkPro
 import { withNoApplications, withTestApplications } from "./dev-applications.mjs";
 import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
 import { clippedTextProblems, touchTargetProblems, emulateDesktop, emulatePhone } from "./mobile-checks.mjs";
-import { pagePath } from "./page-path.mjs";
+import { needsData, pagePath } from "./page-path.mjs";
 import { PAGES } from "./pages.mjs";
 import { ensureServers } from "./servers.mjs";
 
@@ -46,8 +46,8 @@ const rendered = shardPages(
   SHARD,
 );
 if (SHARD.total > 1) console.log(`Shard ${SHARD.index} of ${SHARD.total}: ${rendered.length} pages\n`);
-const pages = rendered.filter((page) => !page.application);
-const dataPages = rendered.filter((page) => page.application);
+const pages = rendered.filter((page) => !needsData(page));
+const dataPages = rendered.filter(needsData);
 
 /** axe violations on the page as it stands, one line per failing element. */
 async function violations(chrome, where) {
@@ -125,7 +125,7 @@ async function phoneProblems(chrome) {
  */
 async function warmUp() {
   const cookie = `${SESSION_COOKIE}=${await createTestSession()}`;
-  const routes = PAGES.filter((page) => !page.redirect && !page.application);
+  const routes = PAGES.filter((page) => !page.redirect && !needsData(page));
   await Promise.all(
     routes.map(async (page) => {
       const headers = page.signedIn ? { cookie } : {};
