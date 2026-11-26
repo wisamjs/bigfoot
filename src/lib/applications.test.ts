@@ -122,6 +122,14 @@ describe("roundNumber", () => {
     expect(roundNumber(app, second)).toBe(2);
   });
 
+  it("goes by id for Interviews at the same time, added at the same time", () => {
+    const b = added("b", "2026-11-09T15:00:00Z", "2026-10-02T09:00:00Z");
+    const a = added("a", "2026-11-09T15:00:00Z", "2026-10-02T09:00:00Z");
+    const app = application("x", { interviews: [b, a] });
+    expect(roundNumber(app, a)).toBe(1);
+    expect(roundNumber(app, b)).toBe(2);
+  });
+
   it("goes by date before the order added", () => {
     const next = added("next", "2026-12-01T15:00:00Z", "2026-09-01T09:00:00Z");
     const app = application("a", { interviews: [first, next] });
@@ -585,6 +593,7 @@ describe("applicationProgress", () => {
     expect(applicationProgress(application("a", { interviews: [interview("n", "2099-01-01T00:00:00Z", false)] })).label).toBe("Interview scheduled");
     expect(applicationProgress(application("a", { status: "done", outcome: "offer" })).label).toBe("Offer");
     expect(applicationProgress(application("a", { status: "done", outcome: "withdrawn" })).label).toBe("Done · Withdrawn");
+    expect(applicationProgress(application("a", { status: "done", outcome: null })).label).toBe("Done");
   });
 });
 

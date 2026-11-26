@@ -17,7 +17,7 @@ export function rememberDashboardView(search: string) {
   }
 }
 
-function rememberedView(): string {
+export function rememberedView(): string {
   try {
     const search = sessionStorage.getItem(KEY) ?? "";
     // Only ever a search string this tab wrote; anything else is ignored.

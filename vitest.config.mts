@@ -49,10 +49,19 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/**/*.{ts,tsx}"],
-      exclude: ["src/**/*.test.{ts,tsx}", "src/**/*.stories.tsx", "src/test/**"],
+      // mock-data.ts is test data, not logic to test.
+      exclude: ["src/**/*.test.{ts,tsx}", "src/**/*.stories.tsx", "src/test/**", "src/lib/mock-data.ts"],
       reporter: ["text-summary", "html"],
-      // Current coverage minus 2 points. Raise these as tests are added; never lower them.
-      thresholds: { statements: 56, branches: 56, functions: 57, lines: 56 },
+      // Current coverage minus 2 points, rounded down. Raise these as tests are added; never lower
+      // them. The global floor counts every file, src/lib's too; src/lib, the domain and data
+      // access, also has its own, higher floor (CODING_STANDARDS.md, "Coverage floors").
+      thresholds: {
+        statements: 84,
+        branches: 84,
+        functions: 80,
+        lines: 85,
+        "src/lib/**": { statements: 97, branches: 97, functions: 98, lines: 97 },
+      },
     },
   },
 });

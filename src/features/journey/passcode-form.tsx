@@ -9,15 +9,10 @@ import { fieldLabelClasses } from "@/components/ui/field";
 import { inputClasses } from "@/components/ui/input";
 import { ShareLinkFrame } from "@/features/journey/share-link-frame";
 import { initials } from "@/features/shell/avatar";
-import { LOCKED_MESSAGE, viewerCopy } from "@/lib/journey";
+import { passcodeError } from "@/features/journey/journey-text";
+import { viewerCopy } from "@/lib/journey";
 
 const IDLE: PasscodeState = { status: "idle" };
-
-/** What a try that didn't open the Journey says under the field. */
-const ERRORS: Partial<Record<PasscodeState["status"], (copy: ReturnType<typeof viewerCopy>) => string>> = {
-  wrong: (copy) => copy.wrongPasscode,
-  error: () => "Couldn’t reach Bigfoot’s server. Try again.",
-};
 
 /**
  * A Share link's Passcode page (BIG-197): who shared it, the Passcode field with Show, and the
@@ -29,7 +24,7 @@ export function PasscodeForm({ id, sharedBy, locked = false }: { id: string; sha
   const [state, submit, pending] = useActionState(openJourneyAction.bind(null, id), IDLE);
   const [shown, setShown] = useState(false);
   const isLocked = locked || state.status === "locked";
-  const error = isLocked ? LOCKED_MESSAGE : ERRORS[state.status]?.(copy);
+  const error = passcodeError(state.status, locked, sharedBy);
   const invalid = invalidProps("passcode-error", error);
 
   return (

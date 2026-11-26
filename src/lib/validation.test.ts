@@ -171,6 +171,11 @@ describe("interviewErrors", () => {
     expect(interviewErrors({ kind: "technical" })).toEqual({ kind: "This isn’t a field Bigfoot stores." });
     expect(interviewErrors({ title: "  " })).toEqual({ title: "Enter the title." });
     expect(interviewErrors({ category: "onsite_loop" })).toEqual({ category: "Choose an Interview category." });
+    expect(interviewErrors({ prep_notes: "a".repeat(20_001) })).toEqual({ prep_notes: "Prep notes can be at most 20,000 characters." });
+  });
+
+  it.each([null, "a title", 7])("refuses %s, which isn't an object", (input) => {
+    expect(interviewErrors(input)).toEqual({ form: "Nothing to save." });
   });
 
   it("needs the category, the title and a date and time on a new Interview, never just a date", () => {
