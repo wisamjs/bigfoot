@@ -52,107 +52,115 @@ export function ShareLinks({ links }: { links: ShareLink[] }) {
   const [changing, setChanging] = useState<ShareLink | null>(null);
   const [stopping, setStopping] = useState<ShareLink | null>(null);
   const [announcement, setAnnouncement] = useState("");
+  const formId = useId();
   const ready = state.created && state.created.id !== dismissed ? state.created : null;
   const url = useShareUrl();
-  const full = links.length >= SHARE_LINKS_MAX;
+  const first = links.length === 0;
+  const showForm = first || (adding && links.length < SHARE_LINKS_MAX);
 
   return (
     <div className="flex flex-col gap-6">
-      {links.length === 0 ? (
+      {first ? (
         <>
           <p className="m-0 text-base leading-[1.7] text-body">
             Make a private link so family can follow along: when your Interviews are and how each Application is
             going. Opening it takes the link and a passcode you choose, and it can’t change anything.
           </p>
           <WhatTheySee />
-          <CreateLinkForm heading="Create your first link" state={state} create={create} isCreating={isCreating} />
         </>
       ) : (
-        <>
-          <p className="m-0 text-base leading-[1.7] text-body">{followingText(links)}</p>
-          <ul className="m-0 flex list-none flex-col gap-4 p-0">
-            {links.map((link) => (
-              <ShareLinkCard
-                key={link.id}
-                link={link}
-                url={url(link.id)}
-                onChangePasscode={() => setChanging(link)}
-                onStop={() => setStopping(link)}
-                onRenewed={(renewed) => setAnnouncement(`Renewed the link for ${renewed.label}.`)}
-              />
-            ))}
-          </ul>
-          <div className="flex flex-col gap-4 border-t border-line pt-4">
-            {full ? (
-              <p className="m-0 text-sm leading-[1.6] text-body">
-                You can share with up to {SHARE_LINKS_MAX} people. Stop sharing one to add another.
-              </p>
-            ) : (
-              <AddLink adding={adding} onToggle={() => setAdding(!adding)}>
-                <CreateLinkForm heading="Someone new" state={state} create={create} isCreating={isCreating} />
-              </AddLink>
-            )}
-          </div>
-        </>
+        <ActiveLinks
+          links={links}
+          url={url}
+          adding={adding}
+          formId={formId}
+          onToggle={() => setAdding(!adding)}
+          onChangePasscode={setChanging}
+          onStop={setStopping}
+          onRenewed={(renewed) => setAnnouncement(`Renewed the link for ${renewed.label}.`)}
+        />
+      )}
+      {/* One place for the form, so it stays mounted when the first link arrives: closing the Link
+          ready dialog then returns focus to its Create link button. */}
+      {showForm && (
+        <div id={formId}>
+          <CreateLinkForm
+            heading={first ? "Create your first link" : "Share with someone else"}
+            state={state}
+            create={(data) => {
+              setAdding(true);
+              create(data);
+            }}
+            isCreating={isCreating}
+          />
+        </div>
       )}
       <output className="sr-only">{announcement}</output>
 
-      <Modal
-        open={ready !== null}
-        onClose={() => {
-          setDismissed(ready?.id ?? null);
-          setAdding(false);
-        }}
-        title={ready ? `Link ready for ${ready.label}` : "Link ready"}
-      >
-        {ready && (
-          <PasscodeShown
-            link={ready}
-            url={url(ready.id)}
-            intro="Send the link and the passcode separately."
-            onDone={() => {
-              setDismissed(ready.id);
-              setAdding(false);
-            }}
-          />
-        )}
-      </Modal>
+      <LinkReadyDialog link={ready} url={ready ? url(ready.id) : ""} onClose={() => setDismissed(ready?.id ?? null)} />
 
       <ChangePasscodeDialog link={changing} url={changing ? url(changing.id) : ""} onClose={() => setChanging(null)} />
 
-      <Modal
-        open={stopping !== null}
+      <StopSharingDialog
+        link={stopping}
         onClose={() => setStopping(null)}
-        title={stopping ? `Stop sharing with ${stopping.label}?` : "Stop sharing"}
-      >
-        {stopping && (
-          <StopSharingConfirmation
-            link={stopping}
-            onCancel={() => setStopping(null)}
-            onStopped={() => {
-              setAnnouncement(`Stopped sharing with ${stopping.label}.`);
-              setStopping(null);
-            }}
-          />
-        )}
-      </Modal>
+        onStopped={(stopped) => {
+          setAnnouncement(`Stopped sharing with ${stopped.label}.`);
+          setStopping(null);
+        }}
+      />
     </div>
   );
 }
 
-/** "+ Share with someone else", which opens the create form under it. */
-function AddLink({ adding, onToggle, children }: { adding: boolean; onToggle: () => void; children: ReactNode }) {
-  const formId = useId();
+/** How many can follow along, a card per link, then "+ Share with someone else" or the limit. */
+function ActiveLinks({
+  links,
+  url,
+  adding,
+  formId,
+  onToggle,
+  onChangePasscode,
+  onStop,
+  onRenewed,
+}: {
+  links: ShareLink[];
+  url: (id: string) => string;
+  adding: boolean;
+  formId: string;
+  onToggle: () => void;
+  onChangePasscode: (link: ShareLink) => void;
+  onStop: (link: ShareLink) => void;
+  onRenewed: (link: ShareLink) => void;
+}) {
   return (
     <>
-      <div className="-mx-2">
-        <Button variant="tertiary" onClick={onToggle} aria-expanded={adding} aria-controls={formId}>
-          <Plus className="size-4" aria-hidden />
-          Share with someone else
-        </Button>
-      </div>
-      <div id={formId} hidden={!adding}>
-        {adding && children}
+      <p className="m-0 text-base leading-[1.7] text-body">{followingText(links)}</p>
+      <ul className="m-0 flex list-none flex-col gap-4 p-0">
+        {links.map((link) => (
+          <ShareLinkCard
+            key={link.id}
+            link={link}
+            url={url(link.id)}
+            onChangePasscode={() => onChangePasscode(link)}
+            onStop={() => onStop(link)}
+            onRenewed={onRenewed}
+          />
+        ))}
+      </ul>
+      <div className="border-t border-line pt-4">
+        {links.length >= SHARE_LINKS_MAX ? (
+          <p className="m-0 text-sm leading-[1.6] text-body">
+            You can share with up to {SHARE_LINKS_MAX} people. Stop sharing one to add another.
+          </p>
+        ) : (
+          <div className="-mx-2">
+            <Button variant="tertiary" onClick={onToggle} aria-expanded={adding} aria-controls={adding ? formId : undefined}>
+              <Plus className="size-4" aria-hidden />
+              Share with someone else
+            </Button>
+          </div>
+        )}
       </div>
     </>
   );
@@ -398,7 +406,7 @@ function CopyField({
       <label htmlFor={id} className={hideLabel ? "sr-only" : "mb-2 block text-sm font-medium text-heading"}>
         {label}
       </label>
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <input
           id={id}
           readOnly
@@ -410,7 +418,7 @@ function CopyField({
           variant={brand && !copied ? "brand" : "secondary"}
           onClick={copy}
           aria-label={`${copied ? "Copied" : copyText}: ${label}`}
-          className={`shrink-0 ${copied ? "border-line-success-subtle text-fg-success-strong" : ""}`}
+          className={`shrink-0 self-start sm:self-auto ${copied ? "border-line-success-subtle text-fg-success-strong" : ""}`}
         >
           <CopyLabel copied={copied} text={copyText} />
         </Button>
@@ -478,6 +486,31 @@ function Notice({ title, children }: { title: string; children: ReactNode }) {
         <p className="m-0">{children}</p>
       </div>
     </div>
+  );
+}
+
+/** The Link ready dialog: the new link and its Passcode, the one time it is shown. */
+function LinkReadyDialog({ link, url, onClose }: { link: NewShareLink | null; url: string; onClose: () => void }) {
+  return (
+    <Modal open={link !== null} onClose={onClose} title={link ? `Link ready for ${link.label}` : "Link ready"}>
+      {link && <PasscodeShown link={link} url={url} intro="Send the link and the passcode separately." onDone={onClose} />}
+    </Modal>
+  );
+}
+
+function StopSharingDialog({
+  link,
+  onClose,
+  onStopped,
+}: {
+  link: ShareLink | null;
+  onClose: () => void;
+  onStopped: (link: ShareLink) => void;
+}) {
+  return (
+    <Modal open={link !== null} onClose={onClose} title={link ? `Stop sharing with ${link.label}?` : "Stop sharing"}>
+      {link && <StopSharingConfirmation link={link} onCancel={onClose} onStopped={() => onStopped(link)} />}
+    </Modal>
   );
 }
 
