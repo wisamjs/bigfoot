@@ -1,5 +1,6 @@
 // The phone checks of scripts/a11y.mjs (docs/guidelines/mobile.md): at 375×812 with touch emulated, every
-// interactive element has a hit area of at least 44×44px, and no visible text is clipped by an ellipsis.
+// interactive element has a hit area of at least 44×44px, every text field is at least 16px (so iOS
+// doesn't zoom in on it), and no visible text is clipped by an ellipsis.
 
 export const PHONE = { width: 375, height: 812 };
 export const TOUCH_TARGET = 44;
@@ -84,6 +85,29 @@ export async function touchTargetProblems(chrome) {
     returnByValue: true,
   });
   if (exceptionDetails) throw new Error(`touch target check failed: ${exceptionDetails.exception?.description ?? exceptionDetails.text}`);
+  return result.value;
+}
+
+/** Under this, iOS Safari zooms in on a focused field and stays zoomed (BIG-204). */
+export const FIELD_FONT_SIZE = 16;
+
+/** One line per visible text field whose font is under 16px, so a phone would zoom in on it. */
+export async function fieldZoomProblems(chrome) {
+  const { result, exceptionDetails } = await chrome.send("Runtime.evaluate", {
+    expression: `(() => {
+      const name = ${NAME_SOURCE};
+      const found = [];
+      for (const el of document.querySelectorAll('select, textarea, input:not([type="checkbox"], [type="radio"], [type="hidden"])')) {
+        if (!el.checkVisibility({ visibilityProperty: true })) continue;
+        const size = parseFloat(getComputedStyle(el).fontSize);
+        if (size >= ${FIELD_FONT_SIZE}) continue;
+        found.push(\`field under ${FIELD_FONT_SIZE}px (\${size}px), so a phone zooms in on it: \${name(el)}\`);
+      }
+      return found;
+    })()`,
+    returnByValue: true,
+  });
+  if (exceptionDetails) throw new Error(`field zoom check failed: ${exceptionDetails.exception?.description ?? exceptionDetails.text}`);
   return result.value;
 }
 

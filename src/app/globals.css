@@ -317,6 +317,19 @@ body {
   outline-offset: 2px;
 }
 
+/*
+ * Touch screens: fields are at least 16px. iOS Safari zooms in on a focused field under 16px and
+ * stays zoomed when the page changes under it, so a Share link's Journey opened from its Passcode
+ * field came up cut off at both edges (BIG-204). Outside any layer so it beats a field's `text-sm`.
+ */
+@media (pointer: coarse) {
+  select,
+  textarea,
+  input:not([type="checkbox"], [type="radio"]) {
+    font-size: max(16px, 1em);
+  }
+}
+
 @layer components {
   /*
    * Touch screens: every control's hit area is at least 44×44px (docs/guidelines/mobile.md). Buttons, fields and
