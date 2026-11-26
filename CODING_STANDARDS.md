@@ -54,6 +54,7 @@ A change to a component in `src/components/ui/` or `src/features/` updates its s
 - A new component's stories have a story per state it has (default, empty, error, loading, long text, and hover, focus and disabled for controls). A new entry in the check's lists is a piece truly drawn only inside its parent, or a static page part; a component with states of its own gets stories.
 - A changed component gets a new story for each state it gains, and changes or removes stories for the states it changes or loses. A changed prop, label or behaviour updates the args and play functions that use it.
 - A story that saves uses the Server Action spies in `__mocks__/actions.ts`, and its play function checks the call, or the error when a story makes the action fail.
+- A page's layout lives in its feature (`dashboard-page.tsx`, `account-page.tsx`, `application-page.tsx`, `interview-page.tsx`, `journey/shared-page.tsx`), and its route in `src/app/` only loads data and renders it. Its **Pages/** stories show each state a job seeker or Viewer sees, at desktop and phone width, from the fixtures and fixed today in `src/test/pages.ts`; a change to a page's states updates them.
 
 Review sends back a PR that changes a component's behaviour or look without touching its stories.
 
