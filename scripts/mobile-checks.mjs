@@ -31,7 +31,11 @@ export async function emulateDesktop(chrome, size) {
 /** One line per interactive element whose hit area is under 44×44px, inline text links excepted. */
 export async function touchTargetProblems(chrome) {
   const { result, exceptionDetails } = await chrome.send("Runtime.evaluate", {
-    expression: `(() => {
+    expression: `(async () => {
+      // Measure settled boxes: a dialog zooms in from 95%, so a mid-animation close button reads 42px wide.
+      // Endless animations (a skeleton's pulse) never finish, so only finite ones are awaited.
+      const finite = document.getAnimations().filter((a) => a.effect?.getComputedTiming().endTime !== Infinity);
+      await Promise.all(finite.map((a) => a.finished.catch(() => {})));
       const name = ${NAME_SOURCE};
       const min = ${TOUCH_TARGET};
       const exceptions = ${JSON.stringify(TOUCH_TARGET_EXCEPTIONS.map((e) => e.selector))};
@@ -83,6 +87,7 @@ export async function touchTargetProblems(chrome) {
       return found;
     })()`,
     returnByValue: true,
+    awaitPromise: true,
   });
   if (exceptionDetails) throw new Error(`touch target check failed: ${exceptionDetails.exception?.description ?? exceptionDetails.text}`);
   return result.value;
