@@ -90,6 +90,11 @@ describe("journeyCounts", () => {
     expect(journeyCounts(journey, NOW).find((c) => c.id === "completed")?.value).toBe(3);
   });
 
+  it("says one completed Interview in the singular", () => {
+    const journey = { applications: [], other_completed_interviews: [at(10, 4)] };
+    expect(journeyCounts(journey, NOW).find((c) => c.id === "completed")?.label).toBe("Interview completed this month");
+  });
+
   it("says one or none in the singular or plural", () => {
     expect(journeyCounts({ applications: [app({ interviews: [interview(at(10, 19))] })], other_completed_interviews: [] }, NOW).map((c) => c.label)).toEqual([
       "Offers to decide",

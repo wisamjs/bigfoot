@@ -4,6 +4,7 @@ import { AppFooter } from "@/features/shell/app-footer";
 import { AppHeader } from "@/features/shell/app-header";
 import { Avatar } from "@/features/shell/avatar";
 import { AccessTokens } from "@/features/account/access-tokens";
+import { deletedApplicationsText } from "@/features/account/account-text";
 import { DeleteAccountForm } from "@/features/account/delete-account-form";
 import { ShareLinks } from "@/features/account/share-links";
 import { buttonClasses } from "@/components/ui/button-classes";
@@ -145,14 +146,7 @@ function AccountLayout({
               <p className="m-0">Deleting your account removes, straight away:</p>
               <ul className={list}>
                 <li>
-                  {count === undefined ? (
-                    "all of your Applications"
-                  ) : count === 1 ? (
-                    "your 1 Application"
-                  ) : (
-                    `all ${count} of your Applications`
-                  )}
-                  , sample Applications included;
+                  {deletedApplicationsText(count)}, sample Applications included;
                 </li>
                 <li>your job seeker record: your Google account id and when you joined Bigfoot; and</li>
                 <li>your Access tokens and Share links, which stop working.</li>

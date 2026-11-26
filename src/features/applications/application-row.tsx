@@ -7,6 +7,7 @@ import { InterviewWhen } from "@/features/applications/application-when";
 import { applicationHref } from "@/features/applications/routes";
 import { SampleBadge } from "@/features/applications/sample-badge";
 import { GROUP_TONE, interviewMark, OUTCOME_TONE } from "@/features/applications/status-tone";
+import { nextWhen } from "@/features/applications/when-text";
 import { useIsClient } from "@/hooks/use-is-client";
 import { useToday } from "@/hooks/use-today";
 import {
@@ -16,7 +17,6 @@ import {
   nextInterview,
   OUTCOME_OPTIONS,
   parseDay,
-  relativeDays,
   upcomingInterviews,
   type Application,
   type ApplicationGroup,
@@ -231,15 +231,6 @@ function NextLine({ job }: { job: Application }) {
   return null;
 }
 
-const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
-const weekdayTimeFormat = new Intl.DateTimeFormat(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" });
-const dayTimeFormat = new Intl.DateTimeFormat(undefined, {
-  weekday: "short",
-  month: "short",
-  day: "numeric",
-  hour: "numeric",
-  minute: "2-digit",
-});
 const sinceFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
 
 /**
@@ -250,15 +241,7 @@ const sinceFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "n
 function NextWhen({ at, short = false }: { at: string; short?: boolean }) {
   const today = useToday();
   if (!today) return <span className="inline-block h-4" />;
-  const date = new Date(at);
-  const days = calendarDaysBetween(today, date);
-  const soon = days <= 1;
-  const relative = relativeDays(days);
-  const text = short
-    ? soon
-      ? `${relative} ${timeFormat.format(date)}`
-      : relative
-    : `${relative.charAt(0).toUpperCase()}${relative.slice(1)} · ${(soon ? timeFormat : days < 7 ? weekdayTimeFormat : dayTimeFormat).format(date)}`;
+  const { text, soon } = nextWhen(new Date(at), today, short);
   return (
     <time aria-hidden dateTime={at} className={soon ? "font-medium text-fg-brand" : "text-body"}>
       {text}

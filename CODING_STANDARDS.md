@@ -58,6 +58,16 @@ A change to a component in `src/components/ui/` or `src/features/` updates its s
 
 Review sends back a PR that changes a component's behaviour or look without touching its stories.
 
+## Which layer a frontend test goes in
+
+Each frontend test goes in the cheapest layer that can check it.
+
+- **Unit** (`*.test.ts`, Node): logic. Anything a function decides from its arguments: formatting, sorting, grouping, a label's wording, which date or choice to show, validation. Logic that a component makes inline moves into a plain function next to it (`when-text.ts`, `status-choices.ts`, `journey/journey-text.ts`) or into `src/lib`, and the component only renders what it returns. Stub what the code reads from outside, such as the API (`fetch`), the session (`@/auth`) or `sessionStorage`, as `src/lib/api.test.ts` and `src/lib/dal.test.ts` do.
+- **Component** (`*.test.tsx`, happy-dom): behaviour. What a job seeker does and what the component does back: typing, saving, errors from a Server Action, focus, what it announces.
+- **Story** (`*.stories.tsx`): each look and state, as "Storybook shows the app as it is" says.
+
+New or changed logic in `src/` gets a unit test in the same PR. Review sends back a PR whose new rule is tested only through a component or a story, as it does a component change without its stories.
+
 ## Which layer an API test goes in
 
 An API test is a unit test unless only the database can decide what it checks.
@@ -76,7 +86,8 @@ coverage minus 2 points: raise it as tests are added, never lower it.
 
 | Tests | Floor | Set in |
 |---|---|---|
-| Frontend (Vitest, `npm test`) | statements 56, branches 56, functions 57, lines 56 | `thresholds` in `vitest.config.mts` |
+| Frontend (Vitest, `npm test`), every file in `src` but stories, tests and `src/lib/mock-data.ts` | statements 84, branches 84, functions 80, lines 85 | `thresholds` in `vitest.config.mts` |
+| Frontend domain and data access alone, `src/lib` | statements 97, branches 97, functions 98, lines 97 | `"src/lib/**"` in `thresholds` in `vitest.config.mts` |
 | API (pytest-cov, `npm run test:api`), line and branch coverage of `api/app` | 97% | `fail_under` in `api/pyproject.toml` |
 | API unit tests alone (`npm run test:api:unit`), line and branch coverage of the logic modules: `auth`, `domain`, `models`, `monitoring`, `responses`, `samples`, `settings` | 98% | `--cov-fail-under` and the `--cov` list in `test:api:unit` in `package.json`; a new logic module joins the list |
 
