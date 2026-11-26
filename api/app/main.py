@@ -110,4 +110,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     for module in (health, account, access_tokens, share_links, journey, applications, interviews):
         app.include_router(module.router)
+    app.include_router(journey.preview_router)
     return app

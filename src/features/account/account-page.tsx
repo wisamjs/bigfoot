@@ -5,7 +5,7 @@ import { AppHeader } from "@/features/shell/app-header";
 import { Avatar } from "@/features/shell/avatar";
 import { AccessTokens } from "@/features/account/access-tokens";
 import { DeleteAccountForm } from "@/features/account/delete-account-form";
-import { ShareLinks } from "@/features/account/share-links";
+import { PreviewJourneyLink, ShareLinks } from "@/features/account/share-links";
 import { buttonClasses } from "@/components/ui/button-classes";
 import { Container } from "@/components/ui/container";
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton";
@@ -86,12 +86,7 @@ function AccountLayout({
               </p>
             </section>
 
-            <section aria-labelledby="share-title" className="card flex flex-col gap-4 p-6">
-              <h2 id="share-title" className="m-0 text-xl font-bold leading-[1.25] text-heading">
-                Share your progress
-              </h2>
-              {shareLinks ? <ShareLinks links={shareLinks} /> : <Skeleton className="h-64 w-full" />}
-            </section>
+            <ShareSection user={user} shareLinks={shareLinks} />
 
             <section aria-labelledby="download-title" className="card flex flex-col gap-4 p-6">
               <h2 id="download-title" className="m-0 text-xl font-bold leading-[1.25] text-heading">
@@ -195,6 +190,25 @@ function AccountLayout({
 }
 
 const list = "m-0 flex list-disc flex-col gap-2 pl-6";
+
+/** Share your progress: "Preview Alex’s Journey" at its top right (BIG-198), then the Share links. */
+function ShareSection({ user, shareLinks }: { user?: CurrentUser; shareLinks?: ShareLink[] }) {
+  return (
+    <section aria-labelledby="share-title" className="card flex flex-col gap-4 p-6">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <h2 id="share-title" className="m-0 text-xl font-bold leading-[1.25] text-heading">
+          Share your progress
+        </h2>
+        {user && <PreviewJourneyLink firstName={user.firstName} />}
+      </div>
+      {shareLinks && user ? (
+        <ShareLinks links={shareLinks} firstName={user.firstName} />
+      ) : (
+        <Skeleton className="h-64 w-full" />
+      )}
+    </section>
+  );
+}
 
 const DOWNLOADS: { format: ExportFormat; label: string; type: string; description: string }[] = [
   {

@@ -2,6 +2,7 @@
 
 import { Lock } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Container } from "@/components/ui/container";
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton";
 import { JourneyApplications } from "@/features/journey/journey-applications";
@@ -37,14 +38,26 @@ function timeZoneName(now: Date) {
  * A Share link's Journey (GLOSSARY.md, BIG-197): the job seeker's search as a Viewer sees it. Four
  * counts, the next Interview, the Interviews calendar, and Where things stand. Times and days are
  * the Viewer's own, so it renders in the browser; the server sends JourneySkeleton. `now` is for
- * stories and tests; the page leaves it out.
+ * stories and tests; the page leaves it out. The job seeker's own preview (BIG-198) passes no link
+ * `id`, so there is no Lock, and a `banner` above it all.
  */
-export function JourneyView({ id, journey, now: fixedNow }: { id: string; journey: Journey; now?: Date }) {
+export function JourneyView({
+  id,
+  journey,
+  banner,
+  now: fixedNow,
+}: {
+  id?: string;
+  journey: Journey;
+  banner?: ReactNode;
+  now?: Date;
+}) {
   const today = useToday();
   const now = fixedNow ?? today;
   const copy = viewerCopy(journey.shared_by);
   return (
     <div className="flex min-h-dvh flex-col">
+      {banner}
       <JourneyHeader id={id} sharedBy={journey.shared_by} />
       <main id="main" className="flex-1 py-8 sm:py-12">
         <Container className="flex flex-col gap-6 max-sm:px-4">

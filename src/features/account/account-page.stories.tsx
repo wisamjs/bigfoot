@@ -23,6 +23,8 @@ const none: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("heading", { level: 1, name: "Account" })).toBeVisible();
     await expect(canvas.queryByText("Mom & Dad")).not.toBeInTheDocument();
+    // Before any link, the job seeker can still check what a Viewer would see (BIG-198).
+    await expect(canvas.getByRole("link", { name: "Preview Alex’s Journey" })).toHaveAttribute("href", "/account/journey-preview");
   },
 };
 export const NoneDesktop: Story = { ...none, ...DESKTOP };
@@ -34,6 +36,7 @@ const withLinks: Story = {
     const share = within(canvas.getByRole("region", { name: "Share your progress" }));
     await expect(share.getByText("Mom & Dad")).toBeVisible();
     await expect(share.getByText("Old flatmate")).toBeVisible();
+    await expect(share.getByRole("link", { name: "Preview Alex’s Journey" })).toBeVisible();
     const tokens = within(canvas.getByRole("region", { name: "Access tokens" }));
     await expect(tokens.getByText("Calendar cron job")).toBeVisible();
     await expect(canvas.getByText(/all 8 of your Applications/)).toBeVisible();

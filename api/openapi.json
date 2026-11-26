@@ -1575,6 +1575,53 @@
           }
         }
       }
+    },
+    "/me/journey": {
+      "get": {
+        "tags": [
+          "Share links"
+        ],
+        "summary": "Preview the job seeker's Journey",
+        "description": "The Journey every one of the job seeker's Share links shows, read as the signed-in job seeker,\nso they can check what a Viewer sees without a Passcode, before making a link or after. It\nrecords no Share link as opened. `shared_by` is null: Bigfoot stores the name only on a link.",
+        "operationId": "preview_journey_me_journey_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Journey"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The bearer token is missing, expired or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The bearer token is an Access token, which can't use Account routes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WebToken": []
+          }
+        ]
+      }
     }
   },
   "components": {

@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getApplications, getJourney, getShareLinkStatus, listApplications, openShareLink } from "./api";
+import { getApplications, getJourney, getShareLinkStatus, listApplications, openShareLink, previewJourney } from "./api";
 
 // `use cache` and next/cache's cacheTag/cacheLife only work inside a Next.js build, so these tests
 // check what the cached read does on a miss. That it is kept, tagged per job seeker and expired by
@@ -38,6 +38,16 @@ describe("getApplications", () => {
     vi.mocked(Sentry.setUser).mockClear();
     await listApplications("seeker-1");
     expect(Sentry.setUser).toHaveBeenCalledOnce();
+  });
+});
+
+describe("previewJourney (BIG-198)", () => {
+  it("reads the job seeker's own Journey with a token naming them, not a Viewer token", async () => {
+    fetchMock.mockImplementation(async () => Response.json({ shared_by: null, applications: [], other_completed_interviews: [] }));
+    expect(await previewJourney("seeker-1")).toEqual({ shared_by: null, applications: [], other_completed_interviews: [] });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/me\/journey$/);
+    expect(init.headers.authorization).toMatch(/^Bearer /);
   });
 });
 
