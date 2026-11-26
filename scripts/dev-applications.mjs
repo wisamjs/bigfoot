@@ -35,7 +35,7 @@ function at(days, hour) {
 }
 
 // Interviews are [category, title, days from today, hour]; negative days are completed. Every Interview has a
-// date and time (docs/adr/0005).
+// date and time (docs/adr/0005), and its Participants (PARTICIPANTS, BIG-191).
 function applications() {
   const applied_on = at(-14, 9).slice(0, 10);
   return [
@@ -57,6 +57,19 @@ function applications() {
   ].map((a) => ({ applied_on, salary: "$150k–$180k", ...a }));
 }
 
+/**
+ * Who each category's Interview is with: a recruiter screen meets the recruiter, and every other
+ * Interview the same named engineering manager (so an Application's second Interview offers someone
+ * met before) and someone known only by role.
+ */
+const PARTICIPANTS = {
+  recruiter: [{ role: "Recruiter", name: "Dana Lee" }],
+  other: [
+    { role: "Engineering Manager", name: "Sam Okafor" },
+    { role: "Staff Engineer", name: null },
+  ],
+};
+
 export async function addTestApplications(jobSeekerId = TEST_JOB_SEEKER_ID) {
   const existing = await call(jobSeekerId, "GET", "/applications");
   if (existing.length) {
@@ -67,8 +80,12 @@ export async function addTestApplications(jobSeekerId = TEST_JOB_SEEKER_ID) {
   }
   for (const { interviews, ...fields } of applications()) {
     const application = await call(jobSeekerId, "POST", "/applications", fields);
+    // Participants already on this Application, by role, so a later Interview sends them by id.
+    const met = new Map();
     for (const [category, title, days, hour] of interviews) {
-      const body = { category, title, at: at(days, hour) };
+      const people = PARTICIPANTS[category === "recruiter" ? "recruiter" : "other"];
+      const participants = people.map((p) => (met.has(p.role) ? { id: met.get(p.role), ...p } : p));
+      const body = { category, title, at: at(days, hour), participants };
       // Every completed Interview has Interview notes, so cards show the notes mark.
       if (days < 0) {
         body.what_they_asked = "Tell me about a past project.\nHow do you test your work?";
@@ -77,7 +94,8 @@ export async function addTestApplications(jobSeekerId = TEST_JOB_SEEKER_ID) {
       }
       // Technical Interviews also have Prep notes, so the Before card and the folded Prep notes show (BIG-180).
       if (category === "technical") body.prep_notes = "Review the caching chapter.\nDraw the diagram first.\nAsk about the on-call rotation.";
-      await call(jobSeekerId, "POST", `/applications/${application.id}/interviews`, body);
+      const added = await call(jobSeekerId, "POST", `/applications/${application.id}/interviews`, body);
+      for (const p of added.participants) met.set(p.role, p.id);
     }
   }
 }

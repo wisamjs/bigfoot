@@ -84,6 +84,7 @@ const FIELD_LABELS: Record<string, string> = {
   how_it_went: "How it went",
   takeaway: "Takeaway for next time",
   prep_notes: "Prep notes",
+  participants: "Participants",
   name: "Name",
   label: "Who it’s for",
   passcode: "Passcode",
@@ -99,7 +100,8 @@ async function apiError(res: Response): Promise<{ message: string; fieldErrors?:
     if (typeof detail === "string") return { message: detail };
     if (Array.isArray(detail)) {
       const problems = detail.map((d: { loc?: unknown[]; msg?: string }) => {
-        const field = String(d.loc?.at(-1) ?? "");
+        // A Participant's role or name ("body", "participants", 0, "role") belongs to the Participants field.
+        const field = d.loc?.includes("participants") ? "participants" : String(d.loc?.at(-1) ?? "");
         const message = `${FIELD_LABELS[field] ?? "A field"} ${(d.msg ?? "is invalid").replace(/^Value error, /, "")}`;
         return [field, message] as const;
       });

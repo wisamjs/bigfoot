@@ -49,6 +49,8 @@ def test_first_time_seeds_sample_applications(client, token):
     assert all(i["at"] is not None for a in apps for i in a["interviews"])
     upcoming = [i for a in apps for i in a["interviews"] if not i["completed"]]
     assert upcoming and all(datetime.fromisoformat(i["at"]) > datetime.now(UTC) for i in upcoming)
+    # Every sample Interview has its Participants (GLOSSARY.md).
+    assert all(i["participants"] for a in apps for i in a["interviews"])
 
 
 def test_samples_are_only_for_that_job_seeker(client, token):

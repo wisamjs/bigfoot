@@ -39,6 +39,12 @@ InterviewCategory = Literal[
 # Interview title: the job seeker's own name for an Interview, required.
 INTERVIEW_TITLE_MAX_LENGTH = 200
 
+# Participants (GLOSSARY.md): the people from the company a job seeker meets in an Interview. A
+# role is required and a name is optional; an Interview has at least one when it is added or edited.
+PARTICIPANT_ROLE_MAX_LENGTH = 200
+PARTICIPANT_NAME_MAX_LENGTH = 200
+PARTICIPANTS_PER_INTERVIEW_MAX = 20
+
 # Interview notes are three plain-text fields. What they asked and How it went are generous enough
 # that nobody writing by hand reaches them; Takeaway for next time is one short line.
 WHAT_THEY_ASKED_MAX_LENGTH = 20_000

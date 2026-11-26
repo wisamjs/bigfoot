@@ -15,7 +15,8 @@ from app.models import (
     InterviewId,
     InterviewPatch,
 )
-from app.queries import INTERVIEW_COLUMNS, INTERVIEW_ORDER, interview_view, owned, pool
+from app.participants import prune_participants, set_participants
+from app.queries import INTERVIEW_COLUMNS, INTERVIEW_ORDER, interview_views, owned, pool
 from app.responses import APPLICATION_NOT_FOUND, INTERVIEW_NOT_FOUND, UNAUTHORIZED
 
 router = APIRouter(
@@ -40,8 +41,7 @@ def list_interviews(request: Request, job_seeker: JobSeekerId, application_id: A
             ),
             (application_id,),
         ).fetchall()
-    now = datetime.now(UTC)
-    return [interview_view(row, now) for row in rows]
+        return interview_views(conn, rows, datetime.now(UTC))
 
 
 @router.post(
@@ -61,9 +61,10 @@ def list_interviews(request: Request, job_seeker: JobSeekerId, application_id: A
 def create_interview(
     request: Request, job_seeker: JobSeekerId, application_id: ApplicationId, body: InterviewCreate
 ) -> Interview:
-    """Add an Interview to an Application. The category, title and date and time are required;
-    categories and titles can repeat, and Interview notes and Prep notes are optional. The number of
-    Interviews per Application is capped (409)."""
+    """Add an Interview to an Application. The category, title, date and time and at least one
+    Participant are required; categories and titles can repeat, and Interview notes and Prep notes are
+    optional. A Participant sent by `id` must be one of the Application's (422). The number of Interviews per
+    Application is capped (409)."""
     with pool(request).connection() as conn, conn.transaction():
         owned(conn, job_seeker, application_id, lock=True)
         count = conn.execute("select count(*) from interviews where application_id = %s", (application_id,)).fetchone()[
@@ -91,7 +92,8 @@ def create_interview(
                 body.prep_notes,
             ),
         ).fetchone()
-    return interview_view(row, datetime.now(UTC))
+        set_participants(conn, application_id, row["id"], body.participants)
+        return interview_views(conn, [row], datetime.now(UTC))[0]
 
 
 @router.patch("/{interview_id}", summary="Edit an Interview")
@@ -102,12 +104,14 @@ def update_interview(
     interview_id: InterviewId,
     body: InterviewPatch,
 ) -> Interview:
-    """Change an Interview's category, title, date, Interview notes or Prep notes.
+    """Change an Interview's category, title, date, Interview notes, Prep notes or Participants.
 
     Only the fields sent change; send null for `what_they_asked`, `how_it_went`, `takeaway` or `prep_notes` to
-    clear it. The category, title and date can't be cleared.
+    clear it. The category, title and date can't be cleared. `participants` replaces the Interview's
+    Participants: at least one, and a Participant left in no Interview is deleted. An `id` that isn't one of
+    the Application's Participants is refused (422).
     """
-    changes = body.model_dump(exclude_unset=True)
+    changes = body.model_dump(exclude_unset=True, exclude={"participants"})
     assignments = [sql.SQL("{} = %s").format(sql.Identifier(name)) for name in changes]
     assignments.append(sql.SQL("updated_at = now()"))
     with pool(request).connection() as conn, conn.transaction():
@@ -118,20 +122,24 @@ def update_interview(
             ),
             [*changes.values(), interview_id, application_id],
         ).fetchone()
-    if row is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Interview not found")
-    return interview_view(row, datetime.now(UTC))
+        if row is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Interview not found")
+        if body.participants is not None:
+            set_participants(conn, application_id, interview_id, body.participants)
+        return interview_views(conn, [row], datetime.now(UTC))[0]
 
 
 @router.delete("/{interview_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete an Interview")
 def delete_interview(
     request: Request, job_seeker: JobSeekerId, application_id: ApplicationId, interview_id: InterviewId
 ) -> None:
-    """Delete an Interview, for example a cancelled one, and its Interview notes and Prep notes with it."""
+    """Delete an Interview, for example a cancelled one, and its Interview notes and Prep notes with it, and
+    its Participants who are in no other Interview."""
     with pool(request).connection() as conn, conn.transaction():
         owned(conn, job_seeker, application_id)
         deleted = conn.execute(
             "delete from interviews where id = %s and application_id = %s", (interview_id, application_id)
         ).rowcount
+        prune_participants(conn, application_id)
     if not deleted:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Interview not found")

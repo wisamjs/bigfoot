@@ -30,13 +30,17 @@ export const MissingFields: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Add Interview" }));
     await expect(canvas.getByRole("combobox", { name: /^Application/ })).toHaveFocus();
     await expect(canvas.getByRole("button", { name: /^Date, / })).toHaveAttribute("aria-invalid", "true");
+    await expect(canvas.getByRole("group", { name: "Who you’re meeting" })).toHaveAccessibleDescription(
+      "Add at least one person you’re meeting.",
+    );
     await expect(createInterviewAction).not.toHaveBeenCalled();
   },
 };
 
 /**
  * The category (its name filling in the title), a title in the job seeker's words, the date and
- * time, and How it went create the Interview.
+ * time, who they're meeting (someone already met at Datadog, and someone new), and How it went
+ * create the Interview.
  */
 export const Add: Story = {
   args: { applicationId: "datadog" },
@@ -49,6 +53,8 @@ export const Add: Story = {
     await userEvent.click(canvas.getByRole("button", { name: /^Date, / }));
     await userEvent.click(within(await screen.findByRole("grid")).getByText("15"));
     await userEvent.type(canvas.getByLabelText("Time"), "14:30");
+    await userEvent.type(canvas.getByRole("textbox", { name: "Role" }), "Staff Engineer");
+    await userEvent.selectOptions(canvas.getByRole("combobox", { name: "Add someone you’ve met" }), "datadog-Senior Engineer-Priya Shah");
     await userEvent.type(canvas.getByRole("textbox", { name: "How it went" }), "Bring the system design notes");
     await userEvent.click(canvas.getByRole("button", { name: "Add Interview" }));
     await waitFor(() =>
@@ -58,6 +64,10 @@ export const Add: Story = {
           category: "system_design",
           title: "Retrospective System Design",
           how_it_went: "Bring the system design notes",
+          participants: [
+            { role: "Staff Engineer", name: null },
+            { id: "datadog-Senior Engineer-Priya Shah", role: "Senior Engineer", name: "Priya Shah" },
+          ],
         }),
       ),
     );
@@ -74,6 +84,7 @@ export const AddFails: Story = {
     await userEvent.click(canvas.getByRole("button", { name: /^Date, / }));
     await userEvent.click(within(await screen.findByRole("grid")).getByText("15"));
     await userEvent.type(canvas.getByLabelText("Time"), "09:00");
+    await userEvent.type(canvas.getByRole("textbox", { name: "Role" }), "Recruiter");
     await userEvent.click(canvas.getByRole("button", { name: "Add Interview" }));
     await expect(await canvas.findByText(/Couldn’t reach Bigfoot’s server/)).toBeVisible();
   },

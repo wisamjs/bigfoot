@@ -114,7 +114,7 @@ describe.each(XSS_TEXT.map((payload, n) => [payload, XSS_URLS[n]] as const))("%j
 });
 
 describe("the Add Interview form", () => {
-  it.each(XSS_TEXT)("sends Interview notes %j exactly as typed", async (payload) => {
+  it.each(XSS_TEXT)("sends Interview notes and a Participant %j exactly as typed", async (payload) => {
     const user = userEvent.setup();
     render(<NewInterviewForm applications={[application("birch", { company: "Birch" })]} applicationId="birch" />);
     await user.click(screen.getByRole("button", { name: /^Date, / }));
@@ -123,11 +123,18 @@ describe("the Add Interview form", () => {
     // Pastes rather than types: user-event reads braces and brackets as key names.
     await user.click(screen.getByLabelText("How it went"));
     await user.paste(payload);
+    await user.click(screen.getByLabelText("Role"));
+    await user.paste(payload);
+    await user.click(screen.getByLabelText(/^Name/));
+    await user.paste(payload);
     await user.click(screen.getByRole("button", { name: "Add Interview" }));
 
     expect(actions.createInterviewAction).toHaveBeenCalledWith(
       "birch",
-      expect.objectContaining({ how_it_went: payload.trim() }),
+      expect.objectContaining({
+        how_it_went: payload.trim(),
+        participants: [{ role: payload.trim(), name: payload.trim() }],
+      }),
     );
     expectNothingInjected();
   });

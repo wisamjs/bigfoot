@@ -115,7 +115,14 @@ def test_an_access_token_reads_and_writes_my_applications_and_interviews(client,
 
     interviews = f"/applications/{application_id}/interviews"
     interview = client.post(
-        interviews, json={"category": "technical", "title": "Technical", "at": "2026-11-20T17:00:00Z"}, headers=headers
+        interviews,
+        json={
+            "category": "technical",
+            "title": "Technical",
+            "at": "2026-11-20T17:00:00Z",
+            "participants": [{"role": "Recruiter"}],
+        },
+        headers=headers,
     )
     assert interview.status_code == 201, interview.text
     moved = client.patch(f"{interviews}/{interview.json()['id']}", json={"category": "hiring_manager"}, headers=headers)
@@ -135,7 +142,12 @@ def test_an_access_token_reaches_nobody_elses_data(client, token):
     alice = bearer(create(client, token("alice"))["token"])
     bobs = client.post("/applications", json={"company": "Bob's", "title": "Engineer"}, headers=token("bob")).json()
     interviews = f"/applications/{bobs['id']}/interviews"
-    interview = {"category": "technical", "title": "Technical", "at": "2026-11-20T17:00:00Z"}
+    interview = {
+        "category": "technical",
+        "title": "Technical",
+        "at": "2026-11-20T17:00:00Z",
+        "participants": [{"role": "Recruiter"}],
+    }
     interview_id = client.post(interviews, json=interview, headers=token("bob")).json()["id"]
     bobs_interview = f"{interviews}/{interview_id}"
 

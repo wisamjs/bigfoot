@@ -50,6 +50,7 @@ def interview(client, headers, app, at, title="Hiring Manager", category="hiring
         "title": title,
         "at": at,
         "prep_notes": "Private prep",
+        "participants": [{"role": "Recruiter", "name": "Private name"}],
         "what_they_asked": "Private questions",
         "how_it_went": "Private reflection",
         "takeaway": "Private takeaway",

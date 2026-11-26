@@ -41,7 +41,12 @@ from app.models import (
 )
 
 APPLICATION = {"company": "Northwind", "title": "Engineer"}
-INTERVIEW = {"category": "technical", "title": "Technical", "at": "2026-11-20T17:00:00Z"}
+INTERVIEW = {
+    "category": "technical",
+    "title": "Technical",
+    "at": "2026-11-20T17:00:00Z",
+    "participants": [{"role": "Recruiter"}],
+}
 DONE = {"status": "done", "outcome": "offer"}
 
 
@@ -269,11 +274,12 @@ def test_an_interview_at_a_datetime_object_is_kept():
     assert InterviewCreate.model_validate(INTERVIEW | {"at": at}).at == at
 
 
-def test_an_interview_needs_a_category_a_title_and_a_date():
+def test_an_interview_needs_a_category_a_title_a_date_and_participants():
     assert errors(InterviewCreate, {}) == [
         "category: Field required",
         "title: Field required",
         "at: Field required",
+        "participants: Field required",
     ]
 
 
@@ -318,6 +324,63 @@ def test_an_interview_patch_can_move_the_date_and_clear_the_notes():
     assert patch.at == datetime(2026, 11, 27, 15, 30, tzinfo=UTC)
     assert (patch.how_it_went, patch.takeaway) == (None, None)
     assert patch.model_fields_set == {"at", "how_it_went", "takeaway"}
+
+
+def test_an_interview_needs_one_to_twenty_participants_each_with_a_role():
+    assert errors(InterviewCreate, {k: v for k, v in INTERVIEW.items() if k != "participants"}) == [
+        "participants: Field required"
+    ]
+    assert errors(InterviewCreate, INTERVIEW | {"participants": []}) == [
+        "participants: List should have at least 1 item after validation, not 0"
+    ]
+    many = [{"role": f"Engineer {n}"} for n in range(21)]
+    assert errors(InterviewCreate, INTERVIEW | {"participants": many}) == [
+        "participants: List should have at most 20 items after validation, not 21"
+    ]
+    assert errors(InterviewCreate, INTERVIEW | {"participants": [{"role": "  ", "name": "Dana"}]}) == [
+        "participants.0.role: Value error, must not be blank"
+    ]
+    assert errors(InterviewCreate, INTERVIEW | {"participants": [{"name": "Dana"}]}) == [
+        "participants.0.role: Field required"
+    ]
+
+
+def test_a_participant_is_trimmed_and_a_blank_name_is_none():
+    interview = InterviewCreate.model_validate(
+        INTERVIEW
+        | {"participants": [{"role": " Sr Director, Product ", "name": "  "}, {"role": "EM", "name": " Sam "}]}
+    )
+    assert [(p.id, p.role, p.name) for p in interview.participants] == [
+        (None, "Sr Director, Product", None),
+        (None, "EM", "Sam"),
+    ]
+
+
+def test_a_participant_refuses_long_text_control_characters_and_unknown_fields():
+    for participant, problem in [
+        ({"role": "x" * 201}, "participants.0.role: String should have at most 200 characters"),
+        ({"role": "EM", "name": "x" * 201}, "participants.0.name: String should have at most 200 characters"),
+        ({"role": "E\u202eM"}, "participants.0.role: Value error, must not contain control characters"),
+        ({"role": "EM", "name": "Sa\nm"}, "participants.0.name: Value error, must not contain control characters"),
+        ({"role": "EM", "email": "sam@example.com"}, "participants.0.email: Extra inputs are not permitted"),
+    ]:
+        assert errors(InterviewCreate, INTERVIEW | {"participants": [participant]}) == [problem]
+
+
+def test_an_interview_cannot_list_the_same_participant_twice():
+    same = "6f1d8a4e-2b7c-4a7e-9a35-0c4d2f1e8b90"
+    twice = [{"id": same, "role": "EM"}, {"id": same, "role": "EM"}]
+    assert errors(InterviewCreate, INTERVIEW | {"participants": twice}) == [
+        "participants: Value error, lists the same Participant twice"
+    ]
+
+
+def test_an_interview_patch_cannot_clear_or_empty_the_participants():
+    assert errors(InterviewPatch, {"participants": None}) == ["Value error, participants cannot be cleared"]
+    assert errors(InterviewPatch, {"participants": []}) == [
+        "participants: List should have at least 1 item after validation, not 0"
+    ]
+    assert InterviewPatch.model_validate({"title": "Onsite"}).participants is None
 
 
 def test_an_interview_patch_still_needs_a_time():
