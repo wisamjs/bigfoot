@@ -101,6 +101,24 @@ export const PickedEmptyDay: Story = {
   },
 };
 
+// A rejected Application's Interview 3 days ago: the dashboard keeps it once the Application is Done (BIG-206).
+const rejected = on("stripe", ["technical", "Rejected Loop"], -3);
+rejected.application = { ...rejected.application, status: "done", outcome: "rejected" };
+const rejectedDay = new Date(rejected.interview.at);
+
+/** A Done Application's completed Interview stays on its day (BIG-206). */
+export const DoneApplication: Story = {
+  args: { interviews: [rejected] },
+  parameters: {
+    nextjs: {
+      navigation: { pathname: "/dashboard", query: { month: monthParam(monthStart(rejectedDay, 0)), day: dayKey(rejectedDay) } },
+    },
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("region", { name: /^\w+day, / })).toHaveTextContent(/Rejected Loop/);
+  },
+};
+
 /** Next month: that month's Interviews, or a line saying it has none. */
 export const NextMonth: Story = {
   parameters: {

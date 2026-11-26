@@ -84,7 +84,7 @@ function JourneyBody({ journey, now }: { journey: Journey; now: Date }) {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       <ul aria-label="At a glance" className="m-0 grid list-none grid-cols-2 gap-3 p-0 max-lg:order-2 sm:gap-4 lg:col-span-2 lg:grid-cols-4">
-        {journeyCounts(journey.applications, now).map((count) => (
+        {journeyCounts(journey, now).map((count) => (
           <li key={count.id} className="card flex flex-col gap-1 p-4 sm:p-5">
             <span className={`text-3xl font-bold leading-none ${COUNT_COLOUR[count.id]}`}>{count.value}</span>
             <span className="text-sm text-body">{count.label}</span>

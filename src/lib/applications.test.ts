@@ -163,9 +163,18 @@ describe("getApplicationGroups", () => {
 });
 
 describe("getCalendarInterviews", () => {
-  it("keeps past and upcoming Interviews of In Progress Applications, by date", () => {
+  it("keeps past and upcoming Interviews of In Progress Applications and completed ones of Done Applications, by date", () => {
     const result = getCalendarInterviews([scheduled, rejected]);
-    expect(result.map((d) => d.interview.id)).toEqual(["past", "next"]);
+    expect(result.map((d) => d.interview.id)).toEqual(["past", "old", "next"]);
+  });
+
+  it("leaves out a Done Application's Interviews that were still to come", () => {
+    const withdrawn = application("withdrawn", {
+      status: "done",
+      outcome: "withdrawn",
+      interviews: [interview("done", "2026-11-04T15:00:00Z", true), interview("cancelled", "2026-12-02T15:00:00Z", false)],
+    });
+    expect(getCalendarInterviews([withdrawn]).map((d) => d.interview.id)).toEqual(["done"]);
   });
 });
 

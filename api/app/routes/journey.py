@@ -128,8 +128,9 @@ def open_share_link(request: Request, share_link_id: ShareLinkId, body: Passcode
 )
 def get_journey(request: Request, share_link_id: ShareLinkId, viewer: ViewerOf) -> Journey:
     """The job seeker's Journey: their In Progress Applications and Offers, with each one's company,
-    role, applied date and Interviews (category, title and time). Salary, job postings, Location,
-    Prep notes, Interview notes, Outcome notes and other Done Applications are never read.
+    role, applied date and Interviews (category, title and time). Of the other Done Applications,
+    only when their completed Interviews happened, for the count of Interviews completed this month.
+    Salary, job postings, Location, Prep notes, Interview notes and Outcome notes are never read.
 
     Every request checks the link again, so stopping it, letting it expire or changing its Passcode
     cuts the Viewer off at once. Records when the link was last opened, to within a minute."""
@@ -169,7 +170,17 @@ def get_journey(request: Request, share_link_id: ShareLinkId, viewer: ViewerOf) 
             " order by at, created_at, id",
             ([a["id"] for a in applications],),
         ).fetchall()
-    return Journey(shared_by=_shared_by(link["shared_by"]), applications=_project(applications, interviews))
+        other_completed = conn.execute(
+            "select i.at from interviews i join applications a on a.id = i.application_id"
+            " where a.job_seeker_id = %s and a.status <> 'in_progress' and a.outcome is distinct from 'offer'"
+            " and i.at <= now() order by i.at",
+            (link["job_seeker_id"],),
+        ).fetchall()
+    return Journey(
+        shared_by=_shared_by(link["shared_by"]),
+        applications=_project(applications, interviews),
+        other_completed_interviews=[row["at"] for row in other_completed],
+    )
 
 
 def _project(applications: list[dict[str, Any]], interviews: list[dict[str, Any]]) -> list[JourneyApplication]:

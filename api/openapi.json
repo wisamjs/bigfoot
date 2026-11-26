@@ -890,7 +890,7 @@
           "Journey"
         ],
         "summary": "Read a Share link's Journey",
-        "description": "The job seeker's Journey: their In Progress Applications and Offers, with each one's company,\nrole, applied date and Interviews (category, title and time). Salary, job postings, Location,\nPrep notes, Interview notes, Outcome notes and other Done Applications are never read.\n\nEvery request checks the link again, so stopping it, letting it expire or changing its Passcode\ncuts the Viewer off at once. Records when the link was last opened, to within a minute.",
+        "description": "The job seeker's Journey: their In Progress Applications and Offers, with each one's company,\nrole, applied date and Interviews (category, title and time). Of the other Done Applications,\nonly when their completed Interviews happened, for the count of Interviews completed this month.\nSalary, job postings, Location, Prep notes, Interview notes and Outcome notes are never read.\n\nEvery request checks the link again, so stopping it, letting it expire or changing its Passcode\ncuts the Viewer off at once. Records when the link was last opened, to within a minute.",
         "operationId": "get_journey_share_links__share_link_id__journey_get",
         "security": [
           {
@@ -2775,16 +2775,31 @@
             "type": "array",
             "title": "Applications",
             "description": "Oldest applied first."
+          },
+          "other_completed_interviews": {
+            "items": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "type": "array",
+            "title": "Other Completed Interviews",
+            "description": "When each completed Interview of the other Done Applications, those without an Offer, happened, oldest first: for the count of Interviews completed this month (BIG-206). Nothing else of those Applications is sent.",
+            "examples": [
+              [
+                "2026-11-12T15:00:00Z"
+              ]
+            ]
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "shared_by",
-          "applications"
+          "applications",
+          "other_completed_interviews"
         ],
         "title": "Journey",
-        "description": "What a Viewer of a Share link sees (GLOSSARY.md, Journey; docs/adr/0008): the job seeker's In\nProgress Applications and Offers, and nothing the job seeker keeps private."
+        "description": "What a Viewer of a Share link sees (GLOSSARY.md, Journey; docs/adr/0008): the job seeker's In\nProgress Applications and Offers, when their other Done Applications' Interviews happened, and\nnothing the job seeker keeps private."
       },
       "JourneyApplication": {
         "properties": {

@@ -324,11 +324,13 @@ export function getUpcoming(apps: Application[]): DatedInterview[] {
     .toSorted((a, b) => a.interview.at.localeCompare(b.interview.at));
 }
 
-/** Every Interview of open Applications, past and upcoming, by date. Done Applications drop off. */
+/**
+ * The Interviews calendar's Interviews, by date: every one of open Applications, and the completed
+ * ones of Done Applications (BIG-206). A Done Application's Interviews still to come never happen.
+ */
 export function getCalendarInterviews(apps: Application[]): DatedInterview[] {
   return apps
-    .filter((a) => !isDone(a))
-    .flatMap((a) => dated(a, a.interviews))
+    .flatMap((a) => dated(a, isDone(a) ? a.interviews.filter((i) => i.completed) : a.interviews))
     .toSorted((a, b) => a.interview.at.localeCompare(b.interview.at));
 }
 

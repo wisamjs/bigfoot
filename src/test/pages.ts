@@ -216,7 +216,10 @@ export const applications = [lumen, tilth, northwind, fernway, quillon, cobalt, 
 /** A new job seeker's Sample Applications, as onboarding adds them. */
 export const samples = previewApplications(NOW).map((sample) => ({ ...sample, is_sample: true }));
 
-/** The Journey a Viewer of Alex's Share link sees: In Progress Applications and Offers, nothing private. */
+/**
+ * The Journey a Viewer of Alex's Share link sees: In Progress Applications and Offers, and when the
+ * other Done Applications' Interviews happened; nothing private.
+ */
 export const journey: Journey = {
   shared_by: user.name,
   applications: applications
@@ -231,6 +234,11 @@ export const journey: Journey = {
       waiting_since: a.waiting_since,
       interviews: a.interviews.map(({ category, title, at, completed }) => ({ category, title, at, completed })),
     })),
+  // The other Done Applications give only when their completed Interviews happened (BIG-206).
+  other_completed_interviews: applications
+    .filter((a) => isDone(a) && a.outcome !== "offer")
+    .flatMap((a) => a.interviews.filter((i) => i.completed).map((i) => i.at))
+    .toSorted(),
 };
 
 export const SHARE_LINK_ID = "k7Qm2x9PaB";

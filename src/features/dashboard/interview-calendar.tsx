@@ -103,7 +103,8 @@ function agendaTitle(span: string) {
 
 /**
  * The Interviews card's body (BIG-36, BIG-173): a month grid, Monday first, then the picked day's
- * Interviews, then the agenda: every dated Interview of an In Progress Application, past ones muted.
+ * Interviews, then the agenda: every Interview of an In Progress Application and every completed one of a
+ * Done Application (BIG-206), past ones muted.
  * Any day of the month can be picked; today is picked until another day is. The agenda lists
  * another month's Interviews, or for this month the widest upcoming window that holds five (BIG-72).
  * With nothing to list this month, Bigfoot says why: no Interviews yet, or `waiting` Applications

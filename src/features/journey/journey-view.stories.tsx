@@ -76,7 +76,11 @@ const fernway = application({
 });
 const quillon = application({ company: "Quillon Learning", title: "Senior Engineering Manager", applied_on: isoDay(-5) });
 
-const journey: Journey = { shared_by: "Wisam Zaghal", applications: [cobalt, tilth, lumen, northwind, fernway, quillon] };
+const journey: Journey = {
+  shared_by: "Wisam Zaghal",
+  applications: [cobalt, tilth, lumen, northwind, fernway, quillon],
+  other_completed_interviews: [],
+};
 
 const meta = {
   component: JourneyView,
@@ -140,7 +144,7 @@ export const Phone: Story = {
 
 /** Nothing booked: every Application is waiting to hear back, so there is no next Interview. */
 export const NothingBooked: Story = {
-  args: { journey: { shared_by: "Wisam Zaghal", applications: [fernway, quillon] } },
+  args: { journey: { shared_by: "Wisam Zaghal", applications: [fernway, quillon], other_completed_interviews: [] } },
   play: async ({ canvas }) => {
     await expect(canvas.queryByText(/Next Interview/)).not.toBeInTheDocument();
     await expect(showing(canvas.getAllByText("Nothing booked yet"))).toHaveLength(2);
@@ -150,8 +154,21 @@ export const NothingBooked: Story = {
 
 /** No Applications in progress, and no Offers. */
 export const NoApplications: Story = {
-  args: { journey: { shared_by: "Wisam Zaghal", applications: [] } },
+  args: { journey: { shared_by: "Wisam Zaghal", applications: [], other_completed_interviews: [] } },
   play: async ({ canvas }) => {
+    await expect(canvas.getByText("No Applications in progress right now.")).toBeVisible();
+  },
+};
+
+/**
+ * Applications that ended without an Offer still count their completed Interviews this month
+ * (BIG-206), and show nothing else: here one, at midnight today.
+ */
+export const DoneApplicationsCounted: Story = {
+  args: { journey: { shared_by: "Wisam Zaghal", applications: [], other_completed_interviews: [on(0, 0)] } },
+  play: async ({ canvas }) => {
+    const completed = within(canvas.getByRole("list", { name: "At a glance" })).getByText("Interview completed this month");
+    await expect(completed.previousElementSibling).toHaveTextContent("1");
     await expect(canvas.getByText("No Applications in progress right now.")).toBeVisible();
   },
 };

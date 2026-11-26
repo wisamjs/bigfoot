@@ -36,6 +36,12 @@ export type Journey = {
   shared_by: string | null;
   /** In Progress Applications and Offers, oldest applied first. */
   applications: JourneyApplication[];
+  /**
+   * ISO timestamps, oldest first: when each completed Interview of the other Done Applications
+   * happened, those without an Offer. Only "completed this month" counts them; nothing else of
+   * those Applications reaches a Viewer (BIG-206).
+   */
+  other_completed_interviews: string[];
 };
 
 /** What a Share link's Passcode page knows before the Passcode: the API's status. */
@@ -109,13 +115,17 @@ export type JourneyCount = { id: "offers" | "upcoming" | "completed" | "waiting"
 
 /**
  * The four counts over the Journey, in the viewer's time zone: Offers to decide, Interviews in the
- * next 2 weeks, Interviews completed this month and Applications waiting to hear back.
+ * next 2 weeks, Interviews completed this month (the other Done Applications' too, BIG-206) and
+ * Applications waiting to hear back.
  */
-export function journeyCounts(apps: JourneyApplication[], now: Date): JourneyCount[] {
+export function journeyCounts(
+  { applications: apps, other_completed_interviews }: Pick<Journey, "applications" | "other_completed_interviews">,
+  now: Date,
+): JourneyCount[] {
   const until = now.getTime() + SUMMARY_DAYS * 24 * 60 * 60 * 1000;
   const upcoming = upcomingJourneyInterviews(apps, now).filter(({ interview }) => new Date(interview.at).getTime() <= until);
-  const completed = journeyInterviews(apps).filter(({ interview }) => {
-    const at = new Date(interview.at);
+  const completed = [...journeyInterviews(apps).map(({ interview }) => interview.at), ...other_completed_interviews].filter((iso) => {
+    const at = new Date(iso);
     return at <= now && at.getFullYear() === now.getFullYear() && at.getMonth() === now.getMonth();
   });
   const offers = apps.filter((a) => a.offer).length;
