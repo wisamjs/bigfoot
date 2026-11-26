@@ -38,6 +38,12 @@ const checks = [
           ? (r) => r.body.includes("NEXT_REDIRECT")
           : (r) => r.status === 200 && r.body.includes(page.expect),
   })),
+  // Share links made before BIG-197 used /s/<id>; next.config.ts redirects them for good.
+  {
+    path: "/s/abcdefghij",
+    signedIn: false,
+    expect: (r) => r.status === 308 && new URL(r.location ?? "", base).pathname === "/journey/abcdefghij",
+  },
   { path: "/api/auth/providers", signedIn: false, expect: (r) => r.status === 200 && r.body.includes('"google"') },
   // The API rejects requests without a token from the Next.js server.
   { url: () => `${apiBase}/applications`, signedIn: false, expect: (r) => r.status === 401 },

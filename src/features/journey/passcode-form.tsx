@@ -2,7 +2,7 @@
 
 import { AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { useActionState, useState } from "react";
-import { openJourneyAction, type PasscodeState } from "@/app/s/[id]/actions";
+import { openJourneyAction, type PasscodeState } from "@/app/journey/[id]/actions";
 import { Button } from "@/components/ui/button";
 import { invalidProps } from "@/components/ui/field-error";
 import { fieldLabelClasses } from "@/components/ui/field";

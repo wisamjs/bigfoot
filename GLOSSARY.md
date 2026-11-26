@@ -19,7 +19,7 @@ A secret a job seeker creates on the Account page and gives a script, such as a 
 _Avoid_: API key, personal access token, PAT, credential; delete (a token is revoked)
 
 **Share link**:
-A private link a job seeker makes on the Account page so someone can follow their search without signing in. Each has a label saying who it's for, which only the job seeker sees, and its own Passcode. It shows its Viewer the job seeker's Journey and nothing else, and can't change anything. It expires 7 days after it is made; Renew makes it last 7 days from then, keeping the same link and Passcode. Stop sharing deletes it, and anyone viewing it is cut off straight away. A job seeker can have up to 10. The Account page lists each one's label, when it was made, when its Passcode was set, when it was last opened and when it expires.
+A private link a job seeker makes on the Account page so someone can follow their search without signing in: `/journey/<id>`, with a random 10-character id (links made before BIG-197 used `/s/<id>`, which redirects). Each has a label saying who it's for, which only the job seeker sees, and its own Passcode. It shows its Viewer the job seeker's Journey and nothing else, and can't change anything. It expires 7 days after it is made; Renew makes it last 7 days from then, keeping the same link and Passcode. Stop sharing deletes it, and anyone viewing it is cut off straight away. A job seeker can have up to 10. The Account page lists each one's label, when it was made, when its Passcode was set, when it was last opened and when it expires.
 _Avoid_: share URL, public link, invite; revoke (a Share link is stopped)
 
 **Viewer**:
@@ -31,7 +31,7 @@ The secret a job seeker chooses for one Share link, at least 8 characters and ea
 _Avoid_: password, PIN
 
 **Journey**:
-A job seeker's search as a Viewer sees it, at the Share link's URL, headed "Wisam's Journey": counts of Offers to decide, Interviews in the next 2 weeks, Interviews completed this month and Applications waiting to hear back; the next Interview; a month calendar; and where each Application stands. It covers In Progress Applications and Offers only, with Interview titles and categories, and never shows salary, job postings, Prep notes, Interview notes, Outcome notes or other Done Applications. Times are in the Viewer's own time zone.
+A job seeker's search as a Viewer sees it, at the Share link's URL (`/journey/<id>`), headed "Wisam's Journey": counts of Offers to decide, Interviews in the next 2 weeks, Interviews completed this month and Applications waiting to hear back; the next Interview; a month calendar; and where each Application stands. It covers In Progress Applications and Offers only, with Interview titles and categories, and never shows salary, job postings, Prep notes, Interview notes, Outcome notes or other Done Applications. Times are in the Viewer's own time zone.
 _Avoid_: shared view, shared dashboard, public page, progress page
 
 **Application**:

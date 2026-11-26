@@ -484,7 +484,7 @@ class ShareLink(BaseModel):
     """A private link a job seeker makes so a Viewer can follow their search (GLOSSARY.md). Never
     includes the Passcode: Bigfoot stores only its hash."""
 
-    id: str = Field(description="10 URL-safe characters: the link is `/s/<id>`.", examples=["k7Qm2x9PaB"])
+    id: str = Field(description="10 URL-safe characters: the link is `/journey/<id>`.", examples=["k7Qm2x9PaB"])
     label: str = Field(description="Who the link is for, as the job seeker wrote it.", examples=["Mom & Dad"])
     created_at: datetime
     passcode_set_at: datetime = Field(

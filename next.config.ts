@@ -13,12 +13,16 @@ const nextConfig: NextConfig = {
     // is never reused (dynamic defaults to 0), and the Dashboard shows its skeleton on every visit.
     staleTimes: { dynamic: 300 },
   },
+  // Share links made before BIG-197 pointed at /s/<id>; those already sent keep working.
+  async redirects() {
+    return [{ source: "/s/:id", destination: "/journey/:id", permanent: true }];
+  },
   // A Share link's pages (BIG-197): its id is half of what opens a Journey, so no Referer carries
   // it to another site, and search engines don't index it.
   async headers() {
     return [
       {
-        source: "/s/:id",
+        source: "/journey/:id",
         headers: [
           { key: "Referrer-Policy", value: "no-referrer" },
           { key: "X-Robots-Tag", value: "noindex, nofollow" },

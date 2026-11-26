@@ -7,9 +7,9 @@ const dayFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "num
 const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** The path a Viewer opens: `/s/<id>`. */
+/** The path a Viewer opens: `/journey/<id>`. */
 export function shareLinkPath(id: string) {
-  return `/s/${id}`;
+  return `/journey/${id}`;
 }
 
 /** "Nov 20", in the viewer's time zone. */

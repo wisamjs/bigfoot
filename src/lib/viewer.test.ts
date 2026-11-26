@@ -68,7 +68,7 @@ describe("viewerCookie", () => {
       httpOnly: true,
       secure: true,
       sameSite: "lax",
-      path: `/s/${ID}`,
+      path: `/journey/${ID}`,
       expires: new Date("2026-12-02T15:00:00Z"),
     });
   });

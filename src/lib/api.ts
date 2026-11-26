@@ -171,7 +171,7 @@ export function revokeAccessToken(jobSeekerId: string, id: string) {
 
 /** A Share link (GLOSSARY.md) as the API lists it: never the Passcode, which Bigfoot doesn't store. */
 export type ShareLink = {
-  /** 10 URL-safe characters: the link is `/s/<id>`. */
+  /** 10 URL-safe characters: the link is `/journey/<id>`. */
   id: string;
   label: string;
   /** ISO timestamps. */

@@ -23,7 +23,7 @@ export function needsData(page) {
 /**
  * The path to open `page` as `jobSeekerId`, who holds the Applications when `page.application` is
  * set. `page.interview` is the title of one of that Application's Interviews, for `[interviewId]`.
- * `page.shareLink` is the label of one of their Share links, for `/s/[id]`.
+ * `page.shareLink` is the label of one of their Share links, for `/journey/[id]`.
  */
 export async function pagePath(page, jobSeekerId) {
   if (page.shareLink) {

@@ -8,7 +8,7 @@ import { JourneyView } from "@/features/journey/journey-view";
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton";
 import { sharedPage, VIEWER_COOKIE } from "@/lib/viewer";
 
-// Not behind Google sign-in (src/proxy.ts doesn't match /s/*). next.config.ts also sends
+// Not behind Google sign-in (src/proxy.ts doesn't match /journey/*). next.config.ts also sends
 // Referrer-Policy: no-referrer and X-Robots-Tag, so the link's id never leaks to another site.
 export const metadata: Metadata = {
   title: "Shared Journey · Bigfoot",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
  * A Share link (GLOSSARY.md, docs/adr/0008): the Journey when the Viewer's cookie still opens it;
  * otherwise the Passcode page, or why the link no longer opens.
  */
-export default function SharedPage({ params }: PageProps<"/s/[id]">) {
+export default function SharedPage({ params }: PageProps<"/journey/[id]">) {
   return (
     <Suspense fallback={<SharedPageSkeleton />}>
       <Shared params={params} />
@@ -27,7 +27,7 @@ export default function SharedPage({ params }: PageProps<"/s/[id]">) {
   );
 }
 
-async function Shared({ params }: Pick<PageProps<"/s/[id]">, "params">) {
+async function Shared({ params }: Pick<PageProps<"/journey/[id]">, "params">) {
   const [{ id }, jar] = await Promise.all([params, cookies()]);
   const page = await sharedPage(id, jar.get(VIEWER_COOKIE)?.value);
   switch (page.kind) {

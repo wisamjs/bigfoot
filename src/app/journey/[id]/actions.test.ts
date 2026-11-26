@@ -35,10 +35,10 @@ beforeEach(() => {
 describe("openJourneyAction", () => {
   it("sets the Viewer's cookie for this link and reloads the page, which shows the Journey", async () => {
     vi.mocked(api.openShareLink).mockResolvedValue({ token: "viewer-token", expires_at: "2026-12-02T15:00:00Z" });
-    await expect(openJourneyAction(ID, idle, form("maple-river-42"))).rejects.toThrow(`NEXT_REDIRECT /s/${ID}`);
+    await expect(openJourneyAction(ID, idle, form("maple-river-42"))).rejects.toThrow(`NEXT_REDIRECT /journey/${ID}`);
     expect(api.openShareLink).toHaveBeenCalledWith(ID, "maple-river-42");
     expect(jar.set).toHaveBeenCalledWith(
-      expect.objectContaining({ name: VIEWER_COOKIE, value: "viewer-token", httpOnly: true, path: `/s/${ID}` }),
+      expect.objectContaining({ name: VIEWER_COOKIE, value: "viewer-token", httpOnly: true, path: `/journey/${ID}` }),
     );
   });
 
@@ -54,7 +54,7 @@ describe("openJourneyAction", () => {
 
   it.each([404, 410])("reloads the page when the link stopped or expired meanwhile (%i)", async (status) => {
     vi.mocked(api.openShareLink).mockRejectedValue(new api.ApiError(status, "Gone"));
-    await expect(openJourneyAction(ID, idle, form("maple-river-42"))).rejects.toThrow(`NEXT_REDIRECT /s/${ID}`);
+    await expect(openJourneyAction(ID, idle, form("maple-river-42"))).rejects.toThrow(`NEXT_REDIRECT /journey/${ID}`);
     expect(jar.set).not.toHaveBeenCalled();
   });
 
@@ -77,8 +77,8 @@ describe("openJourneyAction", () => {
 
 describe("lockAction", () => {
   it("forgets the Viewer's cookie for this link and goes back to its Passcode page", async () => {
-    await expect(lockAction(ID)).rejects.toThrow(`NEXT_REDIRECT /s/${ID}`);
-    expect(jar.delete).toHaveBeenCalledWith({ name: VIEWER_COOKIE, path: `/s/${ID}` });
+    await expect(lockAction(ID)).rejects.toThrow(`NEXT_REDIRECT /journey/${ID}`);
+    expect(jar.delete).toHaveBeenCalledWith({ name: VIEWER_COOKIE, path: `/journey/${ID}` });
   });
 
   it("sends a malformed id home", async () => {

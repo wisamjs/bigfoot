@@ -3005,7 +3005,7 @@
           "id": {
             "type": "string",
             "title": "Id",
-            "description": "10 URL-safe characters: the link is `/s/<id>`.",
+            "description": "10 URL-safe characters: the link is `/journey/<id>`.",
             "examples": [
               "k7Qm2x9PaB"
             ]
@@ -3145,7 +3145,7 @@
           "id": {
             "type": "string",
             "title": "Id",
-            "description": "10 URL-safe characters: the link is `/s/<id>`.",
+            "description": "10 URL-safe characters: the link is `/journey/<id>`.",
             "examples": [
               "k7Qm2x9PaB"
             ]

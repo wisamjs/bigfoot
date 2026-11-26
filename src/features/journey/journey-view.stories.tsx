@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { lockAction } from "@/app/s/[id]/actions";
+import { lockAction } from "@/app/journey/[id]/actions";
 import type { Journey, JourneyApplication, JourneyInterview } from "@/lib/journey";
 import { JourneySkeleton, JourneyView } from "./journey-view";
 
 // A Share link's Journey (BIG-197), as a Viewer sees it. Times are relative to now, so "Tomorrow"
 // and "In 9 days" read the same on any day; they show in the browser's time zone. Lock is mocked
-// (src/app/s/[id]/__mocks__/actions.ts).
+// (src/app/journey/[id]/__mocks__/actions.ts).
 
 /** Rows draw Progress and Next twice, stacked for a phone and in columns wider: the ones showing. */
 const showing = (elements: HTMLElement[]) => elements.filter((element) => element.checkVisibility());

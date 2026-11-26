@@ -12,7 +12,7 @@ const SIGNED_OUT_PAGES = new Set(["/", "/sign-in", "/sign-up"]);
  * signed-out visitor opening a signed-in page goes to /sign-in, with `next` set to that page, so
  * signing in lands back on it. An optimistic check: it only decrypts the session cookie, and
  * Auth.js treats an expired or invalid one as no session. The Data Access Layer (src/lib/dal.ts)
- * stays the real check for every signed-in page and Server Action. A Share link's pages (`/s/*`)
+ * stays the real check for every signed-in page and Server Action. A Share link's pages (`/journey/*`)
  * aren't matched: a Viewer has no account, and the link and its Passcode are what open it.
  */
 export const proxy = auth((request) => {

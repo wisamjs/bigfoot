@@ -1,6 +1,6 @@
 # A Share link lets a Viewer read a Journey
 
-Amends ADR 0001 and ADR 0003. Until now only a signed-in job seeker (through Next.js) or their Access token reached FastAPI's data. A job seeker can now make a Share link so family can follow their search: a Viewer opens `/s/[id]`, types the Passcode the job seeker chose, and sees their Journey.
+Amends ADR 0001 and ADR 0003. Until now only a signed-in job seeker (through Next.js) or their Access token reached FastAPI's data. A job seeker can now make a Share link so family can follow their search: a Viewer opens `/journey/[id]`, types the Passcode the job seeker chose, and sees their Journey.
 
 FastAPI gets one read-only endpoint for this. It returns a projection built for Viewers: In Progress Applications and Offers, with company, role, applied date, Interview titles, categories and times, and nothing else. Salary, job postings, Prep notes, Interview notes, Outcome notes and Done Applications other than Offers are never selected. We chose a server-side projection over loading the job seeker's full data and hiding fields in React because one rendering bug would then show a Viewer the job seeker's salary; with the projection, the data isn't there to show.
 

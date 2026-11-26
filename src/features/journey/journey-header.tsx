@@ -1,5 +1,5 @@
 import { Eye, Lock } from "lucide-react";
-import { lockAction } from "@/app/s/[id]/actions";
+import { lockAction } from "@/app/journey/[id]/actions";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { Wordmark } from "@/features/shell/wordmark";

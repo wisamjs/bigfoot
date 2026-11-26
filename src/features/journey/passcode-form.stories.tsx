@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, mocked, userEvent, waitFor } from "storybook/test";
-import { openJourneyAction } from "@/app/s/[id]/actions";
+import { openJourneyAction } from "@/app/journey/[id]/actions";
 import { PasscodeForm } from "./passcode-form";
 
-// A Share link's Passcode page (BIG-197). The Server Action is mocked (src/app/s/[id]/__mocks__/actions.ts):
+// A Share link's Passcode page (BIG-197). The Server Action is mocked (src/app/journey/[id]/__mocks__/actions.ts):
 // it answers "wrong" unless a story says otherwise. The right Passcode reloads the page on the server,
 // which a story can't, so the Journey has its own stories.
 
