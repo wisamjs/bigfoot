@@ -48,6 +48,10 @@ describe("envProblems", () => {
     },
   );
 
+  it("doesn't call an API_URL that isn't a URL a localhost address", () => {
+    expect(envProblems({ ...COMPLETE, ...SENTRY, API_URL: "not a url", VERCEL_ENV: "production" })).toEqual([]);
+  });
+
   it("rejects API_DOCS=true in production only", () => {
     expect(envProblems({ ...COMPLETE, ...SENTRY, API_DOCS: "True", VERCEL_ENV: "production" })).toEqual([
       "API_DOCS must not be true in production",

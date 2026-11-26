@@ -2,6 +2,8 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
+import { capitalize } from "@/features/applications/when-text";
+import { dayDotClasses } from "@/features/journey/journey-text";
 import { calendarDaysBetween, relativeDays } from "@/lib/applications";
 import { dayKey, groupByDay, monthStart, monthWeeks, type CalendarDay } from "@/lib/calendar";
 import type { DatedJourneyInterview } from "@/lib/journey";
@@ -118,12 +120,6 @@ function tileClasses(isToday: boolean, has: boolean, inMonth: boolean) {
   return `flex h-full flex-col items-center justify-center gap-0.5 rounded-control border text-sm ${border} ${fill} ${text}`;
 }
 
-/** The brand colour while any of the day's Interviews is ahead, grey once all are done, none without any. */
-function dotClasses(items: DatedJourneyInterview[], now: Date) {
-  if (items.length === 0) return "";
-  return items.some((d) => new Date(d.interview.at) > now) ? "bg-brand" : "bg-body-subtle";
-}
-
 /** A day of the grid: its date, a dot when it has Interviews, outlined today. Not a control: nothing opens. */
 function DayCell({ day, items, isToday, now }: { day: CalendarDay; items: DatedJourneyInterview[]; isToday: boolean; now: Date }) {
   const has = items.length > 0;
@@ -140,7 +136,7 @@ function DayCell({ day, items, isToday, now }: { day: CalendarDay; items: DatedJ
             {dayFormat.format(day.date)}, {items.length} {items.length === 1 ? "Interview" : "Interviews"}
           </span>
         )}
-        <span aria-hidden className={`size-1.5 rounded-full ${dotClasses(items, now)}`} />
+        <span aria-hidden className={`size-1.5 rounded-full ${dayDotClasses(items, now)}`} />
       </span>
     </td>
   );
@@ -207,8 +203,7 @@ function UpcomingItem({ item: { application, interview }, now }: { item: DatedJo
       </span>
       <span className="flex shrink-0 flex-col items-end gap-px whitespace-nowrap text-sm text-body">
         <span className="text-heading">
-          {relative.charAt(0).toUpperCase()}
-          {relative.slice(1)}
+          {capitalize(relative)}
         </span>
         <span>{timeFormat.format(at)}</span>
       </span>
