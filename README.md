@@ -126,6 +126,10 @@ Like any new job seeker, the test user receives Sample Applications the first ti
 
 With the dev server and API running, `npm run screenshots` retakes the two screenshots in this README.
 
+### Snapshots of every page
+
+`npm run snapshots` takes a picture of every page in Storybook's Pages section, in each state, at desktop and phone width, dark and light, in `docs/snapshots/<page>/<state>-<desktop|mobile>-<dark|light>.png`. It needs no server running. Every commit retakes them too, rewriting only the pictures that changed. The folder is git-ignored, so the pictures stay on your machine.
+
 ### Coding agents (optional)
 
 If you use a coding agent such as Claude Code, install Vercel's React and Next.js performance rules for your user, not the repo:
