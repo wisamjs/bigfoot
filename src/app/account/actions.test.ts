@@ -162,7 +162,7 @@ describe("createShareLinkAction", () => {
   it("creates the link as the signed-in job seeker, returns its Passcode and refreshes the list", async () => {
     vi.mocked(api.createShareLink).mockResolvedValue(created);
     expect(await createShareLinkAction(nothing, shareForm("Mom & Dad", "maple-river-42"))).toEqual({ error: null, created });
-    expect(api.createShareLink).toHaveBeenCalledWith("seeker-1", "Mom & Dad", "maple-river-42");
+    expect(api.createShareLink).toHaveBeenCalledWith("seeker-1", "Mom & Dad", "maple-river-42", "Sam");
     expect(refresh).toHaveBeenCalledOnce();
   });
 

@@ -31,6 +31,7 @@ from app.domain import (
 
 ACCESS_TOKEN_NAME_MAX = 100  # also a check constraint on access_tokens.name
 SHARE_LINK_LABEL_MAX = 100  # also a check constraint on share_links.label
+SHARED_BY_MAX = 200  # also a check constraint on share_links.shared_by
 PASSCODE_MIN_LENGTH = 8
 PASSCODE_MAX_LENGTH = 128
 SHARE_LINKS_MAX = 10
@@ -464,6 +465,11 @@ class ShareLinkCreate(BaseModel):
         examples=["Mom & Dad"],
     )
     passcode: Passcode
+    shared_by: Annotated[RequiredText, AfterValidator(_no_control_characters)] = Field(
+        max_length=SHARED_BY_MAX,
+        description='The job seeker\'s name as their Viewers see it: "Shared by Wisam Zaghal".',
+        examples=["Wisam Zaghal"],
+    )
 
 
 class PasscodeChange(BaseModel):
@@ -501,6 +507,81 @@ class NewShareLink(ShareLink):
     """A Share link as returned when it is created or its Passcode changes: the one time the Passcode is shown."""
 
     passcode: str = Field(description="The Passcode, shown only in this response.", examples=[EXAMPLE_PASSCODE])
+
+
+class PasscodeAttempt(BaseModel):
+    """What a Viewer typed to open a Share link."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    passcode: str = Field(max_length=PASSCODE_MAX_LENGTH, description="The Passcode as typed.")
+
+
+class ViewerToken(BaseModel):
+    """A Viewer's credential for one Share link, returned when the Passcode is right (docs/adr/0008)."""
+
+    token: str = Field(description="Send as `Authorization: Bearer …` to read the Journey.")
+    expires_at: datetime = Field(description="When the token stops working: when the Share link expires.")
+
+
+class ShareLinkStatus(BaseModel):
+    """What a Share link's Passcode page needs, before the Passcode is typed. Nothing else about the
+    job seeker: the link id alone opens no more than this."""
+
+    shared_by: str | None = Field(
+        description="The job seeker's name as their Viewers see it; null for a link made before Bigfoot stored it.",
+        examples=["Wisam Zaghal"],
+    )
+    expired: bool = Field(description="The link has expired: it opens again only once the job seeker renews it.")
+    locked: bool = Field(
+        description="5 wrong Passcodes were typed in the last 15 minutes, so none is accepted until they age out."
+    )
+
+
+class JourneyInterview(BaseModel):
+    """An Interview as a Viewer sees it: what it is and when, never its notes."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    category: InterviewCategory = Field(description=CATEGORY, examples=["hiring_manager"])
+    title: str = Field(description=INTERVIEW_TITLE, examples=["Hiring Manager"])
+    at: datetime = Field(description=AT, examples=["2026-11-24T19:00:00Z"])
+    completed: bool = Field(description="Derived, never stored: the date is in the past.", examples=[False])
+
+
+class JourneyApplication(BaseModel):
+    """An In Progress Application or an Offer as a Viewer sees it: no salary, job posting, Location or notes."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    company: str = COMPANY
+    title: str = TITLE
+    applied_on: date = Field(description="When the job seeker applied.", examples=["2026-11-02"])
+    offer: bool = Field(description="Done with an Offer; otherwise the Application is In Progress.")
+    is_waiting: bool = Field(
+        description="Derived (GLOSSARY.md, Waiting): In Progress with no upcoming Interview, including a new one."
+    )
+    waiting_since: datetime | date | None = Field(
+        description=(
+            "While waiting: when the last completed Interview happened (a timestamp), or else the applied date. "
+            "Null when not waiting."
+        ),
+        examples=["2026-11-08T17:00:00Z"],
+    )
+    interviews: list[JourneyInterview] = Field(description=INTERVIEW_ORDER_DESCRIPTION)
+
+
+class Journey(BaseModel):
+    """What a Viewer of a Share link sees (GLOSSARY.md, Journey; docs/adr/0008): the job seeker's In
+    Progress Applications and Offers, and nothing the job seeker keeps private."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    shared_by: str | None = Field(
+        description="The job seeker's name as their Viewers see it; null for a link made before Bigfoot stored it.",
+        examples=["Wisam Zaghal"],
+    )
+    applications: list[JourneyApplication] = Field(description="Oldest applied first.")
 
 
 class Onboarding(BaseModel):

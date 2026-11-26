@@ -34,18 +34,27 @@ def test_every_operation_has_a_summary_description_and_tag(schema):
             ["Account"],
             ["Access tokens"],
             ["Share links"],
+            ["Journey"],
             ["Applications"],
             ["Interviews"],
             ["Health"],
         ), name
 
 
-def test_every_operation_but_health_needs_a_token_and_documents_401(schema):
+# A Viewer opens a Share link with its id and Passcode alone (docs/adr/0008).
+NO_TOKEN = {"GET /health", "GET /share-links/{share_link_id}", "POST /share-links/{share_link_id}/viewer-token"}
+
+
+def test_every_operation_but_health_and_opening_a_share_link_needs_a_token_and_documents_401(schema):
     for name, operation in operations(schema):
-        if name == "GET /health":
-            assert "security" not in operation
+        if name in NO_TOKEN:
+            assert "security" not in operation, name
             continue
         assert "401" in operation["responses"], name
+        if operation["tags"] == ["Journey"]:
+            # Only a Viewer token reads a Journey; a job seeker's tokens can't.
+            assert operation["security"] == [{"ViewerToken": []}], name
+            continue
         if operation["tags"] in (["Account"], ["Access tokens"], ["Share links"]):
             # A script can't reach the account: web tokens only, and an Access token gets 403.
             assert operation["security"] == [{"WebToken": []}], name
@@ -57,7 +66,7 @@ def test_every_operation_but_health_needs_a_token_and_documents_401(schema):
 
 def test_routes_with_an_id_document_404(schema):
     for name, operation in operations(schema):
-        if "{application_id}" in name:
+        if "{application_id}" in name or "{share_link_id}" in name:
             assert "404" in operation["responses"], name
 
 
@@ -72,6 +81,11 @@ def test_bodies_document_every_field(schema):
         "AccessTokenCreate",
         "AccessToken",
         "NewAccessToken",
+        "ShareLinkStatus",
+        "ViewerToken",
+        "Journey",
+        "JourneyApplication",
+        "JourneyInterview",
     )
     for model in (*documented, "Interview"):
         for field, spec in models[model]["properties"].items():
@@ -79,9 +93,9 @@ def test_bodies_document_every_field(schema):
                 assert spec.get("description"), f"{model}.{field}"
 
 
-def test_both_bearer_schemes_drive_the_authorize_dialog(schema):
+def test_every_bearer_scheme_drives_the_authorize_dialog(schema):
     schemes = schema["components"]["securitySchemes"]
-    assert set(schemes) == {"AccessToken", "WebToken"}
+    assert set(schemes) == {"AccessToken", "WebToken", "ViewerToken"}
     for scheme in schemes.values():
         assert scheme["type"] == "http"
         assert scheme["scheme"] == "bearer"

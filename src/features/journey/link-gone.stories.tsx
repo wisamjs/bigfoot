@@ -1,0 +1,40 @@
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { expect } from "storybook/test";
+import { LinkGone } from "./link-gone";
+
+// A Share link that no longer opens (BIG-197).
+
+const meta = {
+  component: LinkGone,
+  args: { kind: "not_active" },
+  parameters: { layout: "fullscreen" },
+} satisfies Meta<typeof LinkGone>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+/** Stopped, or never a link: the same page, naming nobody. */
+export const NotActive: Story = {
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("heading", { level: 1, name: "This link isn’t active" })).toBeVisible();
+    await expect(canvas.getByText("Ask the person who sent it for a new one.")).toBeVisible();
+  },
+};
+
+/** Expired: the job seeker can renew it. */
+export const Expired: Story = {
+  args: { kind: "expired", sharedBy: "Wisam Zaghal" },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("heading", { level: 1, name: "This link has expired" })).toBeVisible();
+    await expect(canvas.getByText("Ask Wisam to renew it.")).toBeVisible();
+  },
+};
+
+/** Expired, made before Bigfoot stored names. */
+export const ExpiredNoName: Story = {
+  args: { kind: "expired", sharedBy: null },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("Ask the person who sent it to renew it.")).toBeVisible();
+  },
+};

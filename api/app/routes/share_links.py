@@ -57,10 +57,11 @@ def create_share_link(request: Request, job_seeker: SignedInJobSeekerId, body: S
         for _ in range(ID_ATTEMPTS):
             row = conn.execute(
                 sql.SQL(
-                    "insert into share_links (id, job_seeker_id, label, passcode_hash) values (%s, %s, %s, %s)"
+                    "insert into share_links (id, job_seeker_id, label, passcode_hash, shared_by)"
+                    " values (%s, %s, %s, %s, %s)"
                     " on conflict (id) do nothing returning {}"
                 ).format(SHARE_LINK_COLUMNS),
-                (auth.new_share_link_id(), job_seeker, body.label, hashed),
+                (auth.new_share_link_id(), job_seeker, body.label, hashed, body.shared_by),
             ).fetchone()
             if row is not None:
                 return NewShareLink(**row, passcode=body.passcode)

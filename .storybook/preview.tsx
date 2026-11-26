@@ -12,6 +12,7 @@ import "./preview.css";
 sb.mock(import("../src/app/actions.ts"));
 sb.mock(import("../src/app/applications/actions.ts"));
 sb.mock(import("../src/app/account/actions.ts"));
+sb.mock(import("../src/app/s/[id]/actions.ts"));
 
 const preview: Preview = {
   // The same classes src/app/layout.tsx puts on <html> and <body>.

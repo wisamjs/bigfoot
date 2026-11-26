@@ -13,6 +13,19 @@ const nextConfig: NextConfig = {
     // is never reused (dynamic defaults to 0), and the Dashboard shows its skeleton on every visit.
     staleTimes: { dynamic: 300 },
   },
+  // A Share link's pages (BIG-197): its id is half of what opens a Journey, so no Referer carries
+  // it to another site, and search engines don't index it.
+  async headers() {
+    return [
+      {
+        source: "/s/:id",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
+    ];
+  },
   images: {
     // Google profile photos
     remotePatterns: [{ protocol: "https", hostname: "lh3.googleusercontent.com" }],

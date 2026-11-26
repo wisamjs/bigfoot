@@ -13,10 +13,25 @@ export function fillParams(path, params = {}) {
 }
 
 /**
+ * Whether opening `page` needs scripts/dev-applications.mjs's data: an Application, or the test
+ * Share link (`shareLink`, its label), whose id is made fresh each run.
+ */
+export function needsData(page) {
+  return Boolean(page.application || page.shareLink);
+}
+
+/**
  * The path to open `page` as `jobSeekerId`, who holds the Applications when `page.application` is
  * set. `page.interview` is the title of one of that Application's Interviews, for `[interviewId]`.
+ * `page.shareLink` is the label of one of their Share links, for `/s/[id]`.
  */
 export async function pagePath(page, jobSeekerId) {
+  if (page.shareLink) {
+    const links = await call(jobSeekerId, "GET", "/me/share-links");
+    const link = links.find((l) => l.label === page.shareLink);
+    if (!link) throw new Error(`${page.path}: no ${page.shareLink} Share link for ${jobSeekerId}`);
+    return fillParams(page.path, { id: link.id });
+  }
   if (!page.application) return fillParams(page.path, page.params);
   const applications = await call(jobSeekerId, "GET", "/applications");
   const found = applications.find((a) => a.company === page.application);

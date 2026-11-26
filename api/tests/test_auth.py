@@ -4,6 +4,7 @@ the lookup against Postgres: expiry, revocation and when last_used_at moves."""
 
 import hashlib
 import time
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
 
@@ -23,8 +24,11 @@ from app.auth import (
     job_seeker_id,
     new_access_token,
     new_share_link_id,
+    new_viewer_token,
     passcode_hash,
+    passcode_matches,
     signed_in_job_seeker_id,
+    viewer,
 )
 
 SECRET = "unit-test-secret-of-at-least-32-bytes"
@@ -171,3 +175,56 @@ def test_a_passcode_is_stored_as_a_salted_argon2id_hash():
     assert "maple-river-42" not in first
     assert first != second  # each hash has its own salt
     assert PasswordHasher().verify(first, "maple-river-42")
+
+
+def test_a_passcode_matches_only_its_own_hash():
+    stored = passcode_hash("maple-river-42")
+    assert passcode_matches(stored, "maple-river-42")
+    assert not passcode_matches(stored, "maple-river-43")
+    assert not passcode_matches("not-a-hash", "maple-river-42")
+
+
+# Viewer tokens (docs/adr/0008)
+
+IN_A_WEEK = datetime.now(UTC) + timedelta(days=7)
+
+
+def test_a_viewer_token_names_its_share_link_and_passcode_version():
+    token = new_viewer_token(SECRET, "k7Qm2x9PaB", 3, IN_A_WEEK)
+    found = viewer(request(), bearer(token))
+    assert (found.share_link_id, found.passcode_version) == ("k7Qm2x9PaB", 3)
+    assert jwt.decode(token, options={"verify_signature": False})["exp"] == int(IN_A_WEEK.timestamp())
+
+
+def test_a_viewer_token_is_refused_once_its_link_has_expired():
+    token = new_viewer_token(SECRET, "k7Qm2x9PaB", 1, datetime.now(UTC) - timedelta(seconds=1))
+    assert refused(lambda: viewer(request(), bearer(token))) == "Invalid token"
+
+
+def test_a_viewer_token_signed_with_another_secret_is_refused():
+    token = new_viewer_token("another-secret-of-at-least-32-bytes!", "k7Qm2x9PaB", 1, IN_A_WEEK)
+    assert refused(lambda: viewer(request(), bearer(token))) == "Invalid token"
+
+
+@pytest.mark.parametrize(
+    "token",
+    [web_token(), ACCESS_TOKEN, ""],
+    ids=["web token", "Access token", "none"],
+)
+def test_a_web_token_or_access_token_is_not_a_viewer_token(token):
+    pool = Pool({"job_seeker_id": "alice"})
+    refused(lambda: viewer(request(pool), bearer(token) if token else None))
+    assert pool.params == []
+
+
+def test_a_viewer_token_is_not_a_web_token():
+    token = new_viewer_token(SECRET, "k7Qm2x9PaB", 1, IN_A_WEEK)
+    assert refused(lambda: job_seeker_id(request(), None, bearer(token))) == "Invalid token"
+    assert refused(lambda: signed_in_job_seeker_id(request(), bearer(token))) == "Invalid token"
+
+
+@pytest.mark.parametrize("claims", [{"ver": "1"}, {"sub": 7}], ids=["version not a number", "link not a string"])
+def test_a_viewer_token_with_malformed_claims_is_refused(claims):
+    payload = {"sub": "k7Qm2x9PaB", "ver": 1, "aud": "bigfoot-viewer", "iss": "bigfoot-api"} | claims
+    token = jwt.encode(payload | {"exp": int(IN_A_WEEK.timestamp())}, SECRET, algorithm="HS256")
+    refused(lambda: viewer(request(), bearer(token)))

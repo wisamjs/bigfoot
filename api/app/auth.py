@@ -4,16 +4,22 @@
 - an Access token (GLOSSARY.md): a long-lived secret the job seeker created for a script.
 
 Both resolve to the same job seeker id, so routes scope their queries the same way for either.
+
+A third kind names a Share link, not a job seeker (docs/adr/0008): a Viewer token, which this API
+signs when a Viewer types the right Passcode. It reads that one link's Journey and nothing else.
 """
 
 import hashlib
 import re
 import secrets
 import string
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Annotated
 
 import jwt
 from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError, VerificationError
 from argon2.low_level import Type
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -22,6 +28,9 @@ from app.monitoring import tag_job_seeker
 
 AUDIENCE = "bigfoot-api"
 ISSUER = "bigfoot-web"
+# A Viewer token's own audience and issuer, so neither kind of JWT passes for the other.
+VIEWER_AUDIENCE = "bigfoot-viewer"
+VIEWER_ISSUER = "bigfoot-api"
 
 # Marks a bearer token as an Access token, so this module can tell the two kinds apart, and so a
 # secret scanner given this pattern can find a leaked one.
@@ -52,6 +61,17 @@ web_token_bearer = HTTPBearer(
         "A short-lived HS256 JWT signed with API_SECRET, with `sub` set to the job seeker's id, "
         f"`aud` {AUDIENCE!r} and `iss` {ISSUER!r}. The Next.js server signs one per request for the signed-in "
         "job seeker; locally, `node scripts/dev-api-token.mjs` prints one for the test job seeker."
+    ),
+)
+
+viewer_token_bearer = HTTPBearer(
+    auto_error=False,
+    scheme_name="ViewerToken",
+    bearerFormat="JWT",
+    description=(
+        "A Viewer token: an HS256 JWT this API returns when a Viewer types a Share link's Passcode. It reads "
+        "that Share link's Journey only, and stops working when the link is stopped, expires or gets a new "
+        "Passcode. The Next.js server keeps it in the Viewer's cookie for that link."
     ),
 )
 
@@ -87,6 +107,55 @@ def new_share_link_id() -> str:
 def passcode_hash(passcode: str) -> str:
     """How share_links stores a Passcode: an argon2id hash in PHC form, with its own salt."""
     return _passcode_hasher.hash(passcode)
+
+
+def passcode_matches(stored_hash: str, passcode: str) -> bool:
+    """Whether `passcode` is the one `stored_hash` was made from."""
+    try:
+        return _passcode_hasher.verify(stored_hash, passcode)
+    except (VerificationError, InvalidHashError):
+        return False
+
+
+@dataclass(frozen=True)
+class Viewer:
+    """Who a Viewer token names: one Share link, at the passcode version it was issued for."""
+
+    share_link_id: str
+    passcode_version: int
+
+
+def new_viewer_token(secret: str, share_link_id: str, passcode_version: int, expires_at: datetime) -> str:
+    """A Viewer token for one Share link, valid until the link expires. Changing the Passcode raises
+    the link's version, so tokens issued before stop working (docs/adr/0008)."""
+    claims = {
+        "sub": share_link_id,
+        "ver": passcode_version,
+        "aud": VIEWER_AUDIENCE,
+        "iss": VIEWER_ISSUER,
+        "exp": int(expires_at.timestamp()),
+    }
+    return jwt.encode(claims, secret, algorithm="HS256")
+
+
+def viewer(request: Request, credentials: Annotated[Credentials, Depends(viewer_token_bearer)]) -> Viewer:
+    """The Share link a Viewer token names. Only checks the signature and expiry: the route checks the
+    link still exists at that passcode version. A web token or Access token is refused."""
+    token = _token(credentials)
+    try:
+        claims = jwt.decode(
+            token,
+            request.app.state.settings.api_secret,
+            algorithms=["HS256"],
+            audience=VIEWER_AUDIENCE,
+            issuer=VIEWER_ISSUER,
+            options={"require": ["exp", "sub", "ver"]},
+        )
+    except jwt.PyJWTError as exc:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token") from exc
+    if not isinstance(claims["ver"], int) or not isinstance(claims["sub"], str):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token")
+    return Viewer(share_link_id=claims["sub"], passcode_version=claims["ver"])
 
 
 def _token(credentials: Credentials) -> str:
@@ -167,3 +236,4 @@ def signed_in_job_seeker_id(request: Request, web_token: Annotated[Credentials, 
 
 JobSeekerId = Annotated[str, Depends(job_seeker_id)]
 SignedInJobSeekerId = Annotated[str, Depends(signed_in_job_seeker_id)]
+ViewerOf = Annotated[Viewer, Depends(viewer)]

@@ -300,4 +300,34 @@ export const PAGES = [
       },
     ],
   },
+  // A Share link (BIG-197), not behind Google sign-in. An id that was never a link, or a stopped one,
+  // shows the same page and names nobody.
+  { path: "/s/[id]", signedIn: false, params: { id: "abcdefghij" }, expect: "This link isn’t active" },
+  {
+    // `shareLink` is the label of the test job seeker's Share link (scripts/dev-applications.mjs),
+    // made fresh each run. Signed in or not, a Viewer sees the same pages; its Viewer cookie is cleared
+    // before each state. A wrong Passcode is tried at most 3 times a run, under the lock's 5.
+    path: "/s/[id]",
+    signedIn: true,
+    shareLink: "Mom & Dad",
+    expect: "Test shared a job search with you",
+    states: [
+      {
+        name: "share-link-wrong-passcode",
+        steps: [
+          { fill: 'input[name="passcode"]', value: "not-the-passcode" },
+          { click: 'button[type="submit"]', text: "See Test" },
+        ],
+        expect: "That Passcode didn’t match",
+      },
+      {
+        name: "share-link-journey",
+        steps: [
+          { fill: 'input[name="passcode"]', value: "maple-river-42" },
+          { click: 'button[type="submit"]', text: "See Test" },
+        ],
+        expect: "Where things stand",
+      },
+    ],
+  },
 ];
