@@ -84,7 +84,6 @@
     "eslint-plugin-unicorn": "^65.0.1",
     "happy-dom": "^21.0.4",
     "pngjs": "7.0.0",
-    "sharp": "0.35.5",
     "storybook": "10.6.6",
     "storybook-addon-pseudo-states": "10.6.6",
     "tailwindcss": "4.3.3",

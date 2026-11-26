@@ -3,12 +3,11 @@
 // (vitest.config.mts); scripts/snapshots.mjs removes the ones whose story is gone.
 // A picture is rewritten only when a pixel changed, so a commit that doesn't touch a page leaves its
 // snapshots as they were: the story tests' Chrome draws the same pixels every run (its flags in
-// vitest.config.mts). Pictures are stored losslessly at PNG's highest compression, under half the
-// size Chrome writes them, and compared after the same compression, as sharp shifts some shades.
+// vitest.config.mts), so an unchanged page gives the same file, byte for byte. Pictures are stored as
+// Chrome writes them: the folder is git-ignored, so size matters less than speed.
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { PNG } from "pngjs";
-import sharp from "sharp";
 
 export const ROOT = resolve(import.meta.dirname, "..");
 export const SNAPSHOT_DIR = join(ROOT, "docs/snapshots");
@@ -54,37 +53,47 @@ export function changedPixels(a, b) {
 }
 
 /**
- * `png` at PNG's highest lossless compression.
+ * A PNG's width in pixels, read from its header without decoding the picture.
  * @param {Buffer} png
  */
-export function compress(png) {
-  return sharp(png).png({ compressionLevel: 9, adaptiveFiltering: true, effort: 10 }).toBuffer();
+export function pngWidth(png) {
+  return png.readUInt32BE(16);
 }
 
 /**
- * Writes `png`, compressed, to `path` under `dir` unless the file there has the same pixels, and
+ * Writes `png` to `path` under `dir` unless the file there has the same pixels, and
  * notes the path and what happened in the log file `log` (`<path> <result>` per line).
  * @param {string} path relative to `dir`, from snapshotPath
  * @param {Buffer} png
- * @param {{ dir?: string, log?: string, width?: number }} options `width`: the story's width in pixels;
- *   a picture of another width was scaled, and is refused
- * @returns {Promise<"added" | "changed" | "unchanged">}
+ * @param {{ dir?: string, log?: string, width?: number }} options `width`: the picture's expected width in
+ *   pixels (the story's width times the scale); a picture of another width was scaled, and is refused
+ * @returns {"added" | "changed" | "unchanged"}
  */
-export async function saveSnapshot(path, png, { dir = SNAPSHOT_DIR, log, width } = {}) {
-  const file = join(dir, path);
-  if (relative(dir, file).startsWith("..")) throw new Error(`Snapshot outside ${dir}: ${path}`);
-  const actual = PNG.sync.read(png).width;
-  if (width !== undefined && actual !== width) throw new Error(`${path} is ${actual}px wide, not ${width}px: the picture was scaled`);
+export function saveSnapshot(path, png, { dir = SNAPSHOT_DIR, log, width } = {}) {
+  const file = checkedFile(path, png, dir, width);
   const existed = existsSync(file);
-  const small = await compress(png);
   let result = "unchanged";
-  if (!existed || changedPixels(readFileSync(file), small) > 0) {
+  if (!existed || !samePicture(readFileSync(file), png)) {
     mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, small);
+    writeFileSync(file, png);
     result = existed ? "changed" : "added";
   }
   if (log) appendFileSync(log, `${path} ${result}\n`);
   return result;
+}
+
+/** `path`'s file under `dir`, once it is inside `dir` and `png` is `width` pixels wide. */
+function checkedFile(path, png, dir, width) {
+  const file = join(dir, path);
+  if (relative(dir, file).startsWith("..")) throw new Error(`Snapshot outside ${dir}: ${path}`);
+  const actual = pngWidth(png);
+  if (width !== undefined && actual !== width) throw new Error(`${path} is ${actual}px wide, not ${width}px: the picture was scaled`);
+  return file;
+}
+
+/** The same bytes are the same picture; only different bytes need decoding to compare pixels. */
+function samePicture(old, png) {
+  return old.equals(png) || changedPixels(old, png) === 0;
 }
 
 /**

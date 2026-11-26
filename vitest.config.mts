@@ -13,9 +13,14 @@ import { saveSnapshot as store, snapshotPath } from "./scripts/snapshot-store.mj
 // The storybook project renders every story in Chrome and fails on its play function or an axe
 // violation (.storybook/preview.tsx). `npm run test-storybook` runs it; `npm test` runs the others.
 // Under scripts/snapshots.mjs (SNAPSHOTS_LOG set) it also pictures each Pages story for
-// docs/snapshots/: .storybook/snapshots.ts takes the picture, saveSnapshot stores it.
+// docs/snapshots/: .storybook/snapshots.ts takes the picture, saveSnapshot stores it. Those runs draw
+// at SNAPSHOT_SCALE pixels per CSS pixel, a retina screen's sharpness; other runs (CI's) at 1.
 
-const saveSnapshot: BrowserCommand<[storyId: string, theme: "dark" | "light", base64: string, width: number]> = async (
+/** Pixels per CSS pixel in the pictures: they stay on this machine (git-ignored), so size matters little. */
+const SNAPSHOT_SCALE = 2;
+const SNAPSHOTS = Boolean(process.env.SNAPSHOTS_LOG);
+
+const saveSnapshot: BrowserCommand<[storyId: string, theme: "dark" | "light", base64: string, width: number]> = (
   _context,
   storyId,
   theme,
@@ -24,7 +29,7 @@ const saveSnapshot: BrowserCommand<[storyId: string, theme: "dark" | "light", ba
 ) => {
   const path = snapshotPath(storyId, theme);
   if (!path) throw new Error(`Not a Pages story: ${storyId}`);
-  await store(path, Buffer.from(base64, "base64"), { log: process.env.SNAPSHOTS_LOG, width });
+  store(path, Buffer.from(base64, "base64"), { log: process.env.SNAPSHOTS_LOG, width: width * SNAPSHOT_SCALE });
 };
 
 /** Sets the size of the window around the test frame, at least `width`×`height`; returns the old size. */
@@ -69,7 +74,7 @@ export default defineConfig({
         test: {
           name: "storybook",
           setupFiles: ["./.storybook/snapshots.ts"],
-          provide: { snapshots: Boolean(process.env.SNAPSHOTS_LOG) },
+          provide: { snapshots: SNAPSHOTS },
           browser: {
             commands: { saveSnapshot, sizeHost },
             enabled: true,
@@ -81,7 +86,7 @@ export default defineConfig({
             // shifts by a shade from run to run), so docs/snapshots/ changes only when a page does.
             provider: playwright({
               launchOptions: { channel: "chrome", args: DETERMINISTIC_RENDERING },
-              contextOptions: { reducedMotion: "reduce" },
+              contextOptions: { reducedMotion: "reduce", deviceScaleFactor: SNAPSHOTS ? SNAPSHOT_SCALE : 1 },
             }),
             instances: [{ browser: "chromium" }],
           },

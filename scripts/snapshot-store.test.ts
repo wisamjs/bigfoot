@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PNG } from "pngjs";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { changedPixels, pagesStoryFiles, prune, saveSnapshot, snapshotPath } from "./snapshot-store.mjs";
+import { changedPixels, pagesStoryFiles, pngWidth, prune, saveSnapshot, snapshotPath } from "./snapshot-store.mjs";
 
 /** A `width`×`height` PNG of one colour, with the pixel at (0, 0) in `dot` if given. */
 function png(width: number, height: number, colour = [200, 100, 150], dot?: number[]) {
@@ -41,35 +41,41 @@ describe("changedPixels", () => {
   });
 });
 
+describe("pngWidth", () => {
+  it("reads the width from the header", () => {
+    expect(pngWidth(png(414, 2))).toBe(414);
+  });
+});
+
 describe("saveSnapshot", () => {
   const path = "dashboard/empty-mobile-dark.png";
 
-  it("adds a new picture, then leaves it alone while its pixels stay the same", async () => {
-    expect(await saveSnapshot(path, png(8, 8), { dir })).toBe("added");
+  it("adds a new picture, then leaves it alone while its pixels stay the same", () => {
+    expect(saveSnapshot(path, png(8, 8), { dir })).toBe("added");
     const written = statSync(join(dir, path)).mtimeMs;
-    expect(await saveSnapshot(path, png(8, 8), { dir })).toBe("unchanged");
+    expect(saveSnapshot(path, png(8, 8), { dir })).toBe("unchanged");
     expect(statSync(join(dir, path)).mtimeMs).toBe(written);
   });
 
-  it("rewrites a picture when one pixel changed", async () => {
-    await saveSnapshot(path, png(8, 8), { dir });
-    expect(await saveSnapshot(path, png(8, 8, [200, 100, 150], [0, 0, 0]), { dir })).toBe("changed");
+  it("rewrites a picture when one pixel changed", () => {
+    saveSnapshot(path, png(8, 8), { dir });
+    expect(saveSnapshot(path, png(8, 8, [200, 100, 150], [0, 0, 0]), { dir })).toBe("changed");
     expect(changedPixels(readFileSync(join(dir, path)), png(8, 8, [200, 100, 150], [0, 0, 0]))).toBe(0);
   });
 
-  it("refuses a picture that isn't the story's width, as Vitest scaled it", async () => {
-    await expect(saveSnapshot(path, png(8, 8), { dir, width: 414 })).rejects.toThrow("8px wide, not 414px");
+  it("refuses a picture that isn't the expected width, as Vitest scaled it", () => {
+    expect(() => saveSnapshot(path, png(8, 8), { dir, width: 828 })).toThrow("8px wide, not 828px");
     expect(existsSync(join(dir, path))).toBe(false);
   });
 
-  it("refuses a path outside the folder", async () => {
-    await expect(saveSnapshot("../escape.png", png(8, 8), { dir })).rejects.toThrow("outside");
+  it("refuses a path outside the folder", () => {
+    expect(() => saveSnapshot("../escape.png", png(8, 8), { dir })).toThrow("outside");
   });
 
-  it("logs each path with what happened, for pruning", async () => {
+  it("logs each path with what happened, for pruning", () => {
     const log = join(dir, "log.txt");
-    await saveSnapshot(path, png(8, 8), { dir, log });
-    await saveSnapshot(path, png(8, 8), { dir, log });
+    saveSnapshot(path, png(8, 8), { dir, log });
+    saveSnapshot(path, png(8, 8), { dir, log });
     expect(readFileSync(log, "utf8")).toBe(`${path} added\n${path} unchanged\n`);
   });
 });
