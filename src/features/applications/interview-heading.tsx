@@ -35,7 +35,6 @@ import {
   parseDay,
   relativeDays,
   roundNumber,
-  roundTitle,
   STATUS_OPTIONS,
   type Application,
   type Interview,
@@ -72,10 +71,11 @@ function changesOf(values: Values, saved: Saved): Partial<InterviewFields> {
 }
 
 /**
- * The Interview page's heading (BIG-178): the company and role, the Interview title after its Round
- * number ("Round 3 · Retrospective System Design", BIG-190), its date
- * and time with the year, and badges for its Interview category and where it stands ("Upcoming · in 2 days",
- * "Completed · 10 days ago") and, once the Application is Done, its "Done · Rejected". On the right,
+ * The Interview page's heading (BIG-178, restyled in BIG-202): the company (in the brand colour) and
+ * role, then its Round number ("Round 3", BIG-190) beside its Interview category, the Interview title,
+ * and a line with its day and time ("Fri, Nov 13, 2026 · 11:00 AM") and badges for where it stands
+ * ("Upcoming · in 2 days", "Completed · 10 days ago") and, once the Application is Done, its
+ * "Done · Rejected". On the right, level with that line,
  * Edit details turns the category, the title and the date into fields in place (EditableHeading) and ⋯ holds
  * Delete Interview, which asks first and goes back to the Application page. On a phone, Edit details
  * folds into ⋯. Enter, Save, or leaving the fields saves what changed, checked first with the API's
@@ -158,20 +158,26 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
   }
 
   const title = shown.title;
+  const round = roundNumber(app, interview);
   const display = (
-    <div className="flex items-start justify-between gap-3">
+    <div className="flex items-start justify-between gap-3 sm:items-end">
       <div className="min-w-0">
         <p className="m-0 break-words text-base leading-[1.6] text-body">
-          {app.company} · {app.title}
+          <span className="font-medium text-fg-brand">{app.company}</span> · {app.title}
         </p>
-        <h1 className="m-0 mt-1 break-words text-[32px] font-bold leading-[1.1] tracking-[-0.02em] text-heading md:text-[44px]">
-          {roundTitle(roundNumber(app, interview), title)}
-        </h1>
-        <p className="m-0 mt-2 text-base leading-[1.6] text-body md:text-lg">
-          <InterviewWhenLong at={shown.at} />
-        </p>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <p className="m-0 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="text-xl font-bold leading-[1.3] text-fg-brand md:text-2xl">Round {round}</span>
           <CategoryBadge category={shown.category} />
+        </p>
+        <h1 className="m-0 mt-1 break-words text-[32px] font-bold leading-[1.1] tracking-[-0.02em] text-heading md:text-[52px]">
+          {/* The Round line above is in the heading's name too, as screen readers announce only the h1. */}
+          <span className="sr-only">{`Round ${round} · `}</span>
+          {title}
+        </h1>
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <p className="m-0 text-base leading-[1.6] text-body md:text-lg">
+            <InterviewWhenLong at={shown.at} />
+          </p>
           <WhenBadge app={app} at={shown.at} completed={interview.completed} />
           <DoneBadge app={app} />
         </div>

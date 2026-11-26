@@ -431,6 +431,8 @@ export type PrepTakeaway = {
   rule: "same_application" | "same_category";
   application: Pick<Application, "id" | "company">;
   interview: Interview;
+  /** The Interview's Round number in its Application, for "Shows on Round 3 · …" (BIG-202). */
+  round: number;
 };
 
 /** What an upcoming Interview's prep looks back at: the takeaways that apply, and They asked last time. */
@@ -458,7 +460,16 @@ function linked(own: DatedInterview | null | undefined, elsewhere: DatedIntervie
     { rule: "same_category" as const, match: elsewhere },
   ];
   return rules.flatMap(({ rule, match }) =>
-    match ? [{ rule, application: { id: match.application.id, company: match.application.company }, interview: match.interview }] : [],
+    match
+      ? [
+          {
+            rule,
+            application: { id: match.application.id, company: match.application.company },
+            interview: match.interview,
+            round: roundNumber(match.application, match.interview),
+          },
+        ]
+      : [],
   );
 }
 

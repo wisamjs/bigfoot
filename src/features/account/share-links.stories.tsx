@@ -16,6 +16,12 @@ import { ShareLinks } from "./share-links";
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
 const at = (offset: number) => new Date(Date.now() + offset).toISOString();
+/** A time later today: `share` of the way from now to midnight. */
+const untilMidnight = (share: number) => {
+  const midnight = new Date();
+  midnight.setHours(24, 0, 0, 0);
+  return at((midnight.getTime() - Date.now()) * share);
+};
 /** Today at `hour`:`minute` in the viewer's time zone. */
 function today(hour: number, minute = 0) {
   const date = new Date();
@@ -57,12 +63,10 @@ export const NoLinks: Story = { args: { links: [] } };
 /** Two people can follow along: one has opened the link today, one hasn't yet. */
 export const LinksActive: Story = {};
 
-/** The last minute of today, local time: later than now whenever the story runs, and still today. */
-const lastMinuteToday = () => new Date(new Date().setHours(23, 59, 59, 999)).toISOString();
-
 /** On its last day, the expiry is in the warning colour, with the time it stops. */
 export const ExpiresToday: Story = {
-  args: { links: [{ ...momAndDad, expires_at: lastMinuteToday() }] },
+  // Halfway between now and midnight, so it is still today however late the story runs.
+  args: { links: [{ ...momAndDad, expires_at: untilMidnight(0.5) }] },
   play: async ({ canvas }) => {
     await expect(await canvas.findByText(/^Expires today, /)).toBeVisible();
   },

@@ -515,8 +515,8 @@ describe("takeaways that apply (BIG-181)", () => {
     const card = screen.getByRole("region", { name: "Takeaway for next time" });
     const links = within(card).getAllByRole("link");
     expect(links.map((link) => link.textContent)).toEqual([
-      "Shows on the prep for Technical Deep-Dive · in 2 days",
-      "Shows on the prep for your next Hiring Manager · Tilth Agritech, tomorrow",
+      "Shows on Round 2 · Technical Deep-Dive, in 2 days",
+      "Shows on your next Hiring Manager: Tilth Agritech, tomorrow",
     ]);
     expect(links[0]).toHaveAttribute("href", "/applications/lumen/interviews/deep-dive");
     expect(links[1]).toHaveAttribute("href", "/applications/tilth/interviews/tilth-manager");
