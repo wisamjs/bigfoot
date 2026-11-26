@@ -11,11 +11,10 @@ import { JourneySkeleton, JourneyView } from "./journey-view";
 /** Rows draw Progress and Next twice, stacked for a phone and in columns wider: the ones showing. */
 const showing = (elements: HTMLElement[]) => elements.filter((element) => element.checkVisibility());
 
-const HOUR = 60 * 60 * 1000;
-const DAY = 24 * HOUR;
 /** `days` from now at `hour`:00 in the viewer's time zone. */
 function on(days: number, hour: number) {
-  const date = new Date(Date.now() + days * DAY);
+  const date = new Date();
+  date.setDate(date.getDate() + days); // calendar days: days × 24h misses by one across a DST change
   date.setHours(hour, 0, 0, 0);
   return date.toISOString();
 }

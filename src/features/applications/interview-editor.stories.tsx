@@ -9,9 +9,9 @@ import { UnsavedChanges } from "./unsaved-changes";
 // The Interview page under its "Dashboard / <company>" breadcrumb (BIG-178, BIG-202): the heading, the strip with this
 // Interview outlined, the Prep notes and Interview notes (BIG-180), and links to the Rounds either side. Dates are counted from today. Server Actions are
 // mocked (src/app/applications/__mocks__/actions.ts) and succeed unless a story says otherwise.
-const DAY = 86_400_000;
 const daysFromNow = (days: number, hour = 15) => {
-  const date = new Date(Date.now() + days * DAY);
+  const date = new Date();
+  date.setDate(date.getDate() + days); // calendar days: days × 24h misses by one across a DST change
   date.setHours(hour, 0, 0, 0);
   return date.toISOString();
 };
