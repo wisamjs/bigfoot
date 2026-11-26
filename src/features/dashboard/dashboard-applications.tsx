@@ -4,17 +4,30 @@ import { useState } from "react";
 import { AddApplicationLink } from "@/features/applications/add-links";
 import { ApplicationList } from "@/features/applications/application-list";
 import { DashboardCard } from "@/features/dashboard/dashboard-card";
+import { SORT_PARAM, setViewParams, useDashboardView } from "@/features/dashboard/dashboard-view";
 import { ClipboardBigfoot } from "@/features/shell/illustrations";
-import { doneWithoutOffer, type Application } from "@/lib/applications";
+import { inputClasses } from "@/components/ui/input";
+import {
+  APPLICATION_SORT_LABELS,
+  APPLICATION_SORTS,
+  doneWithoutOffer,
+  parseApplicationSort,
+  type Application,
+  type ApplicationSort,
+} from "@/lib/applications";
 
 /**
  * The dashboard's Applications card (BIG-173): its heading with Show done and Add Application, then
  * the table, each row a link to its Application's page. A line under the table says how many Done
  * Applications Show done would add. With no Applications at all, Bigfoot and a first Add button.
+ * The table sorts by Progress, or by the column the job seeker picks (BIG-209): its headers on wide
+ * screens, the "Sort by" menu on a phone. The sort is kept in the dashboard's URL (`?sort=next`).
  */
 export function DashboardApplications({ applications }: { applications: Application[] }) {
   const [showDone, setShowDone] = useState(false);
   const doneCount = doneWithoutOffer(applications).length;
+  const sort = parseApplicationSort(useDashboardView().get(SORT_PARAM));
+  const setSort = (next: ApplicationSort) => setViewParams({ [SORT_PARAM]: next === "progress" ? null : next });
 
   return (
     <DashboardCard
@@ -22,6 +35,7 @@ export function DashboardApplications({ applications }: { applications: Applicat
       title="Applications"
       actions={
         <>
+          {applications.length > 1 && <SortMenu sort={sort} onSort={setSort} />}
           {doneCount > 0 && (
             <label className="flex cursor-pointer items-center gap-2.5 text-sm text-body pointer-coarse:min-h-11">
               <input
@@ -41,11 +55,31 @@ export function DashboardApplications({ applications }: { applications: Applicat
         <NoApplications />
       ) : (
         <div className="pb-2">
-          <ApplicationList applications={applications} showDone={showDone} linked flush />
+          <ApplicationList applications={applications} showDone={showDone} linked flush sort={sort} onSort={setSort} />
           {doneCount > 0 && !showDone && <HiddenDone count={doneCount} />}
         </div>
       )}
     </DashboardCard>
+  );
+}
+
+/** "Sort by", on a phone, where the table's column headers are hidden. */
+function SortMenu({ sort, onSort }: { sort: ApplicationSort; onSort: (sort: ApplicationSort) => void }) {
+  return (
+    <label className="flex items-center gap-2.5 whitespace-nowrap text-sm text-body sm:hidden">
+      Sort by
+      <select
+        value={sort}
+        onChange={(e) => onSort(e.target.value as ApplicationSort)}
+        className={`${inputClasses} w-auto py-2 pointer-coarse:min-h-11`}
+      >
+        {APPLICATION_SORTS.map((option) => (
+          <option key={option} value={option}>
+            {APPLICATION_SORT_LABELS[option]}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

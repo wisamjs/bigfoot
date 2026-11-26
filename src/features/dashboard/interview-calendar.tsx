@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { rememberDashboardView } from "@/features/shell/dashboard-link";
+import { DAY_PARAM, MONTH_PARAM, SHOW_MONTH_PARAM, setViewParams, useDashboardView } from "@/features/dashboard/dashboard-view";
 import { CalendarBigfoot, ClockBigfoot } from "@/features/shell/illustrations";
 import { interviewHref } from "@/features/applications/routes";
 import { useIsClient } from "@/hooks/use-is-client";
@@ -37,46 +36,19 @@ function interviewCount(n: number) {
 }
 
 /**
- * The dashboard's search params for the calendar's month (`2026-12`), picked day (`2026-12-04`), and
- * on a phone, whether "Show month" swapped this week's row for the month grid (`calendar=month`).
- */
-const MONTH_PARAM = "month";
-const DAY_PARAM = "day";
-const SHOW_MONTH_PARAM = "calendar";
-
-/** The month and day in the URL as a search string, "" for this month with today picked. */
-function viewSearch(params: URLSearchParams): string {
-  const view = new URLSearchParams();
-  for (const name of [MONTH_PARAM, DAY_PARAM, SHOW_MONTH_PARAM]) {
-    const value = params.get(name);
-    if (value) view.set(name, value);
-  }
-  const search = view.toString();
-  return search ? `?${search}` : "";
-}
-
-/**
  * The calendar's month and picked day, kept in the dashboard's URL so Back from an Interview page
  * and a shared link show the same view. Changes replace the history entry rather than add one.
  */
 function useCalendarView() {
-  const params = useSearchParams();
-  const search = viewSearch(new URLSearchParams(params.toString()));
-
-  // "← Dashboard" on the other pages goes back to this view.
-  useEffect(() => rememberDashboardView(search), [search]);
+  const params = useDashboardView();
 
   /** `showMonth` left out keeps the phone's choice of week row or month grid as it is. */
   function setView(start: Date | null, day: string | null, showMonth?: boolean) {
-    const next = new URLSearchParams(window.location.search);
-    if (start) next.set(MONTH_PARAM, monthParam(start));
-    else next.delete(MONTH_PARAM);
-    if (day) next.set(DAY_PARAM, day);
-    else next.delete(DAY_PARAM);
-    if (showMonth === true) next.set(SHOW_MONTH_PARAM, "month");
-    else if (showMonth === false) next.delete(SHOW_MONTH_PARAM);
-    const query = next.toString();
-    window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+    setViewParams({
+      [MONTH_PARAM]: start ? monthParam(start) : null,
+      [DAY_PARAM]: day,
+      ...(showMonth === undefined ? {} : { [SHOW_MONTH_PARAM]: showMonth ? "month" : null }),
+    });
   }
 
   return {

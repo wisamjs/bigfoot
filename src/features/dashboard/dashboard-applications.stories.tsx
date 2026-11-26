@@ -49,3 +49,19 @@ export const Empty: Story = {
 
 /** Only Done Applications, hidden: the table has nothing to show until Show done. */
 export const OnlyDone: Story = { args: { applications: done } };
+
+/** Sorted by Location, as the dashboard's URL says (`?sort=location`, BIG-209); the Location header shows it. */
+export const SortedByLocation: Story = {
+  parameters: { nextjs: { navigation: { pathname: "/dashboard", query: { sort: "location" } } } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("columnheader", { name: "Location" })).toHaveAttribute("aria-sort", "ascending");
+  },
+};
+
+/** On a phone, where the column headers are hidden, "Sort by" sits beside Show done. */
+export const PhoneSortBy: Story = {
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("combobox", { name: "Sort by" })).toBeVisible();
+  },
+};
