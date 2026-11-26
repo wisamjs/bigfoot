@@ -5,7 +5,7 @@ import { InterviewEditor } from "@/features/applications/interview-editor";
 import { applicationHref } from "@/features/applications/routes";
 import { UnsavedChanges } from "@/features/applications/unsaved-changes";
 import { AppHeader } from "@/features/shell/app-header";
-import { BackLink } from "@/features/shell/dashboard-link";
+import { DashboardBreadcrumb } from "@/features/shell/dashboard-link";
 import { FormPage } from "@/features/shell/form-page";
 import { getApplications } from "@/lib/api";
 import { prepLookBack, takeawayShowsOn } from "@/lib/applications";
@@ -38,8 +38,8 @@ async function InterviewPageBody({ params }: Pick<Props, "params">) {
       wide
       header={<AppHeader user={user} current="/dashboard" />}
       title={app.company}
-      // The Interview page belongs to its Application page, so "← <company>" goes there.
-      back={<BackLink href={applicationHref(app.id)}>{app.company}</BackLink>}
+      // The Interview page belongs to its Application page, so "Dashboard / <company>" leads there (BIG-202).
+      back={<DashboardBreadcrumb href={applicationHref(app.id)}>{app.company}</DashboardBreadcrumb>}
       guard={UnsavedChanges}
     >
       <InterviewEditor

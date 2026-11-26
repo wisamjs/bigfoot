@@ -12,13 +12,13 @@ const dayFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "num
 /**
  * The Application's Interviews as a strip of segments, by date (BIG-174): one for each completed
  * Interview, green while the Application is In Progress and grey once it is Done (BIG-177), the
- * brand colour for the next, a light line for the rest, each with its date and "R3 · <title>" (its
- * Round number, BIG-190) under it. Each segment opens its Interview page. On a phone, the segments
+ * brand colour for the next, a light line for the rest, each with "R3 · Nov 25 · In 2 days" (its
+ * Round number, BIG-190) and its title under it (BIG-202). Each segment opens its Interview page. On a phone, the segments
  * alone and "2 of 4 Interviews completed". Nothing when there are no Interviews.
  *
  * On an Interview page (`current` is that Interview's id, BIG-178), its segment is outlined and
  * labelled "This interview · Nov 13", and a phone's line reads "Round 2 of 4" with a link to
- * "Next: <title> →".
+ * "R3 · <title> →".
  */
 export function InterviewProgress({ app, current }: { app: Application; current?: string }) {
   const next = nextInterview(app);
@@ -55,7 +55,7 @@ export function InterviewProgress({ app, current }: { app: Application; current?
                 href={interviewHref(app.id, following.id)}
                 className="touch-target inline-flex items-center rounded-control font-medium text-fg-brand underline underline-offset-4 hover:text-fg-brand-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
               >
-                Next: {following.title} →
+                <span className="sr-only">Next: </span>R{roundNumber(app, following)} · {following.title} →
               </Link>
             )}
           </>
@@ -97,16 +97,17 @@ function Segment({
       >
         <span className={`-m-1.5 block rounded-control p-1.5 ${current ? "ring-2 ring-brand" : ""}`}>
           <span aria-hidden className={`block h-1.5 rounded-full ${bar}`} />
-          <span className="sr-only sm:hidden">
-            Round {round}: {title}
-          </span>
-          <span className="hidden sm:block">
-            <span className={`mt-2.5 block text-xs ${current ? "font-medium text-heading" : next ? "font-medium text-fg-brand" : "text-body"}`}>
-              <SegmentWhen interview={interview} next={next} current={current} />
+          {/* On a phone the bar shows alone, and these lines are left for screen readers. */}
+          <span className="block max-sm:sr-only">
+            <span className={`mt-2.5 block text-xs ${current ? "font-bold text-heading" : "text-body"}`}>
+              <span aria-hidden className="font-bold text-heading">
+                R{round}
+              </span>
+              <span className="sr-only">Round {round}</span>
+              {" · "}
+              <SegmentWhen interview={interview} current={current} />
             </span>
-            <span className="mt-1 block truncate text-sm font-bold text-heading">
-              <span aria-hidden>R{round} · </span>
-              <span className="sr-only">Round {round}: </span>
+            <span className={`mt-1 block truncate text-base ${current ? "font-bold text-heading" : "font-semibold text-body"}`}>
               {title}
             </span>
           </span>
@@ -116,18 +117,16 @@ function Segment({
   );
 }
 
-/** "Nov 6 · Completed", "Nov 25 · Next, in 2 days", "Dec 2", or on an Interview's own page "This interview · Nov 13". */
-function SegmentWhen({ interview, next, current }: { interview: Interview; next: boolean; current: boolean }) {
+/** "Nov 6 · Completed", "Nov 25 · In 2 days", or on an Interview's own page "This interview · Nov 13". */
+function SegmentWhen({ interview, current }: { interview: Interview; current: boolean }) {
   const isClient = useIsClient();
   if (!isClient) return <span className="inline-block h-4" />;
   const day = dayFormat.format(new Date(interview.at));
   if (current) return <>This interview · {day}</>;
   if (interview.completed) return <>{day} · Completed</>;
-  if (next)
-    return (
-      <>
-        {day} · Next, <DaysFromToday date={interview.at} />
-      </>
-    );
-  return <>{day}</>;
+  return (
+    <>
+      {day} · <DaysFromToday date={interview.at} capitalize />
+    </>
+  );
 }
