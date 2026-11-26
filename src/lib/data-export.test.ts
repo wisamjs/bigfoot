@@ -155,8 +155,17 @@ describe("dataExportJson", () => {
     expires_at: "2027-11-12T12:00:00Z",
     expired: false,
   };
+  const shareLink = {
+    id: "k7Qm2x9PaB",
+    label: "Mom & Dad",
+    created_at: "2026-11-12T12:00:00Z",
+    passcode_set_at: "2026-11-12T12:00:00Z",
+    expires_at: "2026-11-19T12:00:00Z",
+    last_opened_at: "2026-11-13T09:00:00Z",
+    expired: false,
+  };
 
-  it("holds the profile, every Application field (is_sample, the Done date, the Outcome note, Interview notes and Prep notes included) and Access token names and dates", () => {
+  it("holds the profile, every Application field (is_sample, the Done date, the Outcome note, Interview notes and Prep notes included) Access token names and dates, and Share link labels and dates", () => {
     const noted = { id: "i1", application_id: "a1", category: "technical", title: "Pair Programming", at: ts, what_they_asked: "Why us?", how_it_went: "Went well.", takeaway: "Smile.", prep_notes: "Review caching.", completed: true, created_at: ts, updated_at: ts } as const;
     const app = application({
       is_sample: true,
@@ -172,7 +181,7 @@ describe("dataExportJson", () => {
       samples_seeded_at: "2026-11-10T12:00:01Z",
       last_seen_at: "2026-11-13T12:00:00Z",
     };
-    const data = JSON.parse(dataExportJson(user, record, [app], [accessToken], now));
+    const data = JSON.parse(dataExportJson(user, record, [app], [accessToken], [shareLink], now));
     expect(data).toEqual({
       exported_at: "2026-11-14T05:00:00.000Z",
       profile: {
@@ -193,6 +202,15 @@ describe("dataExportJson", () => {
           expires_at: "2027-11-12T12:00:00Z",
         },
       ],
+      share_links: [
+        {
+          label: "Mom & Dad",
+          created_at: "2026-11-12T12:00:00Z",
+          passcode_set_at: "2026-11-12T12:00:00Z",
+          expires_at: "2026-11-19T12:00:00Z",
+          last_opened_at: "2026-11-13T09:00:00Z",
+        },
+      ],
     });
     expect(data.applications[0]).toMatchObject({ done_on: "2026-11-16", outcome_note: "They went with an internal candidate." });
     expect(data.applications[0].interviews[0]).toMatchObject({
@@ -207,16 +225,26 @@ describe("dataExportJson", () => {
 
   it("never exports an Access token's secret or hash, even if the API sent one", () => {
     const leaky = { ...accessToken, token: "bigfoot_secret", token_hash: "abc123" };
-    const text = dataExportJson(user, null, [], [leaky], now);
+    const text = dataExportJson(user, null, [], [leaky], [], now);
     expect(text).not.toContain("bigfoot_secret");
     expect(text).not.toContain("abc123");
   });
 
+  it("never exports a Share link's Passcode, its hash or its id, even if the API sent them", () => {
+    const leaky = { ...shareLink, passcode: "maple-river-42", passcode_hash: "$argon2id$abc", passcode_version: 3 };
+    const text = dataExportJson(user, null, [], [], [leaky], now);
+    expect(text).not.toContain("maple-river-42");
+    expect(text).not.toContain("argon2id");
+    expect(text).not.toContain("passcode_version");
+    expect(text).not.toContain("k7Qm2x9PaB");
+  });
+
   it("still exports when the job seeker has no database record yet", () => {
-    const data = JSON.parse(dataExportJson(user, null, [], [], now));
+    const data = JSON.parse(dataExportJson(user, null, [], [], [], now));
     expect(data.profile.account_created_at).toBeNull();
     expect(data.applications).toEqual([]);
     expect(data.access_tokens).toEqual([]);
+    expect(data.share_links).toEqual([]);
   });
 });
 

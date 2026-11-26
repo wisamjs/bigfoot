@@ -5,12 +5,20 @@ import { AppHeader } from "@/features/shell/app-header";
 import { Avatar } from "@/features/shell/avatar";
 import { AccessTokens } from "@/features/account/access-tokens";
 import { DeleteAccountForm } from "@/features/account/delete-account-form";
+import { ShareLinks } from "@/features/account/share-links";
 import { Download } from "lucide-react";
 import { buttonClasses } from "@/components/ui/button-classes";
 import { Container } from "@/components/ui/container";
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton";
 import { ACCESS_TOKEN_LIFETIME, GOOGLE_PERMISSIONS_URL } from "@/lib/account";
-import { API_URL, listAccessTokens, listApplications, type AccessToken } from "@/lib/api";
+import {
+  API_URL,
+  listAccessTokens,
+  listApplications,
+  listShareLinks,
+  type AccessToken,
+  type ShareLink,
+} from "@/lib/api";
 import { getCurrentUser, type CurrentUser } from "@/lib/dal";
 import { EXPORT_CONTENT_TYPES, type ExportFormat } from "@/lib/data-export";
 import { BACKUP_DAYS, SERVER_LOG_RETENTION } from "@/lib/legal/privacy";
@@ -29,13 +37,17 @@ export default function AccountPage() {
 
 async function Account() {
   const user = await getCurrentUser();
-  const [applications, accessTokens] = await Promise.all([listApplications(user.id), listAccessTokens(user.id)]);
-  return <AccountLayout user={user} count={applications.length} accessTokens={accessTokens} />;
+  const [applications, accessTokens, shareLinks] = await Promise.all([
+    listApplications(user.id),
+    listAccessTokens(user.id),
+    listShareLinks(user.id),
+  ]);
+  return <AccountLayout user={user} count={applications.length} accessTokens={accessTokens} shareLinks={shareLinks} />;
 }
 
 /**
  * The account page with skeleton shapes wherever the job seeker's data goes (BIG-73): who is
- * signed in, their Access tokens, how many Applications deleting removes, and the forms, which
+ * signed in, their Share links and Access tokens, how many Applications deleting removes, and the forms, which
  * mustn't take typing that the loaded page would throw away.
  */
 function AccountSkeleton() {
@@ -51,10 +63,12 @@ function AccountLayout({
   user,
   count,
   accessTokens,
+  shareLinks,
 }: {
   user?: CurrentUser;
   count?: number;
   accessTokens?: AccessToken[];
+  shareLinks?: ShareLink[];
 }) {
   return (
     <>
@@ -83,6 +97,13 @@ function AccountLayout({
                 Your name, email and photo come from your Google account. To change them, change them
                 in Google, then sign in to Bigfoot again.
               </p>
+            </section>
+
+            <section aria-labelledby="share-title" className="card flex flex-col gap-4 p-6">
+              <h2 id="share-title" className="m-0 text-xl font-bold leading-[1.25] text-heading">
+                Share your progress
+              </h2>
+              {shareLinks ? <ShareLinks links={shareLinks} /> : <Skeleton className="h-64 w-full" />}
             </section>
 
             <section aria-labelledby="download-title" className="card flex flex-col gap-4 p-6">
@@ -147,7 +168,7 @@ function AccountLayout({
                   , sample Applications included;
                 </li>
                 <li>your job seeker record: your Google account id and when you joined Bigfoot; and</li>
-                <li>your Access tokens, which stop working.</li>
+                <li>your Access tokens and Share links, which stop working.</li>
               </ul>
               <p className="m-0">
                 You’ll be signed out. If you sign in again later, you start over as a new job seeker,
@@ -200,7 +221,7 @@ const DOWNLOADS: { format: ExportFormat; label: string; type: string; descriptio
     label: "JSON",
     type: EXPORT_CONTENT_TYPES.json,
     description:
-      "Everything, for moving to another tool: your profile, every field of every Application, and your Access tokens’ names and dates (never their secrets).",
+      "Everything, for moving to another tool: your profile, every field of every Application, your Share links’ labels and dates (never their passcodes) and your Access tokens’ names and dates (never their secrets).",
   },
 ];
 

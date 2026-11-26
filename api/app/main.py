@@ -11,7 +11,7 @@ from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
 from app import monitoring
-from app.routes import access_tokens, account, applications, health, interviews
+from app.routes import access_tokens, account, applications, health, interviews, share_links
 from app.settings import Settings, get_settings
 
 DESCRIPTION = """\
@@ -26,7 +26,7 @@ of the job seeker the token names. There are two kinds of token:
   ([ADR 0003](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0003-access-tokens-open-fastapi-to-scripts.md)).
 - **Web token** (`WebToken`): a short-lived JWT the Next.js server signs for the signed-in job
   seeker. The browser itself never calls this API. Web tokens work on every route, and are the only
-  way to use the Account and Access tokens routes
+  way to use the Account, Access tokens and Share links routes
   ([ADR 0001](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0001-fastapi-behind-nextjs-with-authjs.md)).
 
 Terms such as Application, Interview, Waiting, Sample Application and Access token are defined in
@@ -44,6 +44,11 @@ TAGS = [
     {
         "name": "Access tokens",
         "description": "Secrets that let a job seeker's scripts use the API as them. Web tokens only.",
+    },
+    {
+        "name": "Share links",
+        "description": "Private links that let a Viewer follow the job seeker's search, each with its own Passcode."
+        " Web tokens only.",
     },
     {"name": "Applications", "description": "Roles the job seeker has applied to, each with its Interviews."},
     {"name": "Interviews", "description": "Conversations in a company's hiring process, one Application each."},
@@ -93,6 +98,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         openapi_url="/openapi.json" if docs else None,
     )
     app.state.settings = settings
-    for module in (health, account, access_tokens, applications, interviews):
+    for module in (health, account, access_tokens, share_links, applications, interviews):
         app.include_router(module.router)
     return app

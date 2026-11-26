@@ -7,7 +7,7 @@ import { ACCOUNT_DELETED_PATH, DELETE_CONFIRMATION } from "@/lib/account";
 import * as api from "@/lib/api";
 import { applicationsTag } from "@/lib/applications";
 import { findCurrentUser } from "@/lib/dal";
-import { accessTokenNameError } from "@/lib/validation";
+import { accessTokenNameError, passcodeError, shareLinkLabelError } from "@/lib/validation";
 
 export type CreateAccessTokenState = {
   error: string | null;
@@ -55,6 +55,89 @@ export async function revokeAccessTokenAction(id: string): Promise<{ ok: true } 
   }
   refresh();
   return { ok: true };
+}
+
+const SESSION_ENDED = "Your session has ended. Sign in again.";
+
+export type CreateShareLinkState = {
+  error: string | null;
+  /** What's wrong with each field, shown beside it; `error` is for everything else. */
+  labelError?: string | null;
+  passcodeError?: string | null;
+  /** The link just created, Passcode included. Held only in the page's state: reloading drops it. */
+  created: api.NewShareLink | null;
+};
+
+/** Creates a Share link for the signed-in job seeker and returns its Passcode, this once. */
+export async function createShareLinkAction(_: CreateShareLinkState, form: FormData): Promise<CreateShareLinkState> {
+  const user = await findCurrentUser();
+  if (!user) return { error: SESSION_ENDED, created: null };
+  // The form checks these too, but Server Actions are plain POST endpoints.
+  const label = form.get("label");
+  const passcode = form.get("passcode");
+  const labelError = shareLinkLabelError(label);
+  const passcodeProblem = passcodeError(passcode);
+  if (labelError || passcodeProblem) return { error: null, labelError, passcodeError: passcodeProblem, created: null };
+  try {
+    const created = await api.createShareLink(user.id, String(label), String(passcode));
+    refresh();
+    return { error: null, created };
+  } catch (error) {
+    return { error: failure(error, "No link was created."), created: null };
+  }
+}
+
+type ShareLinkResult<T> = { ok: true; link: T } | { ok: false; error: string };
+
+/** Makes a Share link work for 7 days from now, keeping its link and Passcode. */
+export async function renewShareLinkAction(id: string): Promise<ShareLinkResult<api.ShareLink>> {
+  const user = await findCurrentUser();
+  if (!user) return { ok: false, error: SESSION_ENDED };
+  try {
+    const link = await api.renewShareLink(user.id, id);
+    refresh();
+    return { ok: true, link };
+  } catch (error) {
+    return { ok: false, error: failure(error, "The link was not renewed.") };
+  }
+}
+
+/** Sets a Share link's new Passcode, signing out its Viewers, and returns it, this once. */
+export async function changePasscodeAction(id: string, passcode: string): Promise<ShareLinkResult<api.NewShareLink>> {
+  const user = await findCurrentUser();
+  if (!user) return { ok: false, error: SESSION_ENDED };
+  const problem = passcodeError(passcode);
+  if (problem) return { ok: false, error: problem };
+  try {
+    const link = await api.changeShareLinkPasscode(user.id, id, passcode);
+    refresh();
+    return { ok: true, link };
+  } catch (error) {
+    return { ok: false, error: failure(error, "The passcode was not changed.") };
+  }
+}
+
+/** Stops sharing one of the signed-in job seeker's Share links: it stops working straight away. */
+export async function stopSharingAction(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const user = await findCurrentUser();
+  if (!user) return { ok: false, error: SESSION_ENDED };
+  try {
+    await api.stopSharing(user.id, id);
+  } catch (error) {
+    // Already stopped, for example in another tab: the list just needs refreshing.
+    if (!(error instanceof api.ApiError && error.status === 404)) {
+      return { ok: false, error: failure(error, "The link still works.") };
+    }
+  }
+  refresh();
+  return { ok: true };
+}
+
+/** The API's own message, or, when it couldn't be reached, that and what didn't happen. */
+function failure(error: unknown, unchanged: string) {
+  if (error instanceof api.ApiError) return error.message;
+  console.error(error);
+  return `Couldn’t reach Bigfoot’s server. ${unchanged} Try again.`;
 }
 
 export type DeleteAccountState = { error: string | null };

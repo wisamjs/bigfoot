@@ -21,6 +21,20 @@ vi.mock("@/lib/api", () => ({
       expires_at: "2027-11-12T12:00:00Z",
       expired: false,
     })),
+  listShareLinks: async (jobSeekerId: string) =>
+    jobSeekerId === "alice"
+      ? [
+          {
+            id: "k7Qm2x9PaB",
+            label: "Mom & Dad",
+            created_at: "2026-11-12T12:00:00Z",
+            passcode_set_at: "2026-11-12T12:00:00Z",
+            expires_at: "2026-11-19T12:00:00Z",
+            last_opened_at: null,
+            expired: false,
+          },
+        ]
+      : [],
   getJobSeeker: async (jobSeekerId: string) => ({
     job_seeker_id: jobSeekerId,
     created_at: "2026-11-10T12:00:00Z",
@@ -100,6 +114,19 @@ describe("GET /account/export", () => {
         created_at: "2026-11-12T12:00:00Z",
         last_used_at: null,
         expires_at: "2027-11-12T12:00:00Z",
+      },
+    ]);
+  });
+
+  it("lists the job seeker's own Share links in the JSON, by label and dates only", async () => {
+    const data = await (await get("json")).json();
+    expect(data.share_links).toEqual([
+      {
+        label: "Mom & Dad",
+        created_at: "2026-11-12T12:00:00Z",
+        passcode_set_at: "2026-11-12T12:00:00Z",
+        expires_at: "2026-11-19T12:00:00Z",
+        last_opened_at: null,
       },
     ]);
   });

@@ -82,7 +82,7 @@ def get_job_seeker(request: Request, job_seeker: SignedInJobSeekerId) -> JobSeek
 
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT, summary="Delete the job seeker's account")
 def delete_account(request: Request, job_seeker: SignedInJobSeekerId) -> None:
-    """Delete the job seeker, all of their Applications and all of their Access tokens, in one transaction.
+    """Delete the job seeker, all of their Applications, Access tokens and Share links, in one transaction.
 
     Idempotent: deleting an account that is already gone succeeds and logs nothing. Signing
     in again afterwards makes a new job seeker, who receives Sample Applications again.
@@ -91,5 +91,6 @@ def delete_account(request: Request, job_seeker: SignedInJobSeekerId) -> None:
         applications = conn.execute("delete from applications where job_seeker_id = %s", (job_seeker,)).rowcount
         job_seekers = conn.execute("delete from job_seekers where job_seeker_id = %s", (job_seeker,)).rowcount
         tokens = conn.execute("delete from access_tokens where job_seeker_id = %s", (job_seeker,)).rowcount
-        if applications or job_seekers or tokens:
+        links = conn.execute("delete from share_links where job_seeker_id = %s", (job_seeker,)).rowcount
+        if applications or job_seekers or tokens or links:
             conn.execute("insert into account_deletions (job_seeker_hash) values (%s)", (job_seeker_hash(job_seeker),))

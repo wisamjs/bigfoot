@@ -2,10 +2,15 @@
 // reused (e.g. a dashboard notice when the policy changes).
 
 /** The date the current version of the policy takes effect (ISO yyyy-mm-dd). */
-export const PRIVACY_EFFECTIVE_DATE = "2026-11-25";
+export const PRIVACY_EFFECTIVE_DATE = "2026-11-26";
 
 /** Newest first. The first entry's date must equal PRIVACY_EFFECTIVE_DATE. */
 export const PRIVACY_CHANGES: readonly { date: string; summary: string }[] = [
+  {
+    date: "2026-11-26",
+    summary:
+      "You can make Share links on your Account page, so someone you choose can follow your search. For each one, we store who it is for, its dates and a one-way hash of its passcode, never the passcode itself. Your data download lists each link’s label and dates, and deleting your account deletes your Share links.",
+  },
   {
     date: "2026-11-25",
     summary:

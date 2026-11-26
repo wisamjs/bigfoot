@@ -9,6 +9,7 @@ from typing import Any
 
 import jwt
 import pytest
+from argon2 import PasswordHasher
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 
@@ -17,9 +18,12 @@ from app.auth import (
     ACCESS_TOKEN_PREFIX,
     AUDIENCE,
     ISSUER,
+    SHARE_LINK_ID_PATTERN,
     access_token_hash,
     job_seeker_id,
     new_access_token,
+    new_share_link_id,
+    passcode_hash,
     signed_in_job_seeker_id,
 )
 
@@ -153,3 +157,17 @@ def test_new_access_tokens_match_the_pattern_and_never_repeat():
 def test_an_access_token_is_stored_as_its_sha256_hex_digest():
     assert access_token_hash(ACCESS_TOKEN) == hashlib.sha256(ACCESS_TOKEN.encode()).hexdigest()
     assert access_token_hash(ACCESS_TOKEN) != access_token_hash(ACCESS_TOKEN + "x")
+
+
+def test_new_share_link_ids_are_10_url_safe_characters_and_never_repeat():
+    ids = {new_share_link_id() for _ in range(200)}
+    assert len(ids) == 200
+    assert all(SHARE_LINK_ID_PATTERN.fullmatch(link_id) for link_id in ids)
+
+
+def test_a_passcode_is_stored_as_a_salted_argon2id_hash():
+    first, second = passcode_hash("maple-river-42"), passcode_hash("maple-river-42")
+    assert first.startswith("$argon2id$")
+    assert "maple-river-42" not in first
+    assert first != second  # each hash has its own salt
+    assert PasswordHasher().verify(first, "maple-river-42")
