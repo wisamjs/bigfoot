@@ -15,6 +15,8 @@ import {
   parseDay,
   questions,
   relativeDays,
+  roundNumber,
+  roundTitle,
   getCalendarInterviews,
   dashboardSummary,
   getStats,
@@ -79,6 +81,60 @@ const rejected = application("rejected", {
   outcome: "rejected",
   is_waiting: false,
   interviews: [interview("old", "2026-11-03T15:00:00Z", true)],
+});
+
+describe("roundNumber", () => {
+  const added = (id: string, at: string, created_at: string): Interview => ({ ...interview(id, at, true), created_at });
+  const first = added("first", "2026-11-02T15:00:00Z", "2026-10-01T09:00:00Z");
+  const second = added("second", "2026-11-09T15:00:00Z", "2026-10-02T09:00:00Z");
+  const third = added("third", "2026-11-16T15:00:00Z", "2026-10-03T09:00:00Z");
+
+  it("counts from 1 by date, whatever order the list is in", () => {
+    const app = application("a", { interviews: [third, first, second] });
+    expect([first, second, third].map((i) => roundNumber(app, i))).toEqual([1, 2, 3]);
+  });
+
+  it("orders by the instant, not the text, when times carry different offsets", () => {
+    const early = added("early", "2026-11-02T10:00:00-05:00", "2026-10-02T09:00:00Z");
+    const late = added("late", "2026-11-02T14:00:00Z", "2026-10-01T09:00:00Z");
+    const app = application("a", { interviews: [late, early] });
+    expect(roundNumber(app, late)).toBe(1);
+    expect(roundNumber(app, early)).toBe(2);
+  });
+
+  it("counts Interviews at the same time in the order they were added", () => {
+    const later = added("aaa", "2026-11-09T15:00:00Z", "2026-10-05T09:00:00Z");
+    const app = application("a", { interviews: [first, later, second] });
+    expect(roundNumber(app, second)).toBe(2);
+    expect(roundNumber(app, later)).toBe(3);
+  });
+
+  it("renumbers the later Interviews after one is deleted", () => {
+    const app = application("a", { interviews: [first, second, third] });
+    expect(roundNumber(app, third)).toBe(3);
+    const afterDelete = { ...app, interviews: app.interviews.filter((i) => i.id !== second.id) };
+    expect(roundNumber(afterDelete, first)).toBe(1);
+    expect(roundNumber(afterDelete, third)).toBe(2);
+  });
+
+  it("counts a Done Application's Interviews the same way", () => {
+    const app = application("a", { status: "done", outcome: "rejected", is_waiting: false, interviews: [first, second, third] });
+    expect(roundNumber(app, second)).toBe(2);
+  });
+
+  it("goes by date before the order added", () => {
+    const next = added("next", "2026-12-01T15:00:00Z", "2026-09-01T09:00:00Z");
+    const app = application("a", { interviews: [first, next] });
+    expect(roundNumber(app, next)).toBe(2);
+  });
+
+  it("is 0 for an Interview that isn't the Application's", () => {
+    expect(roundNumber(application("a", { interviews: [first] }), second)).toBe(0);
+  });
+
+  it("puts the round before the title", () => {
+    expect(roundTitle(3, "Retrospective System Design")).toBe("Round 3 · Retrospective System Design");
+  });
 });
 
 describe("getApplicationGroups", () => {

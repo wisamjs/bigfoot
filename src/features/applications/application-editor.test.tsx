@@ -183,7 +183,7 @@ describe("the Interviews", () => {
     });
     const asked = { ...oak, interviews: oak.interviews.map((i) => (i.id === "manager" ? { ...i, what_they_asked: "Why Oak?\nWhat would you not build?" } : i)) };
     open(asked, { lookBack: prepLookBack([asked, elm], asked, asked.interviews[2]) });
-    const next = screen.getByRole("region", { name: "Technical Deep-Dive" });
+    const next = screen.getByRole("region", { name: "Round 3 · Technical Deep-Dive" });
     expect(next).toHaveTextContent(/Next up · in 2 days/);
     const takeaways = within(within(next).getByRole("list", { name: "Takeaways for this Interview" })).getAllByRole("listitem");
     expect(takeaways.map((t) => t.textContent)).toEqual([
@@ -197,7 +197,7 @@ describe("the Interviews", () => {
 
   it("looks back at nothing when there is nothing to look back at", () => {
     open(oak);
-    const next = screen.getByRole("region", { name: "Technical Deep-Dive" });
+    const next = screen.getByRole("region", { name: "Round 3 · Technical Deep-Dive" });
     expect(within(next).queryByRole("list", { name: "Takeaways for this Interview" })).not.toBeInTheDocument();
     expect(within(next).queryByRole("list", { name: "They asked last time" })).not.toBeInTheDocument();
   });
@@ -222,7 +222,7 @@ describe("the Interviews", () => {
 
   it("shows the next one's Prep notes instead of Add Prep notes once it has some", () => {
     open({ ...oak, interviews: oak.interviews.map((i) => (i.id === "deep" ? { ...i, prep_notes: "Bring the migration story." } : i)) });
-    const next = screen.getByRole("region", { name: "Technical Deep-Dive" });
+    const next = screen.getByRole("region", { name: "Round 3 · Technical Deep-Dive" });
     expect(within(next).getByRole("heading", { name: "Prep notes" })).toBeInTheDocument();
     expect(within(next).getByText("Bring the migration story.")).toBeInTheDocument();
     expect(within(next).queryByRole("link", { name: "Add Prep notes" })).not.toBeInTheDocument();
@@ -230,7 +230,7 @@ describe("the Interviews", () => {
 
   it("never asks for Interview notes on the next one, which hasn't happened yet", () => {
     open(oak);
-    const next = screen.getByRole("region", { name: "Technical Deep-Dive" });
+    const next = screen.getByRole("region", { name: "Round 3 · Technical Deep-Dive" });
     expect(within(next).queryByText(/Interview notes/)).not.toBeInTheDocument();
   });
 

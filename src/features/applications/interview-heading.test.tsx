@@ -52,7 +52,7 @@ describe("the Interview page heading", () => {
   it("shows the company and role, the title with its category, and the date and time", () => {
     openPage();
     expect(screen.getByText("Birch · Senior Engineer")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 1, name: "Technical" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Round 1 · Technical" })).toBeInTheDocument();
     // eslint-disable-next-line testing-library/no-node-access -- the date is a <time>, which has no role to query by.
     expect(document.querySelector("h1 ~ p time")).toHaveAttribute("datetime", technical.at);
   });
@@ -60,7 +60,7 @@ describe("the Interview page heading", () => {
   it("shows the job seeker's own title, with its category as a tag", () => {
     const paired = { ...technical, title: "Pair Programming" };
     openPage(paired, application("birch", { company: "Birch", interviews: [paired] }));
-    expect(screen.getByRole("heading", { level: 1, name: "Pair Programming" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Round 1 · Pair Programming" })).toBeInTheDocument();
     expect(screen.getByText("Technical")).toBeInTheDocument();
   });
 
@@ -105,7 +105,7 @@ describe("the Interview page heading", () => {
     await user.keyboard("{Enter}");
 
     expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { category: "culture", title: "Culture" });
-    expect(await screen.findByRole("heading", { level: 1, name: "Culture" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Round 1 · Culture" })).toBeInTheDocument();
     await waitFor(() => expect(editButton()).toHaveFocus());
   });
 
@@ -123,7 +123,7 @@ describe("the Interview page heading", () => {
       category: "system_design",
       title: "Retrospective System Design",
     });
-    expect(await screen.findByRole("heading", { level: 1, name: "Retrospective System Design" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Round 1 · Retrospective System Design" })).toBeInTheDocument();
     expect(screen.getByText("System Design")).toBeInTheDocument();
   });
 
@@ -193,7 +193,7 @@ describe("the Interview page heading", () => {
     await user.keyboard("{Escape}");
 
     expect(screen.queryByRole("form")).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 1, name: "Technical" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Round 1 · Technical" })).toBeInTheDocument();
     expect(actions.updateInterviewAction).not.toHaveBeenCalled();
     await waitFor(() => expect(editButton()).toHaveFocus());
   });
@@ -203,7 +203,7 @@ describe("the Interview page heading", () => {
     await user.click(editButton());
     await user.selectOptions(screen.getByLabelText(/^Category/), "people_management");
     await user.click(within(form()).getByRole("button", { name: "Cancel" }));
-    expect(screen.getByRole("heading", { level: 1, name: "Technical" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Round 1 · Technical" })).toBeInTheDocument();
     expect(actions.updateInterviewAction).not.toHaveBeenCalled();
   });
 
@@ -270,13 +270,13 @@ describe("the Interview page heading", () => {
     expect(segments.map((link) => link.getAttribute("aria-current"))).toEqual([null, "page", null]);
     expect(await screen.findByText(/^This interview · /)).toBeInTheDocument();
     // The phone's line: where this one falls and a link to the next.
-    expect(screen.getByText("Interview 2 of 3")).toBeInTheDocument();
+    expect(screen.getByText("Round 2 of 3")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Next: Leadership →" })).toHaveAttribute("href", "/applications/birch/interviews/i2");
   });
 
   it("has no link to a next Interview on the last one", () => {
     openPage();
-    expect(screen.getByText("Interview 1 of 1")).toBeInTheDocument();
+    expect(screen.getByText("Round 1 of 1")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /^Next:/ })).not.toBeInTheDocument();
   });
 });

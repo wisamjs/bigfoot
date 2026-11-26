@@ -5,19 +5,19 @@ import { useIsClient } from "@/hooks/use-is-client";
 import { DaysFromToday } from "@/features/applications/application-when";
 import { interviewHref } from "@/features/applications/routes";
 import { interviewMark } from "@/features/applications/status-tone";
-import { nextInterview, type Application, type Interview, type Status } from "@/lib/applications";
+import { nextInterview, roundNumber, type Application, type Interview, type Status } from "@/lib/applications";
 
 const dayFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
 
 /**
  * The Application's Interviews as a strip of segments, by date (BIG-174): one for each completed
  * Interview, green while the Application is In Progress and grey once it is Done (BIG-177), the
- * brand colour for the next, a light line for the rest, each with its date and title under it. Each
- * segment opens its Interview page. On a phone, the segments alone and "2 of 4 Interviews
- * completed". Nothing when there are no Interviews.
+ * brand colour for the next, a light line for the rest, each with its date and "R3 · <title>" (its
+ * Round number, BIG-190) under it. Each segment opens its Interview page. On a phone, the segments
+ * alone and "2 of 4 Interviews completed". Nothing when there are no Interviews.
  *
  * On an Interview page (`current` is that Interview's id, BIG-178), its segment is outlined and
- * labelled "This interview · Nov 13", and a phone's line reads "Interview 2 of 4" with a link to
+ * labelled "This interview · Nov 13", and a phone's line reads "Round 2 of 4" with a link to
  * "Next: <title> →".
  */
 export function InterviewProgress({ app, current }: { app: Application; current?: string }) {
@@ -37,6 +37,7 @@ export function InterviewProgress({ app, current }: { app: Application; current?
             key={interview.id}
             applicationId={app.id}
             interview={interview}
+            round={roundNumber(app, interview)}
             status={app.status}
             next={interview.id === next?.id}
             current={interview.id === current}
@@ -47,7 +48,7 @@ export function InterviewProgress({ app, current }: { app: Application; current?
         {position >= 0 ? (
           <>
             <span>
-              Interview {position + 1} of {app.interviews.length}
+              Round {roundNumber(app, app.interviews[position])} of {app.interviews.length}
             </span>
             {following && (
               <Link
@@ -71,12 +72,15 @@ export function InterviewProgress({ app, current }: { app: Application; current?
 function Segment({
   applicationId,
   interview,
+  round,
   status,
   next,
   current,
 }: {
   applicationId: string;
   interview: Interview;
+  /** Its Round number, shown as "R3" before the title. */
+  round: number;
   status: Status;
   next: boolean;
   current: boolean;
@@ -93,12 +97,18 @@ function Segment({
       >
         <span className={`-m-1.5 block rounded-control p-1.5 ${current ? "ring-2 ring-brand" : ""}`}>
           <span aria-hidden className={`block h-1.5 rounded-full ${bar}`} />
-          <span className="sr-only sm:hidden">{title}</span>
+          <span className="sr-only sm:hidden">
+            Round {round}: {title}
+          </span>
           <span className="hidden sm:block">
             <span className={`mt-2.5 block text-xs ${current ? "font-medium text-heading" : next ? "font-medium text-fg-brand" : "text-body"}`}>
               <SegmentWhen interview={interview} next={next} current={current} />
             </span>
-            <span className="mt-1 block truncate text-sm font-bold text-heading">{title}</span>
+            <span className="mt-1 block truncate text-sm font-bold text-heading">
+              <span aria-hidden>R{round} · </span>
+              <span className="sr-only">Round {round}: </span>
+              {title}
+            </span>
           </span>
         </span>
       </Link>

@@ -289,12 +289,12 @@ export const DoneApplication: Story = {
   },
 };
 
-/** On a phone: the segments, "Interview 3 of 4" and a link to the next Interview, and Edit details in ⋯. */
+/** On a phone: the segments, "Round 3 of 4" and a link to the next Interview, and Edit details in ⋯. */
 export const Phone: Story = {
   args: { interview: lumen.interviews[2] },
   globals: { viewport: { value: "mobile1", isRotated: false } },
   play: async ({ canvas }) => {
-    await expect(canvas.getByText("Interview 3 of 4")).toBeVisible();
+    await expect(canvas.getByText("Round 3 of 4")).toBeVisible();
     await expect(canvas.getByRole("link", { name: "Next: Leadership →" })).toBeVisible();
     // Hidden below sm, so it is out of the accessibility tree.
     await expect(canvas.queryByRole("button", { name: "Edit details" })).not.toBeInTheDocument();
