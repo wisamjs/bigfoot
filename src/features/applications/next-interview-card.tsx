@@ -7,11 +7,11 @@ import { DateTile } from "@/features/applications/date-tile";
 import { NO_LOOK_BACK } from "@/features/applications/interview-notes-form";
 import { PrepLookBack } from "@/features/applications/prep-look-back";
 import { interviewHref } from "@/features/applications/routes";
-import type { Application, Interview, PrepLookBack as LookBack } from "@/lib/applications";
+import { roundNumber, roundTitle, type Application, type Interview, type PrepLookBack as LookBack } from "@/lib/applications";
 
 /**
- * The Application's next Interview, first on its page (BIG-174): when it is, its title and
- * category, and Open
+ * The Application's next Interview, first on its page (BIG-174): when it is, its title after its
+ * Round number ("Round 3 · Retrospective System Design", BIG-190) and its category, and Open
  * Interview. Under them, what its prep looks back at (BIG-181): up to two takeaways and They
  * asked last time, as on its Interview page. Then its Prep notes, or Add Prep notes to start them
  * on its Interview page: the card is there to get ready, and Interview notes come after (BIG-187).
@@ -44,7 +44,7 @@ export function NextInterviewCard({
             <DaysFromToday date={interview.at} />
           </p>
           <h2 id="next-up-title" className="m-0 mt-1 break-words text-2xl font-bold leading-[1.2] text-heading">
-            {interview.title}
+            {roundTitle(roundNumber(app, interview), interview.title)}
           </h2>
           <p className="m-0 mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 break-words text-base text-body">
             <CategoryBadge category={interview.category} />

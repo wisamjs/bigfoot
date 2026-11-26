@@ -34,6 +34,8 @@ import {
   OUTCOME_OPTIONS,
   parseDay,
   relativeDays,
+  roundNumber,
+  roundTitle,
   STATUS_OPTIONS,
   type Application,
   type Interview,
@@ -70,7 +72,8 @@ function changesOf(values: Values, saved: Saved): Partial<InterviewFields> {
 }
 
 /**
- * The Interview page's heading (BIG-178): the company and role, the Interview title, its date
+ * The Interview page's heading (BIG-178): the company and role, the Interview title after its Round
+ * number ("Round 3 · Retrospective System Design", BIG-190), its date
  * and time with the year, and badges for its Interview category and where it stands ("Upcoming · in 2 days",
  * "Completed · 10 days ago") and, once the Application is Done, its "Done · Rejected". On the right,
  * Edit details turns the category, the title and the date into fields in place (EditableHeading) and ⋯ holds
@@ -162,7 +165,7 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
           {app.company} · {app.title}
         </p>
         <h1 className="m-0 mt-1 break-words text-[32px] font-bold leading-[1.1] tracking-[-0.02em] text-heading md:text-[44px]">
-          {title}
+          {roundTitle(roundNumber(app, interview), title)}
         </h1>
         <p className="m-0 mt-2 text-base leading-[1.6] text-body md:text-lg">
           <InterviewWhenLong at={shown.at} />

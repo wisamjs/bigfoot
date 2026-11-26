@@ -38,21 +38,22 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * Coming up: its title, its date and time with the year, and its category tag beside a blue
+ * Coming up: "Round 2 · " and its title (its Round number, BIG-190), its date and time with the year, and its category tag beside a blue
  * "Upcoming · in 2 days".
  */
 export const Upcoming: Story = {
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole("heading", { level: 1, name: "Technical Deep-Dive" })).toBeVisible();
+    await expect(canvas.getByRole("heading", { level: 1, name: "Round 2 · Technical Deep-Dive" })).toBeVisible();
     await expect(canvas.getByText("Project Deep-dive")).toBeVisible();
     await expect(await canvas.findByText("Upcoming · in 2 days")).toBeVisible();
   },
 };
 
-/** Past: a green "Completed · 10 days ago". */
+/** Past: the first by date, so Round 1, and a green "Completed · 10 days ago". */
 export const Completed: Story = {
   args: { interview: completed },
   play: async ({ canvas }) => {
+    await expect(canvas.getByRole("heading", { level: 1, name: "Round 1 · Hiring Manager" })).toBeVisible();
     await expect(await canvas.findByText("Completed · 10 days ago")).toBeVisible();
   },
 };
@@ -73,7 +74,7 @@ export const OwnTitle: Story = {
   },
   play: async ({ canvas }) => {
     await expect(
-      canvas.getByRole("heading", { level: 1, name: "Strategic Alignment with the Sr Director of Platform" }),
+      canvas.getByRole("heading", { level: 1, name: "Round 2 · Strategic Alignment with the Sr Director of Platform" }),
     ).toBeVisible();
     await expect(canvas.getByText("Decision Maker")).toBeVisible();
   },

@@ -111,7 +111,8 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * An Interview scheduled: the strip (completed Interviews green), the next Interview with the
+ * An Interview scheduled: the strip (completed Interviews green, each segment "R1 · <title>" with
+ * its Round number), the next Interview, "Round 3 · Technical Deep-Dive", with the
  * takeaways that apply (this Application's Hiring Manager, and the last Technical Deep-Dive at
  * Fernway Health) and They asked last time, Later and Completed (each with its Interview notes inline), and the Details card with the salary hidden.
  */
@@ -120,8 +121,11 @@ export const Default: Story = {
     await expect(canvas.getByRole("list", { name: "Completed" })).toBeVisible();
     await expect(await canvas.findAllByText(/ · Completed$/)).toHaveLength(2);
     await expect(completedBars(canvas, "bg-fg-success-strong")).toHaveLength(2);
-    await expect(canvas.getByRole("heading", { level: 2, name: "Technical Deep-Dive" })).toBeVisible();
-    const next = canvas.getByRole("region", { name: "Technical Deep-Dive" });
+    const segments = within(canvas.getByRole("list", { name: "Interviews by date" })).getAllByRole("link");
+    await expect(segments.map((s) => s.textContent?.match(/R\d · /)?.[0])).toEqual(["R1 · ", "R2 · ", "R3 · ", "R4 · "]);
+    await expect(segments[3]).toHaveAccessibleName(/Round 4: Leadership$/);
+    await expect(canvas.getByRole("heading", { level: 2, name: "Round 3 · Technical Deep-Dive" })).toBeVisible();
+    const next = canvas.getByRole("region", { name: "Round 3 · Technical Deep-Dive" });
     const takeaways = within(within(next).getByRole("list", { name: "Takeaways for this Interview" })).getAllByRole("listitem");
     await expect(takeaways).toHaveLength(2);
     await expect(takeaways[0]).toHaveTextContent(/^Takeaway from Hiring Manager · .+Lead with the decision/);
@@ -289,7 +293,7 @@ export const ChangeOutcome: Story = {
 export const NothingToLookBackAt: Story = {
   args: { lookBack: { takeaways: [], theyAsked: null } },
   play: async ({ canvas }) => {
-    const next = canvas.getByRole("region", { name: "Technical Deep-Dive" });
+    const next = canvas.getByRole("region", { name: "Round 3 · Technical Deep-Dive" });
     await expect(within(next).queryByRole("list", { name: "Takeaways for this Interview" })).not.toBeInTheDocument();
     await expect(within(next).queryByRole("list", { name: "They asked last time" })).not.toBeInTheDocument();
   },
@@ -306,7 +310,7 @@ export const NextHasPrepNotes: Story = {
     },
   },
   play: async ({ canvas }) => {
-    const next = canvas.getByRole("region", { name: "Technical Deep-Dive" });
+    const next = canvas.getByRole("region", { name: "Round 3 · Technical Deep-Dive" });
     await expect(within(next).getByText(/Bring the feature store migration story/)).toBeVisible();
     await expect(within(next).queryByRole("link", { name: "Add Prep notes" })).not.toBeInTheDocument();
   },
@@ -319,7 +323,7 @@ export const NextHasPrepNotes: Story = {
 export const NextUpOnAPhone: Story = {
   globals: { viewport: { value: "mobile1", isRotated: false } },
   play: async ({ canvas }) => {
-    const next = canvas.getByRole("region", { name: "Technical Deep-Dive" });
+    const next = canvas.getByRole("region", { name: "Round 3 · Technical Deep-Dive" });
     const links = ["Add Prep notes", "Open Interview"].map((name) =>
       within(next).getAllByRole("link", { name }).find((l) => l.checkVisibility()),
     );

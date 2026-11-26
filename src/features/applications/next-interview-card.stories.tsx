@@ -71,7 +71,7 @@ type Story = StoryObj<typeof meta>;
 /** Tomorrow's Interview with two takeaways and its Prep notes; Open Interview opens its Interview page. */
 export const WithTakeawaysAndPrepNotes: Story = {
   play: async ({ canvas }) => {
-    const card = canvas.getByRole("region", { name: "Technical Deep-Dive" });
+    const card = canvas.getByRole("region", { name: "Round 2 · Technical Deep-Dive" });
     await expect(within(card).getByText(/^Next up · tomorrow$/i)).toBeVisible();
     await expect(within(card).getByText(/^Lumen Bio · Engineering Manager, ML Platform ·/)).toBeVisible();
     await expect(within(card).getAllByRole("listitem")).toHaveLength(2);
@@ -92,7 +92,7 @@ export const WithoutTakeawaysOrPrepNotes: Story = {
     lookBack: { takeaways: [], theyAsked: null },
   },
   play: async ({ canvas }) => {
-    const card = canvas.getByRole("region", { name: "Technical Deep-Dive" });
+    const card = canvas.getByRole("region", { name: "Round 2 · Technical Deep-Dive" });
     await expect(within(card).queryByRole("list", { name: "Takeaways for this Interview" })).not.toBeInTheDocument();
     await expect(within(card).getByRole("link", { name: "Add Prep notes" })).toHaveAttribute(
       "href",

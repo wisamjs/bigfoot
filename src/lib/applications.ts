@@ -223,6 +223,28 @@ export function nextInterview(app: Application): Interview | null {
   return upcomingInterviews(app)[0] ?? null;
 }
 
+/**
+ * Round number (GLOSSARY.md, docs/adr/0007): the Interview's place among its Application's
+ * Interviews by date, counting from 1, worked out on each read and never stored. Interviews at the
+ * same time count in the order they were added, so deleting one renumbers the later ones. The
+ * order is the API's (`at`, `created_at`, `id`, api/app/queries.py), applied here again so the
+ * number doesn't depend on the list arriving sorted. 0 when the Interview isn't the Application's.
+ */
+export function roundNumber(app: Pick<Application, "interviews">, interview: Pick<Interview, "id">): number {
+  const byDate = app.interviews.toSorted(
+    (a, b) =>
+      Date.parse(a.at) - Date.parse(b.at) ||
+      Date.parse(a.created_at) - Date.parse(b.created_at) ||
+      a.id.localeCompare(b.id),
+  );
+  return byDate.findIndex((i) => i.id === interview.id) + 1;
+}
+
+/** "Round 3 · Retrospective System Design": an Interview's title with its Round number before it. */
+export function roundTitle(round: number, title: string): string {
+  return `Round ${round} · ${title}`;
+}
+
 /** The latest completed Interview. */
 export function lastCompletedInterview(app: Application): Interview | null {
   return app.interviews.findLast((i) => i.completed) ?? null;
