@@ -1,9 +1,10 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "@/app/applications/actions";
 import type { Application } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
+import { typeRich } from "@/test/rich-text";
 import { AddInterviewLink } from "./add-links";
 import { NewInterviewForm } from "./new-interview-form";
 
@@ -65,7 +66,7 @@ describe("Add Interview", () => {
     expect(within(form!).getByLabelText("Application")).toHaveValue("oak");
   });
 
-  it("marks Application, Category, Title and Date and time required, and starts with no time", () => {
+  it("marks Application, Category, Title and Date and time required, and starts with no time", async () => {
     const { form } = openAdd();
     expect(form).toHaveTextContent("* Required");
     expect(within(form!).getByLabelText("Application")).toBeRequired();
@@ -75,8 +76,10 @@ describe("Add Interview", () => {
     expect(within(form!).getByLabelText("Title")).toHaveValue("Recruiter");
     expect(within(form!).getByRole("group", { name: "Date and time" })).toBeInTheDocument();
     expect(within(form!).getByLabelText("Time")).toHaveValue("");
-    expect(within(form!).getByLabelText("How it went")).not.toBeRequired();
-    expect(within(form!).getByLabelText("How it went")).toHaveAttribute("placeholder", expect.stringMatching(/\w/));
+    const howItWent = within(form!).getByRole("textbox", { name: "How it went" });
+    expect(howItWent).not.toBeRequired();
+    // The editor's placeholder sits on its empty first paragraph.
+    await waitFor(() => expect(within(howItWent).getByText("", { selector: "p" })).toHaveAttribute("data-placeholder", expect.stringMatching(/\w/)));
   });
 
   it("shows each missing field's error beside it, focuses the first, and saves nothing", async () => {
@@ -123,7 +126,7 @@ describe("Add Interview", () => {
     // The title follows the category until it's edited.
     expect(within(form!).getByLabelText("Title")).toHaveValue("Technical");
     await pickDate(user, form!, "14:30");
-    await user.type(within(form!).getByLabelText("How it went"), "  Went well  ");
+    await typeRich(within(form!).getByRole("textbox", { name: "How it went" }), "  Went well  ");
     await meet(user, form!, " Staff Engineer ", " Sam ");
     await user.click(within(form!).getByRole("button", { name: "Add Interview" }));
 

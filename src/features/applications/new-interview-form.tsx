@@ -9,6 +9,7 @@ import { DateTimePicker, type DateAndTime } from "@/components/ui/date-time-pick
 import { Field, RequiredMark, RequiredNote, fieldLabelClasses } from "@/components/ui/field";
 import { FieldError, invalidProps } from "@/components/ui/field-error";
 import { inputClasses } from "@/components/ui/input";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { useSaveStatus } from "@/hooks/use-save-status";
 import { AddFormActions } from "@/features/applications/add-form-actions";
 import { FormAlert } from "@/features/applications/details-fields";
@@ -26,7 +27,6 @@ import {
   applicationParticipants,
   categoryLabel,
   INTERVIEW_CATEGORIES,
-  INTERVIEW_NOTES_MAX_LENGTHS,
   INTERVIEW_TITLE_MAX_LENGTH,
   titleForCategory,
   type Application,
@@ -310,18 +310,17 @@ function NewInterviewFields({
         problem={fieldErrors.participants ? { message: fieldErrors.participants, key: participantsKey } : undefined}
       />
       <Field id={`${id}-how-it-went`} label="How it went" error={fieldErrors.how_it_went}>
-        <textarea
+        <RichTextEditor
           id={`${id}-how-it-went`}
           value={howItWent}
-          rows={3}
-          maxLength={INTERVIEW_NOTES_MAX_LENGTHS.how_it_went}
-          placeholder={PLACEHOLDERS.how_it_went}
-          onChange={(e) => {
-            setHowItWent(e.target.value);
+          onChange={(markdown) => {
+            setHowItWent(markdown);
             clear("how_it_went");
           }}
-          {...invalidProps(`${id}-how-it-went-error`, fieldErrors.how_it_went)}
-          className={`${inputClasses} field-sizing-content max-h-96 min-h-20 resize-y`}
+          placeholder={PLACEHOLDERS.how_it_went}
+          labelledBy={`${id}-how-it-went-label`}
+          errorId={`${id}-how-it-went-error`}
+          error={fieldErrors.how_it_went}
         />
       </Field>
       <FormAlert message={invalid} />

@@ -430,44 +430,6 @@ export function paragraphs(notes: string | null): string[] {
 }
 
 /**
- * One block of Interview notes as the Interview page reads them: a run of text, or a run of "- "
- * lines. Each block and item has an `id`, the number of the line it starts on, to key it by.
- */
-export type NoteBlock =
-  | { type: "text"; id: number; text: string }
-  | { type: "list"; id: number; items: { id: number; text: string }[] };
-
-/**
- * Interview notes as blocks for reading: lines starting "- " become a list, the other lines run
- * together as text, and a blank line ends a block. Nothing here changes what is stored.
- */
-export function noteBlocks(notes: string | null): NoteBlock[] {
-  const blocks: NoteBlock[] = [];
-  // The lines of the text block being gathered; a blank line, a list or the end closes it.
-  let text: { id: number; lines: string[] } | null = null;
-  const closeText = () => {
-    if (text) blocks.push({ type: "text", id: text.id, text: text.lines.join("\n") });
-    text = null;
-  };
-  for (const [id, raw] of (notes ?? "").split("\n").entries()) {
-    const line = raw.trim();
-    const bullet = /^- +(.*)$/.exec(line);
-    if (!bullet) {
-      if (!line) closeText();
-      else if (text) text.lines.push(line);
-      else text = { id, lines: [line] };
-      continue;
-    }
-    closeText();
-    const last = blocks.at(-1);
-    if (last?.type === "list") last.items.push({ id, text: bullet[1] });
-    else blocks.push({ type: "list", id, items: [{ id, text: bullet[1] }] });
-  }
-  closeText();
-  return blocks;
-}
-
-/**
  * A Takeaway for next time shown on an upcoming Interview's prep (BIG-181), or, read the other way,
  * an upcoming Interview a completed one's takeaway shows on. `rule` says which rule linked them:
  * `same_application`, or `same_category`, the same Interview category at another Application.

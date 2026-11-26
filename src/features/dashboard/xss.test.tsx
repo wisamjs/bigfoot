@@ -8,6 +8,8 @@ import { NewApplicationForm } from "@/features/applications/new-application-form
 import { NewInterviewForm } from "@/features/applications/new-interview-form";
 import { getUpcoming } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
+import { MarkdownView } from "@/components/ui/markdown-view";
+import { richValue, typeRich } from "@/test/rich-text";
 import { INJECTED_ELEMENTS, XSS_TEXT, XSS_URLS } from "@/test/xss";
 import { InterviewCalendar } from "./interview-calendar";
 import { DashboardApplications } from "./dashboard-applications";
@@ -114,15 +116,17 @@ describe.each(XSS_TEXT.map((payload, n) => [payload, XSS_URLS[n]] as const))("%j
 });
 
 describe("the Add Interview form", () => {
-  it.each(XSS_TEXT)("sends Interview notes and a Participant %j exactly as typed", async (payload) => {
+  it.each(XSS_TEXT)("sends a Participant %j exactly as typed, and How it went as Markdown that reads back as it", async (payload) => {
     const user = userEvent.setup();
     render(<NewInterviewForm applications={[application("birch", { company: "Birch" })]} applicationId="birch" />);
     await user.click(screen.getByRole("button", { name: /^Date, / }));
     await user.click(within(screen.getByRole("grid")).getByText("20"));
     await user.type(screen.getByLabelText("Time"), "10:00");
+    // How it went holds Markdown, so the payload typed there is stored escaped (BIG-214).
+    const howItWent = screen.getByRole("textbox", { name: "How it went" });
+    await typeRich(howItWent, payload);
+    const markdown = await richValue(howItWent);
     // Pastes rather than types: user-event reads braces and brackets as key names.
-    await user.click(screen.getByLabelText("How it went"));
-    await user.paste(payload);
     await user.click(screen.getByLabelText("Role"));
     await user.paste(payload);
     await user.click(screen.getByLabelText(/^Name/));
@@ -132,10 +136,12 @@ describe("the Add Interview form", () => {
     expect(actions.createInterviewAction).toHaveBeenCalledWith(
       "birch",
       expect.objectContaining({
-        how_it_went: payload.trim(),
+        how_it_went: markdown.trim(),
         participants: [{ role: payload.trim(), name: payload.trim() }],
       }),
     );
+    render(<MarkdownView markdown={markdown} data-testid="read-back" />);
+    expect(screen.getByTestId("read-back")).toHaveTextContent(payload.trim(), { normalizeWhitespace: false });
     expectNothingInjected();
   });
 });

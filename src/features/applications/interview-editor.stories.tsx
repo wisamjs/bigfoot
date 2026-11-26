@@ -184,8 +184,8 @@ export const WritingPrepNotes: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: "Add Prep notes" }));
     const field = canvas.getByRole("textbox", { name: "Prep notes" });
-    await expect(field).toHaveFocus();
-    await userEvent.type(field, "Review caching.");
+    await waitFor(() => expect(field).toHaveFocus());
+    await userEvent.keyboard("Review caching.");
     await userEvent.tab();
     await waitFor(() =>
       expect(updateInterviewAction).toHaveBeenCalledWith("lumen", upcoming.id, { prep_notes: "Review caching." }),
@@ -221,7 +221,7 @@ export const EditingPrepNotes: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: "Show Prep notes" }));
     await userEvent.click(canvas.getByRole("button", { name: "Edit Prep notes" }));
-    await expect(canvas.getByRole("textbox", { name: "Prep notes" })).toHaveFocus();
+    await waitFor(() => expect(canvas.getByRole("textbox", { name: "Prep notes" })).toHaveFocus());
     await userEvent.click(canvas.getByRole("button", { name: "Done" }));
     await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
     await waitFor(() => expect(canvas.getByRole("button", { name: "Edit Prep notes" })).toHaveFocus());
@@ -235,7 +235,13 @@ export const JustFinished: Story = {
     await expect(canvas.getByText("Just finished · write it down while it’s fresh")).toBeVisible();
     await expect(canvas.getByRole("heading", { level: 2, name: "How did it go?" })).toBeVisible();
     await expect(canvas.getByRole("textbox", { name: "What they asked" })).toHaveAttribute("placeholder", "One question per line");
-    await expect(canvas.getByRole("textbox", { name: "How it went" })).toHaveAttribute("placeholder", "What landed, what didn't");
+    // How it went formats as it's written (BIG-214): its placeholder sits on its empty first paragraph.
+    await waitFor(() =>
+      expect(within(canvas.getByRole("textbox", { name: "How it went" })).getByText("", { selector: "p" })).toHaveAttribute(
+        "data-placeholder",
+        "What landed, what didn't",
+      ),
+    );
     await expect(canvas.getByRole("textbox", { name: "Takeaway for next time" })).toHaveAttribute(
       "placeholder",
       "One thing to do differently",
@@ -249,12 +255,64 @@ export const Editing: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: "Edit Interview notes" }));
     await expect(canvas.getByRole("textbox", { name: "What they asked" })).toHaveFocus();
-    await expect(canvas.getByRole("textbox", { name: "How it went" })).toHaveValue(completed.how_it_went);
+    await expect(await canvas.findByText("Rambled on the roadmap question.")).toBeVisible();
+    await expect(canvas.getByRole("toolbar", { name: "Formatting" })).toBeVisible();
     await expect(canvas.getByRole("textbox", { name: "Takeaway for next time" })).toHaveValue(completed.takeaway);
     await expect(canvas.queryByRole("region", { name: "Takeaway for next time" })).not.toBeInTheDocument();
     await userEvent.click(canvas.getByRole("button", { name: "Done" }));
     await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
     await waitFor(() => expect(canvas.getByRole("button", { name: "Edit Interview notes" })).toHaveFocus());
+  },
+};
+
+/** How it went written with titles, bold, italics, underline and lists (BIG-214), read back formatted. */
+export const FormattedNotes: Story = {
+  args: {
+    interview: {
+      ...completed,
+      how_it_went:
+        "# Round one\n\n**Strong** on the *incident story*, <u>weak</u> on the roadmap.\n\n## Follow up\n\n1. Send a thank-you\n2. Ask about on-call\n\n- Bring numbers\n- Draw first",
+    },
+  },
+  play: async ({ canvas }) => {
+    const notes = canvas.getByRole("region", { name: "Interview notes" });
+    await expect(within(notes).getByRole("heading", { level: 3, name: "Round one" })).toBeVisible();
+    await expect(within(notes).getByRole("heading", { level: 3, name: "Follow up" })).toBeVisible();
+    await expect(within(notes).getByText("Strong").tagName).toBe("STRONG");
+    await expect(within(notes).getByText("weak").tagName).toBe("U");
+    await expect(within(notes).getAllByRole("list")[0].tagName).toBe("OL");
+  },
+};
+
+/**
+ * Writing How it went with the toolbar and with "- " at a line's start, typed for real: it saves as
+ * Markdown, and Done reads it back formatted.
+ */
+export const WritingFormattedNotes: Story = {
+  args: { interview: { ...completed, ...empty } },
+  play: async ({ canvas, userEvent }) => {
+    const field = canvas.getByRole("textbox", { name: "How it went" });
+    // keyboard, not type: type clicks the field first, which would move the caret and drop Bold.
+    await userEvent.click(field);
+    await userEvent.click(canvas.getByRole("button", { name: "Large title" }));
+    await userEvent.keyboard("Round one{Enter}");
+    await userEvent.click(canvas.getByRole("button", { name: "Bold" }));
+    await expect(canvas.getByRole("button", { name: "Bold" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.keyboard("Strong");
+    await userEvent.click(canvas.getByRole("button", { name: "Bold" }));
+    await userEvent.keyboard(" start{Enter}- Send a thank-you");
+    await expect(canvas.getByRole("button", { name: "Bulleted list" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.tab();
+    await waitFor(() =>
+      expect(updateInterviewAction).toHaveBeenLastCalledWith("lumen", completed.id, {
+        how_it_went: "# Round one\n\n**Strong** start\n\n- Send a thank-you",
+      }),
+    );
+    await userEvent.click(canvas.getByRole("button", { name: "Done" }));
+    const notes = canvas.getByRole("region", { name: "Interview notes" });
+    await expect(within(notes).getByRole("heading", { level: 3, name: "Round one" })).toBeVisible();
+    await expect(within(notes).getByText("Strong").tagName).toBe("STRONG");
+    await expect(within(notes).getByRole("listitem")).toHaveTextContent("Send a thank-you");
   },
 };
 
