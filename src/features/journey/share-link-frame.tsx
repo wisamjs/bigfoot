@@ -13,7 +13,7 @@ export function ShareLinkFrame({ children }: { children: ReactNode }) {
         <Wordmark tile />
       </header>
       <main id="main" className="flex-1 px-4">
-        <div className="card mx-auto flex max-w-[480px] flex-col items-center border-line-card p-6 text-center sm:p-8">
+        <div className="card mx-auto flex max-w-[480px] flex-col items-center border-line-brand-subtle p-6 text-center sm:p-8">
           {children}
         </div>
       </main>

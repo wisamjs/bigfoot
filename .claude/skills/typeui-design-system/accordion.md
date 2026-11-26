@@ -4,8 +4,8 @@
 
 ## Core Specs
 
-- **Wrapper:** full width, 1px border (border-default color), 24px radius — clips first/last item corners
-- **Item separator:** 1px bottom border (border-default) on every item except last
+- **Wrapper:** full width, 1px border (line color), 24px radius — clips first/last item corners
+- **Item separator:** 1px bottom border (line) on every item except last
 
 ## Trigger (Button)
 
@@ -13,17 +13,17 @@
 - **Padding:** 20px horizontal, 16px vertical
 - **Font:** 14px, medium weight
 - **Text color:** heading
-- **Background:** neutral-secondary-soft
-- **Hover:** neutral-tertiary-soft background
+- **Background:** surface
+- **Hover:** card background
 - **Focus:** outline none, 2px ring in brand color
 - **Transition:** colors, 150ms
-- **Open state:** neutral-tertiary-soft background
+- **Open state:** card background
 
 ## Panel (Content)
 
 - **Padding:** 20px horizontal, 16px vertical
-- **Background:** neutral-primary-soft
-- **Top border:** 1px, border-default color
+- **Background:** surface
+- **Top border:** 1px, line color
 - **Font:** 14px, body color, 1.625 line-height
 
 ## Chevron Icon
@@ -52,8 +52,8 @@ No outer border. Trigger and panel have transparent backgrounds. Only bottom bor
 
 | State | Trigger appearance |
 |---|---|
-| Closed | heading text, neutral-secondary-soft background |
-| Open | heading text, neutral-tertiary-soft background |
-| Hover | neutral-tertiary-soft background |
+| Closed | heading text, surface background |
+| Open | heading text, card background |
+| Hover | card background |
 | Focus | 2px brand ring, no outline |
-| Disabled | fg-disabled text, not-allowed cursor, no hover/focus |
+| Disabled | body-subtle text, not-allowed cursor, no hover/focus |

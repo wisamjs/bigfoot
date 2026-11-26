@@ -11,7 +11,7 @@
 
 ### 1. Underline (Default)
 
-**Wrapper:** bottom border, border-default
+**Wrapper:** bottom border, line
 
 **Tab Item:**
 - Padding: 16px horizontal, 16px vertical
@@ -21,9 +21,9 @@
 
 | State | Appearance |
 |---|---|
-| Active | fg-brand text, border-brand bottom border |
-| Inactive | transparent bottom border; hover → heading text, border-default-strong bottom border |
-| Disabled | fg-disabled text, not-allowed cursor |
+| Active | fg-brand text, line-brand bottom border |
+| Inactive | transparent bottom border; hover → heading text, line-medium bottom border |
+| Disabled | body-subtle text, not-allowed cursor |
 
 ### 2. Pills
 
@@ -36,8 +36,8 @@
 | State | Appearance |
 |---|---|
 | Active | brand background, white text, shadow-sm |
-| Inactive | body text; hover → neutral-secondary-soft background, heading text |
-| Disabled | fg-disabled text, not-allowed cursor |
+| Inactive | body text; hover → surface background, heading text |
+| Disabled | body-subtle text, not-allowed cursor |
 
 ### 3. Full Width
 
@@ -46,14 +46,14 @@ Children overlap with -1px left margin on all except first.
 **Tab Item:**
 - Full width, centered text
 - Padding: 16px horizontal, 16px vertical
-- Background: neutral-primary-soft
-- Border: 1px, border-default
+- Background: surface
+- Border: 1px, line
 - Transition: colors, 150ms
-- Hover: neutral-secondary-medium background, heading text
+- Hover: card background, heading text
 
 | State | Appearance |
 |---|---|
-| Active | neutral-secondary-soft background, fg-brand text |
+| Active | surface background, fg-brand text |
 | First item | rounded start (8px) |
 | Last item | rounded end (8px) |
 

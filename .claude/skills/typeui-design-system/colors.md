@@ -1,162 +1,73 @@
 # Color Tokens
 
-## Background Tokens
+Colours come in two tiers. Both live in `src/app/globals.css`, the only file that holds colour values; `npm run tokens` (`scripts/check-tokens.mjs`) enforces the tiers.
 
-### Neutral
-| Token | Light | Dark |
+1. **Base scales** (`@tokens base`): one numbered scale per hue, 50 lightest to 950 darkest. The only hex values in the app, the same in light and dark. A scale lists only the steps a role uses.
+2. **Roles** (`@tokens roles`, dark values in `@tokens dark`): named for their job. Each points at a base step, and dark mode points it at another. Components use roles only, through Tailwind utilities (`bg-card`, `text-heading`, `border-line`); base steps have no utilities.
+
+Storybook's **Design tokens** page shows both tiers, read from `globals.css`.
+
+## Adding a colour
+
+Reuse a role first. When no role fits, point a role at an existing base step. Add a role only for a new job (a new status, a new kind of surface), never for one component's shade; add a base step only when no step on the scale is close enough. `npm run tokens` fails a hex value outside the base block, two base steps with one value, and a token nothing uses.
+
+## Base scales
+
+| Scale | Steps | For |
 |---|---|---|
-| neutral-primary-soft | #FAEBF1 | #2A0A1D |
-| neutral-primary | #FFFFFF | #1F0714 |
-| neutral-primary-medium | #F5D6E3 | #3A0F28 |
-| neutral-primary-strong | #EFC9DC | #4A1632 |
-| neutral-secondary-soft | #FAEBF1 | #2A0A1D |
-| neutral-secondary | #F7E4ED | #1F0714 |
-| neutral-secondary-medium | #F5D6E3 | #3A0F28 |
-| neutral-secondary-strong | #ECC1D7 | #4A1632 |
-| neutral-tertiary-soft | #F5D6E3 | #2A0A1D |
-| neutral-tertiary | #F0CADC | #3A0F28 |
-| neutral-tertiary-medium | #E8BAD0 | #4A1632 |
-| neutral-quaternary | #E3C6D7 | #4A1632 |
-| quaternary-medium | #D9B3C9 | #5C1E3F |
-| gray | #C99FB8 | #5C1E3F |
+| mauve | 50–950 | The pink-tinted neutrals: surfaces, text, lines |
+| pink | 50–900 | The brand, bubblegum to wine |
+| white | | Text on the brand, fields and popovers in light mode |
+| green, red, orange, yellow, blue, slate, purple, gray | a few steps each | Status and Round and Stage colours: a soft fill (50–100), its line (200–300), its text (700–800) and the dark-mode fill (950) |
+| google-red, -blue, -yellow, -green | | Google's "G" logo only |
 
-### Brand
-| Token | Light | Dark |
-|---|---|---|
-| brand-softer | #FBEAF2 | #2A0A1D |
-| brand-soft | #F2D2E2 | #4F1135 |
-| brand | #4F1135 | #D9659F |
-| brand-medium | #E3AEC9 | #4F1135 |
-| brand-strong | #3A0B27 | #B5538C |
+## Roles
 
-### Status
-| Token | Light | Dark |
-|---|---|---|
-| success-soft | #ECFDF5 | #002C22 |
-| success | #007A55 | #009966 |
-| success-medium | #D0FAE5 | #004F3B |
-| success-strong | #006045 | #007A55 |
-| danger-soft | #FEF0F2 | #4D0218 |
-| danger | #C70036 | #C70036 |
-| danger-medium | #FFE4E6 | #8B0836 |
-| danger-strong | #A50036 | #A50036 |
-| warning-soft | #FFF7ED | #7C2D12 |
-| warning | #F97316 | #F97316 |
-| warning-medium | #FFEDD5 | #7C2D12 |
-| warning-strong | #C2410C | #C2410C |
+| Role | Light | Dark | Use |
+|---|---|---|---|
+| surface | mauve-50 | mauve-900 | Every page and section background |
+| surface-white | white | mauve-950 | Fields, popovers, dialogs: contrasts with the surface |
+| card | mauve-100 | mauve-800 | Cards over a section; secondary and tertiary buttons' hover |
+| card-strong | mauve-200 | mauve-700 | A layer nested in a card; hover on a card-coloured control |
+| brand | pink-800 | pink-400 | Primary actions, selected states |
+| brand-soft | pink-100 | pink-800 | Soft brand fills (icon shapes, highlights) |
+| brand-softer | pink-50 | mauve-900 | The lightest brand fill |
+| on-brand | white | mauve-900 | Text and icons on `brand` |
+| heading | pink-900 | mauve-50 | Headings |
+| body | mauve-600 | mauve-300 | Body text |
+| body-subtle | mauve-500 | mauve-400 | Secondary text, placeholders, disabled text |
+| fg-brand | pink-800 | pink-300 | Links and brand-coloured text |
+| fg-brand-strong | pink-900 | pink-100 | Brand text that needs more weight |
+| line | mauve-300 | mauve-800 | Default borders and dividers |
+| line-medium | mauve-400 | mauve-700 | Field borders, stronger dividers |
+| line-brand-subtle | pink-200 | pink-600 | Brand-tinted borders (dashboard and Journey cards, icon shapes), the button focus ring |
+| line-brand | pink-800 | pink-300 | Selected and focused borders |
+| skeleton | mauve-300 | pink-600 | Loading shapes |
+| success-soft, fg-success-strong, line-success-subtle | green | green | Success fill, text, border |
+| warning-soft, fg-warning, line-warning-subtle | orange | orange | Warning fill, text, border |
+| danger-soft, fg-danger, line-danger-subtle, line-danger | red | red | Error fill, text, borders; `line-danger` also for destructive actions |
+| tone-*, tone-*-fg, tone-*-line | that hue | that hue | Round and Stage colours (purple, slate, blue, green, yellow, orange, red, gray): badge fill, text, border |
+| glint-highlight, glint-shadow | white 30%, pink-800 18% | white 14%, mauve-950 30% | The button glint (`buttons.md`) |
+| shadow-xs, -md, -lg, -2xl | pink-800 tint | same | Elevation (`shadows.md`) |
 
-### Button Glint (CSS custom properties, used for the glint box-shadow effect)
-| Variable | Light | Dark |
-|---|---|---|
-| `--color-1-400` | rgba(255,255,255,0.30) | rgba(255,255,255,0.14) |
-| `--color-1-700` | rgba(79,17,53,0.18) | rgba(0,0,0,0.30) |
+shadcn/ui's theme variables (`--background`, `--primary`, `--destructive`…, in `@tokens shadcn`) point at these roles, so `npx shadcn add` output matches without editing its colours.
 
-### Utility
-| Token | Light | Dark |
-|---|---|---|
-| dark | #2A0A1D | #2A0A1D |
-| dark-strong | #1F0714 | #3A0F28 |
-| disabled | #F2E0E9 | #2A0A1D |
+## Not built yet
 
-### Accent
-| Token | Value (same both modes) |
-|---|---|
-| purple | #A855F7 |
-| sky | #0EA5E9 |
-| teal | #0D9488 |
-| pink | #FF2D6E |
-| cyan | #06B6D4 |
-| fuchsia | #D6298E |
-| indigo | #4F46E5 |
-| orange | #FB923C |
-
-## Text Color Tokens
-
-### Base
-| Token | Light | Dark |
-|---|---|---|
-| white | #FFFFFF | #FFFFFF |
-| black | #2A0A1D | #2A0A1D |
-| heading | #3C0D28 | #FAEBF1 |
-| body | #6E4258 | #E3B9CF |
-| body-subtle | #8A6275 | #C99FB8 |
-
-### Brand
-| Token | Light | Dark |
-|---|---|---|
-| fg-brand-subtle | #E3AEC9 | #4F1135 |
-| fg-brand | #4F1135 | #E59CC4 |
-| fg-brand-strong | #3A0B27 | #F2D2E2 |
-
-### Status
-| Token | Light | Dark |
-|---|---|---|
-| fg-success | #047857 | #065F46 |
-| fg-success-strong | #065F46 | #10B981 |
-| fg-danger | #BE123C | #F43F5E |
-| fg-danger-strong | #881337 | #F87171 |
-| fg-warning-subtle | #EA580C | #F97316 |
-| fg-warning | #7C2D12 | #FBBF24 |
-| fg-disabled | #B58CA3 | #8A6275 |
-
-### Informational / Accent
-| Token | Light | Dark |
-|---|---|---|
-| fg-yellow | #FACC15 | #FACC15 |
-| fg-info | #5C1E3F | #E59CC4 |
-| fg-purple | #9333EA | #A855F7 |
-| fg-purple-strong | #7E3AF2 | #DDD6FE |
-| fg-cyan | #0891B2 | #06B6D4 |
-| fg-indigo | #4F46E5 | #4F46E5 |
-| fg-pink | #FF2D6E | #FF2D6E |
-| fg-lime | #65A30D | #84CC16 |
-
-## Border Color Tokens
-
-| Token | Light | Dark |
-|---|---|---|
-| border-dark | #4F1135 | #8A4B6E |
-| border-buffer | #FFFFFF | #1F0714 |
-| border-buffer-medium | #FFFFFF | #2A0A1D |
-| border-buffer-strong | #FAEBF1 | #3A0F28 |
-| border-muted | #F7E4ED | #1F0714 |
-| border-light-subtle | #F5D6E3 | #1F0714 |
-| border-light | #F5D6E3 | #2A0A1D |
-| border-light-medium | #EFC9DC | #3A0F28 |
-| border-default-subtle | #E3C6D7 | #2A0A1D |
-| border-default | #E3C6D7 | #3A0F28 |
-| border-default-medium | #D9B3C9 | #4A1632 |
-| border-default-strong | #C99FB8 | #5C1E3F |
-| border-success-subtle | #A7F3D0 | #064E3B |
-| border-success | #047857 | #065F46 |
-| border-danger-subtle | #FECDD3 | #881337 |
-| border-danger | #BE123C | #BE123C |
-| border-warning-subtle | #FED7AA | #7C2D12 |
-| border-warning | #EA580C | #F97316 |
-| border-brand-subtle | #E3AEC9 | #4F1135 |
-| border-brand-light | #B5538C | #B5538C |
-| border-brand | #4F1135 | #E59CC4 |
-| border-dark-subtle | #4F1135 | #5C1E3F |
-| border-purple | #A855F7 | #A855F7 |
-| border-orange | #FB923C | #FB923C |
+The module files name some Candy colours no screen uses yet: `disabled` (background), `dark` and `dark-strong` (tooltips, dark badges and buttons), solid `success`, `danger` and `warning` with their `-medium` and `-strong` hovers and rings, `border-success`, `border-warning`, and the accent colours (`fg-purple`, `fg-cyan`…). When a component needs one, follow **Adding a colour**: reuse a role (disabled text is `body-subtle`; a disabled background is `card`) or add the role on an existing scale.
 
 ## Semantic Usage Rules
 
-- Page/section backgrounds: neutral-primary-soft (the shared surface) — every section across the whole app uses this same surface color; neutral-secondary-soft is the same value so alternating sections stay seamless
-- Cards over a section: use a derived tone of the section surface (neutral-primary-medium / neutral-secondary-medium) so the card reads as a lighter/distinct layer above the surface it sits on
-- Inputs: use a token that contrasts against the surface they sit on (neutral-primary white against the pink surface) so fields stay legible
-- Primary buttons: brand background (candy gradient defined in `buttons.md`)
-- Headings: heading text color
-- Body text: body text color
-- CTA links: fg-brand text color
-- Default borders: border-default
-- Status borders match intent: success → border-success, danger → border-danger, warning → border-warning
-- Disabled: disabled background + fg-disabled text
+- Page and section backgrounds: surface, the same on every section.
+- Cards over a section: card, so the card reads as a distinct layer above the surface.
+- Inputs: surface-white against the pink surface, so fields stay legible.
+- Primary buttons: brand (candy gradient in `buttons.md`).
+- Headings: heading. Body text: body. CTA links: fg-brand.
+- Default borders: line. Status borders match intent: line-success-subtle, line-danger, line-warning-subtle.
 
 ## Prohibited
 
-- No raw hex/rgb values in component code — always use design tokens
-- No brand text color for long-form paragraphs
-- No accent text tokens (fg-purple, etc.) for body copy or navigation
-- No brand/accent backgrounds for large layout surfaces (pages, sections) unless it's a hero/campaign area
-- No manual light/dark value swapping — let the CSS custom properties handle it
+- No raw hex or rgb values outside the base block of `globals.css`: components use roles.
+- No brand text colour for long-form paragraphs.
+- No brand or accent backgrounds for large layout surfaces (pages, sections) unless it's a hero or campaign area.
+- No manual light/dark swapping: point the role at a different base step in `@tokens dark`.

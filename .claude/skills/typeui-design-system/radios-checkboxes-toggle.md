@@ -6,26 +6,26 @@
 
 - Size: 16x16px
 - Radius: 8px
-- Border: 1px, border-default-medium
-- Background: neutral-secondary-medium
+- Border: 1px, line-medium
+- Background: card
 - Focus ring: 2px, brand-soft
 
 ### Disabled
 - Border: border-light
-- Text: fg-disabled
+- Text: body-subtle
 
 ## Radio
 
 - Size: 16x16px
 - Radius: fully rounded
-- Border: 1px, border-default-medium
-- Background: neutral-secondary-medium
+- Border: 1px, line-medium
+- Background: card
 - Focus ring: 2px, brand-soft
-- Checked: border-brand, indicator: neutral-primary color
+- Checked: line-brand, indicator: surface-white color
 
 ### Disabled
 - Border: border-light-medium
-- Text: fg-disabled
+- Text: body-subtle
 
 Group all radio items under the same `name` attribute.
 
@@ -33,10 +33,10 @@ Group all radio items under the same `name` attribute.
 
 ### Track
 - Fully rounded
-- Background: neutral-quaternary
+- Background: line
 - Focus-within ring: 2px, brand-soft
 - Checked track: brand background
-- Disabled track: neutral-tertiary background
+- Disabled track: card-strong background
 
 ### Thumb
 - Fully rounded
@@ -44,8 +44,8 @@ Group all radio items under the same `name` attribute.
 - Border: border-buffer
 
 ### Disabled
-- Track: neutral-tertiary background
-- Label: fg-disabled text
+- Track: card-strong background
+- Label: body-subtle text
 
 ## Rules
 

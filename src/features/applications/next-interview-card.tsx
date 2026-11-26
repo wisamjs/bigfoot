@@ -34,7 +34,7 @@ export function NextInterviewCard({
   const dashboard = on === "dashboard";
   const prepNotes = interview.prep_notes;
   return (
-    <section aria-labelledby="next-up-title" className="card flex flex-col gap-5 border-line-card p-5 sm:p-8">
+    <section aria-labelledby="next-up-title" className="card flex flex-col gap-5 border-line-brand-subtle p-5 sm:p-8">
       <div className="flex items-start gap-4">
         <DateTile at={interview.at} tone="brand" className="hidden sm:flex" />
         <div className="min-w-0 flex-1">

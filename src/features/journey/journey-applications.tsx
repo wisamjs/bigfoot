@@ -18,7 +18,7 @@ const cell = "px-4 py-4 align-middle sm:px-6";
 export function JourneyApplications({ applications, now }: { applications: JourneyApplication[]; now: Date }) {
   const groups = journeyGroups(applications);
   return (
-    <section aria-labelledby="journey-where-title" className="card flex min-w-0 flex-col overflow-hidden border-line-card">
+    <section aria-labelledby="journey-where-title" className="card flex min-w-0 flex-col overflow-hidden border-line-brand-subtle">
       <h2 id="journey-where-title" className="m-0 px-4 py-5 text-xl font-bold leading-[1.25] text-heading sm:px-6">
         Where things stand
       </h2>
