@@ -83,16 +83,18 @@ export const LOCKED_MESSAGE = "Too many tries. Try again in 15 minutes.";
 
 export type JourneyGroup = {
   id: "offer" | "interviewing" | "waiting";
-  label: string;
   applications: JourneyApplication[];
 };
 
-/** Where things stand: Got an Offer, Interviewing (something booked), Waiting to hear back. Empty groups are left out. */
+/**
+ * Where things stand's order: Offers, Interviewing (something booked), then Waiting to hear back. Each
+ * row's pill names its group, so the groups have no headings of their own (BIG-208). Empty groups are left out.
+ */
 export function journeyGroups(apps: JourneyApplication[]): JourneyGroup[] {
   const groups: JourneyGroup[] = [
-    { id: "offer", label: "Got an Offer", applications: apps.filter((a) => a.offer) },
-    { id: "interviewing", label: "Interviewing", applications: apps.filter((a) => !a.offer && !a.is_waiting) },
-    { id: "waiting", label: "Waiting to hear back", applications: apps.filter((a) => !a.offer && a.is_waiting) },
+    { id: "offer", applications: apps.filter((a) => a.offer) },
+    { id: "interviewing", applications: apps.filter((a) => !a.offer && !a.is_waiting) },
+    { id: "waiting", applications: apps.filter((a) => !a.offer && a.is_waiting) },
   ];
   return groups.filter((g) => g.applications.length > 0);
 }

@@ -16,8 +16,8 @@ const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute:
 /**
  * The Journey's Interviews card (BIG-197), read-only: the month grid with a dot under each day that
  * has Interviews (the brand colour while any is ahead, grey once all are done) and today outlined,
- * then the upcoming Interviews after the next one. On a phone the list comes first, as "Coming up",
- * and Show month opens the grid. Nothing here links anywhere: a Viewer can't open an Interview.
+ * then the upcoming Interviews after the next one, headed "After that" at every width so it doesn't
+ * read as the whole list (BIG-208). On a phone the list comes first, and Show month opens the grid. Nothing here links anywhere: a Viewer can't open an Interview.
  */
 export function JourneyCalendar({
   interviews,
@@ -39,8 +39,7 @@ export function JourneyCalendar({
     <section aria-labelledby="journey-interviews-title" className="card flex min-w-0 flex-col border-line-card">
       <div className="flex items-center justify-between gap-3 px-4 py-5 sm:px-6">
         <h2 id="journey-interviews-title" className="m-0 text-xl font-bold leading-[1.25] text-heading">
-          <span className="sm:hidden">Coming up</span>
-          <span className="max-sm:hidden">Interviews</span>
+          Interviews
         </h2>
         <button
           type="button"
@@ -163,16 +162,16 @@ function Legend() {
   );
 }
 
-/** "After that" (or a phone's whole card): each upcoming Interview after the next, with how far off it is. */
+/** "After that": each upcoming Interview after the next, with how far off it is. */
 function UpcomingList({ upcoming, now }: { upcoming: DatedJourneyInterview[]; now: Date }) {
   return (
     <section aria-labelledby="journey-after-title" className="border-t border-line max-sm:border-t-0">
       <div className="flex items-baseline justify-between gap-3 px-4 pb-2 pt-4 max-sm:pt-0 sm:px-6">
-        <h3 id="journey-after-title" className="m-0 text-sm font-semibold text-heading max-sm:sr-only">
+        <h3 id="journey-after-title" className="m-0 text-sm font-semibold text-heading">
           After that
         </h3>
         {upcoming.length > 0 && (
-          <span className="text-[13px] text-body max-sm:hidden">
+          <span className="text-[13px] text-body">
             {upcoming.length} more {upcoming.length === 1 ? "Interview" : "Interviews"}
           </span>
         )}
