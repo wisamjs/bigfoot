@@ -19,7 +19,7 @@ import { parseShard, shardPages } from "./a11y-shard.mjs";
 import { dialogKeyboardProblems, enterState, launchChrome, openPage, skipLinkProblems } from "./chrome.mjs";
 import { withNoApplications, withTestApplications } from "./dev-applications.mjs";
 import { createTestSession, SESSION_COOKIE } from "./dev-session.mjs";
-import { clippedTextProblems, touchTargetProblems, emulateDesktop, emulatePhone } from "./mobile-checks.mjs";
+import { clippedTextProblems, fieldZoomProblems, touchTargetProblems, emulateDesktop, emulatePhone } from "./mobile-checks.mjs";
 import { needsData, pagePath } from "./page-path.mjs";
 import { PAGES } from "./pages.mjs";
 import { ensureServers } from "./servers.mjs";
@@ -112,9 +112,13 @@ async function setScheme(chrome, scheme) {
   await chrome.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: scheme }] });
 }
 
-/** The phone rules on the page as it stands: hit areas and clipped text. */
+/** The phone rules on the page as it stands: hit areas, field font sizes and clipped text. */
 async function phoneProblems(chrome) {
-  return [...(await touchTargetProblems(chrome)), ...(await clippedTextProblems(chrome))];
+  return [
+    ...(await touchTargetProblems(chrome)),
+    ...(await fieldZoomProblems(chrome)),
+    ...(await clippedTextProblems(chrome)),
+  ];
 }
 
 /**

@@ -23,6 +23,10 @@ Other guidelines (BIG-78) are added to this folder beside this file.
    Long lists get a sticky row of chips that jump to each group. *Checked by human review.*
 5. **Pages reflow at 320px with no sideways scrolling.** Source: WCAG 1.4.10 Reflow.
    *Checked by `npm run a11y`.*
+6. **Text fields are at least 16px on touch screens.** iOS Safari zooms in on a focused field
+   under 16px and stays zoomed when the page changes under it, so the next page comes up cut off
+   at both edges (BIG-204: a Journey opened from its Passcode field). `globals.css` raises every
+   field to 16px on touch screens; don't override it. *Checked by `npm run a11y`.*
 
 ## Exceptions
 
