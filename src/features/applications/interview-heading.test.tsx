@@ -30,7 +30,14 @@ beforeEach(() => {
 });
 
 // 15:00 UTC on November 1st: the calendar opens on November, wherever the tests run.
-const technical = interview("i1", { application_id: "birch", category: "technical", title: "Technical", at: "2026-11-01T15:00:00Z" });
+const dana = { id: "p1", role: "Recruiter", name: "Dana Lee" };
+const technical = interview("i1", {
+  application_id: "birch",
+  category: "technical",
+  title: "Technical",
+  at: "2026-11-01T15:00:00Z",
+  participants: [dana],
+});
 const birch = application("birch", { company: "Birch", title: "Senior Engineer", interviews: [technical] });
 
 /** The Interview page's guarded column: the heading, the strip and the notes under one UnsavedChanges. */
@@ -85,6 +92,65 @@ describe("the Interview page heading", () => {
     // The notes card's Done button (its fields are open: completed, no notes) isn't a badge.
     expect(screen.queryByText(/^Done ·/)).not.toBeInTheDocument();
     expect(screen.getByText(/^Completed · /)).toHaveClass("bg-success-soft");
+  });
+
+  it("says who the job seeker is meeting under the title", () => {
+    const sam = { id: "p2", role: "EM", name: "Sam" };
+    const both = { ...technical, participants: [dana, sam] };
+    openPage(both, application("birch", { company: "Birch", interviews: [both] }));
+    expect(screen.getByText("With Dana Lee (Recruiter), Sam (EM)")).toBeInTheDocument();
+  });
+
+  it("asks who the job seeker is meeting on an Interview from before Participants, opening Edit details there", async () => {
+    const older = { ...technical, participants: [] };
+    const { user } = openPage(older, application("birch", { company: "Birch", interviews: [older] }));
+    expect(screen.queryByText(/^With /)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add who you’re meeting" }));
+    const role = within(form()).getByLabelText("Role");
+    await waitFor(() => expect(role).toHaveFocus());
+    await user.type(role, "Hiring Manager");
+    await user.keyboard("{Enter}");
+    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { participants: [{ role: "Hiring Manager", name: null }] });
+    expect(await screen.findByText("With Hiring Manager")).toBeInTheDocument();
+  });
+
+  it("needs someone before Edit details saves, even when only the title changed", async () => {
+    const older = { ...technical, participants: [] };
+    const { user } = openPage(older, application("birch", { company: "Birch", interviews: [older] }));
+    await user.click(editButton());
+    await user.clear(within(form()).getByLabelText(/^Title/));
+    await user.type(within(form()).getByLabelText(/^Title/), "Pairing");
+    await user.click(within(form()).getByRole("button", { name: "Save" }));
+    expect(screen.getByRole("group", { name: "Who you’re meeting" })).toHaveAccessibleDescription(
+      "Add at least one person you’re meeting.",
+    );
+    expect(within(form()).getByLabelText("Role")).toHaveFocus();
+    expect(actions.updateInterviewAction).not.toHaveBeenCalled();
+  });
+
+  it("edits a Participant, changing them on every Interview, and refuses removing the last one", async () => {
+    const { user } = openPage();
+    await user.click(editButton());
+    const name = within(form()).getByLabelText(/^Name/);
+    expect(form()).toHaveTextContent("Changing someone you’ve met before changes them on every Interview they’re in.");
+    await user.clear(name);
+    await user.type(name, "Dana Lee-Park");
+    await user.click(within(form()).getByRole("button", { name: "Save" }));
+    expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", {
+      participants: [{ id: "p1", role: "Recruiter", name: "Dana Lee-Park" }],
+    });
+    expect(await screen.findByText("With Dana Lee-Park (Recruiter)")).toBeInTheDocument();
+
+    await user.click(editButton());
+    await user.click(within(form()).getByRole("button", { name: "Remove Dana Lee-Park" }));
+    // With nobody left, focus goes to adding someone; she's still offered among the Application's people.
+    await waitFor(() => expect(within(form()).getByRole("button", { name: "Add someone new" })).toHaveFocus());
+    expect(within(form()).getByLabelText("Add someone you’ve met")).toBeInTheDocument();
+    await user.click(within(form()).getByRole("button", { name: "Save" }));
+    expect(screen.getByRole("group", { name: "Who you’re meeting" })).toHaveAccessibleDescription(
+      "Add at least one person you’re meeting.",
+    );
+    expect(actions.updateInterviewAction).toHaveBeenCalledTimes(1);
   });
 
   it("turns the category, the title and the date into fields, with focus on the category", async () => {

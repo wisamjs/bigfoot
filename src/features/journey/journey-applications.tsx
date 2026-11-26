@@ -1,19 +1,10 @@
 import { Badge, type Tone } from "@/components/ui/badge";
-import { COMPLETED_MARK } from "@/features/applications/status-tone";
-import { calendarDaysBetween, parseDay, relativeDays } from "@/lib/applications";
-import {
-  interviewsDone,
-  journeyGroups,
-  waitingDays,
-  type JourneyApplication,
-  type JourneyGroup,
-} from "@/lib/journey";
+import { journeyNext, markClasses, nextMarkIndex, progressLabel } from "@/features/journey/journey-text";
+import { parseDay } from "@/lib/applications";
+import { interviewsDone, journeyGroups, type JourneyApplication, type JourneyGroup } from "@/lib/journey";
 
 const GROUP_TONE: Record<JourneyGroup["id"], Tone> = { offer: "success", interviewing: "blue", waiting: "warning" };
 const appliedFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
-const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
-const weekdayTimeFormat = new Intl.DateTimeFormat(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" });
-const dateFormat = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" });
 
 const cell = "px-4 py-4 align-middle sm:px-6";
 
@@ -92,7 +83,7 @@ function Row({ app, group, now, first }: { app: JourneyApplication; group: Journ
 /** The group as a badge, then a mark per Interview with "2 of 4 done", or "Applied Nov 18" before any. */
 function Progress({ app, group, now }: { app: JourneyApplication; group: JourneyGroup["id"]; now: Date }) {
   const done = interviewsDone(app);
-  const next = app.offer ? -1 : app.interviews.findIndex((i) => !i.completed);
+  const next = nextMarkIndex(app);
   return (
     <div className="flex flex-col items-start gap-2">
       <Badge tone={GROUP_TONE[group]} pill dot nowrap>
@@ -115,36 +106,14 @@ function Progress({ app, group, now }: { app: JourneyApplication; group: Journey
   );
 }
 
-/** "Offer", "Interviewing", or "Waiting · 13 days". */
-function progressLabel(app: JourneyApplication, group: JourneyGroup["id"], now: Date) {
-  if (group === "offer") return "Offer";
-  if (group === "interviewing") return "Interviewing";
-  const days = waitingDays(app, now);
-  return days === null ? "Waiting" : `Waiting · ${days} ${days === 1 ? "day" : "days"}`;
-}
-
-/** The colour of an Interview's mark: completed green, the next in the brand colour, later ones muted. */
-function markClasses(completed: boolean, next: boolean) {
-  if (completed) return COMPLETED_MARK.in_progress;
-  return next ? "bg-brand" : "bg-line-medium";
-}
-
 /** What comes next: the next Interview's title and when, "Thinking it over" for an Offer, or "Nothing booked yet". */
 function Next({ app, now }: { app: JourneyApplication; now: Date }) {
-  if (app.offer) return <p className="m-0 font-semibold text-fg-success-strong">Thinking it over</p>;
-  const next = app.interviews.find((i) => !i.completed);
-  if (!next) return <p className="m-0 text-body">Nothing booked yet</p>;
-  const at = new Date(next.at);
-  const days = calendarDaysBetween(now, at);
-  const soon = days <= 1;
-  const when = soon
-    ? `${relativeDays(days).replace(/^./, (c) => c.toUpperCase())}, ${timeFormat.format(at)}`
-    : days < 7
-      ? weekdayTimeFormat.format(at)
-      : dateFormat.format(at);
+  const next = journeyNext(app, now);
+  if (next.kind === "offer") return <p className="m-0 font-semibold text-fg-success-strong">Thinking it over</p>;
+  if (next.kind === "nothing") return <p className="m-0 text-body">Nothing booked yet</p>;
   return (
-    <p className={`m-0 font-semibold ${soon ? "text-fg-brand" : "text-heading"}`}>
-      {next.title} · <time dateTime={next.at}>{when}</time>
+    <p className={`m-0 font-semibold ${next.soon ? "text-fg-brand" : "text-heading"}`}>
+      {next.title} · <time dateTime={next.at}>{next.when}</time>
     </p>
   );
 }

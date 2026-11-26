@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Application } from "./applications";
+import type { Application, Interview } from "./applications";
 import { applicationsCsv, dataExportJson, exportFileName, neutralizeFormula } from "./data-export";
 
 const ts = "2026-11-02T15:00:00.000Z";
@@ -80,9 +80,9 @@ describe("applicationsCsv", () => {
           outcome_note: "They went with an internal candidate.",
           is_sample: true,
           interviews: [
-            { id: "i1", application_id: "a1", category: "recruiter", title: "Recruiter Screen", at: ts, what_they_asked: "Why us?\nSalary range?", how_it_went: "Friendly, asked about salary.", takeaway: null, prep_notes: "Know the salary range.", completed: true, created_at: ts, updated_at: ts },
-            { id: "i2", application_id: "a1", category: "technical", title: "Technical", at: ts, what_they_asked: null, how_it_went: null, takeaway: null, prep_notes: null, completed: true, created_at: ts, updated_at: ts },
-            { id: "i3", application_id: "a1", category: "system_design", title: "Retrospective System Design", at: ts, what_they_asked: null, how_it_went: "Drew the cache late.\nStart with the diagram.", takeaway: "Diagram first.", prep_notes: null, completed: true, created_at: ts, updated_at: ts },
+            { id: "i1", application_id: "a1", category: "recruiter", title: "Recruiter Screen", at: ts, what_they_asked: "Why us?\nSalary range?", how_it_went: "Friendly, asked about salary.", takeaway: null, prep_notes: "Know the salary range.", participants: [{ id: "p1", role: "Recruiter", name: "Dana Lee" }], completed: true, created_at: ts, updated_at: ts },
+            { id: "i2", application_id: "a1", category: "technical", title: "Technical", at: ts, what_they_asked: null, how_it_went: null, takeaway: null, prep_notes: null, participants: [], completed: true, created_at: ts, updated_at: ts },
+            { id: "i3", application_id: "a1", category: "system_design", title: "Retrospective System Design", at: ts, what_they_asked: null, how_it_went: "Drew the cache late.\nStart with the diagram.", takeaway: "Diagram first.", prep_notes: null, participants: [{ id: "p2", role: "EM", name: null }, { id: "p1", role: "Recruiter", name: "Dana Lee" }], completed: true, created_at: ts, updated_at: ts },
           ],
         }),
         application({ company: "Second" }),
@@ -105,6 +105,9 @@ describe("applicationsCsv", () => {
       Interviews:
         "Recruiter Screen (Recruiter, 2026-11-02T15:00:00Z); Technical (Technical, 2026-11-02T15:00:00Z); " +
         "Retrospective System Design (System Design, 2026-11-02T15:00:00Z)",
+      Participants:
+        "Recruiter Screen (Recruiter, 2026-11-02T15:00:00Z): Dana Lee (Recruiter)\n" +
+        "Retrospective System Design (System Design, 2026-11-02T15:00:00Z): EM, Dana Lee (Recruiter)",
       "What they asked": "Recruiter Screen (Recruiter, 2026-11-02T15:00:00Z): Why us?\nSalary range?",
       "How it went":
         "Recruiter Screen (Recruiter, 2026-11-02T15:00:00Z): Friendly, asked about salary.\n\n" +
@@ -165,8 +168,8 @@ describe("dataExportJson", () => {
     expired: false,
   };
 
-  it("holds the profile, every Application field (is_sample, the Done date, the Outcome note, Interview notes and Prep notes included) Access token names and dates, and Share link labels and dates", () => {
-    const noted = { id: "i1", application_id: "a1", category: "technical", title: "Pair Programming", at: ts, what_they_asked: "Why us?", how_it_went: "Went well.", takeaway: "Smile.", prep_notes: "Review caching.", completed: true, created_at: ts, updated_at: ts } as const;
+  it("holds the profile, every Application field (is_sample, the Done date, the Outcome note, Participants, Interview notes and Prep notes included) Access token names and dates, and Share link labels and dates", () => {
+    const noted: Interview = { id: "i1", application_id: "a1", category: "technical", title: "Pair Programming", at: ts, what_they_asked: "Why us?", how_it_went: "Went well.", takeaway: "Smile.", prep_notes: "Review caching.", participants: [{ id: "p1", role: "Recruiter", name: "Dana Lee" }], completed: true, created_at: ts, updated_at: ts };
     const app = application({
       is_sample: true,
       status: "done",

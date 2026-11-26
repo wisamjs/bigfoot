@@ -1,6 +1,7 @@
 "use client";
 
 import { useIsClient } from "@/hooks/use-is-client";
+import { capitalize as capitalizeText, readyByWeekday } from "@/features/applications/when-text";
 import { useToday } from "@/hooks/use-today";
 import { calendarDaysBetween, nextInterview, parseDay, relativeDays, type Application } from "@/lib/applications";
 
@@ -15,9 +16,8 @@ export function ApplicationWhen({ app }: { app: Application }) {
   const next = nextInterview(app);
   if (next?.at) return <time dateTime={next.at}>{whenFormat.format(new Date(next.at))}</time>;
   if (app.is_waiting && app.waiting_since) {
-    // A date-only value (YYYY-MM-DD) is the applied date: format it as that calendar day, not UTC midnight.
-    const since = app.waiting_since.length === 10 ? new Date(`${app.waiting_since}T00:00`) : new Date(app.waiting_since);
-    return <span className="text-body">Waiting since {sinceFormat.format(since)}</span>;
+    // A date-only value (YYYY-MM-DD) is the applied date: parseDay reads it as that calendar day, not UTC midnight.
+    return <span className="text-body">Waiting since {sinceFormat.format(parseDay(app.waiting_since))}</span>;
   }
   return <span className="text-body-subtle">—</span>;
 }
@@ -87,7 +87,7 @@ export function DaysFromToday({ date, capitalize = false }: { date: string; capi
   const today = useToday();
   if (!today) return null;
   const days = relativeDays(calendarDaysBetween(today, parseDay(date)));
-  return <>{capitalize ? days.charAt(0).toUpperCase() + days.slice(1) : days}</>;
+  return <>{capitalize ? capitalizeText(days) : days}</>;
 }
 
 const readyDayFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
@@ -108,7 +108,6 @@ export function GetReadyFor({ at }: { at: string }) {
   const today = useToday();
   if (!today) return <>Get ready</>;
   const date = new Date(at);
-  const days = calendarDaysBetween(today, date);
-  const day = days >= 0 && days < 7 ? weekdayFormat.format(date) : readyDayFormat.format(date);
+  const day = readyByWeekday(date, today) ? weekdayFormat.format(date) : readyDayFormat.format(date);
   return <>Get ready for {day}</>;
 }

@@ -16,6 +16,7 @@ describe("safeNext", () => {
     ["a protocol-relative URL", "//evil.example"],
     ["a backslash read as a slash", "/\\evil.example"],
     ["a scheme", "data:text/html,hi"],
+    ["a tab the URL parser drops, leaving //", "/\t/evil.example"],
     ["a relative path", "dashboard"],
     ["nothing", ""],
     ["no value", undefined],

@@ -44,6 +44,10 @@ describe("scrub", () => {
   it("drops a user without an id", () => {
     expect(scrub({ type: undefined, user: { email: "jane@example.com" } } as ErrorEvent).user).toBeUndefined();
   });
+
+  it("leaves an event with no request or user without them", () => {
+    expect(scrub({ type: undefined, message: "Plain" } as ErrorEvent)).toEqual({ type: undefined, message: "Plain" });
+  });
 });
 
 describe("sentryEnvironment and tracesSampleRate", () => {
