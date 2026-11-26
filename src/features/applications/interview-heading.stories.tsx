@@ -7,9 +7,9 @@ import { InterviewHeading } from "./interview-heading";
 // The Interview page's heading (BIG-178). Dates are counted from today, so the badge reads as it
 // would on the page. Server Actions are mocked (src/app/applications/__mocks__/actions.ts) and
 // succeed unless a story says otherwise.
-const DAY = 86_400_000;
 const daysFromNow = (days: number, hour = 15) => {
-  const date = new Date(Date.now() + days * DAY);
+  const date = new Date();
+  date.setDate(date.getDate() + days); // calendar days: days × 24h misses by one across a DST change
   date.setHours(hour, 0, 0, 0);
   return date.toISOString();
 };

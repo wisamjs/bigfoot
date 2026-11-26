@@ -10,7 +10,6 @@ import { InterviewCalendar, InterviewCalendarSkeleton } from "./interview-calend
 // The dashboard's Interviews card, for the landing page's sample Applications. Dates are set from
 // today, so the month shown always has Interviews in it.
 
-const DAY = 24 * 60 * 60 * 1000;
 
 /**
  * An Interview of the sample Application `id`, its category and title, `days` from now (negative is
@@ -18,7 +17,8 @@ const DAY = 24 * 60 * 60 * 1000;
  */
 function on(id: string, [category, title]: [InterviewCategory, string], days: number): DatedInterview {
   const application = previewApplications().find((a) => a.id === id)!;
-  const at = new Date(Date.now() + days * DAY);
+  const at = new Date();
+  at.setDate(at.getDate() + days); // calendar days: days × 24h misses by one across a DST change
   at.setHours(10, 0, 0, 0);
   const iso = at.toISOString();
   return {
@@ -86,13 +86,16 @@ export const PickedDay: Story = {
   },
 };
 
+const inThreeDays = new Date();
+inThreeDays.setDate(inThreeDays.getDate() + 3);
+
 /** A picked day with nothing on it. */
 export const PickedEmptyDay: Story = {
   parameters: {
     nextjs: {
       navigation: {
         pathname: "/dashboard",
-        query: { month: monthParam(monthStart(new Date(Date.now() + 3 * DAY), 0)), day: dayKey(new Date(Date.now() + 3 * DAY)) },
+        query: { month: monthParam(monthStart(inThreeDays, 0)), day: dayKey(inThreeDays) },
       },
     },
   },

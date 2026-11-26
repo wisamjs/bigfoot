@@ -7,9 +7,9 @@ import { NextInterviewCard } from "./next-interview-card";
 // The Next up card. On the Application page it is shown through application-editor.stories.tsx;
 // these stories are the dashboard's (BIG-183): the job seeker's soonest upcoming Interview, with
 // the takeaways that apply (prepTakeaways) and its Prep notes. Dates are counted from today.
-const DAY = 86_400_000;
 const daysFromNow = (days: number, hour = 15) => {
-  const date = new Date(Date.now() + days * DAY);
+  const date = new Date();
+  date.setDate(date.getDate() + days); // calendar days: days × 24h misses by one across a DST change
   date.setHours(hour, 0, 0, 0);
   return date.toISOString();
 };

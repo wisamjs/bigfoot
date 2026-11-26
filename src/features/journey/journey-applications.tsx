@@ -18,10 +18,11 @@ const dateFormat = new Intl.DateTimeFormat(undefined, { weekday: "short", month:
 const cell = "px-4 py-4 align-middle sm:px-6";
 
 /**
- * Where things stand (BIG-197): the Journey's Applications grouped Got an Offer, Interviewing and
+ * Where things stand (BIG-197): the Journey's Applications, Offers first, then Interviewing, then
  * Waiting to hear back. Each row has the company and role, Progress (its group as a badge, with
- * "Waiting · 13 days", and a mark per Interview) and Next. On a phone each row stacks into one
- * column. Rendered in the browser only (JourneyView), so `now` is the Viewer's.
+ * "Waiting · 13 days", and a mark per Interview) and Next. The badge names the group, so the groups
+ * have no heading rows (BIG-208). On a phone each row stacks into one column. Rendered in the
+ * browser only (JourneyView), so `now` is the Viewer's.
  */
 export function JourneyApplications({ applications, now }: { applications: JourneyApplication[]; now: Date }) {
   const groups = journeyGroups(applications);
@@ -47,28 +48,19 @@ export function JourneyApplications({ applications, now }: { applications: Journ
               </th>
             </tr>
           </thead>
-          {groups.map((group) => (
-            <tbody key={group.id}>
-              <tr>
-                <th
-                  scope="colgroup"
-                  colSpan={3}
-                  className={`${cell} border-t border-line pb-1 text-xs font-semibold uppercase tracking-[0.08em] text-body`}
-                >
-                  {group.label}
-                </th>
-              </tr>
-              {group.applications.map((app) => (
+          <tbody>
+            {groups.flatMap((group) =>
+              group.applications.map((app) => (
                 <Row
                   key={`${app.company}|${app.title}|${app.applied_on}`}
                   app={app}
                   group={group.id}
                   now={now}
-                  first={app === group.applications[0]}
+                  first={app === groups[0].applications[0]}
                 />
-              ))}
-            </tbody>
-          ))}
+              )),
+            )}
+          </tbody>
         </table>
       )}
     </section>

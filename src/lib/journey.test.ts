@@ -60,10 +60,10 @@ describe("journeyGroups", () => {
     const offer = app({ company: "Cobalt", offer: true });
     const booked = app({ company: "Tilth", interviews: [interview(at(10, 19))] });
     const waiting = app({ company: "Fernway", is_waiting: true, waiting_since: "2026-11-05" });
-    expect(journeyGroups([waiting, booked, offer]).map((g) => [g.label, g.applications])).toEqual([
-      ["Got an Offer", [offer]],
-      ["Interviewing", [booked]],
-      ["Waiting to hear back", [waiting]],
+    expect(journeyGroups([waiting, booked, offer]).map((g) => [g.id, g.applications])).toEqual([
+      ["offer", [offer]],
+      ["interviewing", [booked]],
+      ["waiting", [waiting]],
     ]);
     expect(journeyGroups([waiting]).map((g) => g.id)).toEqual(["waiting"]);
     expect(journeyGroups([])).toEqual([]);
