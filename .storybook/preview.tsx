@@ -3,6 +3,7 @@ import { addons } from "storybook/preview-api";
 import { sb } from "storybook/test";
 import { themes } from "storybook/theming";
 import "../src/app/globals.css";
+import { fixNow } from "./fixed-now";
 import "./preview.css";
 
 // Server Actions run on the server, so stories use the spies in each module's __mocks__ folder
@@ -70,6 +71,9 @@ const preview: Preview = {
     },
   },
   initialGlobals: { theme: "dark" },
+  // A story with `parameters.now` (an ISO timestamp) runs at that time: the Pages stories use it so
+  // relative dates never drift (fixed-now.ts).
+  beforeEach: ({ parameters }) => (typeof parameters.now === "string" ? fixNow(parameters.now) : undefined),
   // The same classes src/app/layout.tsx puts on <html> and <body>.
   decorators: [
     (Story, context) => {
