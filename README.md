@@ -128,7 +128,7 @@ With the dev server and API running, `npm run screenshots` retakes the two scree
 
 ### Snapshots of every page
 
-[`docs/snapshots/`](docs/snapshots/) holds a picture of every page in Storybook's Pages section, in each state, at desktop and phone width, dark and light: `docs/snapshots/<page>/<state>-<desktop|mobile>-<dark|light>.png`. Every commit retakes them and adds the ones that changed, so a pull request's diff shows which pages it changed. `npm run snapshots` retakes them by hand; it needs no server running.
+`npm run snapshots` takes a picture of every page in Storybook's Pages section, in each state, at desktop and phone width, dark and light, in `docs/snapshots/<page>/<state>-<desktop|mobile>-<dark|light>.png`. It needs no server running. Every commit retakes them too, rewriting only the pictures that changed. The folder is git-ignored, so the pictures stay on your machine.
 
 ### Coding agents (optional)
 
