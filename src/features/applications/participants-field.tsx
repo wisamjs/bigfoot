@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { RequiredMark, fieldLabelClasses } from "@/components/ui/field";
 import { FieldError } from "@/components/ui/field-error";
 import { inputClasses } from "@/components/ui/input";
+import { PLACEHOLDERS } from "@/features/applications/placeholders";
 import {
   PARTICIPANT_MAX_LENGTHS,
   PARTICIPANTS_PER_INTERVIEW_MAX,
@@ -115,43 +116,45 @@ export function ParticipantsField({
             const invalid = problem?.key === draft.key;
             const person = draft.name.trim() || draft.role.trim() || `person ${index + 1}`;
             return (
-              <li key={draft.key} className="grid grid-cols-[1fr_auto] items-end gap-x-2 gap-y-2 sm:grid-cols-[1fr_1fr_auto]">
-                <div className="min-w-0">
-                  <label htmlFor={`${id}-${draft.key}-role`} className="mb-1 block text-xs font-medium text-heading">
-                    Role
-                  </label>
-                  <input
-                    id={`${id}-${draft.key}-role`}
-                    value={draft.role}
-                    required
-                    disabled={disabled}
-                    maxLength={PARTICIPANT_MAX_LENGTHS.role}
-                    autoComplete="off"
-                    placeholder="Recruiter"
-                    onChange={(e) => update(draft.key, { role: e.target.value })}
-                    className={inputClasses}
-                    {...(invalid ? { "aria-invalid": true, "aria-describedby": errorId } : {})}
-                  />
-                </div>
-                <div className="col-start-1 row-start-2 min-w-0 sm:col-start-auto sm:row-start-auto">
-                  <label htmlFor={`${id}-${draft.key}-name`} className="mb-1 block text-xs font-medium text-heading">
-                    Name <span className="font-normal text-body">(optional)</span>
-                  </label>
-                  <input
-                    id={`${id}-${draft.key}-name`}
-                    value={draft.name}
-                    disabled={disabled}
-                    maxLength={PARTICIPANT_MAX_LENGTHS.name}
-                    autoComplete="off"
-                    placeholder="Dana Lee"
-                    onChange={(e) => update(draft.key, { name: e.target.value })}
-                    className={inputClasses}
-                  />
+              // Role and Name side by side, or stacked on a phone; Remove beside them, at the bottom.
+              <li key={draft.key} className="flex items-end gap-2">
+                <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
+                  <div className="min-w-0">
+                    <label htmlFor={`${id}-${draft.key}-role`} className="mb-1 block text-xs font-medium text-heading">
+                      Role
+                    </label>
+                    <input
+                      id={`${id}-${draft.key}-role`}
+                      value={draft.role}
+                      required
+                      disabled={disabled}
+                      maxLength={PARTICIPANT_MAX_LENGTHS.role}
+                      autoComplete="off"
+                      placeholder={PLACEHOLDERS.participant_role}
+                      onChange={(e) => update(draft.key, { role: e.target.value })}
+                      className={inputClasses}
+                      {...(invalid ? { "aria-invalid": true, "aria-describedby": errorId } : {})}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <label htmlFor={`${id}-${draft.key}-name`} className="mb-1 block text-xs font-medium text-heading">
+                      Name <span className="font-normal text-body">(optional)</span>
+                    </label>
+                    <input
+                      id={`${id}-${draft.key}-name`}
+                      value={draft.name}
+                      disabled={disabled}
+                      maxLength={PARTICIPANT_MAX_LENGTHS.name}
+                      autoComplete="off"
+                      onChange={(e) => update(draft.key, { name: e.target.value })}
+                      className={inputClasses}
+                    />
+                  </div>
                 </div>
                 <Button
                   variant="tertiary"
                   size="sm"
-                  className="row-start-1 px-2.5 sm:row-start-auto"
+                  className="px-2.5 py-2.5"
                   disabled={disabled}
                   aria-label={`Remove ${person}`}
                   onClick={() => remove(index)}
