@@ -14,4 +14,7 @@ export const PLACEHOLDERS = {
   how_it_went: "What landed, what didn't",
   takeaway: "One thing to do differently",
   prep_notes: "Review the caching chapter. Ask about the on-call rotation.",
+  // A Participant's role (BIG-191). Their name has none: on someone known only by role, an example
+  // name would read as theirs.
+  participant_role: "Sr Director, Product",
 } as const;

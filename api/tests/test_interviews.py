@@ -11,6 +11,8 @@ from tests.conftest import TEST_SCHEMA
 PAST = (datetime.now(UTC) - timedelta(days=3)).replace(microsecond=0)
 LONG_PAST = PAST - timedelta(days=4)
 FUTURE = (datetime.now(UTC) + timedelta(days=2)).replace(microsecond=0)
+# Adding an Interview needs at least one Participant.
+RECRUITER = [{"role": "Recruiter"}]
 
 
 def create_application(client, headers, **fields):
@@ -19,8 +21,13 @@ def create_application(client, headers, **fields):
     return res.json()
 
 
-def add(client, headers, application, category="technical", at=PAST, title=None):
-    body = {"category": category, "title": title or category.replace("_", " ").title(), "at": at.isoformat()}
+def add(client, headers, application, category="technical", at=PAST, title=None, participants=RECRUITER):
+    body = {
+        "category": category,
+        "title": title or category.replace("_", " ").title(),
+        "at": at.isoformat(),
+        "participants": participants,
+    }
     res = client.post(f"/applications/{application['id']}/interviews", json=body, headers=headers)
     assert res.status_code == 201, res.text
     return res.json()
@@ -45,7 +52,12 @@ def test_an_interview_has_a_required_category_title_and_date_and_time(client, to
 @pytest.mark.parametrize("at", [None, "2026-11-20", "", "not a date"])
 def test_create_needs_a_date_and_time(client, token, at):
     app = create_application(client, token())
-    body = {"category": "technical", "title": "Technical", **({} if at is None else {"at": at})}
+    body = {
+        "category": "technical",
+        "title": "Technical",
+        "participants": RECRUITER,
+        **({} if at is None else {"at": at}),
+    }
     res = client.post(f"/applications/{app['id']}/interviews", json=body, headers=token())
     assert res.status_code == 422
     assert [e["loc"] for e in res.json()["detail"]] == [["body", "at"]]
@@ -167,6 +179,7 @@ def test_notes_can_be_given_when_adding_an_interview(client, token):
         "category": "technical",
         "title": "Technical",
         "at": FUTURE.isoformat(),
+        "participants": RECRUITER,
         "what_they_asked": "Why us?\nWhy now?",
         "how_it_went": "  Bring ID.\n",
         "takeaway": "Smile",
@@ -236,7 +249,13 @@ def test_prep_notes_are_separate_from_notes_and_can_be_added_changed_and_cleared
 
 def test_prep_notes_can_be_given_when_adding_an_interview(client, token):
     app = create_application(client, token())
-    body = {"category": "technical", "title": "Technical", "at": FUTURE.isoformat(), "prep_notes": "  Bring ID.\n"}
+    body = {
+        "category": "technical",
+        "title": "Technical",
+        "at": FUTURE.isoformat(),
+        "participants": RECRUITER,
+        "prep_notes": "  Bring ID.\n",
+    }
     res = client.post(f"/applications/{app['id']}/interviews", json=body, headers=token())
     assert res.status_code == 201 and res.json()["prep_notes"] == "Bring ID." and res.json()["how_it_went"] is None
 
@@ -301,7 +320,7 @@ def test_other_job_seekers_cannot_touch_interviews(client, token):
     interview = add(client, token("alice"), app)
     base = f"/applications/{app['id']}/interviews"
     assert client.get(base, headers=token("bob")).status_code == 404
-    body = {"category": "technical", "title": "Technical", "at": FUTURE.isoformat()}
+    body = {"category": "technical", "title": "Technical", "at": FUTURE.isoformat(), "participants": RECRUITER}
     assert client.post(base, json=body, headers=token("bob")).status_code == 404
     assert (
         client.patch(f"{base}/{interview['id']}", json={"category": "culture"}, headers=token("bob")).status_code == 404
@@ -386,7 +405,7 @@ def test_an_application_can_have_at_most_50_interviews(settings, client, token):
         )
     add(client, token(), application)
 
-    body = {"category": "technical", "title": "Technical", "at": FUTURE.isoformat()}
+    body = {"category": "technical", "title": "Technical", "at": FUTURE.isoformat(), "participants": RECRUITER}
     res = client.post(f"/applications/{application['id']}/interviews", json=body, headers=token())
 
     assert res.status_code == 409

@@ -2,10 +2,15 @@
 // reused (e.g. a dashboard notice when the policy changes).
 
 /** The date the current version of the policy takes effect (ISO yyyy-mm-dd). */
-export const PRIVACY_EFFECTIVE_DATE = "2026-11-27";
+export const PRIVACY_EFFECTIVE_DATE = "2026-11-28";
 
 /** Newest first. The first entry's date must equal PRIVACY_EFFECTIVE_DATE. */
 export const PRIVACY_CHANGES: readonly { date: string; summary: string }[] = [
+  {
+    date: "2026-11-28",
+    summary:
+      "Each Interview now records who you’re meeting: the names and roles of people you interview with, which you enter (a role is required, a name is optional). We store them with the Application, include them in your data download, and delete each person once no Interview has them, or with the Application or your account. Someone you give a Share link never sees them.",
+  },
   {
     date: "2026-11-27",
     summary:

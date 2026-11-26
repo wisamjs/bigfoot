@@ -9,6 +9,7 @@ import {
   dateOrderError,
   interviewErrors,
   isHttpUrl,
+  participantsError,
   isValid,
   passcodeError,
   shareLinkLabelError,
@@ -142,9 +143,10 @@ describe("interviewErrors", () => {
       how_it_went: "a".repeat(INTERVIEW_NOTES_MAX_LENGTHS.how_it_went),
       takeaway: "a".repeat(INTERVIEW_NOTES_MAX_LENGTHS.takeaway),
     };
-    expect(interviewErrors({ category: "technical", title: "Technical", at: "2026-12-01T15:00:00.000Z", ...notes }, { creating: true })).toEqual(
-      {},
-    );
+    const participants = [{ role: "Recruiter", name: null }];
+    expect(
+      interviewErrors({ category: "technical", title: "Technical", at: "2026-12-01T15:00:00.000Z", participants, ...notes }, { creating: true }),
+    ).toEqual({});
     expect(interviewErrors({ what_they_asked: null, how_it_went: null, takeaway: null })).toEqual({});
   });
 
@@ -178,8 +180,10 @@ describe("interviewErrors", () => {
       category: "Choose an Interview category.",
       title: "Enter the title.",
       at: "Enter the date and time.",
+      participants: "Add at least one person you’re meeting.",
     });
-    expect(interviewErrors({ category: "technical", title: "Technical", at: "2026-12-01" }, { creating: true })).toEqual({
+    const participants = [{ role: "EM", name: null }];
+    expect(interviewErrors({ category: "technical", title: "Technical", at: "2026-12-01", participants }, { creating: true })).toEqual({
       at: "Enter a date and time.",
     });
   });
@@ -191,6 +195,12 @@ describe("interviewErrors", () => {
       title: "Enter the title.",
     });
     expect(interviewErrors({ at: "" })).toEqual({ at: "Enter the date and time." });
+  });
+
+  it("refuses emptying an Interview's Participants, and leaves them alone when not sent", () => {
+    expect(interviewErrors({ participants: [] })).toEqual({ participants: "Add at least one person you’re meeting." });
+    expect(interviewErrors({ participants: null })).toEqual({ participants: "Add at least one person you’re meeting." });
+    expect(interviewErrors({ title: "Onsite" })).toEqual({});
   });
 
   it.each(XSS_TEXT)("keeps %j in Interview notes as typed", (notes) => {
@@ -286,5 +296,36 @@ describe("passcodeError", () => {
     expect(passcodeError("p".repeat(PASSCODE_MIN_LENGTH - 1))).toBe("Use at least 8 characters.");
     expect(passcodeError("p".repeat(PASSCODE_MAX_LENGTH + 1))).toBe("Passcode can be at most 128 characters.");
     expect(passcodeError("maple\triver")).toBe("Use only characters you can see.");
+  });
+});
+
+describe("participantsError", () => {
+  it("accepts 1 to 20 people, each with a role and maybe a name, new or already on the Application", () => {
+    expect(participantsError([{ role: "Sr Director, Product", name: "Dana Lee" }, { id: "p1", role: "EM", name: null }])).toBeNull();
+    expect(participantsError(Array.from({ length: 20 }, (_, n) => ({ role: `Engineer ${n}`, name: null })))).toBeNull();
+  });
+
+  it("needs someone, and no more than 20", () => {
+    expect(participantsError([])).toEqual({ message: "Add at least one person you’re meeting." });
+    expect(participantsError(undefined)).toEqual({ message: "Add at least one person you’re meeting." });
+    expect(participantsError(Array.from({ length: 21 }, () => ({ role: "EM", name: null })))).toEqual({
+      message: "An Interview can have at most 20 people.",
+    });
+  });
+
+  it("names the first person with a problem", () => {
+    const ok = { role: "EM", name: null };
+    expect(participantsError([ok, { role: "  ", name: "Sam" }])).toEqual({ message: "Enter each person’s role.", index: 1 });
+    expect(participantsError([ok, {}])).toEqual({ message: "Enter each person’s role.", index: 1 });
+    expect(participantsError([{ role: "a".repeat(201), name: null }])).toEqual({
+      message: "Role can be at most 200 characters.",
+      index: 0,
+    });
+    expect(participantsError([{ role: "EM", name: "a".repeat(201) }])).toEqual({
+      message: "Name can be at most 200 characters.",
+      index: 0,
+    });
+    expect(participantsError([{ role: "E\u202eM", name: null }])).toEqual({ message: "Use only characters you can see.", index: 0 });
+    expect(participantsError([{ id: "p1", ...ok }, { id: "p1", ...ok }])).toEqual({ message: "Each person can be listed once.", index: 1 });
   });
 });

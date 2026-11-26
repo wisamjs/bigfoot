@@ -3,8 +3,8 @@
 // ahead of time can't read the clock, so landing/hero-preview.tsx passes the visitor's today once hydrated.
 import type { Application, InterviewCategory } from "@/lib/applications";
 
-/** An Interview as its category and title. */
-type Entry = [InterviewCategory, string];
+/** An Interview as its category and title, and who's in it as [role, name] (GLOSSARY.md, Participant). */
+type Entry = [InterviewCategory, string, ([string, string | null][] | undefined)?];
 
 /** 2:00 PM local time, `days` after `now`. */
 function daysAhead(now: Date, days: number) {
@@ -28,7 +28,7 @@ function sample(
   } = {},
 ): Application {
   const interview = (
-    [category, title]: Entry,
+    [category, title, people = []]: Entry,
     i: number,
     completed: boolean,
   ) => ({
@@ -43,6 +43,8 @@ function sample(
     how_it_went: null,
     takeaway: null,
     prep_notes: null,
+    // The same role and name is the same Participant across an Application's Interviews.
+    participants: people.map(([role, name]) => ({ id: `${id}-${role}-${name ?? ""}`, role, name })),
     completed,
     created_at: "2026-11-01T00:00:00Z",
     updated_at: "2026-11-01T00:00:00Z",
@@ -85,8 +87,8 @@ export function previewApplications(now: Date = new Date()): Application[] {
       nextIn: 2,
     }),
     sample(now, "datadog", "Datadog", "Software Engineer", {
-      done: [["recruiter", "Recruiter Screen"]],
-      next: ["technical", "Technical"],
+      done: [["recruiter", "Recruiter Screen", [["Recruiter", "Jordan Kim"]]]],
+      next: ["technical", "Technical", [["Senior Engineer", "Priya Shah"], ["Engineering Manager", null]]],
       nextIn: 3,
     }),
     sample(now, "linear", "Linear", "Product Engineer", {

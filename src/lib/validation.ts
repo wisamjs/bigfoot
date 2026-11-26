@@ -15,6 +15,8 @@ import {
   LOCATIONS,
   OFFICE_DAYS,
   OUTCOMES,
+  PARTICIPANT_MAX_LENGTHS,
+  PARTICIPANTS_PER_INTERVIEW_MAX,
   STATUSES,
   type ApplicationFields,
   type InterviewFields,
@@ -209,19 +211,67 @@ function interviewDateError(fields: InterviewInput, creating: boolean) {
   return null;
 }
 
+/** The Participants' problem: at least one when creating, and never emptied by a change. */
+function interviewParticipantsError(fields: InterviewInput, creating: boolean) {
+  return creating || "participants" in fields ? (participantsError(fields.participants)?.message ?? null) : null;
+}
+
+/**
+ * What's wrong with an Interview's Participants, as the API checks them: 1 to 20, each with a role
+ * and maybe a name, no one listed twice. Null when they're fine. `index` is the first one with a
+ * problem, so a form can mark it; undefined when the problem is the list itself.
+ */
+export function participantsError(value: unknown): { message: string; index?: number } | null {
+  if (!Array.isArray(value) || value.length === 0) return { message: "Add at least one person you’re meeting." };
+  if (value.length > PARTICIPANTS_PER_INTERVIEW_MAX) {
+    return { message: `An Interview can have at most ${PARTICIPANTS_PER_INTERVIEW_MAX} people.` };
+  }
+  return peopleError(value);
+}
+
+/** The first person in the list with a problem, and what it is; null when everyone is fine. */
+function peopleError(value: unknown[]): { message: string; index: number } | null {
+  const ids = new Set<unknown>();
+  for (const [index, participant] of value.entries()) {
+    const { id, role, name } = (participant ?? {}) as Record<string, unknown>;
+    const problem = personError(role, name) ?? (id !== undefined && ids.has(id) ? "Each person can be listed once." : null);
+    if (problem) return { message: problem, index };
+    ids.add(id ?? Symbol());
+  }
+  return null;
+}
+
+/** One Participant's problem: a role is required, a name optional, both within their limits and visible. */
+function personError(role: unknown, name: unknown): string | null {
+  if (typeof role !== "string" || role.trim() === "") return "Enter each person’s role.";
+  const problem =
+    (role.length > PARTICIPANT_MAX_LENGTHS.role ? tooLong("Role", PARTICIPANT_MAX_LENGTHS.role) : null) ??
+    optionalText(name, "Name", PARTICIPANT_MAX_LENGTHS.name);
+  if (problem) return problem;
+  return CONTROL_CHARACTERS.test(`${role}${name ?? ""}`) ? "Use only characters you can see." : null;
+}
+
 /**
  * Problems with an Interview's fields. `creating` checks a whole new Interview, so the category, the
- * title and the date and time are required; otherwise only the fields given are checked, as a
- * change, and none of those three can be cleared.
+ * title, the date and time and at least one Participant are required; otherwise only the fields
+ * given are checked, as a change, and none of those four can be cleared.
  */
 export function interviewErrors(input: unknown, { creating = false }: { creating?: boolean } = {}): FieldErrors {
   if (typeof input !== "object" || input === null) return { form: "Nothing to save." };
   const fields = input as InterviewInput;
-  const errors: FieldErrors = unknownFields(input, ["category", "title", "at", ...INTERVIEW_NOTES_FIELDS, "prep_notes"]);
+  const errors: FieldErrors = unknownFields(input, [
+    "category",
+    "title",
+    "at",
+    ...INTERVIEW_NOTES_FIELDS,
+    "prep_notes",
+    "participants",
+  ]);
   const required = {
     category: interviewCategoryError(fields, creating),
     title: interviewTitleError(fields, creating),
     at: interviewDateError(fields, creating),
+    participants: interviewParticipantsError(fields, creating),
   };
   for (const [field, problem] of Object.entries(required)) if (problem) errors[field] = problem;
   for (const field of INTERVIEW_NOTES_FIELDS) {

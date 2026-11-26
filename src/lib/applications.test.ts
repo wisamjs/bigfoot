@@ -34,6 +34,10 @@ import {
   outcomeSummary,
   takeaways,
   titleForCategory,
+  applicationParticipants,
+  participantOption,
+  participantText,
+  withParticipants,
   OUTCOMES,
   STATUS_OPTIONS,
   STATUSES,
@@ -43,7 +47,7 @@ import {
 } from "./applications";
 
 function interview(id: string, at: string, completed: boolean): Interview {
-  return { id, application_id: "a", category: "technical", title: "Technical", at, what_they_asked: null, how_it_went: null, takeaway: null, prep_notes: null, completed, created_at: "", updated_at: "" };
+  return { id, application_id: "a", category: "technical", title: "Technical", at, what_they_asked: null, how_it_went: null, takeaway: null, prep_notes: null, participants: [], completed, created_at: "", updated_at: "" };
 }
 
 function application(id: string, overrides: Partial<Application>): Application {
@@ -613,5 +617,33 @@ describe("Outcome card (BIG-182)", () => {
   it("leaves out the days without a Done date, and says when it ended before any Interview or the same day", () => {
     expect(outcomeSummary({ ...ended, done_on: null })).toBe("After 3 Interviews.");
     expect(outcomeSummary({ ...ended, done_on: "2026-10-20", interviews: [] })).toBe("Before any Interview, on the day you applied.");
+  });
+});
+
+describe("Participants", () => {
+  const dana = { id: "p1", role: "Recruiter", name: "Dana Lee" };
+  const em = { id: "p2", role: "EM", name: null };
+
+  it("reads as a name with the role, or the role alone", () => {
+    expect(participantText(dana)).toBe("Dana Lee (Recruiter)");
+    expect(participantText(em)).toBe("EM");
+    expect(participantOption(dana)).toBe("Dana Lee · Recruiter");
+    expect(participantOption(em)).toBe("EM");
+  });
+
+  it("heads an Interview as \"With …\", and says nothing for one with nobody", () => {
+    expect(withParticipants([dana, { ...em, name: "Sam" }])).toBe("With Dana Lee (Recruiter), Sam (EM)");
+    expect(withParticipants([])).toBeNull();
+  });
+
+  it("lists an Application's people once each, in the order they first appear", () => {
+    const app = application("a", {
+      interviews: [
+        { ...interview("i1", "2026-11-01T15:00:00Z", true), participants: [dana] },
+        { ...interview("i2", "2026-11-02T15:00:00Z", true), participants: [em, dana] },
+        interview("i3", "2026-11-03T15:00:00Z", false),
+      ],
+    });
+    expect(applicationParticipants(app)).toEqual([dana, em]);
   });
 });
