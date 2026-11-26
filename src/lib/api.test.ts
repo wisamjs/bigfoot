@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getApplications, listApplications } from "./api";
+import { getApplications, getJourney, getShareLinkStatus, listApplications, openShareLink } from "./api";
 
 // `use cache` and next/cache's cacheTag/cacheLife only work inside a Next.js build, so these tests
 // check what the cached read does on a miss. That it is kept, tagged per job seeker and expired by
@@ -38,5 +38,42 @@ describe("getApplications", () => {
     vi.mocked(Sentry.setUser).mockClear();
     await listApplications("seeker-1");
     expect(Sentry.setUser).toHaveBeenCalledOnce();
+  });
+});
+
+describe("a Viewer's requests (docs/adr/0008)", () => {
+  it("reads a Share link's status with no token, and null when no link has the id", async () => {
+    fetchMock.mockImplementation(async () => Response.json({ shared_by: "Wisam", expired: false, locked: false }));
+    expect(await getShareLinkStatus("k7Qm2x9PaB")).toEqual({ shared_by: "Wisam", expired: false, locked: false });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/share-links\/k7Qm2x9PaB$/);
+    expect(init.headers.authorization).toBeUndefined();
+
+    fetchMock.mockImplementation(async () => Response.json({ detail: "This link isn't active" }, { status: 404 }));
+    expect(await getShareLinkStatus("k7Qm2x9PaB")).toBeNull();
+    fetchMock.mockImplementation(async () => Response.json({ detail: "Down" }, { status: 503 }));
+    await expect(getShareLinkStatus("k7Qm2x9PaB")).rejects.toMatchObject({ status: 503 });
+  });
+
+  it("sends the Passcode with no token, and the Journey request with the Viewer token alone", async () => {
+    fetchMock.mockImplementation(async () => Response.json({ token: "viewer", expires_at: "2026-12-02T15:00:00Z" }));
+    expect(await openShareLink("k7Qm2x9PaB", "maple-river-42")).toMatchObject({ token: "viewer" });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/share-links\/k7Qm2x9PaB\/viewer-token$/);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ passcode: "maple-river-42" });
+    expect(init.headers.authorization).toBeUndefined();
+
+    fetchMock.mockImplementation(async () => Response.json({ shared_by: null, applications: [] }));
+    await getJourney("k7Qm2x9PaB", "viewer");
+    expect(fetchMock.mock.calls[1][1].headers.authorization).toBe("Bearer viewer");
+  });
+
+  it("turns a refusal into an ApiError with the API's message", async () => {
+    fetchMock.mockImplementation(async () => Response.json({ detail: "That Passcode didn't match" }, { status: 401 }));
+    await expect(openShareLink("k7Qm2x9PaB", "otter-lake-7")).rejects.toMatchObject({
+      status: 401,
+      message: "That Passcode didn't match",
+    });
   });
 });

@@ -158,7 +158,7 @@ export const CopyLink: Story = {
   },
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: "Copy link: Link for Mom & Dad" }));
-    await expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`${window.location.origin}/s/k7Qm2x9PaB`);
+    await expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`${window.location.origin}/journey/k7Qm2x9PaB`);
     await expect(await canvas.findByRole("button", { name: "Copied: Link for Mom & Dad" })).toBeVisible();
   },
 };

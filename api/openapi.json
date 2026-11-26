@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Bigfoot API",
-    "description": "Bigfoot's data API: a job seeker's Applications and their Interviews, in Supabase Postgres.\n\nEvery route but `/health` needs `Authorization: Bearer <token>`, and reads and writes only the data\nof the job seeker the token names. There are two kinds of token:\n\n- **Access token** (`AccessToken`): a secret starting with `bigfoot_` that a job seeker creates on\n  their Account page and gives a script, such as a cron job. It works on the Applications and\n  Interviews routes, expires after a year, and can be revoked\n  ([ADR 0003](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0003-access-tokens-open-fastapi-to-scripts.md)).\n- **Web token** (`WebToken`): a short-lived JWT the Next.js server signs for the signed-in job\n  seeker. The browser itself never calls this API. Web tokens work on every route, and are the only\n  way to use the Account, Access tokens and Share links routes\n  ([ADR 0001](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0001-fastapi-behind-nextjs-with-authjs.md)).\n\nTerms such as Application, Interview, Waiting, Sample Application and Access token are defined in\n[GLOSSARY.md](https://github.com/wisamjs/bigfoot/blob/main/GLOSSARY.md).\n\nTo try a request, click **Authorize** and paste an Access token from the Account page, or a web\ntoken from `node scripts/dev-api-token.mjs`.\n",
+    "description": "Bigfoot's data API: a job seeker's Applications and their Interviews, in Supabase Postgres.\n\nEvery route but `/health` and a Share link's status and Passcode check needs\n`Authorization: Bearer <token>`, and reads and writes only the data of the job seeker the token\nnames. There are two kinds of token that name a job seeker:\n\n- **Access token** (`AccessToken`): a secret starting with `bigfoot_` that a job seeker creates on\n  their Account page and gives a script, such as a cron job. It works on the Applications and\n  Interviews routes, expires after a year, and can be revoked\n  ([ADR 0003](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0003-access-tokens-open-fastapi-to-scripts.md)).\n- **Web token** (`WebToken`): a short-lived JWT the Next.js server signs for the signed-in job\n  seeker. The browser itself never calls this API. Web tokens work on every route, and are the only\n  way to use the Account, Access tokens and Share links routes\n  ([ADR 0001](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0001-fastapi-behind-nextjs-with-authjs.md)).\n\nA third kind, the **Viewer token** (`ViewerToken`), names a Share link instead: a Viewer gets one by\ntyping the link's Passcode, and it reads only that link's Journey\n([ADR 0008](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0008-a-share-link-lets-a-viewer-read-a-journey.md)).\n\nTerms such as Application, Interview, Waiting, Sample Application and Access token are defined in\n[GLOSSARY.md](https://github.com/wisamjs/bigfoot/blob/main/GLOSSARY.md).\n\nTo try a request, click **Authorize** and paste an Access token from the Account page, or a web\ntoken from `node scripts/dev-api-token.mjs`.\n",
     "version": "0.1.0"
   },
   "paths": {
@@ -711,6 +711,239 @@
           },
           "404": {
             "description": "No Share link with this id belongs to the job seeker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/share-links/{share_link_id}": {
+      "get": {
+        "tags": [
+          "Journey"
+        ],
+        "summary": "Get a Share link's status",
+        "description": "What the Passcode page shows: the job seeker's name, and whether the link has expired or is\nlocked by wrong Passcodes. Needs no token.",
+        "operationId": "get_status_share_links__share_link_id__get",
+        "parameters": [
+          {
+            "name": "share_link_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{10}$",
+              "description": "The Share link's id: 10 URL-safe characters.",
+              "title": "Share Link Id"
+            },
+            "description": "The Share link's id: 10 URL-safe characters."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareLinkStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Share link has this id: it was stopped, or never made.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/share-links/{share_link_id}/viewer-token": {
+      "post": {
+        "tags": [
+          "Journey"
+        ],
+        "summary": "Open a Share link with its Passcode",
+        "description": "Check the Passcode and return a Viewer token for this Share link, valid until it expires.\n\nA wrong Passcode is counted; the 5th within 15 minutes locks the link, and while it is locked\neven the right Passcode is refused. Tries on one link take turns, so the count is exact.",
+        "operationId": "open_share_link_share_links__share_link_id__viewer_token_post",
+        "parameters": [
+          {
+            "name": "share_link_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{10}$",
+              "description": "The Share link's id: 10 URL-safe characters.",
+              "title": "Share Link Id"
+            },
+            "description": "The Share link's id: 10 URL-safe characters."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasscodeAttempt"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerToken"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Share link has this id: it was stopped, or never made.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "The Share link has expired. Renewing it opens it again.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The Passcode is wrong. The try is counted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "5 wrong Passcodes in 15 minutes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/share-links/{share_link_id}/journey": {
+      "get": {
+        "tags": [
+          "Journey"
+        ],
+        "summary": "Read a Share link's Journey",
+        "description": "The job seeker's Journey: their In Progress Applications and Offers, with each one's company,\nrole, applied date and Interviews (category, title and time). Salary, job postings, Location,\nPrep notes, Interview notes, Outcome notes and other Done Applications are never read.\n\nEvery request checks the link again, so stopping it, letting it expire or changing its Passcode\ncuts the Viewer off at once. Records when the link was last opened, to within a minute.",
+        "operationId": "get_journey_share_links__share_link_id__journey_get",
+        "security": [
+          {
+            "ViewerToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "share_link_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{10}$",
+              "description": "The Share link's id: 10 URL-safe characters.",
+              "title": "Share Link Id"
+            },
+            "description": "The Share link's id: 10 URL-safe characters."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Journey"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Share link has this id: it was stopped, or never made.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "The Share link has expired. Renewing it opens it again.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No Viewer token for this Share link, or one issued before its Passcode changed.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2518,6 +2751,180 @@
         "title": "JobSeeker",
         "description": "Everything Bigfoot's database holds about the job seeker besides their Applications."
       },
+      "Journey": {
+        "properties": {
+          "shared_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared By",
+            "description": "The job seeker's name as their Viewers see it; null for a link made before Bigfoot stored it.",
+            "examples": [
+              "Wisam Zaghal"
+            ]
+          },
+          "applications": {
+            "items": {
+              "$ref": "#/components/schemas/JourneyApplication"
+            },
+            "type": "array",
+            "title": "Applications",
+            "description": "Oldest applied first."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "shared_by",
+          "applications"
+        ],
+        "title": "Journey",
+        "description": "What a Viewer of a Share link sees (GLOSSARY.md, Journey; docs/adr/0008): the job seeker's In\nProgress Applications and Offers, and nothing the job seeker keeps private."
+      },
+      "JourneyApplication": {
+        "properties": {
+          "company": {
+            "type": "string",
+            "title": "Company",
+            "description": "The company the job seeker applied to.",
+            "examples": [
+              "Northwind Robotics"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "The role's job title.",
+            "examples": [
+              "Frontend Engineer"
+            ]
+          },
+          "applied_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Applied On",
+            "description": "When the job seeker applied.",
+            "examples": [
+              "2026-11-02"
+            ]
+          },
+          "offer": {
+            "type": "boolean",
+            "title": "Offer",
+            "description": "Done with an Offer; otherwise the Application is In Progress."
+          },
+          "is_waiting": {
+            "type": "boolean",
+            "title": "Is Waiting",
+            "description": "Derived (GLOSSARY.md, Waiting): In Progress with no upcoming Interview, including a new one."
+          },
+          "waiting_since": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waiting Since",
+            "description": "While waiting: when the last completed Interview happened (a timestamp), or else the applied date. Null when not waiting.",
+            "examples": [
+              "2026-11-08T17:00:00Z"
+            ]
+          },
+          "interviews": {
+            "items": {
+              "$ref": "#/components/schemas/JourneyInterview"
+            },
+            "type": "array",
+            "title": "Interviews",
+            "description": "Ordered by date."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "company",
+          "title",
+          "applied_on",
+          "offer",
+          "is_waiting",
+          "waiting_since",
+          "interviews"
+        ],
+        "title": "JourneyApplication",
+        "description": "An In Progress Application or an Offer as a Viewer sees it: no salary, job posting, Location or notes."
+      },
+      "JourneyInterview": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "recruiter",
+              "hiring_manager",
+              "technical",
+              "system_design",
+              "project_deep_dive",
+              "people_management",
+              "project_delivery",
+              "collaboration",
+              "culture",
+              "decision_maker"
+            ],
+            "title": "Category",
+            "description": "What the Interview assesses (GLOSSARY.md, Interview category, docs/adr/0007): recruiter, hiring_manager, technical, system_design, project_deep_dive, people_management, project_delivery, collaboration, culture or decision_maker.",
+            "examples": [
+              "hiring_manager"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "The Interview's name in the job seeker's own words (GLOSSARY.md, Interview title), at most 200 characters. Required; the ends are trimmed.",
+            "examples": [
+              "Hiring Manager"
+            ]
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At",
+            "description": "When the Interview happens: a date and time, with a time zone. Required (docs/adr/0005).",
+            "examples": [
+              "2026-11-24T19:00:00Z"
+            ]
+          },
+          "completed": {
+            "type": "boolean",
+            "title": "Completed",
+            "description": "Derived, never stored: the date is in the past.",
+            "examples": [
+              false
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "category",
+          "title",
+          "at",
+          "completed"
+        ],
+        "title": "JourneyInterview",
+        "description": "An Interview as a Viewer sees it: what it is and when, never its notes."
+      },
       "NewAccessToken": {
         "properties": {
           "id": {
@@ -2598,7 +3005,7 @@
           "id": {
             "type": "string",
             "title": "Id",
-            "description": "10 URL-safe characters: the link is `/s/<id>`.",
+            "description": "10 URL-safe characters: the link is `/journey/<id>`.",
             "examples": [
               "k7Qm2x9PaB"
             ]
@@ -2695,6 +3102,23 @@
         ],
         "title": "Onboarding"
       },
+      "PasscodeAttempt": {
+        "properties": {
+          "passcode": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Passcode",
+            "description": "The Passcode as typed."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "passcode"
+        ],
+        "title": "PasscodeAttempt",
+        "description": "What a Viewer typed to open a Share link."
+      },
       "PasscodeChange": {
         "properties": {
           "passcode": {
@@ -2721,7 +3145,7 @@
           "id": {
             "type": "string",
             "title": "Id",
-            "description": "10 URL-safe characters: the link is `/s/<id>`.",
+            "description": "10 URL-safe characters: the link is `/journey/<id>`.",
             "examples": [
               "k7Qm2x9PaB"
             ]
@@ -2815,16 +3239,63 @@
             "examples": [
               "maple-river-42"
             ]
+          },
+          "shared_by": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Shared By",
+            "description": "The job seeker's name as their Viewers see it: \"Shared by Wisam Zaghal\".",
+            "examples": [
+              "Wisam Zaghal"
+            ]
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "label",
-          "passcode"
+          "passcode",
+          "shared_by"
         ],
         "title": "ShareLinkCreate",
         "description": "A new Share link: who it's for and its Passcode. It always expires 7 days after it is created."
+      },
+      "ShareLinkStatus": {
+        "properties": {
+          "shared_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared By",
+            "description": "The job seeker's name as their Viewers see it; null for a link made before Bigfoot stored it.",
+            "examples": [
+              "Wisam Zaghal"
+            ]
+          },
+          "expired": {
+            "type": "boolean",
+            "title": "Expired",
+            "description": "The link has expired: it opens again only once the job seeker renews it."
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked",
+            "description": "5 wrong Passcodes were typed in the last 15 minutes, so none is accepted until they age out."
+          }
+        },
+        "type": "object",
+        "required": [
+          "shared_by",
+          "expired",
+          "locked"
+        ],
+        "title": "ShareLinkStatus",
+        "description": "What a Share link's Passcode page needs, before the Passcode is typed. Nothing else about the\njob seeker: the link id alone opens no more than this."
       },
       "ValidationError": {
         "properties": {
@@ -2865,12 +3336,40 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "ViewerToken": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token",
+            "description": "Send as `Authorization: Bearer …` to read the Journey."
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At",
+            "description": "When the token stops working: when the Share link expires."
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "expires_at"
+        ],
+        "title": "ViewerToken",
+        "description": "A Viewer's credential for one Share link, returned when the Passcode is right (docs/adr/0008)."
       }
     },
     "securitySchemes": {
       "WebToken": {
         "type": "http",
         "description": "A short-lived HS256 JWT signed with API_SECRET, with `sub` set to the job seeker's id, `aud` 'bigfoot-api' and `iss` 'bigfoot-web'. The Next.js server signs one per request for the signed-in job seeker; locally, `node scripts/dev-api-token.mjs` prints one for the test job seeker.",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "ViewerToken": {
+        "type": "http",
+        "description": "A Viewer token: an HS256 JWT this API returns when a Viewer types a Share link's Passcode. It reads that Share link's Journey only, and stops working when the link is stopped, expires or gets a new Passcode. The Next.js server keeps it in the Viewer's cookie for that link.",
         "scheme": "bearer",
         "bearerFormat": "JWT"
       },
@@ -2893,6 +3392,10 @@
     {
       "name": "Share links",
       "description": "Private links that let a Viewer follow the job seeker's search, each with its own Passcode. Web tokens only."
+    },
+    {
+      "name": "Journey",
+      "description": "A Viewer's side of a Share link: its status and Passcode check need no token; the Journey needs the Viewer token the Passcode check returns."
     },
     {
       "name": "Applications",

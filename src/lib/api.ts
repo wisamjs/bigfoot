@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { SignJWT } from "jose";
 import { cacheLife, cacheTag } from "next/cache";
 import { applicationsTag, type Application, type ApplicationFields, type Interview, type InterviewFields } from "@/lib/applications";
+import type { Journey, ShareLinkStatus } from "@/lib/journey";
 import { jobSeekerTag } from "@/lib/sentry";
 
 // Client for the FastAPI service (api/). Every request carries a short-lived token naming the
@@ -170,7 +171,7 @@ export function revokeAccessToken(jobSeekerId: string, id: string) {
 
 /** A Share link (GLOSSARY.md) as the API lists it: never the Passcode, which Bigfoot doesn't store. */
 export type ShareLink = {
-  /** 10 URL-safe characters: the link is `/s/<id>`. */
+  /** 10 URL-safe characters: the link is `/journey/<id>`. */
   id: string;
   label: string;
   /** ISO timestamps. */
@@ -189,8 +190,12 @@ export function listShareLinks(jobSeekerId: string) {
   return request<ShareLink[]>(jobSeekerId, "/me/share-links");
 }
 
-export function createShareLink(jobSeekerId: string, label: string, passcode: string) {
-  return request<NewShareLink>(jobSeekerId, "/me/share-links", { method: "POST", body: { label, passcode } });
+/** `sharedBy` is the job seeker's name as their Viewers see it: "Shared by Wisam Zaghal". */
+export function createShareLink(jobSeekerId: string, label: string, passcode: string, sharedBy: string) {
+  return request<NewShareLink>(jobSeekerId, "/me/share-links", {
+    method: "POST",
+    body: { label, passcode, shared_by: sharedBy },
+  });
 }
 
 export function renewShareLink(jobSeekerId: string, id: string) {
@@ -206,6 +211,46 @@ export function changeShareLinkPasscode(jobSeekerId: string, id: string, passcod
 
 export function stopSharing(jobSeekerId: string, id: string) {
   return request<void>(jobSeekerId, `/me/share-links/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+// A Viewer's side of a Share link (docs/adr/0008). No job seeker signs these requests: the status
+// and Passcode check need no token, and the Journey takes the Viewer token the check returned.
+
+async function viewerRequest<T>(path: string, init: { method?: string; body?: unknown; viewerToken?: string } = {}) {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: init.method ?? "GET",
+    headers: {
+      ...(init.viewerToken ? { authorization: `Bearer ${init.viewerToken}` } : {}),
+      ...(init.body === undefined ? {} : { "content-type": "application/json" }),
+    },
+    body: init.body === undefined ? undefined : JSON.stringify(init.body),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new ApiError(res.status, (await apiError(res)).message);
+  return (await res.json()) as T;
+}
+
+/** What a Share link's Passcode page shows; null when no link has this id (stopped, or never made). */
+export async function getShareLinkStatus(id: string) {
+  try {
+    return await viewerRequest<ShareLinkStatus>(`/share-links/${encodeURIComponent(id)}`);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+/** A Viewer token for the link when the Passcode is right. ApiError 401 wrong, 423 locked, 410 expired, 404 not active. */
+export function openShareLink(id: string, passcode: string) {
+  return viewerRequest<{ token: string; expires_at: string }>(`/share-links/${encodeURIComponent(id)}/viewer-token`, {
+    method: "POST",
+    body: { passcode },
+  });
+}
+
+/** The link's Journey. ApiError 401 when the token is no good for it, 410 expired, 404 not active. */
+export function getJourney(id: string, viewerToken: string) {
+  return viewerRequest<Journey>(`/share-links/${encodeURIComponent(id)}/journey`, { viewerToken });
 }
 
 export function listApplications(jobSeekerId: string) {

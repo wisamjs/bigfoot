@@ -79,7 +79,8 @@ export async function createShareLinkAction(_: CreateShareLinkState, form: FormD
   const passcodeProblem = passcodeError(passcode);
   if (labelError || passcodeProblem) return { error: null, labelError, passcodeError: passcodeProblem, created: null };
   try {
-    const created = await api.createShareLink(user.id, String(label), String(passcode));
+    // The name Viewers see ("Wisam shared a job search with you"), from the Google account.
+    const created = await api.createShareLink(user.id, String(label), String(passcode), user.name);
     refresh();
     return { error: null, created };
   } catch (error) {

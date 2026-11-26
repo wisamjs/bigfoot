@@ -68,5 +68,5 @@ describe("suggestPasscode", () => {
 });
 
 it("builds the path a Viewer opens", () => {
-  expect(shareLinkPath("k7Qm2x9PaB")).toBe("/s/k7Qm2x9PaB");
+  expect(shareLinkPath("k7Qm2x9PaB")).toBe("/journey/k7Qm2x9PaB");
 });

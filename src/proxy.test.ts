@@ -36,6 +36,10 @@ describe("proxy", () => {
     ]);
   });
 
+  it("leaves a Share link's pages to anyone, signed in or not (BIG-197)", () => {
+    for (const pattern of config.matcher) expect(pattern).not.toMatch(/^\/(journey|s)(\/|$)/);
+  });
+
   it.each(["/", "/sign-in", "/sign-up"])("redirects a job seeker with a valid session from %s to /dashboard", (path) => {
     const response = run(path, session);
     expect(response?.status).toBe(307);

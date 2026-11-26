@@ -11,14 +11,15 @@ from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
 from app import monitoring
-from app.routes import access_tokens, account, applications, health, interviews, share_links
+from app.routes import access_tokens, account, applications, health, interviews, journey, share_links
 from app.settings import Settings, get_settings
 
 DESCRIPTION = """\
 Bigfoot's data API: a job seeker's Applications and their Interviews, in Supabase Postgres.
 
-Every route but `/health` needs `Authorization: Bearer <token>`, and reads and writes only the data
-of the job seeker the token names. There are two kinds of token:
+Every route but `/health` and a Share link's status and Passcode check needs
+`Authorization: Bearer <token>`, and reads and writes only the data of the job seeker the token
+names. There are two kinds of token that name a job seeker:
 
 - **Access token** (`AccessToken`): a secret starting with `bigfoot_` that a job seeker creates on
   their Account page and gives a script, such as a cron job. It works on the Applications and
@@ -28,6 +29,10 @@ of the job seeker the token names. There are two kinds of token:
   seeker. The browser itself never calls this API. Web tokens work on every route, and are the only
   way to use the Account, Access tokens and Share links routes
   ([ADR 0001](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0001-fastapi-behind-nextjs-with-authjs.md)).
+
+A third kind, the **Viewer token** (`ViewerToken`), names a Share link instead: a Viewer gets one by
+typing the link's Passcode, and it reads only that link's Journey
+([ADR 0008](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0008-a-share-link-lets-a-viewer-read-a-journey.md)).
 
 Terms such as Application, Interview, Waiting, Sample Application and Access token are defined in
 [GLOSSARY.md](https://github.com/wisamjs/bigfoot/blob/main/GLOSSARY.md).
@@ -49,6 +54,11 @@ TAGS = [
         "name": "Share links",
         "description": "Private links that let a Viewer follow the job seeker's search, each with its own Passcode."
         " Web tokens only.",
+    },
+    {
+        "name": "Journey",
+        "description": "A Viewer's side of a Share link: its status and Passcode check need no token; the Journey"
+        " needs the Viewer token the Passcode check returns.",
     },
     {"name": "Applications", "description": "Roles the job seeker has applied to, each with its Interviews."},
     {"name": "Interviews", "description": "Conversations in a company's hiring process, one Application each."},
@@ -98,6 +108,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         openapi_url="/openapi.json" if docs else None,
     )
     app.state.settings = settings
-    for module in (health, account, access_tokens, share_links, applications, interviews):
+    for module in (health, account, access_tokens, share_links, journey, applications, interviews):
         app.include_router(module.router)
     return app

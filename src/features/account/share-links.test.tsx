@@ -81,7 +81,7 @@ describe("ShareLinks", () => {
     expect(within(first).getByText("Expires in 3 days")).toBeVisible();
     expect(within(second).getByText("Not opened yet")).toBeVisible();
     expect(within(second).getByRole("textbox", { name: "Link for Uncle Sami" })).toHaveValue(
-      `${window.location.origin}/s/Hw3tB8rLzQ`,
+      `${window.location.origin}/journey/Hw3tB8rLzQ`,
     );
     expect(screen.queryByRole("heading", { name: "They’ll see" })).not.toBeInTheDocument();
   });
@@ -126,7 +126,7 @@ describe("ShareLinks", () => {
     expect(form.get("label")).toBe("Mom & Dad");
     expect(form.get("passcode")).toBe("maple-river-42");
     const dialog = await screen.findByRole("dialog", { name: "Link ready for Mom & Dad" });
-    expect(within(dialog).getByRole("textbox", { name: "Link" })).toHaveValue(`${window.location.origin}/s/k7Qm2x9PaB`);
+    expect(within(dialog).getByRole("textbox", { name: "Link" })).toHaveValue(`${window.location.origin}/journey/k7Qm2x9PaB`);
     expect(within(dialog).getByRole("textbox", { name: "Passcode" })).toHaveValue("maple-river-42");
     expect(within(dialog).getByText("You’ll only see this passcode now.")).toBeVisible();
 
@@ -148,7 +148,7 @@ describe("ShareLinks", () => {
     expect(within(dialog).getByRole("button", { name: "Copied: Passcode" })).toBeVisible();
 
     await user.click(within(dialog).getByRole("button", { name: "Copy link: Link" }));
-    expect(await navigator.clipboard.readText()).toBe(`${window.location.origin}/s/k7Qm2x9PaB`);
+    expect(await navigator.clipboard.readText()).toBe(`${window.location.origin}/journey/k7Qm2x9PaB`);
   });
 
   it("checks both fields before sending, and focuses the first problem", async () => {
