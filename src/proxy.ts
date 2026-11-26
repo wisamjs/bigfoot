@@ -33,5 +33,5 @@ function redirectTo(path: string, request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/sign-in", "/sign-up", "/dashboard", "/applications/:path*", "/interviews/:path*", "/account"],
+  matcher: ["/", "/sign-in", "/sign-up", "/dashboard", "/applications/:path*", "/interviews/:path*", "/account", "/account/journey-preview"],
 };

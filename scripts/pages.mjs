@@ -300,6 +300,9 @@ export const PAGES = [
       },
     ],
   },
+  // The job seeker's own preview of their Journey (BIG-198), behind Google sign-in.
+  { path: "/account/journey-preview", signedIn: false, redirect: "/sign-in" },
+  { path: "/account/journey-preview", signedIn: true, expect: "This is what your Viewers see." },
   // A Share link (BIG-197), not behind Google sign-in. An id that was never a link, or a stopped one,
   // shows the same page and names nobody.
   { path: "/journey/[id]", signedIn: false, params: { id: "abcdefghij" }, expect: "This link isn’t active" },

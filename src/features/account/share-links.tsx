@@ -1,7 +1,8 @@
 "use client";
 
-import { Check, CircleCheck, Copy, EyeOff, Info, Link2, Plus } from "lucide-react";
-import { useActionState, useId, useState, useTransition, type ReactNode } from "react";
+import { Check, CircleCheck, Copy, Eye, EyeOff, Info, Link2, Plus } from "lucide-react";
+import Link from "next/link";
+import { useActionState, useId, useState, useTransition, type ReactElement, type ReactNode } from "react";
 import {
   changePasscodeAction,
   createShareLinkAction,
@@ -18,7 +19,7 @@ import { useIsClient } from "@/hooks/use-is-client";
 import { useToday } from "@/hooks/use-today";
 import { SHARE_LINK_LABEL_MAX, SHARE_LINKS_MAX } from "@/lib/account";
 import type { NewShareLink, ShareLink } from "@/lib/api";
-import { expiry, followingText, lastOpened, shareLinkPath, shortDate } from "@/lib/share-links";
+import { expiry, followingText, JOURNEY_PREVIEW_PATH, lastOpened, shareLinkPath, shortDate } from "@/lib/share-links";
 import { passcodeError, shareLinkLabelError } from "@/lib/validation";
 import { PasscodeField } from "./passcode-field";
 
@@ -41,10 +42,27 @@ function useShareUrl() {
 }
 
 /**
- * The Account page's Share links (GLOSSARY.md): create one with its Passcode, copy both from the
- * Link ready dialog, and copy, renew, change the Passcode of or stop sharing each one.
+ * "Preview Wisam’s Journey" (BIG-198): opens the job seeker's Journey as their Viewers see it, from
+ * the Share your progress card and the Link ready dialog. `firstName` is the job seeker's.
  */
-export function ShareLinks({ links }: { links: ShareLink[] }) {
+export function PreviewJourneyLink({ firstName }: { firstName: string }) {
+  return (
+    <Link
+      href={JOURNEY_PREVIEW_PATH}
+      className="touch-target inline-flex items-center gap-1.5 rounded-control text-sm font-medium text-fg-brand hover:text-fg-brand-strong hover:underline hover:underline-offset-4"
+    >
+      <Eye className="size-4 shrink-0" aria-hidden />
+      Preview {firstName}’s Journey
+    </Link>
+  );
+}
+
+/**
+ * The Account page's Share links (GLOSSARY.md): create one with its Passcode, copy both from the
+ * Link ready dialog, and copy, renew, change the Passcode of or stop sharing each one. `firstName`
+ * names the preview in the Link ready dialog.
+ */
+export function ShareLinks({ links, firstName }: { links: ShareLink[]; firstName: string }) {
   const [state, create, isCreating] = useActionState(createShareLinkAction, { error: null, created: null });
   // The id of a created link whose Link ready dialog the job seeker has closed.
   const [dismissed, setDismissed] = useState<string | null>(null);
@@ -97,7 +115,12 @@ export function ShareLinks({ links }: { links: ShareLink[] }) {
       )}
       <output className="sr-only">{announcement}</output>
 
-      <LinkReadyDialog link={ready} url={ready ? url(ready.id) : ""} onClose={() => setDismissed(ready?.id ?? null)} />
+      <LinkReadyDialog
+        link={ready}
+        url={ready ? url(ready.id) : ""}
+        firstName={firstName}
+        onClose={() => setDismissed(ready?.id ?? null)}
+      />
 
       <ChangePasscodeDialog link={changing} url={changing ? url(changing.id) : ""} onClose={() => setChanging(null)} />
 
@@ -449,11 +472,14 @@ function PasscodeShown({
   link,
   url,
   intro,
+  footer,
   onDone,
 }: {
   link: NewShareLink;
   url: string;
   intro: string;
+  /** Beside Done, on the left: the Link ready dialog's preview link. */
+  footer?: ReactElement;
   onDone: () => void;
 }) {
   return (
@@ -468,7 +494,8 @@ function PasscodeShown({
         Send it in a different message from the link, or say it on the phone. Lost it? Choose Change passcode on the
         link.
       </Notice>
-      <div className="flex justify-end border-t border-line pt-4">
+      <div className="flex flex-wrap items-center justify-end gap-3 border-t border-line pt-4">
+        {footer && <div className="mr-auto">{footer}</div>}
         <Button variant="secondary" onClick={onDone}>
           Done
         </Button>
@@ -490,10 +517,28 @@ function Notice({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /** The Link ready dialog: the new link and its Passcode, the one time it is shown. */
-function LinkReadyDialog({ link, url, onClose }: { link: NewShareLink | null; url: string; onClose: () => void }) {
+function LinkReadyDialog({
+  link,
+  url,
+  firstName,
+  onClose,
+}: {
+  link: NewShareLink | null;
+  url: string;
+  firstName: string;
+  onClose: () => void;
+}) {
   return (
     <Modal open={link !== null} onClose={onClose} title={link ? `Link ready for ${link.label}` : "Link ready"}>
-      {link && <PasscodeShown link={link} url={url} intro="Send the link and the passcode separately." onDone={onClose} />}
+      {link && (
+        <PasscodeShown
+          link={link}
+          url={url}
+          intro="Send the link and the passcode separately."
+          footer={<PreviewJourneyLink firstName={firstName} />}
+          onDone={onClose}
+        />
+      )}
     </Modal>
   );
 }

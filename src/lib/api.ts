@@ -215,6 +215,14 @@ export function stopSharing(jobSeekerId: string, id: string) {
   return request<void>(jobSeekerId, `/me/share-links/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
+/**
+ * The Journey every Share link of the job seeker shows, for their own preview (BIG-198). The same
+ * projection a Viewer reads, but it marks no link as opened, and `shared_by` is null.
+ */
+export function previewJourney(jobSeekerId: string) {
+  return request<Journey>(jobSeekerId, "/me/journey");
+}
+
 // A Viewer's side of a Share link (docs/adr/0008). No job seeker signs these requests: the status
 // and Passcode check need no token, and the Journey takes the Viewer token the check returned.
 

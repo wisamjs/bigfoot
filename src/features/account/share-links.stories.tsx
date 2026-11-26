@@ -50,7 +50,7 @@ const uncleSami: ShareLink = {
 
 const meta = {
   component: ShareLinks,
-  args: { links: [momAndDad, uncleSami] },
+  args: { links: [momAndDad, uncleSami], firstName: "Wisam" },
   decorators: [(Story) => <div className="max-w-2xl">{Story()}</div>],
 } satisfies Meta<typeof ShareLinks>;
 
@@ -115,6 +115,10 @@ export const Create: Story = {
     const dialog = await screen.findByRole("dialog", { name: "Link ready for Mom & Dad" });
     await expect(within(dialog).getByRole("textbox", { name: "Passcode" })).toHaveValue("maple-river-otter-42");
     await expect(within(dialog).getByText("You’ll only see this passcode now.")).toBeVisible();
+    await expect(within(dialog).getByRole("link", { name: "Preview Wisam’s Journey" })).toHaveAttribute(
+      "href",
+      "/account/journey-preview",
+    );
   },
 };
 

@@ -33,6 +33,7 @@ describe("proxy", () => {
       "/applications/:path*",
       "/interviews/:path*",
       "/account",
+      "/account/journey-preview",
     ]);
   });
 
@@ -69,7 +70,7 @@ describe("proxy", () => {
     expect(run("/sign-in", session, "POST")).toBeUndefined();
   });
 
-  it.each(["/dashboard?month=2026-12&day=2026-12-04", "/applications/a1/interviews/i1", "/account"])(
+  it.each(["/dashboard?month=2026-12&day=2026-12-04", "/applications/a1/interviews/i1", "/account", "/account/journey-preview"])(
     "sends a signed-out visitor from %s to /sign-in, with the page as next",
     (path) => {
       const response = run(path, null);

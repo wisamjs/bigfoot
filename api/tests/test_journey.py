@@ -294,3 +294,52 @@ def test_stopping_a_link_deletes_its_wrong_tries(settings, client, token):
     open_link(client, link["id"], "wrong-passcode")
     client.delete(f"/me/share-links/{link['id']}", headers=token())
     assert query(settings, "select count(*) from share_link_wrong_tries") == [(0,)]
+
+
+# The job seeker's own preview (BIG-198)
+
+
+def preview(client, headers):
+    return client.get("/me/journey", headers=headers)
+
+
+def test_the_preview_is_the_journey_a_viewer_reads_without_the_name(client, token):
+    me = token()
+    interviewing = application(client, me, "Tilth Agritech")
+    interview(client, me, interviewing, PAST)
+    interview(client, me, interviewing, SOON)
+    application(client, me, "Cobalt Genomics", status="done", outcome="offer")
+    rejected = application(client, me, "Rejected Co", status="done", outcome="rejected")
+    interview(client, me, rejected, PAST)
+    link = create(client, me)
+
+    viewed = journey(client, link["id"], viewer_headers(client, link["id"])).json()
+    res = preview(client, me)
+
+    assert res.status_code == 200
+    assert res.json() == {**viewed, "shared_by": None}
+
+
+def test_the_preview_works_with_no_share_links(client, token):
+    me = token()
+    application(client, me, "Tilth Agritech")
+    body = preview(client, me).json()
+    assert [a["company"] for a in body["applications"]] == ["Tilth Agritech"]
+
+
+def test_the_preview_shows_only_the_signed_in_job_seeker(client, token):
+    application(client, token("bob"), "Bob's Application")
+    application(client, token(), "Alice's Application")
+    assert [a["company"] for a in preview(client, token()).json()["applications"]] == ["Alice's Application"]
+
+
+def test_the_preview_does_not_count_as_opening_a_link(settings, client, token):
+    create(client, token())
+    assert preview(client, token()).status_code == 200
+    assert query(settings, "select last_opened_at from share_links") == [(None,)]
+
+
+def test_only_a_web_token_reads_the_preview(client, token):
+    secret = client.post("/me/access-tokens", json={"name": "Cron"}, headers=token()).json()["token"]
+    assert preview(client, {}).status_code == 401
+    assert preview(client, {"Authorization": f"Bearer {secret}"}).status_code == 403

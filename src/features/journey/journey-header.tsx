@@ -7,9 +7,9 @@ import { Wordmark } from "@/features/shell/wordmark";
 /**
  * The Journey's header (BIG-197): Bigfoot, "View only", who shared it, and Lock, which forgets the
  * Viewer's cookie and goes back to the Passcode page. On a phone, "View only · shared by …" moves to
- * a band under the bar.
+ * a band under the bar. The job seeker's own preview (BIG-198) has no link `id`, so no Lock.
  */
-export function JourneyHeader({ id, sharedBy }: { id: string; sharedBy: string | null }) {
+export function JourneyHeader({ id, sharedBy }: { id?: string; sharedBy: string | null }) {
   const sharedByText = sharedBy ? `Shared by ${sharedBy}` : null;
   return (
     <header className="border-b border-line bg-card">
@@ -21,12 +21,14 @@ export function JourneyHeader({ id, sharedBy }: { id: string; sharedBy: string |
         </span>
         <span className="flex-1" />
         {sharedByText && <span className="hidden text-sm text-body sm:inline">{sharedByText}</span>}
-        <form action={lockAction.bind(null, id)}>
-          <Button type="submit" variant="secondary">
-            <Lock className="size-4" aria-hidden />
-            Lock
-          </Button>
-        </form>
+        {id && (
+          <form action={lockAction.bind(null, id)}>
+            <Button type="submit" variant="secondary">
+              <Lock className="size-4" aria-hidden />
+              Lock
+            </Button>
+          </form>
+        )}
       </Container>
       <p className="m-0 flex items-center gap-2 border-t border-line bg-card-strong px-4 py-2 text-sm font-medium text-heading sm:hidden">
         <Eye className="size-4" aria-hidden />

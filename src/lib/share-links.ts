@@ -12,6 +12,9 @@ export function shareLinkPath(id: string) {
   return `/journey/${id}`;
 }
 
+/** Where the job seeker previews their own Journey as their Viewers see it (BIG-198). */
+export const JOURNEY_PREVIEW_PATH = "/account/journey-preview";
+
 /** "Nov 20", in the viewer's time zone. */
 export function shortDate(at: string | Date) {
   return dayFormat.format(new Date(at));

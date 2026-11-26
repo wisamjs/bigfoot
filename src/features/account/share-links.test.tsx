@@ -58,7 +58,7 @@ afterEach(() => {
 
 describe("ShareLinks", () => {
   it("with no links, says what a Viewer sees and what stays private, and offers the first link", () => {
-    render(<ShareLinks links={[]} />);
+    render(<ShareLinks firstName="Wisam" links={[]} />);
     expect(screen.getByRole("heading", { name: "They’ll see" })).toBeVisible();
     expect(screen.getByText("Interview dates and times in their own time zone")).toBeVisible();
     expect(screen.getByText("Applications that ended without an Offer")).toBeVisible();
@@ -70,6 +70,7 @@ describe("ShareLinks", () => {
   it("lists each link with its dates, when it was opened and when it expires", () => {
     render(
       <ShareLinks
+        firstName="Wisam"
         links={[link({ last_opened_at: at(-6 * 60 * 60 * 1000) }), link({ id: "Hw3tB8rLzQ", label: "Uncle Sami" })]}
       />,
     );
@@ -87,12 +88,12 @@ describe("ShareLinks", () => {
   });
 
   it("shows the time a link stops on its last day, in the warning colour", () => {
-    render(<ShareLinks links={[link({ expires_at: at(2 * 60 * 60 * 1000) })]} />);
+    render(<ShareLinks firstName="Wisam" links={[link({ expires_at: at(2 * 60 * 60 * 1000) })]} />);
     expect(screen.getByText(/^Expires today, /)).toHaveClass("text-fg-warning");
   });
 
   it("mutes an expired link and keeps Copy link, Renew and Stop sharing", () => {
-    render(<ShareLinks links={[link({ expires_at: at(-2 * DAY), expired: true })]} />);
+    render(<ShareLinks firstName="Wisam" links={[link({ expires_at: at(-2 * DAY), expired: true })]} />);
     expect(screen.getByText(/^Expired /)).toBeVisible();
     expect(screen.getByRole("listitem")).toHaveClass("border-dashed");
     expect(screen.getByText(/no one can follow along right now/)).toBeVisible();
@@ -103,13 +104,13 @@ describe("ShareLinks", () => {
 
   it("at 10 links, says so instead of offering another", () => {
     const links = Array.from({ length: 10 }, (_, n) => link({ id: `link${String(n).padStart(6, "0")}`, label: `Cousin ${n}` }));
-    render(<ShareLinks links={links} />);
+    render(<ShareLinks firstName="Wisam" links={links} />);
     expect(screen.getByText("You can share with up to 10 people. Stop sharing one to add another.")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Share with someone else" })).not.toBeInTheDocument();
   });
 
   it("opens the form for someone else under the links", async () => {
-    render(<ShareLinks links={[link()]} />);
+    render(<ShareLinks firstName="Wisam" links={[link()]} />);
     const add = screen.getByRole("button", { name: "Share with someone else" });
     expect(add).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("textbox", { name: "Who it’s for" })).not.toBeInTheDocument();
@@ -119,7 +120,7 @@ describe("ShareLinks", () => {
   });
 
   it("creates a link and shows it with its Passcode, once, until Done", async () => {
-    render(<ShareLinks links={[]} />);
+    render(<ShareLinks firstName="Wisam" links={[]} />);
     await fillAndCreate();
 
     const form = vi.mocked(createShareLinkAction).mock.calls[0][1];
@@ -137,7 +138,7 @@ describe("ShareLinks", () => {
 
   it("copies the link and the Passcode from the Link ready dialog", async () => {
     const user = userEvent.setup();
-    render(<ShareLinks links={[]} />);
+    render(<ShareLinks firstName="Wisam" links={[]} />);
     await user.type(screen.getByRole("textbox", { name: "Who it’s for" }), "Mom & Dad");
     await user.type(screen.getByLabelText("Passcode"), "maple-river-42");
     await user.click(screen.getByRole("button", { name: "Create link" }));
@@ -152,7 +153,7 @@ describe("ShareLinks", () => {
   });
 
   it("checks both fields before sending, and focuses the first problem", async () => {
-    render(<ShareLinks links={[]} />);
+    render(<ShareLinks firstName="Wisam" links={[]} />);
     await userEvent.type(screen.getByLabelText("Passcode"), "short");
     await userEvent.click(screen.getByRole("button", { name: "Create link" }));
 
@@ -173,14 +174,14 @@ describe("ShareLinks", () => {
       passcodeError: "Use only characters you can see.",
       created: null,
     });
-    render(<ShareLinks links={[]} />);
+    render(<ShareLinks firstName="Wisam" links={[]} />);
     await fillAndCreate();
     expect(await screen.findByRole("alert")).toHaveTextContent("You can share with up to 10 people.");
     expect(screen.getByLabelText("Passcode")).toHaveAttribute("aria-invalid", "true");
   });
 
   it("suggests a Passcode and shows it", async () => {
-    render(<ShareLinks links={[]} />);
+    render(<ShareLinks firstName="Wisam" links={[]} />);
     await userEvent.click(screen.getByRole("button", { name: "Suggest" }));
     const input = screen.getByLabelText("Passcode");
     expect((input as HTMLInputElement).value).toMatch(/^[a-z]+-[a-z]+-[a-z]+-\d\d$/);
@@ -189,7 +190,7 @@ describe("ShareLinks", () => {
   });
 
   it("renews a link and announces it", async () => {
-    render(<ShareLinks links={[link({ expired: true, expires_at: at(-DAY) })]} />);
+    render(<ShareLinks firstName="Wisam" links={[link({ expired: true, expires_at: at(-DAY) })]} />);
     await userEvent.click(screen.getByRole("button", { name: "Renew the link for Mom & Dad" }));
     expect(renewShareLinkAction).toHaveBeenCalledWith("k7Qm2x9PaB");
     expect(await screen.findByRole("status")).toHaveTextContent("Renewed the link for Mom & Dad.");
@@ -197,13 +198,13 @@ describe("ShareLinks", () => {
 
   it("says why renewing failed", async () => {
     vi.mocked(renewShareLinkAction).mockResolvedValue({ ok: false, error: "The link was not renewed." });
-    render(<ShareLinks links={[link()]} />);
+    render(<ShareLinks firstName="Wisam" links={[link()]} />);
     await userEvent.click(screen.getByRole("button", { name: "Renew the link for Mom & Dad" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("The link was not renewed.");
   });
 
   it("changes the Passcode and shows the new one once", async () => {
-    render(<ShareLinks links={[link()]} />);
+    render(<ShareLinks firstName="Wisam" links={[link()]} />);
     await userEvent.click(screen.getByRole("button", { name: "Change passcode for Mom & Dad" }));
     const dialog = await screen.findByRole("dialog", { name: "Change passcode for Mom & Dad" });
 
@@ -223,7 +224,7 @@ describe("ShareLinks", () => {
 
   it("keeps the Change passcode dialog open and says why when saving fails", async () => {
     vi.mocked(changePasscodeAction).mockResolvedValue({ ok: false, error: "The passcode was not changed." });
-    render(<ShareLinks links={[link()]} />);
+    render(<ShareLinks firstName="Wisam" links={[link()]} />);
     await userEvent.click(screen.getByRole("button", { name: "Change passcode for Mom & Dad" }));
     const dialog = await screen.findByRole("dialog", { name: "Change passcode for Mom & Dad" });
     await userEvent.type(within(dialog).getByLabelText("New passcode"), "otter-lake-77");
@@ -235,7 +236,7 @@ describe("ShareLinks", () => {
   });
 
   it("asks before stopping sharing, with Cancel focused, then stops it", async () => {
-    render(<ShareLinks links={[link()]} />);
+    render(<ShareLinks firstName="Wisam" links={[link()]} />);
     await userEvent.click(screen.getByRole("button", { name: "Stop sharing with Mom & Dad" }));
     const dialog = await screen.findByRole("dialog", { name: "Stop sharing with Mom & Dad?" });
     expect(within(dialog).getByText("The link stops working straight away. You can’t undo this.")).toBeVisible();
@@ -249,7 +250,7 @@ describe("ShareLinks", () => {
 
   it("keeps the Stop sharing dialog open and says why when stopping fails", async () => {
     vi.mocked(stopSharingAction).mockResolvedValue({ ok: false, error: "The link still works." });
-    render(<ShareLinks links={[link()]} />);
+    render(<ShareLinks firstName="Wisam" links={[link()]} />);
     await userEvent.click(screen.getByRole("button", { name: "Stop sharing with Mom & Dad" }));
     const dialog = await screen.findByRole("dialog", { name: "Stop sharing with Mom & Dad?" });
     await userEvent.click(within(dialog).getByRole("button", { name: "Stop sharing" }));
@@ -258,7 +259,7 @@ describe("ShareLinks", () => {
 
   it.each(XSS_TEXT)("%j is sent as typed and shows as text on the card and in every dialog", async (payload) => {
     vi.mocked(createShareLinkAction).mockResolvedValue({ error: null, created: { ...created, label: payload } });
-    render(<ShareLinks links={[link({ label: payload })]} />);
+    render(<ShareLinks firstName="Wisam" links={[link({ label: payload })]} />);
     await userEvent.click(screen.getByRole("button", { name: "Share with someone else" }));
     await userEvent.click(screen.getByRole("textbox", { name: "Who it’s for" }));
     await userEvent.paste(payload);
