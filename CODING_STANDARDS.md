@@ -29,6 +29,20 @@ Read [`docs/guidelines/mobile.md`](docs/guidelines/mobile.md). `npm run a11y` fa
 targets under 44×44px and on text cut off by an ellipsis. A PR that changes UI attaches
 `npm run capture -- <page> --width 375` images (light and dark) for each page or state it touches.
 
+## A new colour reuses the palette
+
+`src/app/globals.css` has two tiers (the colour tokens in
+`.claude/skills/typeui-design-system/`): base scales, the only hex values, and roles that point at them. `npm run tokens` fails a hex value
+outside the base block, a repeated base step and an unused token. Review judges the rest:
+
+- A change that needs a colour uses an existing role. Failing that, it points an existing or new
+  role at an existing base step; a new base step needs a reason no step on its scale works.
+- A new role names a job other components could share (`skeleton`, `line-danger`), never one
+  component (`line-card`, `dashboard-border`). A role that differs from another only in one
+  component's shade is a defect: reuse the other role.
+- A dark-mode change points the role at another base step in `@tokens dark`; it never adds a
+  colour of its own.
+
 ## Green CI before approval
 
 Approve only when the PR's latest `CI` and `PR naming` runs succeeded. A cancelled or skipped

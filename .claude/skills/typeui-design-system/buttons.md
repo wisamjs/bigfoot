@@ -8,7 +8,7 @@
 - **Border:** 2px solid (use a transparent border so the gradient-border recipe can sit on top; outline variants keep their visible 2px border)
 - **Shadow:** shadow-xs
 - **Glint effect:** Every button except ghost and disabled gets a combined box-shadow that layers the base shadow with an inset top-edge highlight and a subtle outer color glow:
-  - `var(--shadow-xs), inset var(--color-1-400) 0 6px 0px -5px, var(--color-1-700) 0 4px 10px -5px`
+  - `var(--shadow-xs), inset var(--glint-highlight) 0 6px 0px -5px, var(--glint-shadow) 0 4px 10px -5px`
 - **Font weight:** 500 (medium)
 - **Font:** Allo
 - **Text shadow:** subtle wine-toned text shadow for filled gradient buttons — `1px 1px 1px rgba(42,10,29,0.25)` (use a tone from the brand palette, never pure black)
@@ -51,23 +51,23 @@ The primary/brand button uses a layered two-gradient fill — a solid-feeling ca
 - **Border:** 2px transparent with the brand gradient rim
 - **Text:** white
 - **Hover:** drop the resting wine glow and reduce opacity to ~80%
-- **Focus ring:** 4px, brand-medium color
+- **Focus ring:** 4px, line-brand-subtle color
 - **Glint:** yes
 
 ### Secondary
-- **Background:** neutral-secondary-medium
-- **Border:** border-default-medium
+- **Background:** card
+- **Border:** line-medium
 - **Text:** body color
-- **Hover:** neutral-tertiary-medium background, heading text color
-- **Focus ring:** 4px, neutral-tertiary color
+- **Hover:** card-strong background, heading text color
+- **Focus ring:** 4px, card-strong color
 - **Glint:** yes
 
 ### Tertiary
-- **Background:** neutral-primary-soft
-- **Border:** border-default
+- **Background:** surface
+- **Border:** line
 - **Text:** body color
-- **Hover:** neutral-secondary-medium background, heading text color
-- **Focus ring:** 4px, neutral-tertiary-soft color
+- **Hover:** card background, heading text color
+- **Focus ring:** 4px, card color
 - **Glint:** yes
 
 ### Success
@@ -99,21 +99,21 @@ The primary/brand button uses a layered two-gradient fill — a solid-feeling ca
 - **Border:** transparent
 - **Text:** white
 - **Hover:** dark-strong background
-- **Focus ring:** 4px, neutral-tertiary color
+- **Focus ring:** 4px, card-strong color
 - **Glint:** yes
 
 ### Ghost (NO shadow, NO glint)
 - **Background:** transparent
 - **Border:** transparent
 - **Text:** heading color
-- **Hover:** neutral-secondary-medium background
-- **Focus ring:** 4px, neutral-tertiary color
+- **Hover:** card background
+- **Focus ring:** 4px, card-strong color
 - **No shadow, no glint effect**
 
 ### Disabled (NO shadow, NO glint)
 - **Background:** disabled token
-- **Border:** border-default-medium
-- **Text:** fg-disabled color
+- **Border:** line-medium
+- **Text:** body-subtle color
 - **Cursor:** not-allowed
 - **No hover, no focus, no shadow, no glint**
 

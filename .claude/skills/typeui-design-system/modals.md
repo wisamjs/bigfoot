@@ -11,7 +11,7 @@
 - Backdrop blur: small amount
 
 ### Content Container
-- Background: neutral-primary
+- Background: surface-white
 - Radius: 24px (base)
 - Shadow: shadow-xl
 - Padding: 20px
@@ -19,7 +19,7 @@
 ## Anatomy
 
 ### Header
-- Bottom border: border-default
+- Bottom border: line
 - Top corners rounded (24px)
 - Title: 20px, bold weight, heading color
 - Close button: Ghost variant from `buttons.md`, 6px padding
@@ -30,7 +30,7 @@
 - Text: 16px, 1.625 line-height, body color
 
 ### Footer
-- Top border: border-default
+- Top border: line
 - Bottom corners rounded (24px)
 
 ## Variants
@@ -49,8 +49,8 @@ Body contains inputs following `inputs.md`. Vertical spacing between form elemen
 ## Rules
 
 - Backdrop covers full screen with fixed positioning
-- Content: neutral-primary background, 24px radius, shadow-xl
-- Header/Footer separated by border-default borders
+- Content: surface-white background, 24px radius, shadow-xl
+- Header/Footer separated by line borders
 - Close button must be present and functional
 - Accessibility: `role="dialog"`, implement focus trap in code
 - Dark mode automatic via token system

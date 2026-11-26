@@ -571,7 +571,7 @@ function PhoneAgendaItem({
   const at = new Date(interview.at);
   const days = calendarDaysBetween(now, at);
   const relative = relativeDays(days);
-  const tile = soonest ? "bg-brand text-on-brand" : past ? "bg-card-strong text-body" : "border border-line-card text-heading";
+  const tile = soonest ? "bg-brand text-on-brand" : past ? "bg-card-strong text-body" : "border border-line-brand-subtle text-heading";
   return (
     <li>
       <Link

@@ -14,7 +14,7 @@
 Every icon shape uses this candy treatment by default so all icon containers stay consistent. Described in values/tokens so it can be reproduced in any stack — never couple it to a framework.
 
 - **Fill:** soft brand gradient — a linear gradient at ~145deg from `brand-softer` to `brand-soft`
-- **Border guard:** 1px solid `border-brand-subtle`, framing the shape on all sides (the "guard" ring that outlines the icon)
+- **Border guard:** 1px solid `line-brand-subtle`, framing the shape on all sides (the "guard" ring that outlines the icon)
 - **Inner highlight:** a subtle inset top sheen — `inset 0 1px 0 rgba(255,255,255,0.5)` (toned from the white token, never a hard line or pure-black shadow)
 - **Icon color:** `fg-brand-strong`, centered on both axes
 - **Radius:** follow the rounded-square scale above (24px for MD/LG/XL, 8px for XS/SM), or fully rounded (9999px) for the circle variant
@@ -38,18 +38,18 @@ All variants keep the Default Shape Treatment (soft gradient fill, 1px guard bor
 ### Brand
 - Shape: circle or rounded square
 - Fill: gradient from brand-softer to brand-soft
-- Guard border: border-brand-subtle
+- Guard border: line-brand-subtle
 - Icon color: fg-brand-strong
 
 ### Gray
 - Shape: circle
-- Background: neutral-secondary-soft
+- Background: surface
 - Icon color: body
 
 ### Danger
 - Shape: circle
 - Background: danger-soft
-- Icon color: fg-danger-strong
+- Icon color: fg-danger
 
 ### Success
 - Shape: circle

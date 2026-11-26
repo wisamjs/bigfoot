@@ -6,15 +6,15 @@
 
 - **Display:** block, full width
 - **Radius:** 8px, the `--radius-control` token. This overrides Candy's 24px (see `src/app/globals.css`): fields sit with buttons and nested surfaces, not with cards
-- **Border:** 1px, border-default-medium
-- **Background:** neutral-primary — inputs use a contrasting token (the clean white-tinted neutral) against the pink surface/card they sit on, so fields stay clearly distinct from their background
+- **Border:** 1px, line-medium
+- **Background:** surface-white — inputs use a contrasting token (the clean white-tinted neutral) against the pink surface/card they sit on, so fields stay clearly distinct from their background
 - **Shadow:** shadow-xs
 - **Font:** 14px, heading color
 - **Padding:** 12px horizontal, 10px vertical
 - **Placeholder:** body color
 - **Transition:** all properties, 200ms
 
-> Contrast rule: the input background must always differ from the surface it sits on. On the pink section surface and on pink cards, use neutral-primary so the field reads as a crisp, contrasting control. All input colors are taken from color tokens — never hardcode.
+> Contrast rule: the input background must always differ from the surface it sits on. On the pink section surface and on pink cards, use surface-white so the field reads as a crisp, contrasting control. All input colors are taken from color tokens — never hardcode.
 
 ## Label
 
@@ -26,15 +26,15 @@
 ## States
 
 ### Default
-- Border: border-default-medium
-- Background: neutral-primary
+- Border: line-medium
+- Background: surface-white
 
 ### Hover
-- Border: border-default-strong
+- Border: line-medium
 
 ### Focus
 - No outline
-- Border: border-brand
+- Border: line-brand
 - Ring: 1px, brand color
 
 ### Success
@@ -42,12 +42,12 @@
 - Focus ring: 1px, success color
 
 ### Error / Danger
-- Border: border-danger
+- Border: line-danger
 - Focus ring: 1px, danger color
 
 ### Disabled
 - Background: disabled
-- Text: fg-disabled
+- Text: body-subtle
 - Cursor: not-allowed
 
 ## Input with Icons

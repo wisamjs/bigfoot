@@ -38,7 +38,7 @@ export function JourneyCalendar({
   const byDay = groupByDay(interviews, (d) => d.interview.at);
 
   return (
-    <section aria-labelledby="journey-interviews-title" className="card flex min-w-0 flex-col border-line-card">
+    <section aria-labelledby="journey-interviews-title" className="card flex min-w-0 flex-col border-line-brand-subtle">
       <div className="flex items-center justify-between gap-3 px-4 py-5 sm:px-6">
         <h2 id="journey-interviews-title" className="m-0 text-xl font-bold leading-[1.25] text-heading">
           Interviews
@@ -192,7 +192,7 @@ function UpcomingItem({ item: { application, interview }, now }: { item: DatedJo
     <li className="flex items-center gap-3.5 rounded-control px-3 py-2.5">
       <time
         dateTime={interview.at}
-        className="flex w-12 flex-none flex-col items-center rounded-control border border-line-card py-1.5 text-heading"
+        className="flex w-12 flex-none flex-col items-center rounded-control border border-line-brand-subtle py-1.5 text-heading"
       >
         <span className="text-[11px] font-bold uppercase tracking-[0.06em]">{shortMonthFormat.format(at)}</span>
         <span className="text-xl font-bold leading-[1.1]">{at.getDate()}</span>

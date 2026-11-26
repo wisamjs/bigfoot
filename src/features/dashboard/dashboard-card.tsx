@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 /**
  * One of the dashboard's two cards, Applications and Interviews (BIG-173): a section named by its
  * h2, with the card's controls on the right of the heading and its content below, edge to edge,
- * framed in the brand-tinted --line-card border the Next up card shares (BIG-195).
+ * framed in the brand-tinted --line-brand-subtle border the Next up card shares (BIG-195).
  */
 export function DashboardCard({
   id,
@@ -19,7 +19,7 @@ export function DashboardCard({
   className?: string;
 }) {
   return (
-    <section aria-labelledby={id} className={`card flex min-w-0 flex-col border-line-card ${className}`}>
+    <section aria-labelledby={id} className={`card flex min-w-0 flex-col border-line-brand-subtle ${className}`}>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 py-5 sm:px-6">
         <h2 id={id} className="m-0 text-xl font-bold leading-[1.25] text-heading">
           {title}

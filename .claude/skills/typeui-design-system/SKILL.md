@@ -30,7 +30,7 @@ A playful candy-shop interface built on a deep wine + bubblegum-pink palette —
 
 - **Brand color precedence:** When `brand.md` is available, color tokens from `brand.md` overwrite same-name tokens in `colors.md`.
 
-- **Tokens are AGNOSTIC, NOT literal class names:** The tokens defined in the `.md` files (like `neutral-primary-soft`, `heading`, `border-default`) are abstract design system tokens, NOT literal style classes or utilities. Do not assume a token maps to a ready-made class name — map each token to its value yourself in whatever styling layer you are using. The system is intentionally stack- and framework-independent.
+- **Tokens are AGNOSTIC, NOT literal class names:** The tokens defined in the `.md` files (like `surface`, `heading`, `line`) are abstract design system tokens, NOT literal style classes or utilities. Do not assume a token maps to a ready-made class name — map each token to its value yourself in whatever styling layer you are using. The system is intentionally stack- and framework-independent.
 
 - **Cross-reference modules.** A card containing buttons must satisfy both `cards.md` AND `buttons.md`.
 - **Symmetric section spacing.** Sections must have the same spacing on top and bottom between them — the vertical space above a section equals the vertical space below it, keeping a consistent rhythm down the whole page.

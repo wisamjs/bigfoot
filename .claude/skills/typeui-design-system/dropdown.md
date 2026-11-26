@@ -10,8 +10,8 @@
 - Color: inherits from trigger button
 
 ### Menu Container
-- Background: neutral-primary-soft
-- Border: 1px, border-default
+- Background: surface
+- Border: 1px, line
 - Radius: 24px (base)
 - Shadow: shadow-lg
 - Z-index: elevated above content
@@ -24,7 +24,7 @@
 - Layout: inline-flex, vertically centered, full width
 - Padding: 8px horizontal, 8px vertical
 - Radius: 8px (default)
-- Hover: neutral-tertiary-medium background, heading text
+- Hover: card-strong background, heading text
 - Transition: colors, 150ms
 
 ## Trigger Sizes
@@ -47,11 +47,11 @@
 - Menu width: 176px, items have 8px radius
 
 ### With Divider
-- Top border (border-default) between child groups, skip first group
+- Top border (line) between child groups, skip first group
 
 ### With Header
 - Header padding: 16px horizontal, 12px vertical
-- Bottom border: border-default
+- Bottom border: line
 - Name: heading color, 14px, semibold weight
 - Email: body-subtle color, 14px, truncated
 
@@ -75,6 +75,6 @@
 | State | Appearance |
 |---|---|
 | Focused trigger | no outline, 2px brand ring |
-| Hover item | neutral-tertiary-medium background, heading text |
-| Active/open item | neutral-tertiary-soft background, heading text |
-| Disabled item | fg-disabled text, not-allowed cursor, no pointer events |
+| Hover item | card-strong background, heading text |
+| Active/open item | card background, heading text |
+| Disabled item | body-subtle text, not-allowed cursor, no pointer events |
