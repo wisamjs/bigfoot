@@ -77,7 +77,7 @@ describe("journeyCounts", () => {
       app({ interviews: [interview(at(10, 10)), interview(at(10, 19)), interview(at(10, 30)), interview(at(11, 20))] }),
       app({ is_waiting: true, waiting_since: "2026-11-02" }),
     ];
-    expect(journeyCounts(apps, NOW).map((c) => [c.value, c.label])).toEqual([
+    expect(journeyCounts({ applications: apps, other_completed_interviews: [] }, NOW).map((c) => [c.value, c.label])).toEqual([
       [1, "Offer to decide"],
       [2, "Interviews in the next 2 weeks"],
       [2, "Interviews completed this month"],
@@ -85,8 +85,13 @@ describe("journeyCounts", () => {
     ]);
   });
 
+  it("counts the other Done Applications' Interviews completed this month too", () => {
+    const journey = { applications: [app({ interviews: [interview(at(10, 10))] })], other_completed_interviews: [at(9, 28), at(10, 4), at(10, 12)] };
+    expect(journeyCounts(journey, NOW).find((c) => c.id === "completed")?.value).toBe(3);
+  });
+
   it("says one or none in the singular or plural", () => {
-    expect(journeyCounts([app({ interviews: [interview(at(10, 19))] })], NOW).map((c) => c.label)).toEqual([
+    expect(journeyCounts({ applications: [app({ interviews: [interview(at(10, 19))] })], other_completed_interviews: [] }, NOW).map((c) => c.label)).toEqual([
       "Offers to decide",
       "Interview in the next 2 weeks",
       "Interviews completed this month",

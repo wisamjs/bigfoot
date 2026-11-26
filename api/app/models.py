@@ -573,7 +573,8 @@ class JourneyApplication(BaseModel):
 
 class Journey(BaseModel):
     """What a Viewer of a Share link sees (GLOSSARY.md, Journey; docs/adr/0008): the job seeker's In
-    Progress Applications and Offers, and nothing the job seeker keeps private."""
+    Progress Applications and Offers, when their other Done Applications' Interviews happened, and
+    nothing the job seeker keeps private."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -582,6 +583,14 @@ class Journey(BaseModel):
         examples=["Wisam Zaghal"],
     )
     applications: list[JourneyApplication] = Field(description="Oldest applied first.")
+    other_completed_interviews: list[datetime] = Field(
+        description=(
+            "When each completed Interview of the other Done Applications, those without an Offer, happened, oldest "
+            "first: for the count of Interviews completed this month (BIG-206). Nothing else of those Applications "
+            "is sent."
+        ),
+        examples=[["2026-11-12T15:00:00Z"]],
+    )
 
 
 class Onboarding(BaseModel):

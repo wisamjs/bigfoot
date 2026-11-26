@@ -10,7 +10,7 @@ PAST = (datetime.now(UTC) - timedelta(days=3)).isoformat()
 SOON = (datetime.now(UTC) + timedelta(days=1)).isoformat()
 LATER = (datetime.now(UTC) + timedelta(days=9)).isoformat()
 
-JOURNEY_KEYS = {"shared_by", "applications"}
+JOURNEY_KEYS = {"shared_by", "applications", "other_completed_interviews"}
 APPLICATION_KEYS = {"company", "title", "applied_on", "offer", "is_waiting", "waiting_since", "interviews"}
 INTERVIEW_KEYS = {"category", "title", "at", "completed"}
 
@@ -179,6 +179,25 @@ def test_the_journey_has_only_in_progress_applications_and_offers_with_exactly_t
     assert (tilth["offer"], tilth["is_waiting"], tilth["waiting_since"]) == (False, False, None)
     assert (cobalt["offer"], cobalt["is_waiting"]) == (True, False)
     assert (fernway["offer"], fernway["is_waiting"], fernway["waiting_since"]) == (False, True, "2026-11-18")
+
+
+def test_other_done_applications_give_only_when_their_completed_interviews_happened(client, token):
+    me = token()
+    rejected = application(client, me, "Rejected Co", status="done", outcome="rejected")
+    interview(client, me, rejected, PAST, title="Secret Loop")
+    interview(client, me, rejected, SOON, title="Cancelled Loop")
+    offer = application(client, me, "Cobalt Genomics", status="done", outcome="offer")
+    interview(client, me, offer, PAST)
+    open_app = application(client, me, "Tilth Agritech")
+    interview(client, me, open_app, PAST)
+    link = create(client, me)
+
+    res = journey(client, link["id"], viewer_headers(client, link["id"]))
+
+    other = res.json()["other_completed_interviews"]
+    assert [datetime.fromisoformat(at) for at in other] == [datetime.fromisoformat(PAST)]
+    for private in ("Rejected Co", "Secret Loop", "Cancelled Loop"):
+        assert private not in res.text
 
 
 def test_waiting_since_is_the_last_completed_interview(client, token):

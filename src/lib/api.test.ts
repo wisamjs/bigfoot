@@ -64,7 +64,7 @@ describe("a Viewer's requests (docs/adr/0008)", () => {
     expect(JSON.parse(init.body)).toEqual({ passcode: "maple-river-42" });
     expect(init.headers.authorization).toBeUndefined();
 
-    fetchMock.mockImplementation(async () => Response.json({ shared_by: null, applications: [] }));
+    fetchMock.mockImplementation(async () => Response.json({ shared_by: null, applications: [], other_completed_interviews: [] }));
     await getJourney("k7Qm2x9PaB", "viewer");
     expect(fetchMock.mock.calls[1][1].headers.authorization).toBe("Bearer viewer");
   });

@@ -9,7 +9,7 @@ vi.mock("@/lib/api", async (importOriginal) => {
 });
 
 const ID = "k7Qm2x9PaB";
-const journey = { shared_by: "Wisam Zaghal", applications: [] };
+const journey = { shared_by: "Wisam Zaghal", applications: [], other_completed_interviews: [] };
 const open = { shared_by: "Wisam Zaghal", expired: false, locked: false };
 
 beforeEach(() => vi.resetAllMocks());
