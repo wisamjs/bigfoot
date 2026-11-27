@@ -36,7 +36,6 @@ export const SHOWN_IN = {
   "src/features/journey/share-link-frame.tsx": "src/features/journey/link-gone.stories.tsx",
   "src/features/shell/account-menu.tsx": "src/features/shell/app-header.stories.tsx",
   "src/features/shell/avatar.tsx": "src/features/shell/app-header.stories.tsx",
-  "src/features/shell/illustrations.tsx": "src/features/dashboard/interview-calendar.stories.tsx",
   "src/features/shell/wordmark.tsx": "src/features/shell/app-header.stories.tsx",
 };
 

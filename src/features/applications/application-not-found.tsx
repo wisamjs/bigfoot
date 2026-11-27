@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { buttonClasses } from "@/components/ui/button-classes";
 import { RecentlyViewed, type ViewedApplication } from "@/features/applications/recently-viewed";
-import { EmptyFolderBigfoot } from "@/features/shell/illustrations";
+import { MagnifierBigfoot } from "@/features/shell/illustrations";
 
 export const NOT_FOUND_TITLE = "Application not found";
 
@@ -13,7 +13,7 @@ export const NOT_FOUND_TITLE = "Application not found";
 export function ApplicationNotFound({ applications }: { applications: ViewedApplication[] }) {
   return (
     <div className="flex flex-col items-center gap-6 py-6 text-center">
-      <EmptyFolderBigfoot className="h-auto w-[240px] max-w-full" />
+      <MagnifierBigfoot className="h-auto w-[240px] max-w-full" />
       <div className="flex max-w-[600px] flex-col gap-3">
         <h1 className="m-0 text-[32px] font-bold leading-[1.1] tracking-[-0.02em] text-heading md:text-[44px]">
           {NOT_FOUND_TITLE}
