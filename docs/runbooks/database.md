@@ -4,7 +4,7 @@ Bigfoot has two Supabase projects, in two organizations:
 
 | Project | Ref | Organization | Plan | Used by |
 | --- | --- | --- | --- | --- |
-| `Bigfoot` | `vhinumtqipwettgqtrob` | the Free one | Free (pauses after a week idle, no backups) | local dev (`public` schema) and CI (`bigfoot_test_*` schemas) |
+| `Bigfoot` | `vhinumtqipwettgqtrob` | the Free one | Free (pauses after a week idle, no backups) | local dev (`public` schema, through `.env.local`) and CI's `migrations-applied` job (the `DATABASE_URL` repository secret). CI's tests use a Postgres container instead. |
 | `bigfoot-prod` | `bvgfhfuofzfmjmqyraee` | the Pro one | Pro (daily backups kept 7 days, never pauses) | production only |
 
 Both are in `us-east-1`, next to Vercel's `iad1` region. The Privacy Policy says Applications are stored in the United States.
