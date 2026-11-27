@@ -124,6 +124,19 @@ in `eslint.config.mjs` ("Architecture"); `scripts/boundaries.test.ts` checks it 
 new link between features is a design decision for review: the alternative is moving the shared
 piece down into `ui/`.
 
+## Where docs go
+
+Each doc has one reader. A PR's docs go in the one whose reader needs them, and the README is rarely it.
+
+| Doc | Reader | Holds |
+| --- | --- | --- |
+| `README.md` | A visitor, a job seeker with a script, someone running Bigfoot for the first time | What Bigfoot is, the API from a terminal, the tech stack, running it locally, links to the rest |
+| `docs/contributing.md` | A contributor | Checks, CI, test data, the local API docs, pictures. Says when to reach for a script, not what `package.json` already says |
+| `docs/runbooks/` | Whoever operates production | Databases, deployments, restores |
+| `docs/adr/` | Someone asking why | One decision each |
+| `GLOSSARY.md` | Everyone | The product's terms |
+| `AGENTS.md` | Every agent, every turn | Pointers and rules an agent would get wrong otherwise. Grows only when nothing above can hold it |
+
 ## Lint rule groups
 
 `npm run lint` (`eslint.config.mjs`) fails on any warning. It runs in pre-commit (inside
