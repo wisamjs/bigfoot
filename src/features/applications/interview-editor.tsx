@@ -6,7 +6,7 @@ import { InterviewHeading } from "@/features/applications/interview-heading";
 import { InterviewNotesForm, PrepNotesForm, type NotesFieldName } from "@/features/applications/interview-notes-form";
 import { InterviewProgress } from "@/features/applications/interview-progress";
 import { RoundNav } from "@/features/applications/round-nav";
-import type { Application, Interview, PrepLookBack, PrepTakeaway } from "@/lib/applications";
+import { isAbandoned, type Application, type Interview, type PrepLookBack, type PrepTakeaway } from "@/lib/applications";
 import { interviewErrors, isValid } from "@/lib/validation";
 
 /**
@@ -14,7 +14,9 @@ import { interviewErrors, isValid } from "@/lib/validation";
  * details and ⋯ with Delete Interview), the Application's Interviews as a strip with this one
  * outlined, then the notes cards (BIG-179, BIG-180). Before the Interview: Prep notes, then Interview
  * notes (What they asked, How it went and Takeaway for next time) waiting for afterwards. Once it
- * is completed: Interview notes, then Prep notes folded below them. The cards span the page, and
+ * is completed: Interview notes, then Prep notes folded below them. An Abandoned one (BIG-222) keeps
+ * the order from before, Prep notes first, as nothing happened to write about, though Interview
+ * notes can still be added. The cards span the page, and
  * links to the Rounds either side end it (RoundNav, BIG-202). Each reads as text until edited
  * and saves by itself with its own save status. Leaving with the category, the title, the date, an Interview notes
  * field or Prep notes not yet saved asks first: the page puts this inside UnsavedChanges.
@@ -47,10 +49,12 @@ export function InterviewEditor({
     if (!isValid(problems)) return { problem: problems[field], sent: null };
     return { problem: undefined, sent: tracker.run(() => updateInterviewAction(app.id, interview.id, changes)) };
   };
+  const upcoming = !interview.completed && !isAbandoned(app, interview);
   const interviewNotes = (
     <InterviewNotesForm
       key={`notes-${interview.id}`}
       interview={interview}
+      upcoming={upcoming}
       trackers={trackers}
       onSave={(field, value) => save(field, trackers[field])(value)}
       showsOn={showsOn}
@@ -60,6 +64,7 @@ export function InterviewEditor({
     <PrepNotesForm
       key={`prep-${interview.id}`}
       interview={interview}
+      upcoming={upcoming}
       tracker={prepSave}
       onSave={save("prep_notes", prepSave)}
       lookBack={lookBack}

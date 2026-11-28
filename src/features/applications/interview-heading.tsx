@@ -34,15 +34,17 @@ import {
   type ParticipantDraft,
   type ParticipantsProblem,
 } from "@/features/applications/participants-field";
-import { OUTCOME_TONE, UNSCHEDULED_PILL } from "@/features/applications/status-tone";
+import { ABANDONED_PILL, OUTCOME_TONE, UNSCHEDULED_PILL } from "@/features/applications/status-tone";
 import { useUnsavedChanges } from "@/features/applications/unsaved-changes";
 import {
   applicationParticipants,
   calendarDaysBetween,
   categoryLabel,
   DATE_TBD,
+  DIDNT_HAPPEN,
   INTERVIEW_CATEGORIES,
   INTERVIEW_TITLE_MAX_LENGTH,
+  isAbandoned,
   isDone,
   OUTCOME_OPTIONS,
   parseDay,
@@ -61,8 +63,11 @@ import {
 import { interviewErrors, isValid, participantsError, type FieldErrors } from "@/lib/validation";
 
 type Saved = Pick<Interview, "category" | "title" | "at" | "participants">;
-/** `unscheduled` is the Date TBD switch: on, the date and time are cleared and the Interview is Unscheduled. */
-type Values = Pick<Interview, "category" | "title"> & DateAndTime & { unscheduled: boolean; participants: ParticipantDraft[] };
+/**
+ * `noDate` is the switch beside the date: Date TBD on an In Progress Application, Didn't happen on a
+ * Done one. On, the date and time are cleared and the Interview is Unscheduled, or Abandoned.
+ */
+type Values = Pick<Interview, "category" | "title"> & DateAndTime & { noDate: boolean; participants: ParticipantDraft[] };
 
 /** What the save status and Retry name: the fields Edit details changes. */
 const STATUS_LABEL = "Details";
@@ -72,7 +77,7 @@ function valuesOf(saved: Saved): Values {
     category: saved.category,
     title: saved.title,
     ...splitDateTime(toLocalInput(saved.at)),
-    unscheduled: saved.at === null,
+    noDate: saved.at === null,
     // An Interview from before Participants starts with a blank row to fill in.
     participants: saved.participants.length > 0 ? draftsOf(saved.participants) : [blankDraft()],
   };
@@ -95,17 +100,17 @@ function localOf(values: DateAndTime) {
 
 /**
  * What differs from what's saved. A date without a time is no date: no time is assumed. Turning
- * Date TBD on clears the date (`unscheduled`); turning it off sends the date given, or no date for
- * validation to ask for (docs/adr/0009).
+ * Date TBD (or Didn't happen) on clears the date (`noDate`); turning it off sends the date given, or
+ * no date for validation to ask for (docs/adr/0009).
  */
 function changesOf(values: Values, saved: Saved): Partial<InterviewFields> {
   const changes: Partial<InterviewFields> = {};
-  const wasUnscheduled = saved.at === null;
+  const wasNoDate = saved.at === null;
   if (values.category !== saved.category) changes.category = values.category;
   if (values.title.trim() !== saved.title) changes.title = values.title.trim();
-  if (values.unscheduled) {
-    if (!wasUnscheduled) Object.assign(changes, { at: null, unscheduled: true });
-  } else if (wasUnscheduled || localOf(values) !== toLocalInput(saved.at)) {
+  if (values.noDate) {
+    if (!wasNoDate) Object.assign(changes, { at: null, noDate: true });
+  } else if (wasNoDate || localOf(values) !== toLocalInput(saved.at)) {
     changes.at = values.date && values.time ? fromLocalInput(localOf(values)) : null;
   }
   const { inputs } = participantInputs(values.participants);
@@ -128,7 +133,9 @@ function changesOf(values: Values, saved: Saved): Partial<InterviewFields> {
  * rules: the title can't be cleared and no time is assumed. On an In Progress Application, a Date TBD
  * switch beside the date and time makes the Interview Unscheduled ("Date TBD", docs/adr/0009), as for
  * one postponed with no new date: turning it on clears and disables them, and turning it off asks for
- * both. An Unscheduled Interview's line reads "Date TBD" and "Upcoming · date TBD". `editOnOpen`
+ * both. An Unscheduled Interview's line reads "Date TBD" and "Upcoming · date TBD". On a Done
+ * Application the switch is Didn't happen (BIG-222): on, the Interview is Abandoned ("Didn't
+ * happen"); off, it needs a date in the past, which makes it Completed. `editOnOpen`
  * opens Edit details at once, as the Application page's Add the date asks. The title follows
  * a new category while it is still the old category's name. A problem shows beside
  * its field and sends nothing. Escape and Cancel put back what was saved. Leaving the page with a
@@ -167,8 +174,9 @@ export function InterviewHeading({
   // Only read while the menu is open and when editing ends, so the server's guess never shows.
   const wide = useMediaQuery("(min-width: 640px)");
   const dateId = `${id}-at`;
-  // Date TBD is for an Interview still ahead: a Done Application's Interviews keep a date.
-  const canBeUnscheduled = !isDone(app);
+  // Date TBD is for an Interview still ahead; a Done Application's Interview either happened, with a
+  // date in the past, or didn't (BIG-222).
+  const noDateChoice = isDone(app) ? DIDNT_HAPPEN : DATE_TBD;
 
   // Taken in when it changes elsewhere, set during render the way React advises for state that follows a prop.
   if (
@@ -226,7 +234,7 @@ export function InterviewHeading({
       stopEditing();
       return;
     }
-    const problems = interviewErrors(changes, { unscheduledAllowed: canBeUnscheduled });
+    const problems = interviewErrors(changes, { noDateChoice, latest: isDone(app) ? new Date() : undefined });
     if (people) problems.participants = people.message;
     setErrors(problems);
     setParticipantsKey(people?.key);
@@ -272,7 +280,7 @@ export function InterviewHeading({
         </h1>
         <Participants participants={shown.participants} onAdd={() => startEditing(true)} />
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-          <WhenLine at={shown.at} />
+          <WhenLine app={app} at={shown.at} />
           <WhenBadge app={app} at={shown.at} completed={interview.completed} />
           <DoneBadge app={app} />
         </div>
@@ -362,13 +370,13 @@ export function InterviewHeading({
         values={values}
         error={errors.at}
         saving={tracker.saving}
-        canBeUnscheduled={canBeUnscheduled}
+        noDateChoice={noDateChoice}
         onInput={(next) => {
           setValues((prev) => ({ ...prev, ...next }));
           setErrors((prev) => ({ ...prev, at: shown.at || next.date ? undefined : prev.at }));
         }}
-        onUnscheduled={(unscheduled) => {
-          setValues((prev) => ({ ...prev, unscheduled, date: "", time: "" }));
+        onNoDate={(noDate) => {
+          setValues((prev) => ({ ...prev, noDate, date: "", time: "" }));
           setErrors((prev) => ({ ...prev, at: undefined }));
         }}
       />
@@ -388,31 +396,36 @@ export function InterviewHeading({
   );
 }
 
-/** The day and time with the year, "Fri, Nov 13, 2026 · 11:00 AM", or "Date TBD" for an Unscheduled Interview. */
-function WhenLine({ at }: { at: string | null }) {
-  return <p className="m-0 text-base leading-[1.6] text-body md:text-lg">{at === null ? DATE_TBD : <InterviewWhenLong at={at} />}</p>;
+/**
+ * The day and time with the year, "Fri, Nov 13, 2026 · 11:00 AM"; "Date TBD" for an Unscheduled
+ * Interview; "No date" for an Abandoned one, whose badge says it didn't happen.
+ */
+function WhenLine({ app, at }: { app: Application; at: string | null }) {
+  const withoutDate = isAbandoned(app, { at }) ? "No date" : DATE_TBD;
+  return <p className="m-0 text-base leading-[1.6] text-body md:text-lg">{at === null ? withoutDate : <InterviewWhenLong at={at} />}</p>;
 }
 
 /**
- * Edit details' date and time, and beside them on an In Progress Application the Date TBD switch
- * (BIG-221): on, it clears and disables them, as the date picker mounts again empty.
+ * Edit details' date and time, and beside them the switch that leaves the date out: Date TBD on an
+ * In Progress Application (BIG-221), Didn't happen on a Done one (BIG-222). On, it clears and
+ * disables them, as the date picker mounts again empty.
  */
 function DateField({
   id,
   values,
   error,
   saving,
-  canBeUnscheduled,
+  noDateChoice,
   onInput,
-  onUnscheduled,
+  onNoDate,
 }: {
   id: string;
   values: Values;
   error: string | undefined;
   saving: boolean;
-  canBeUnscheduled: boolean;
+  noDateChoice: typeof DATE_TBD | typeof DIDNT_HAPPEN;
   onInput: (next: DateAndTime) => void;
-  onUnscheduled: (unscheduled: boolean) => void;
+  onNoDate: (noDate: boolean) => void;
 }) {
   return (
     <div>
@@ -423,29 +436,27 @@ function DateField({
       <fieldset aria-labelledby={`${id}-label`} className="m-0 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 border-0 p-0">
         <div className="min-w-0 flex-[1_1_20rem]">
           <DateTimePicker
-            key={values.unscheduled ? "tbd" : "dated"}
+            key={values.noDate ? "no-date" : "dated"}
             id={id}
             dateLabel="Date"
             timeLabel="Time"
             value={localOf(values)}
-            disabled={saving || values.unscheduled}
+            disabled={saving || values.noDate}
             onInput={onInput}
             invalid={error ? { date: true, time: true } : undefined}
             aria-describedby={`${id}-error`}
           />
         </div>
-        {canBeUnscheduled && (
-          <label htmlFor={`${id}-tbd`} className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-heading">
-            <Switch
-              id={`${id}-tbd`}
-              checked={values.unscheduled}
-              disabled={saving}
-              aria-describedby={error ? `${id}-error` : undefined}
-              onCheckedChange={onUnscheduled}
-            />
-            {DATE_TBD}
-          </label>
-        )}
+        <label htmlFor={`${id}-no-date`} className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-heading">
+          <Switch
+            id={`${id}-no-date`}
+            checked={values.noDate}
+            disabled={saving}
+            aria-describedby={error ? `${id}-error` : undefined}
+            onCheckedChange={onNoDate}
+          />
+          {noDateChoice}
+        </label>
       </fieldset>
       <FieldError id={`${id}-error`} error={error} />
     </div>
@@ -466,11 +477,20 @@ function Participants({ participants, onAdd }: { participants: Participant[]; on
 
 /**
  * Where the Interview stands, as a pill: "Upcoming · in 2 days" (blue), "Completed · 10 days ago"
- * (green, grey once the Application is Done), or "Upcoming · date TBD" (neutral) for an Unscheduled one.
+ * (green, grey once the Application is Done), "Upcoming · date TBD" (neutral) for an Unscheduled one,
+ * or "Didn't happen" (grey) for an Abandoned one (BIG-222).
  */
 function WhenBadge({ app, at, completed }: { app: Application; at: string | null; completed: boolean }) {
   // The viewer's time zone counts the days, which the server doesn't know: the pill says just "Upcoming" until then.
   const today = useToday();
+  if (isAbandoned(app, { at })) {
+    return (
+      <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium ${ABANDONED_PILL.pill}`}>
+        <span aria-hidden className={`size-2 rounded-full ${ABANDONED_PILL.dot}`} />
+        {DIDNT_HAPPEN}
+      </span>
+    );
+  }
   if (at === null) {
     return (
       <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium ${UNSCHEDULED_PILL.pill}`}>

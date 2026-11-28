@@ -5,7 +5,7 @@ import { InterviewPage, InterviewPageSkeleton } from "@/features/applications/in
 import { EDIT_PARAM, prefetchHrefs } from "@/features/applications/routes";
 import { PrefetchRoutes } from "@/features/shell/prefetch-routes";
 import { getApplications } from "@/lib/api";
-import { prepLookBack, takeawayShowsOn } from "@/lib/applications";
+import { isAbandoned, prepLookBack, takeawayShowsOn } from "@/lib/applications";
 import { getCurrentUser } from "@/lib/dal";
 
 type Props = PageProps<"/applications/[id]/interviews/[interviewId]">;
@@ -37,7 +37,8 @@ async function InterviewPageBody({ params, searchParams }: Pick<Props, "params" 
         app={app}
         interview={interview}
         // Worked out here, from every Application, so only what shows reaches the browser.
-        lookBack={interview.completed ? undefined : prepLookBack(applications, app, interview)}
+        // An Interview that is over, completed or Abandoned, has no prep still to come.
+        lookBack={interview.completed || isAbandoned(app, interview) ? undefined : prepLookBack(applications, app, interview)}
         showsOn={takeawayShowsOn(applications, app, interview)}
         // Add the date on the Application page: Edit details opens at once.
         editDetails={search[EDIT_PARAM] === "details"}

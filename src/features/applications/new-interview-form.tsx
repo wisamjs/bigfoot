@@ -26,6 +26,7 @@ import { UnsavedChanges, useUnsavedChanges } from "@/features/applications/unsav
 import {
   applicationParticipants,
   categoryLabel,
+  DATE_TBD,
   INTERVIEW_CATEGORIES,
   INTERVIEW_TITLE_MAX_LENGTH,
   titleForCategory,
@@ -154,13 +155,18 @@ function NewInterviewFields({
     category: InterviewCategory;
     title: string;
     at: string | null;
-    unscheduled?: boolean;
+    noDate?: boolean;
     how_it_went: string | null;
     participants: ParticipantInput[];
   }, keys: string[]): FieldErrors<Control> {
     const errors: FieldErrors<Control> = {};
     if (!applicationId) errors.application = "Choose the Application this Interview belongs to.";
-    const api = interviewErrors(fields, { creating: true, unscheduledAllowed: canBeUnscheduled });
+    // A Done Application's new Interview took place already: a date in the past (BIG-222).
+    const api = interviewErrors(fields, {
+      creating: true,
+      noDateChoice: canBeUnscheduled ? DATE_TBD : null,
+      latest: canBeUnscheduled ? undefined : new Date(),
+    });
     if (api.category) errors.category = api.category;
     if (api.title) errors.title = api.title;
     if (!unscheduled) Object.assign(errors, dateErrors(at, api.at));
@@ -333,9 +339,9 @@ function offersDateTbd(applications: Application[], applicationId: string): bool
   return applications.find((app) => app.id === applicationId)?.status !== "done";
 }
 
-/** `at` and `unscheduled` as the form sends them: the date and time, or Date TBD's null (BIG-221). */
-function whenOf(at: DateAndTime, unscheduled: boolean): { at: string | null; unscheduled?: true } {
-  if (unscheduled) return { at: null, unscheduled: true };
+/** `at` and `noDate` as the form sends them: the date and time, or Date TBD's null (BIG-221). */
+function whenOf(at: DateAndTime, unscheduled: boolean): { at: string | null; noDate?: true } {
+  if (unscheduled) return { at: null, noDate: true };
   return { at: at.date && at.time ? fromLocalInput(`${at.date}T${at.time}`) : null };
 }
 
@@ -399,7 +405,7 @@ function DateOrTbdField({
             onChange={(e) => onUnscheduled(e.target.checked)}
             className="size-[18px] cursor-pointer rounded-control accent-brand"
           />
-          Date TBD
+          {DATE_TBD}
         </label>
       )}
       <FieldError id={`${id}-at-error`} error={error} />

@@ -9,6 +9,7 @@ from psycopg import sql
 from app.auth import JobSeekerId
 from app.domain import APPLICATIONS_MAX
 from app.models import (
+    FUTURE_ON_DONE,
     Application,
     ApplicationCreate,
     ApplicationId,
@@ -41,6 +42,33 @@ def _settle_status(changes: dict[str, Any], current: dict[str, Any]) -> None:
         changes["done_on"] = _done_today(changes.get("applied_on", current["applied_on"]))
     if "location" in changes and changes["location"] != "hybrid":
         changes.setdefault("office_days", None)
+
+
+def _settle_interviews(conn: Any, application_id: Any, answers: list[dict[str, Any]], now: datetime) -> None:
+    """Marking Done (GLOSSARY.md, Abandoned): each answer gives its Interview the date it took place, keeps the
+    date it has, or leaves it undated, and so Abandoned. An Interview still dated after now that no answer
+    covers loses its date: the job seeker didn't say it happened. 422 for an id that isn't this Application's,
+    and for a date in the future that isn't the one the Interview already has."""
+    saved = {
+        row["id"]: row["at"]
+        for row in conn.execute(
+            "select id, at from interviews where application_id = %s for update", (application_id,)
+        ).fetchall()
+    }
+    answered: dict[Any, datetime | None] = {}
+    for answer in answers:
+        if answer["id"] not in saved:
+            raise HTTPException(422, "interviews lists an Interview that isn't this Application's.")
+        at = answer["at"]
+        if at is not None and at > now and at != saved[answer["id"]]:
+            raise HTTPException(422, FUTURE_ON_DONE)
+        answered[answer["id"]] = at
+    for interview_id, at in saved.items():
+        if interview_id not in answered and at is not None and at > now:
+            answered[interview_id] = None
+    for interview_id, at in answered.items():
+        if at != saved[interview_id]:
+            conn.execute("update interviews set at = %s, updated_at = now() where id = %s", (at, interview_id))
 
 
 def _check(application: dict[str, Any]) -> None:
@@ -115,7 +143,8 @@ def create_application(request: Request, job_seeker: JobSeekerId, body: Applicat
                 "The body is invalid (a list of field errors), or the change would leave a Done "
                 "Application without an Outcome, an In Progress one with an Outcome, a Done date, or an "
                 "Outcome note, a Done date before the applied date, or office days on a Location that "
-                "isn't Hybrid (a message)."
+                "isn't Hybrid; or `interviews` is sent without marking an In Progress Application Done, lists "
+                "an Interview of another Application, or gives one a date in the future (a message)."
             ),
             "content": {
                 "application/json": {
@@ -139,8 +168,13 @@ def update_application(
     its Outcome, Done date, and Outcome note; setting it to `done` needs an Outcome, sent now or already
     set, and from `in_progress` sets the Done date to today unless one is sent. Setting the location to
     anything but `hybrid` clears its office days.
+
+    Marking an In Progress Application Done can send `interviews`: whether each Unscheduled Interview, or each
+    one still dated after now, happened (GLOSSARY.md, Abandoned). It is applied in the same transaction. An
+    Interview it leaves out stays, or becomes, undated: Abandoned, which reopening makes Unscheduled again.
     """
     changes = body.model_dump(exclude_unset=True)
+    answers = changes.pop("interviews", None)
     with pool(request).connection() as conn, conn.transaction():
         current = conn.execute(
             "select status, outcome, done_on, outcome_note, applied_on, location, office_days from applications"
@@ -149,6 +183,9 @@ def update_application(
         ).fetchone()
         if current is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Application not found")
+        marking_done = changes.get("status") == "done" and current["status"] != "done"
+        if answers is not None and not marking_done:
+            raise HTTPException(422, "interviews is only sent when marking an In Progress Application Done.")
         _settle_status(changes, current)
         _check({**current, **changes})
         assignments = [sql.SQL("{} = %s").format(sql.Identifier(name)) for name in changes]
@@ -159,6 +196,8 @@ def update_application(
             ),
             [*changes.values(), application_id],
         ).fetchone()
+        if marking_done:
+            _settle_interviews(conn, application_id, answers or [], datetime.now(UTC))
         return application_views(conn, [row])[0]
 
 

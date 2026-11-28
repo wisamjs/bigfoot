@@ -186,10 +186,13 @@ def journey_of(conn: Connection[dict[str, Any]], job_seeker_id: str, shared_by: 
         " order by applied_on, created_at, id",
         (job_seeker_id,),
     ).fetchall()
+    # An Offer's Interviews with no date are Abandoned (GLOSSARY.md): they never took place, so a Viewer
+    # doesn't see them.
     interviews = conn.execute(
         "select application_id, category, title, at from interviews where application_id = any(%s)"
+        " and (at is not null or application_id <> all(%s))"
         " order by at nulls last, created_at, id",
-        ([a["id"] for a in applications],),
+        ([a["id"] for a in applications], [a["id"] for a in applications if a["offer"]]),
     ).fetchall()
     other_completed = conn.execute(
         "select i.at from interviews i join applications a on a.id = i.application_id"

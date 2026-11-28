@@ -2,11 +2,12 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { XSS_TEXT, XSS_URLS } from "@/test/xss";
 import { ACCESS_TOKEN_NAME_MAX, PASSCODE_MAX_LENGTH, PASSCODE_MIN_LENGTH, SHARE_LINK_LABEL_MAX, SHARE_LINKS_MAX } from "./account";
-import { APPLICATION_MAX_LENGTHS, INTERVIEW_NOTES_MAX_LENGTHS, OFFICE_DAYS } from "./applications";
+import { APPLICATION_MAX_LENGTHS, DIDNT_HAPPEN, INTERVIEW_NOTES_MAX_LENGTHS, OFFICE_DAYS } from "./applications";
 import {
   accessTokenNameError,
   applicationErrors,
   dateOrderError,
+  happenedError,
   interviewErrors,
   isHttpUrl,
   participantsError,
@@ -195,23 +196,62 @@ describe("interviewErrors", () => {
 
   it("accepts no date only as an explicit Date TBD choice (docs/adr/0009)", () => {
     const base = { category: "technical", title: "Technical", participants: [{ role: "EM", name: null }] };
-    expect(interviewErrors({ ...base, at: null, unscheduled: true }, { creating: true })).toEqual({});
+    expect(interviewErrors({ ...base, at: null, noDate: true }, { creating: true })).toEqual({});
     expect(interviewErrors({ ...base, at: null }, { creating: true })).toEqual({ at: "Enter the date and time, or choose Date TBD." });
-    expect(interviewErrors({ ...base, at: "2026-12-01T15:00:00.000Z", unscheduled: true }, { creating: true })).toEqual({
+    expect(interviewErrors({ ...base, at: "2026-12-01T15:00:00.000Z", noDate: true }, { creating: true })).toEqual({
       at: "Choose a date and time, or Date TBD, not both.",
     });
-    expect(interviewErrors({ ...base, at: null, unscheduled: "yes" }, { creating: true })).toEqual({ at: "Choose a date and time, or Date TBD." });
-    expect(interviewErrors({ at: null, unscheduled: true })).toEqual({});
-    expect(interviewErrors({ unscheduled: false })).toEqual({ at: "Enter the date and time, or turn on Date TBD." });
-    expect(interviewErrors({ at: "2026-12-01T15:00:00.000Z", unscheduled: false })).toEqual({});
+    expect(interviewErrors({ ...base, at: null, noDate: "yes" }, { creating: true })).toEqual({ at: "Choose a date and time, or Date TBD." });
+    expect(interviewErrors({ at: null, noDate: true })).toEqual({});
+    expect(interviewErrors({ noDate: false })).toEqual({ at: "Enter the date and time, or turn on Date TBD." });
+    expect(interviewErrors({ at: "2026-12-01T15:00:00.000Z", noDate: false })).toEqual({});
   });
 
   it("asks only for a date and time where Date TBD isn't offered", () => {
-    const options = { creating: true, unscheduledAllowed: false };
+    const options = { creating: true, noDateChoice: null };
     const base = { category: "technical", title: "Technical", participants: [{ role: "EM", name: null }] };
     expect(interviewErrors({ ...base, at: null }, options)).toEqual({ at: "Enter the date and time." });
-    expect(interviewErrors({ ...base, at: null, unscheduled: true }, options)).toEqual({ at: "Enter the date and time." });
-    expect(interviewErrors({ at: null }, { unscheduledAllowed: false })).toEqual({ at: "Enter the date and time." });
+    expect(interviewErrors({ ...base, at: null, noDate: true }, options)).toEqual({ at: "Enter the date and time." });
+    expect(interviewErrors({ at: null }, { noDateChoice: null })).toEqual({ at: "Enter the date and time." });
+  });
+
+  it("offers Didn't happen on a Done Application's Interview, and only dates in the past (BIG-222)", () => {
+    const options = { noDateChoice: DIDNT_HAPPEN, latest: new Date("2026-11-28T12:00:00Z") } as const;
+    expect(interviewErrors({ at: null, noDate: true }, options)).toEqual({});
+    expect(interviewErrors({ at: null }, options)).toEqual({ at: "Enter the date and time, or turn on Didn’t happen." });
+    expect(interviewErrors({ at: "2026-11-28T11:00:00.000Z" }, options)).toEqual({});
+    expect(interviewErrors({ at: "2026-11-28T13:00:00.000Z" }, options)).toEqual({
+      at: "Enter a date and time in the past: the Application is Done.",
+    });
+  });
+
+  it("checks a Mark done answer that says it happened: a past date, not before applying (BIG-222)", () => {
+    const now = new Date(2026, 10, 28, 12);
+    expect(happenedError(null, "2026-11-02", now)).toBe("Enter when it happened.");
+    expect(happenedError(new Date(2026, 10, 20, 15).toISOString(), "2026-11-02", now)).toBeNull();
+    expect(happenedError(new Date(2026, 10, 2, 9).toISOString(), "2026-11-02", now)).toBeNull();
+    expect(happenedError(new Date(2026, 10, 1, 23).toISOString(), "2026-11-02", now)).toBe(
+      "Enter a date on or after the day you applied.",
+    );
+    expect(happenedError(new Date(2026, 10, 28, 13).toISOString(), "2026-11-02", now)).toBe("Enter a date and time in the past.");
+  });
+
+  it("checks the Mark done answers' shape, only when marking it Done (BIG-222)", () => {
+    const done = { status: "done", outcome: "rejected" };
+    expect(applicationErrors({ ...done, interviews: [{ id: "i1", at: null }] }, { creating: false })).toEqual({});
+    expect(applicationErrors({ ...done, interviews: [{ id: "i1", at: "2026-11-20T15:00:00.000Z" }] }, { creating: false })).toEqual({});
+    expect(applicationErrors({ outcome: "rejected", interviews: [] }, { creating: false })).toEqual({
+      interviews: "Say whether Interviews happened only when marking it Done.",
+    });
+    expect(applicationErrors({ ...done, interviews: "all" }, { creating: false })).toEqual({ interviews: "Answer for each Interview." });
+    const twice = [
+      { id: "i1", at: null },
+      { id: "i1", at: null },
+    ];
+    expect(applicationErrors({ ...done, interviews: twice }, { creating: false })).toEqual({ interviews: "Answer once for each Interview." });
+    expect(applicationErrors({ ...done, interviews: [{ id: "i1", at: "soon" }] }, { creating: false })).toEqual({
+      interviews: "Enter when it happened.",
+    });
   });
 
   it("refuses clearing the date without Date TBD, or the category or the title of an Interview", () => {

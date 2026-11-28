@@ -15,6 +15,7 @@ from app.domain import (
     HOW_IT_WENT_MAX_LENGTH,
     INTERVIEW_PREP_NOTES_MAX_LENGTH,
     INTERVIEW_TITLE_MAX_LENGTH,
+    INTERVIEWS_PER_APPLICATION_MAX,
     OFFICE_DAYS_MAX,
     OFFICE_DAYS_MIN,
     OUTCOME_NOTE_MAX_LENGTH,
@@ -116,13 +117,20 @@ def _has_a_time(value: Any) -> Any:
 # A Scheduled Interview has a date and time together; an Unscheduled one has neither (docs/adr/0009).
 InterviewAt = Annotated[datetime, BeforeValidator(_has_a_time)]
 
-UNSCHEDULED_ON_DONE = "Only an In Progress Application's Interview can be Unscheduled (at: null)."
+UNSCHEDULED_ON_DONE = "Only an In Progress Application's Interview can be added Unscheduled (at: null)."
+FUTURE_ON_DONE = "A Done Application's Interview can only be given a date in the past."
 
 
 def check_unscheduled(status: str, at: datetime | None) -> None:
-    """An Interview can be Unscheduled (no date) only on an In Progress Application (docs/adr/0009)."""
+    """A new Interview can be Unscheduled (no date) only on an In Progress Application (docs/adr/0009)."""
     if at is None and status != "in_progress":
         raise ValueError(UNSCHEDULED_ON_DONE)
+
+
+def check_done_interview_at(status: str, at: datetime | None, now: datetime) -> None:
+    """A Done Application's Interview is given a date in the past, or none, which makes it Abandoned (docs/adr/0009)."""
+    if status == "done" and at is not None and at > now:
+        raise ValueError(FUTURE_ON_DONE)
 
 
 # Example values shared by the request and response schemas.
@@ -172,18 +180,35 @@ INTERVIEW_TITLE = (
 EXAMPLE_INTERVIEW_TITLE = "Retrospective System Design"
 AT = (
     "When the Interview happens: a date and time, with a time zone. Null when the Interview is Unscheduled "
-    '(GLOSSARY.md, docs/adr/0009): upcoming, with no date and time yet, shown as "Date TBD".'
+    '(GLOSSARY.md, docs/adr/0009): upcoming, with no date and time yet, shown as "Date TBD". On a Done '
+    'Application, null means the Interview is Abandoned: it never took place, shown as "Didn\'t happen".'
 )
 AT_CREATE = (
-    f"{AT} Required: send null for an Unscheduled Interview; leaving the key out is refused. Null is refused on a "
-    "Done Application (422)."
+    f"{AT} Required: send null for an Unscheduled Interview; leaving the key out is refused. On a Done Application, "
+    "null and a date in the future are refused (422)."
 )
-AT_PATCH = f"{AT} Send null to make it Unscheduled, on an In Progress Application only (422 on a Done one)."
+AT_PATCH = (
+    f"{AT} Send null to make it Unscheduled, or Abandoned on a Done Application, where a date in the future is "
+    "refused (422)."
+)
+INTERVIEW_ANSWER_AT = (
+    "When the Interview took place, a date and time in the past with a time zone; or null when it didn't happen, "
+    "which leaves it Abandoned. An Interview still dated after now can keep that date by sending it unchanged."
+)
+INTERVIEW_ANSWERS = (
+    "Only when marking an In Progress Application Done (GLOSSARY.md, Abandoned): whether each Unscheduled "
+    "Interview, or each one still dated after now, happened. Applied in the same transaction as the Status. Each "
+    "`id` is one of this Application's Interviews, listed once. An Unscheduled Interview left out stays undated "
+    "and becomes Abandoned; one still dated after now that is left out loses its date and becomes Abandoned too."
+)
 WAITING = (
     "Derived (GLOSSARY.md, Waiting): In Progress with no upcoming Interview, Scheduled or Unscheduled, including a "
     "new one."
 )
-COMPLETED = "Derived, never stored: the date is in the past. An Unscheduled Interview is never completed."
+COMPLETED = (
+    "Derived, never stored: the date is in the past. An Interview with no date, Unscheduled or Abandoned, is never "
+    "completed."
+)
 # Interview notes (GLOSSARY.md) are these three fields together.
 WHAT_THEY_ASKED = (
     "What they asked (GLOSSARY.md, Interview notes): the questions the Interview asked, one per line, as plain "
@@ -271,12 +296,34 @@ class ApplicationCreate(BaseModel):
         return self
 
 
+class InterviewAnswer(BaseModel):
+    """Whether one Interview happened, sent with marking its Application Done (GLOSSARY.md, Abandoned)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: UUID = Field(description="One of this Application's Interviews.")
+    at: InterviewAt | None = Field(description=INTERVIEW_ANSWER_AT, examples=["2026-11-20T17:00:00Z"])
+
+
+def _distinct_answers(value: list[InterviewAnswer]) -> list[InterviewAnswer]:
+    if len({answer.id for answer in value}) != len(value):
+        raise ValueError("lists the same Interview twice")
+    return value
+
+
+InterviewAnswers = Annotated[
+    list[InterviewAnswer], Field(max_length=INTERVIEWS_PER_APPLICATION_MAX), AfterValidator(_distinct_answers)
+]
+
+
 class ApplicationPatch(BaseModel):
     """Only the fields sent are changed; send null to clear an optional field.
 
     Setting the status to in_progress without an outcome clears the outcome, Done date, and Outcome note
     (reopening); setting it to done from in_progress without a done_on sets the Done date to today. Setting the
-    location to anything but hybrid without office_days clears the office days.
+    location to anything but hybrid without office_days clears the office days. Marking an In Progress
+    Application Done can say, in `interviews`, whether each Unscheduled Interview, or each one still dated after
+    now, happened.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -296,10 +343,15 @@ class ApplicationPatch(BaseModel):
     outcome_note: OutcomeNote = Field(
         default=None, description=f"{OUTCOME_NOTE} Blank is stored as null.", examples=[EXAMPLE_OUTCOME_NOTE]
     )
+    interviews: InterviewAnswers | None = Field(
+        default=None,
+        description=INTERVIEW_ANSWERS,
+        examples=[[{"id": "8a1f0c52-6f8e-4c43-9a5e-2b7d0e9b1c4d", "at": None}]],
+    )
 
     @model_validator(mode="after")
     def _required_fields_not_cleared(self) -> "ApplicationPatch":
-        for name in ("company", "title", "applied_on", "status"):
+        for name in ("company", "title", "applied_on", "status", "interviews"):
             if name in self.model_fields_set and getattr(self, name) is None:
                 raise ValueError(f"{name} cannot be cleared")
         return self
@@ -400,7 +452,7 @@ class InterviewCreate(BaseModel):
 class InterviewPatch(BaseModel):
     """Only the fields sent are changed; send null for one of the Interview notes fields or `prep_notes` to clear it.
 
-    Send `at: null` to make an In Progress Application's Interview Unscheduled. `participants`, when sent,
+    Send `at: null` to make the Interview Unscheduled, or Abandoned on a Done Application. `participants`, when sent,
     replaces the Interview's Participants and needs at least one.
     """
 

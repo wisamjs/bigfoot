@@ -205,14 +205,14 @@ describe("a job seeker's requests", () => {
     ],
     [
       "createInterview, Date TBD",
-      () => createInterview("s", "a1", { title: "Screen", at: null, unscheduled: true }),
+      () => createInterview("s", "a1", { title: "Screen", at: null, noDate: true }),
       "POST",
       "/applications/a1/interviews",
       { title: "Screen", at: null },
     ],
     [
       "updateInterview, Date TBD turned off",
-      () => updateInterview("s", "a1", "i1", { at: "2026-12-01T15:00:00.000Z", unscheduled: false }),
+      () => updateInterview("s", "a1", "i1", { at: "2026-12-01T15:00:00.000Z", noDate: false }),
       "PATCH",
       "/applications/a1/interviews/i1",
       { at: "2026-12-01T15:00:00.000Z" },

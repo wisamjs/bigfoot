@@ -1,4 +1,5 @@
-"""Interviews (GLOSSARY.md): the list on an Application, Unscheduled Interviews, and the derived Waiting data."""
+"""Interviews (GLOSSARY.md): the list on an Application, Unscheduled and Abandoned Interviews, and the derived
+Waiting data."""
 
 from datetime import UTC, datetime, timedelta
 
@@ -365,16 +366,123 @@ def test_patch_makes_an_interview_unscheduled_and_scheduled_again(client, token)
     assert datetime.fromisoformat(booked["at"]) == PAST and booked["completed"] is True
 
 
-def test_a_done_application_refuses_an_unscheduled_interview(client, token):
+def test_a_done_application_refuses_a_new_interview_with_no_date_or_a_future_one(client, token):
     app = create_application(client, token(), status="done", outcome="rejected")
-    body = {"category": "technical", "title": "Technical", "at": None, "participants": RECRUITER}
-    res = client.post(f"/applications/{app['id']}/interviews", json=body, headers=token())
-    assert res.status_code == 422
-    assert "In Progress" in res.json()["detail"]
+    for at in (None, FUTURE.isoformat()):
+        body = {"category": "technical", "title": "Technical", "at": at, "participants": RECRUITER}
+        res = client.post(f"/applications/{app['id']}/interviews", json=body, headers=token())
+        assert res.status_code == 422, at
+    assert reread(client, token(), app)["interviews"] == []
+
+
+# Abandoned and marking Done (BIG-222)
+
+
+def mark_done(client, headers, app, **fields):
+    return client.patch(
+        f"/applications/{app['id']}", json={"status": "done", "outcome": "rejected", **fields}, headers=headers
+    )
+
+
+def test_a_done_applications_interview_can_lose_its_date_and_get_a_past_one_but_not_a_future_one(client, token):
+    app = create_application(client, token(), status="done", outcome="rejected")
     dated = add(client, token(), app, "technical", PAST)
     url = f"/applications/{app['id']}/interviews/{dated['id']}"
-    assert client.patch(url, json={"at": None}, headers=token()).status_code == 422
-    assert reread(client, token(), app)["interviews"][0]["at"] == dated["at"]
+    abandoned = client.patch(url, json={"at": None}, headers=token())
+    assert abandoned.status_code == 200, abandoned.text
+    assert abandoned.json()["at"] is None and abandoned.json()["completed"] is False
+    future = client.patch(url, json={"at": FUTURE.isoformat()}, headers=token())
+    assert future.status_code == 422 and "past" in future.json()["detail"]
+    completed = client.patch(url, json={"at": LONG_PAST.isoformat()}, headers=token()).json()
+    assert datetime.fromisoformat(completed["at"]) == LONG_PAST and completed["completed"] is True
+
+
+def test_marking_done_saves_each_answer_with_the_status(client, token):
+    app = create_application(client, token())
+    happened = add(client, token(), app, "recruiter", None)
+    skipped = add(client, token(), app, "technical", None)
+    cancelled = add(client, token(), app, "culture", FUTURE)
+    kept = add(client, token(), app, "people_management", FUTURE)
+    answers = [
+        {"id": happened["id"], "at": PAST.isoformat()},
+        {"id": skipped["id"], "at": None},
+        {"id": cancelled["id"], "at": None},
+        {"id": kept["id"], "at": kept["at"]},
+    ]
+    res = mark_done(client, token(), app, interviews=answers)
+    assert res.status_code == 200, res.text
+    done = res.json()
+    assert done["status"] == "done"
+    at = {i["id"]: i["at"] for i in done["interviews"]}
+    assert datetime.fromisoformat(at[happened["id"]]) == PAST
+    assert at[skipped["id"]] is None and at[cancelled["id"]] is None
+    assert at[kept["id"]] == kept["at"]
+
+
+def test_marking_done_without_answers_leaves_unscheduled_ones_undated_and_clears_future_dates(client, token):
+    app = create_application(client, token())
+    unscheduled = add(client, token(), app, "recruiter", None)
+    upcoming = add(client, token(), app, "technical", FUTURE)
+    completed = add(client, token(), app, "culture", PAST)
+    res = mark_done(client, token(), app)
+    assert res.status_code == 200, res.text
+    at = {i["id"]: i["at"] for i in res.json()["interviews"]}
+    assert at[unscheduled["id"]] is None and at[upcoming["id"]] is None
+    assert at[completed["id"]] == completed["at"]
+
+
+def test_reopening_makes_abandoned_interviews_unscheduled_again(client, token):
+    app = create_application(client, token())
+    add(client, token(), app, "recruiter", PAST)
+    abandoned = add(client, token(), app, "technical", None)
+    assert mark_done(client, token(), app).status_code == 200
+    reopened = client.patch(f"/applications/{app['id']}", json={"status": "in_progress"}, headers=token()).json()
+    again = next(i for i in reopened["interviews"] if i["id"] == abandoned["id"])
+    assert again["at"] is None and again["completed"] is False
+    assert reopened["is_waiting"] is False
+
+
+@pytest.mark.parametrize(
+    "answer, message",
+    [
+        ("future", "past"),
+        ("another", "isn't this Application's"),
+    ],
+)
+def test_marking_done_refuses_bad_answers_and_saves_nothing(client, token, answer, message):
+    app = create_application(client, token())
+    interview = add(client, token(), app, "technical", None)
+    other = add(client, token(), create_application(client, token()), "recruiter", None)
+    sent = {
+        "future": {"id": interview["id"], "at": FUTURE.isoformat()},
+        "another": {"id": other["id"], "at": PAST.isoformat()},
+    }[answer]
+    res = mark_done(client, token(), app, interviews=[sent])
+    assert res.status_code == 422 and message in res.json()["detail"]
+    after = reread(client, token(), app)
+    assert after["status"] == "in_progress" and after["interviews"][0]["at"] is None
+
+
+def test_answers_are_only_sent_when_marking_an_in_progress_application_done(client, token):
+    app = create_application(client, token(), status="done", outcome="rejected")
+    dated = add(client, token(), app, "technical", PAST)
+    answers = [{"id": dated["id"], "at": None}]
+    res = client.patch(
+        f"/applications/{app['id']}", json={"outcome": "withdrawn", "interviews": answers}, headers=token()
+    )
+    assert res.status_code == 422 and "only sent when marking" in res.json()["detail"]
+    still_open = create_application(client, token())
+    res = client.patch(f"/applications/{still_open['id']}", json={"interviews": []}, headers=token())
+    assert res.status_code == 422
+
+
+def test_answers_list_each_interview_once_with_a_date_or_null(client, token):
+    app = create_application(client, token())
+    interview = add(client, token(), app, "technical", None)
+    twice = [{"id": interview["id"], "at": None}, {"id": interview["id"], "at": PAST.isoformat()}]
+    assert mark_done(client, token(), app, interviews=twice).status_code == 422
+    assert mark_done(client, token(), app, interviews=[{"id": interview["id"]}]).status_code == 422
+    assert mark_done(client, token(), app, interviews=None).status_code == 422
 
 
 # Waiting

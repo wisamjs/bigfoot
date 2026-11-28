@@ -5,6 +5,7 @@ import { Lightbulb } from "lucide-react";
 import { CelebratingBigfoot, SadBigfoot } from "@/features/shell/illustrations";
 import { useIsClient } from "@/hooks/use-is-client";
 import {
+  DIDNT_HAPPEN,
   OUTCOME_OPTIONS,
   outcomeSummary,
   parseDay,
@@ -27,7 +28,8 @@ const OUTCOME_ART: Partial<Record<Outcome, ComponentType<{ className?: string }>
  * Done date, when it has one), the Outcome as the heading, how it got there ("After 2 Interviews, 27
  * days from applying.") and the Outcome note in quotes. Under them, "What you're taking from it":
  * the Takeaway for next time of each of its Interviews that has one, newest first, each naming its
- * Interview ("From Hiring Manager · Nov 12"); left out when none has one. An Offer or a Rejection
+ * Interview ("From Hiring Manager · Nov 12", or "From Leadership · Didn't happen" for an Abandoned
+ * one, BIG-222); left out when none has one. An Offer or a Rejection
  * puts Bigfoot in the top-right corner, celebrating or sad (BIG-227).
  */
 export function OutcomeCard({ app }: { app: Application }) {
@@ -80,7 +82,7 @@ export function OutcomeCard({ app }: { app: Application }) {
                   <p className="m-0 break-words text-base text-heading">{text}</p>
                   <p className="m-0 mt-1 text-sm text-body">
                     From {from.title}
-                    {isClient && from.at !== null && ` · ${dayFormat.format(new Date(from.at))}`}
+                    {from.at === null ? ` · ${DIDNT_HAPPEN}` : isClient && ` · ${dayFormat.format(new Date(from.at))}`}
                   </p>
                 </div>
               </li>

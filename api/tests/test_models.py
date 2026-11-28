@@ -35,6 +35,7 @@ from app.models import (
     PasscodeChange,
     ShareLinkCreate,
     check_done,
+    check_done_interview_at,
     check_office_days,
     check_outcome,
     check_unscheduled,
@@ -336,12 +337,42 @@ def test_an_interview_is_unscheduled_when_at_is_null_but_never_when_at_is_left_o
         ("done", None, True),
     ],
 )
-def test_only_an_in_progress_application_can_have_an_unscheduled_interview(status, at, refused):
+def test_only_an_in_progress_application_can_add_an_unscheduled_interview(status, at, refused):
     if refused:
         with pytest.raises(ValueError, match="In Progress"):
             check_unscheduled(status, at)
     else:
         check_unscheduled(status, at)
+
+
+NOW = datetime(2026, 11, 28, 12, tzinfo=UTC)
+
+
+@pytest.mark.parametrize(
+    ("status", "at", "refused"),
+    [
+        ("done", None, False),
+        ("done", NOW - timedelta(minutes=1), False),
+        ("done", NOW + timedelta(minutes=1), True),
+        ("in_progress", NOW + timedelta(days=1), False),
+    ],
+)
+def test_a_done_applications_interview_gets_a_past_date_or_none(status, at, refused):
+    if refused:
+        with pytest.raises(ValueError, match="past"):
+            check_done_interview_at(status, at, NOW)
+    else:
+        check_done_interview_at(status, at, NOW)
+
+
+def test_mark_done_answers_need_an_id_and_an_at_and_list_each_interview_once():
+    interview = "8a1f0c52-6f8e-4c43-9a5e-2b7d0e9b1c4d"
+    patch = ApplicationPatch.model_validate(DONE | {"interviews": [{"id": interview, "at": None}]})
+    assert patch.interviews is not None and patch.interviews[0].at is None
+    assert errors(ApplicationPatch, {"interviews": [{"id": interview}]}) == ["interviews.0.at: Field required"]
+    twice = [{"id": interview, "at": None}, {"id": interview, "at": None}]
+    assert any("twice" in e for e in errors(ApplicationPatch, {"interviews": twice}))
+    assert any("cannot be cleared" in e for e in errors(ApplicationPatch, {"interviews": None}))
 
 
 def test_an_interview_patch_can_move_the_date_and_clear_the_notes():

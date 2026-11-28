@@ -263,7 +263,7 @@ describe("the Interview page heading", () => {
     expect(within(form()).getByLabelText("Time")).toBeDisabled();
     await user.click(within(form()).getByRole("button", { name: "Save" }));
 
-    expect(actions.updateInterviewAction).toHaveBeenCalledExactlyOnceWith("birch", "i1", { at: null, unscheduled: true });
+    expect(actions.updateInterviewAction).toHaveBeenCalledExactlyOnceWith("birch", "i1", { at: null, noDate: true });
     expect(await screen.findByText("Date TBD")).toBeInTheDocument();
     expect(screen.getByText("Upcoming · date TBD")).toBeInTheDocument();
   });
@@ -289,11 +289,63 @@ describe("the Interview page heading", () => {
     expect(actions.updateInterviewAction).toHaveBeenCalledExactlyOnceWith("birch", "i1", { at: expect.stringMatching(/T/) });
   });
 
-  it("offers no Date TBD switch on a Done Application, whose Interviews keep a date", async () => {
+  it("offers Didn't happen instead of Date TBD on a Done Application, which takes the date away (BIG-222)", async () => {
     const done = application("birch", { company: "Birch", status: "done", outcome: "rejected", interviews: [technical] });
     const { user } = openPage(technical, done);
     await user.click(editButton());
     expect(within(form()).queryByRole("switch", { name: "Date TBD" })).not.toBeInTheDocument();
+    await user.click(within(form()).getByRole("switch", { name: "Didn’t happen" }));
+    await user.click(within(form()).getByRole("button", { name: "Save" }));
+    expect(actions.updateInterviewAction).toHaveBeenCalledExactlyOnceWith("birch", "i1", { at: null, noDate: true });
+    expect(await screen.findByText("No date")).toBeInTheDocument();
+  });
+
+  it("gives a Done Application's Interview only a date in the past (BIG-222)", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 10, 10, 12));
+    try {
+      const done = application("birch", { company: "Birch", status: "done", outcome: "rejected", interviews: [technical] });
+      const { user } = openPage(technical, done);
+      await user.click(editButton());
+      await user.click(within(form()).getByRole("button", { name: /^Date, / }));
+      await user.click(within(screen.getByRole("grid")).getByText("15"));
+      await user.click(within(form()).getByRole("button", { name: "Save" }));
+      expect(screen.getByRole("alert")).toHaveTextContent("Enter a date and time in the past: the Application is Done.");
+      expect(actions.updateInterviewAction).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows an Abandoned Interview as Didn't happen, opening on its Prep notes, and gives it a past date (BIG-222)", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 10, 28, 12));
+    try {
+      const never = interview("i1", { application_id: "birch", title: "Leadership", at: null, completed: false, participants: [dana] });
+      const done = application("birch", { company: "Birch", status: "done", outcome: "rejected", interviews: [never] });
+      const { user } = openPage(never, done);
+      expect(screen.getByText("Didn’t happen")).toBeInTheDocument();
+      expect(screen.getByText("No date")).toBeInTheDocument();
+      expect(screen.queryByText("Get ready")).not.toBeInTheDocument();
+      expect(screen.queryByText("How did it go?")).not.toBeInTheDocument();
+      expect(screen.getByText("No Interview notes yet.")).toBeInTheDocument();
+      const [first] = screen.getAllByRole("heading", { level: 2 });
+      expect(first).toHaveTextContent("Prep notes");
+
+      await user.click(editButton());
+      const toggle = within(form()).getByRole("switch", { name: "Didn’t happen" });
+      expect(toggle).toBeChecked();
+      await user.click(toggle);
+      await user.click(within(form()).getByRole("button", { name: /^Date, / }));
+      await user.click(within(screen.getByRole("grid")).getByText("15"));
+      await user.type(within(form()).getByLabelText("Time"), "10:00");
+      await user.click(within(form()).getByRole("button", { name: "Save" }));
+      expect(actions.updateInterviewAction).toHaveBeenCalledExactlyOnceWith("birch", "i1", {
+        at: new Date(2026, 10, 15, 10).toISOString(),
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("puts back the saved category, title and date on Escape, without saving", async () => {

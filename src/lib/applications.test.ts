@@ -5,6 +5,8 @@ import {
   byInterviewOrder,
   calendarDaysBetween,
   getUnscheduled,
+  interviewsToAsk,
+  isAbandoned,
   isScheduled,
   isUnscheduled,
   nextScheduledInterview,
@@ -754,5 +756,58 @@ describe("Unscheduled Interviews (BIG-221)", () => {
     expect(takeawayShowsOn([application("solo", { interviews: [lesson] }), other], application("solo", { interviews: [lesson] }), lesson)).toEqual([
       expect.objectContaining({ rule: "same_category", interview: expect.objectContaining({ id: "elsewhere" }) }),
     ]);
+  });
+});
+
+describe("Abandoned Interviews (BIG-222)", () => {
+  const tbd = (id: string, created_at: string): Interview => ({ ...interview(id, "", false), at: null, title: id, created_at });
+  const past = { ...interview("past", "2026-11-02T15:00:00Z", true), created_at: "2026-11-01T10:00:00Z" };
+  const ahead = { ...interview("ahead", "2026-12-01T15:00:00Z", false), created_at: "2026-11-03T10:00:00Z" };
+  const never = tbd("never", "2026-11-04T10:00:00Z");
+  const open = application("open", { is_waiting: false, interviews: [past, ahead, never] });
+  const done = { ...open, status: "done" as const, outcome: "rejected" as const, done_on: "2026-11-10", interviews: [past, never] };
+  const now = new Date("2026-11-20T12:00:00Z");
+
+  it("are the Interviews with no date on a Done Application, and Unscheduled again once it's reopened", () => {
+    expect(isAbandoned(done, never)).toBe(true);
+    expect(isAbandoned(done, past)).toBe(false);
+    expect(isAbandoned(open, never)).toBe(false);
+    const reopened = { ...done, status: "in_progress" as const, outcome: null, done_on: null };
+    expect(isAbandoned(reopened, never)).toBe(false);
+    expect(nextInterview(reopened)?.id).toBe("never");
+    expect(applicationProgress(reopened)).toEqual({ id: "unscheduled", label: "Next round · date TBD" });
+  });
+
+  it("are never ahead, keep their Round number, and have their own section on the Application page", () => {
+    expect(upcomingInterviews(done)).toEqual([]);
+    expect(nextInterview(done)).toBeNull();
+    expect(roundNumber(done, never)).toBe(2);
+    expect(interviewSections(done)).toEqual({ next: null, later: [], completed: [past], abandoned: [never] });
+    expect(interviewSections(open).abandoned).toEqual([]);
+  });
+
+  it("are left out of the Outcome's count, the calendar and the Date TBD group", () => {
+    expect(outcomeSummary(done)).toBe("After 1 Interview, 9 days from applying.");
+    expect(getCalendarInterviews([done]).map((d) => d.interview.id)).toEqual(["past"]);
+    expect(getUnscheduled([done])).toEqual([]);
+  });
+
+  it("are asked about, with Interviews dated after now, when an In Progress Application is marked Done", () => {
+    expect(interviewsToAsk(open, now).map((i) => i.id)).toEqual(["ahead", "never"]);
+    expect(interviewsToAsk(application("past-only", { interviews: [past] }), now)).toEqual([]);
+    expect(interviewsToAsk(done, now)).toEqual([]);
+  });
+
+  it("still carry their Takeaway for next time over to later prep, as from the day the Application ended", () => {
+    const lesson = { ...never, category: "hiring_manager" as const, takeaway: "Ask about the team first." };
+    const older = { ...interview("older", "2026-11-09T15:00:00Z", true), category: "hiring_manager" as const, takeaway: "Older." };
+    const ended = { ...done, interviews: [past, lesson] };
+    const elsewhere = application("elsewhere", { interviews: [older] });
+    const upcoming = { ...interview("upcoming", "2026-12-02T15:00:00Z", false), category: "hiring_manager" as const };
+    const next = application("next", { interviews: [upcoming] });
+    const apps = [ended, elsewhere, next];
+    expect(prepTakeaways(apps, next, upcoming).map((t) => t.interview.id)).toEqual(["never"]);
+    expect(takeawayShowsOn(apps, ended, lesson).map((t) => [t.rule, t.interview.id])).toEqual([["same_category", "upcoming"]]);
+    expect(takeaways(ended).map((t) => t.from.id)).toEqual(["never"]);
   });
 });

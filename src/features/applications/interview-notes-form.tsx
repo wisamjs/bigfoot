@@ -66,11 +66,17 @@ export function notesFieldId(interviewId: string, field: NotesFieldName) {
  */
 export function InterviewNotesForm({
   interview,
+  upcoming,
   trackers,
   onSave,
   showsOn = NOWHERE,
 }: {
   interview: Interview;
+  /**
+   * Still ahead: neither completed nor Abandoned (BIG-222). Only then does an empty card wait for
+   * afterwards; an Abandoned one never took place, so nothing is expected and nothing asks how it went.
+   */
+  upcoming: boolean;
   /** The upcoming Interviews whose prep shows this one's takeaway (takeawayShowsOn). */
   showsOn?: PrepTakeaway[];
   /** One per field, owned by the Interview page's editor, so "Saved" outlasts this form re-rendering with the saved value. */
@@ -126,14 +132,14 @@ export function InterviewNotesForm({
   const any = hasInterviewNotes(shown);
   // An upcoming Interview with nothing written yet waits for afterwards.
   const empty = !any && !editing;
-  const waiting = empty && !interview.completed;
+  const waiting = empty && upcoming;
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
       {!editing && shown.takeaway && <TakeawayCard takeaway={shown.takeaway} showsOn={showsOn} />}
       <NotesCard labelledBy={headingId} editing={editing} waiting={waiting} empty={empty} Art={WritingBigfoot}>
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <NotesHeading id={headingId} justFinished={editing && fresh && !asked} after={!interview.completed} />
+          <NotesHeading id={headingId} justFinished={editing && fresh && !asked} after={upcoming} />
           {!editing && <NotesStatuses trackers={trackers} canEdit={any} editRef={editRef} onEdit={edit} />}
         </div>
         {editing ? (
@@ -535,11 +541,17 @@ export function TheyAsked({ questions: asked, className = "" }: { questions: str
  */
 export function PrepNotesForm({
   interview,
+  upcoming,
   tracker,
   onSave,
   lookBack = NO_LOOK_BACK,
 }: {
   interview: Interview;
+  /**
+   * Still ahead: neither completed nor Abandoned. Only then is there "Get ready" and a look back; an
+   * Abandoned one's notes stay open, as before it, with nothing ahead to get ready for (BIG-222).
+   */
+  upcoming: boolean;
   /** The takeaways and They asked last time this Interview's prep looks back at (prepLookBack). */
   lookBack?: LookBack;
   /** Owned by the Interview page's editor, so "Saved" outlasts this form re-rendering with the saved notes. */
@@ -592,8 +604,8 @@ export function PrepNotesForm({
           )
         }
       />
-      {!folded && <GetReadyLine at={interview.at} />}
-      {!folded && <PrepLookBack lookBack={lookBack} />}
+      {upcoming && <GetReadyLine at={interview.at} />}
+      {upcoming && <PrepLookBack lookBack={lookBack} />}
       {editing ? (
         <PrepField id={notesFieldId(interview.id, "prep_notes")} headingId={headingId} draft={draft} onDone={done} />
       ) : (

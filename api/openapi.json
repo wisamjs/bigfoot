@@ -1083,7 +1083,7 @@
           "Applications"
         ],
         "summary": "Edit an Application",
-        "description": "Change some of an Application's fields and return it with its Interviews.\n\nOnly the fields sent change. Setting the status to `in_progress` reopens the Application and clears\nits Outcome, Done date, and Outcome note; setting it to `done` needs an Outcome, sent now or already\nset, and from `in_progress` sets the Done date to today unless one is sent. Setting the location to\nanything but `hybrid` clears its office days.",
+        "description": "Change some of an Application's fields and return it with its Interviews.\n\nOnly the fields sent change. Setting the status to `in_progress` reopens the Application and clears\nits Outcome, Done date, and Outcome note; setting it to `done` needs an Outcome, sent now or already\nset, and from `in_progress` sets the Done date to today unless one is sent. Setting the location to\nanything but `hybrid` clears its office days.\n\nMarking an In Progress Application Done can send `interviews`: whether each Unscheduled Interview, or each\none still dated after now, happened (GLOSSARY.md, Abandoned). It is applied in the same transaction. An\nInterview it leaves out stays, or becomes, undated: Abandoned, which reopening makes Unscheduled again.",
         "operationId": "update_application_applications__application_id__patch",
         "security": [
           {
@@ -1149,7 +1149,7 @@
             }
           },
           "422": {
-            "description": "The body is invalid (a list of field errors), or the change would leave a Done Application without an Outcome, an In Progress one with an Outcome, a Done date, or an Outcome note, a Done date before the applied date, or office days on a Location that isn't Hybrid (a message).",
+            "description": "The body is invalid (a list of field errors), or the change would leave a Done Application without an Outcome, an In Progress one with an Outcome, a Done date, or an Outcome note, a Done date before the applied date, or office days on a Location that isn't Hybrid; or `interviews` is sent without marking an In Progress Application Done, lists an Interview of another Application, or gives one a date in the future (a message).",
             "content": {
               "application/json": {
                 "schema": {
@@ -1315,7 +1315,7 @@
           "Interviews"
         ],
         "summary": "Add an Interview",
-        "description": "Add an Interview to an Application. The category, title, `at`, and at least one Participant are\nrequired; `at: null` adds an Unscheduled Interview (docs/adr/0009), which a Done Application refuses (422).\nCategories and titles can repeat, and Interview notes and Prep notes are optional. A Participant sent by\n`id` must be one of the Application's (422). The number of Interviews per Application is capped (409).",
+        "description": "Add an Interview to an Application. The category, title, `at`, and at least one Participant are\nrequired; `at: null` adds an Unscheduled Interview (docs/adr/0009). A Done Application's new Interview needs a\ndate in the past (422).\nCategories and titles can repeat, and Interview notes and Prep notes are optional. A Participant sent by\n`id` must be one of the Application's (422). The number of Interviews per Application is capped (409).",
         "operationId": "create_interview_applications__application_id__interviews_post",
         "security": [
           {
@@ -1409,7 +1409,7 @@
           "Interviews"
         ],
         "summary": "Edit an Interview",
-        "description": "Change an Interview's category, title, date, Interview notes, Prep notes, or Participants.\n\nOnly the fields sent change; send null for `what_they_asked`, `how_it_went`, `takeaway` or `prep_notes` to\nclear it. The category and title can't be cleared. `at: null` makes the Interview Unscheduled, on an In\nProgress Application only (422 on a Done one). `participants` replaces the Interview's\nParticipants: at least one, and a Participant left in no Interview is deleted. An `id` that isn't one of\nthe Application's Participants is refused (422).",
+        "description": "Change an Interview's category, title, date, Interview notes, Prep notes, or Participants.\n\nOnly the fields sent change; send null for `what_they_asked`, `how_it_went`, `takeaway` or `prep_notes` to\nclear it. The category and title can't be cleared. `at: null` makes the Interview Unscheduled, or, on a Done\nApplication, Abandoned (GLOSSARY.md), where a date in the future is refused (422). `participants` replaces\nthe Interview's Participants: at least one, and a Participant left in no Interview is deleted. An `id` that\nisn't one of the Application's Participants is refused (422).",
         "operationId": "update_interview_applications__application_id__interviews__interview_id__patch",
         "security": [
           {
@@ -2311,12 +2311,35 @@
             "examples": [
               "They went with an internal candidate."
             ]
+          },
+          "interviews": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/InterviewAnswer"
+                },
+                "type": "array",
+                "maxItems": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interviews",
+            "description": "Only when marking an In Progress Application Done (GLOSSARY.md, Abandoned): whether each Unscheduled Interview, or each one still dated after now, happened. Applied in the same transaction as the Status. Each `id` is one of this Application's Interviews, listed once. An Unscheduled Interview left out stays undated and becomes Abandoned; one still dated after now that is left out loses its date and becomes Abandoned too.",
+            "examples": [
+              [
+                {
+                  "id": "8a1f0c52-6f8e-4c43-9a5e-2b7d0e9b1c4d"
+                }
+              ]
+            ]
           }
         },
         "additionalProperties": false,
         "type": "object",
         "title": "ApplicationPatch",
-        "description": "Only the fields sent are changed; send null to clear an optional field.\n\nSetting the status to in_progress without an outcome clears the outcome, Done date, and Outcome note\n(reopening); setting it to done from in_progress without a done_on sets the Done date to today. Setting the\nlocation to anything but hybrid without office_days clears the office days."
+        "description": "Only the fields sent are changed; send null to clear an optional field.\n\nSetting the status to in_progress without an outcome clears the outcome, Done date, and Outcome note\n(reopening); setting it to done from in_progress without a done_on sets the Done date to today. Setting the\nlocation to anything but hybrid without office_days clears the office days. Marking an In Progress\nApplication Done can say, in `interviews`, whether each Unscheduled Interview, or each one still dated after\nnow, happened."
       },
       "ErrorMessage": {
         "properties": {
@@ -2414,7 +2437,7 @@
               }
             ],
             "title": "At",
-            "description": "When the Interview happens: a date and time, with a time zone. Null when the Interview is Unscheduled (GLOSSARY.md, docs/adr/0009): upcoming, with no date and time yet, shown as \"Date TBD\".",
+            "description": "When the Interview happens: a date and time, with a time zone. Null when the Interview is Unscheduled (GLOSSARY.md, docs/adr/0009): upcoming, with no date and time yet, shown as \"Date TBD\". On a Done Application, null means the Interview is Abandoned: it never took place, shown as \"Didn't happen\".",
             "examples": [
               "2026-11-20T17:00:00Z"
             ]
@@ -2490,7 +2513,7 @@
           "completed": {
             "type": "boolean",
             "title": "Completed",
-            "description": "Derived, never stored: the date is in the past. An Unscheduled Interview is never completed.",
+            "description": "Derived, never stored: the date is in the past. An Interview with no date, Unscheduled or Abandoned, is never completed.",
             "examples": [
               false
             ]
@@ -2524,6 +2547,40 @@
         ],
         "title": "Interview",
         "description": "One conversation in a company's hiring process, belonging to one Application."
+      },
+      "InterviewAnswer": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id",
+            "description": "One of this Application's Interviews."
+          },
+          "at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At",
+            "description": "When the Interview took place, a date and time in the past with a time zone; or null when it didn't happen, which leaves it Abandoned. An Interview still dated after now can keep that date by sending it unchanged.",
+            "examples": [
+              "2026-11-20T17:00:00Z"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "at"
+        ],
+        "title": "InterviewAnswer",
+        "description": "Whether one Interview happened, sent with marking its Application Done (GLOSSARY.md, Abandoned)."
       },
       "InterviewCreate": {
         "properties": {
@@ -2567,7 +2624,7 @@
               }
             ],
             "title": "At",
-            "description": "When the Interview happens: a date and time, with a time zone. Null when the Interview is Unscheduled (GLOSSARY.md, docs/adr/0009): upcoming, with no date and time yet, shown as \"Date TBD\". Required: send null for an Unscheduled Interview; leaving the key out is refused. Null is refused on a Done Application (422).",
+            "description": "When the Interview happens: a date and time, with a time zone. Null when the Interview is Unscheduled (GLOSSARY.md, docs/adr/0009): upcoming, with no date and time yet, shown as \"Date TBD\". On a Done Application, null means the Interview is Abandoned: it never took place, shown as \"Didn't happen\". Required: send null for an Unscheduled Interview; leaving the key out is refused. On a Done Application, null and a date in the future are refused (422).",
             "examples": [
               "2026-11-20T17:00:00Z"
             ]
@@ -2725,7 +2782,7 @@
               }
             ],
             "title": "At",
-            "description": "When the Interview happens: a date and time, with a time zone. Null when the Interview is Unscheduled (GLOSSARY.md, docs/adr/0009): upcoming, with no date and time yet, shown as \"Date TBD\". Send null to make it Unscheduled, on an In Progress Application only (422 on a Done one).",
+            "description": "When the Interview happens: a date and time, with a time zone. Null when the Interview is Unscheduled (GLOSSARY.md, docs/adr/0009): upcoming, with no date and time yet, shown as \"Date TBD\". On a Done Application, null means the Interview is Abandoned: it never took place, shown as \"Didn't happen\". Send null to make it Unscheduled, or Abandoned on a Done Application, where a date in the future is refused (422).",
             "examples": [
               "2026-11-27T15:30:00Z"
             ]
@@ -2826,7 +2883,7 @@
         "additionalProperties": false,
         "type": "object",
         "title": "InterviewPatch",
-        "description": "Only the fields sent are changed; send null for one of the Interview notes fields or `prep_notes` to clear it.\n\nSend `at: null` to make an In Progress Application's Interview Unscheduled. `participants`, when sent,\nreplaces the Interview's Participants and needs at least one."
+        "description": "Only the fields sent are changed; send null for one of the Interview notes fields or `prep_notes` to clear it.\n\nSend `at: null` to make the Interview Unscheduled, or Abandoned on a Done Application. `participants`, when sent,\nreplaces the Interview's Participants and needs at least one."
       },
       "JobSeeker": {
         "properties": {
@@ -3042,7 +3099,7 @@
               }
             ],
             "title": "At",
-            "description": "When the Interview happens: a date and time, with a time zone. Null when the Interview is Unscheduled (GLOSSARY.md, docs/adr/0009): upcoming, with no date and time yet, shown as \"Date TBD\".",
+            "description": "When the Interview happens: a date and time, with a time zone. Null when the Interview is Unscheduled (GLOSSARY.md, docs/adr/0009): upcoming, with no date and time yet, shown as \"Date TBD\". On a Done Application, null means the Interview is Abandoned: it never took place, shown as \"Didn't happen\".",
             "examples": [
               "2026-11-24T19:00:00Z"
             ]
@@ -3050,7 +3107,7 @@
           "completed": {
             "type": "boolean",
             "title": "Completed",
-            "description": "Derived, never stored: the date is in the past. An Unscheduled Interview is never completed.",
+            "description": "Derived, never stored: the date is in the past. An Interview with no date, Unscheduled or Abandoned, is never completed.",
             "examples": [
               false
             ]

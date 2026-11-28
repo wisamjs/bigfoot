@@ -482,8 +482,12 @@ export const SaveFails: Story = {
   },
 };
 
-/** Mark done… holds the Change Status choices; picking one saves at once, with today as the Done date. */
+/**
+ * Mark done… holds the Change Status choices; with no Interview Unscheduled or still ahead, picking
+ * one saves at once, with today as the Done date, and asks nothing.
+ */
 export const MarkDone: Story = {
+  args: { app: { ...lumen, is_waiting: true, interviews: lumen.interviews.filter((i) => i.completed) } },
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: "Mark done…" }));
     await userEvent.click(await canvas.findByRole("menuitem", { name: "Mark Rejected" }));
@@ -495,6 +499,69 @@ export const MarkDone: Story = {
       }),
     );
   },
+};
+
+/**
+ * With an Interview still ahead and an Unscheduled one (BIG-222), Mark Rejected first asks "Did these
+ * Interviews happen?"; confirming sends the Status, the Outcome and each answer in one change.
+ */
+export const MarkDoneAsks: Story = {
+  args: { app: { ...lumen, interviews: [...lumen.interviews.filter((i) => i.id !== "leadership"), unscheduledLeadership] } },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Mark done…" }));
+    await userEvent.click(await canvas.findByRole("menuitem", { name: "Mark Rejected" }));
+    const dialog = await within(canvasElement.ownerDocument.body).findByRole("dialog", { name: "Did these Interviews happen?" });
+    await expect(actions.updateApplicationAction).not.toHaveBeenCalled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Mark Rejected" }));
+    await waitFor(() =>
+      expect(actions.updateApplicationAction).toHaveBeenCalledWith("lumen", {
+        status: "done",
+        outcome: "rejected",
+        done_on: todayLocal(),
+        interviews: [
+          { id: "deep-dive", at: null },
+          { id: "leadership", at: null },
+        ],
+      }),
+    );
+  },
+};
+
+/** Escape closes the Mark done dialog, saving nothing, and focus returns to Mark done…. */
+export const MarkDoneAsksThenEscape: Story = {
+  args: MarkDoneAsks.args,
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const markDone = canvas.getByRole("button", { name: "Mark done…" });
+    await userEvent.click(markDone);
+    await userEvent.click(await canvas.findByRole("menuitem", { name: "Mark Rejected" }));
+    await within(canvasElement.ownerDocument.body).findByRole("dialog", { name: "Did these Interviews happen?" });
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(markDone).toHaveFocus());
+    await expect(actions.updateApplicationAction).not.toHaveBeenCalled();
+  },
+};
+
+/**
+ * Rejected with an Interview that never took place (Abandoned, BIG-222): its strip segment a dashed
+ * grey outline reading "R3 · Didn't happen", its own Didn't happen group in the Interviews card, left
+ * out of the Outcome card's count, and no Next up card.
+ */
+export const DoneWithAnAbandonedInterview: Story = {
+  args: { app: { ...rejected, interviews: [...rejected.interviews, { ...unscheduledLeadership, takeaway: "Ask who decides." }] } },
+  play: async ({ canvas }) => {
+    const segments = within(canvas.getByRole("list", { name: "Interviews by date" })).getAllByRole("link");
+    await expect(segments[2]).toHaveAccessibleName(/^Round 3 · Didn’t happen.*Leadership$/);
+    await expect(canvas.getByRole("list", { name: "Didn’t happen" })).toHaveTextContent("Leadership");
+    await expect(canvas.getByText(/^After 2 Interviews, /)).toBeVisible();
+    await expect(canvas.getByText("From Leadership · Didn’t happen")).toBeVisible();
+    await expect(canvas.queryByText(/Next up/i)).not.toBeInTheDocument();
+  },
+};
+
+/** The same on a phone. */
+export const DoneWithAnAbandonedInterviewOnAPhone: Story = {
+  ...DoneWithAnAbandonedInterview,
+  globals: { viewport: { value: "mobile1", isRotated: false } },
 };
 
 /** ⋯ holds Delete application, which asks first. */

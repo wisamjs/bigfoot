@@ -386,6 +386,19 @@ export const DateTbd: Story = {
 /** The same on a phone: Next on one line, "Hiring Manager · Date TBD". */
 export const DateTbdPhone: Story = { ...DateTbd, globals: { viewport: { value: "mobile1", isRotated: false } } };
 
+/**
+ * An Offer with an Interview that never took place (Abandoned, BIG-222): its last mark a dashed grey
+ * outline, after the grey completed ones.
+ */
+export const DoneWithAnAbandonedInterview: Story = {
+  args: { applications: [{ ...lumenTbd, status: "done", outcome: "offer", done_on: lumenTbd.applied_on }] },
+  play: async ({ canvasElement }) => {
+    const marks = progressMarks(canvasElement, "lumen-bio");
+    await expect(marks.at(-1)?.className).toContain("border-dashed");
+    await expect(marks.slice(0, -1).every((mark) => mark.classList.contains("bg-tone-gray-fg"))).toBe(true);
+  },
+};
+
 /** A row's Interview marks in its Progress column. */
 function progressMarks(canvasElement: HTMLElement, company: string) {
   const row = canvasElement.querySelector(`tr[data-application-id="${company.toLowerCase()}"]`);

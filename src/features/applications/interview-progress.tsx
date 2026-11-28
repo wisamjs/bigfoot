@@ -5,7 +5,16 @@ import { useIsClient } from "@/hooks/use-is-client";
 import { DaysFromToday } from "@/features/applications/application-when";
 import { interviewHref } from "@/features/applications/routes";
 import { interviewMark } from "@/features/applications/status-tone";
-import { DATE_TBD, nextInterview, roundNumber, type Application, type Interview, type Status } from "@/lib/applications";
+import {
+  DATE_TBD,
+  DIDNT_HAPPEN,
+  isAbandoned,
+  nextInterview,
+  roundNumber,
+  type Application,
+  type Interview,
+  type Status,
+} from "@/lib/applications";
 
 const dayFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
 
@@ -13,13 +22,15 @@ const dayFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "num
  * The Application's Interviews as a strip of segments, by date (BIG-174): one for each completed
  * Interview, green while the Application is In Progress and grey once it is Done (BIG-177), the
  * brand colour for the next, a light line for the rest, and a dashed one in the brand colour, last,
- * for each Unscheduled Interview (BIG-221), each with "R3 · Nov 25 · In 2 days" or "R4 · Date TBD"
+ * for each Unscheduled Interview (BIG-221), a dashed grey outline for each Abandoned one of a Done
+ * Application ("R4 · Didn't happen", BIG-222), each with "R3 · Nov 25 · In 2 days" or "R4 · Date TBD"
  * (its Round number, BIG-190) and its title under it (BIG-202). Each segment opens its Interview page. On a phone, the segments
  * alone and "2 of 4 Interviews completed". Nothing when there are no Interviews.
  *
  * On an Interview page (`current` is that Interview's id, BIG-178), its segment is outlined and
  * labelled "This interview · Nov 13", and a phone's line reads "Round 2 of 4" with a link to
- * "R3 · <title> →", or "Round 4 of 4 · Date TBD" for an Unscheduled Interview.
+ * "R3 · <title> →", or "Round 4 of 4 · Date TBD" for an Unscheduled Interview ("· Didn't happen"
+ * for an Abandoned one).
  */
 export function InterviewProgress({ app, current }: { app: Application; current?: string }) {
   const next = nextInterview(app);
@@ -50,7 +61,7 @@ export function InterviewProgress({ app, current }: { app: Application; current?
           <>
             <span>
               Round {roundNumber(app, app.interviews[position])} of {app.interviews.length}
-              {app.interviews[position].at === null && <> · {DATE_TBD}</>}
+              {app.interviews[position].at === null && <> · {noDateText(app, app.interviews[position])}</>}
             </span>
             {following && (
               <Link
@@ -107,7 +118,7 @@ function Segment({
               </span>
               <span className="sr-only">Round {round}</span>
               {" · "}
-              <SegmentWhen interview={interview} current={current} />
+              <SegmentWhen interview={interview} status={status} current={current} />
             </span>
             <span className={`mt-1 block text-base sm:truncate ${current ? "font-bold text-heading" : "font-semibold text-body"}`}>
               {title}
@@ -119,13 +130,21 @@ function Segment({
   );
 }
 
+/** What an Interview with no date reads as: "Didn't happen" when Abandoned, "Date TBD" when Unscheduled. */
+function noDateText(app: Pick<Application, "status">, interview: Interview): string {
+  return isAbandoned(app, interview) ? DIDNT_HAPPEN : DATE_TBD;
+}
+
 /**
- * "Nov 6 · Completed", "Nov 25 · In 2 days", "Date TBD", or on an Interview's own page "This
- * interview · Nov 13" ("This interview · Date TBD").
+ * "Nov 6 · Completed", "Nov 25 · In 2 days", "Date TBD", "Didn't happen", or on an Interview's own
+ * page "This interview · Nov 13" ("This interview · Date TBD").
  */
-function SegmentWhen({ interview, current }: { interview: Interview; current: boolean }) {
+function SegmentWhen({ interview, status, current }: { interview: Interview; status: Status; current: boolean }) {
   const isClient = useIsClient();
-  if (interview.at === null) return <>{current ? `This interview · ${DATE_TBD}` : DATE_TBD}</>;
+  if (interview.at === null) {
+    const noDate = noDateText({ status }, interview);
+    return <>{current ? `This interview · ${noDate}` : noDate}</>;
+  }
   if (!isClient) return <span className="inline-block h-4" />;
   const day = dayFormat.format(new Date(interview.at));
   if (current) return <>This interview · {day}</>;

@@ -60,7 +60,7 @@ export const DateTbd: Story = {
     await userEvent.type(canvas.getByRole("textbox", { name: "Role" }), "VP Engineering");
     await userEvent.click(canvas.getByRole("button", { name: "Add Interview" }));
     await waitFor(() =>
-      expect(createInterviewAction).toHaveBeenCalledWith("datadog", expect.objectContaining({ at: null, unscheduled: true })),
+      expect(createInterviewAction).toHaveBeenCalledWith("datadog", expect.objectContaining({ at: null, noDate: true })),
     );
   },
 };

@@ -13,6 +13,7 @@ import { interviewHref } from "@/features/applications/routes";
 import { TheyAsked } from "@/features/applications/interview-notes-form";
 import {
   DATE_TBD,
+  DIDNT_HAPPEN,
   INTERVIEW_NOTES_LABELS,
   hasInterviewNotes,
   paragraphs,
@@ -27,16 +28,28 @@ const FOLD_LENGTH = 140;
  * One Interview in the Application page's Interviews card (BIG-174): a date tile, its title with its
  * category beside it, its day and time. One still ahead says how far off it is, and Add Interview notes while it has none; a
  * still ahead with no date (Unscheduled, BIG-221) has a "TBD" tile and reads "Date TBD"; a
+ * Done Application's Abandoned one (`abandoned`, BIG-222) has a dashed grey tile and reads "Didn't
+ * happen", with its Interview notes like a completed one's; a
  * completed one is marked Completed and shows its Interview notes in full (BIG-179: How it went, They
  * asked and the takeaway), folded to the first paragraph on a phone behind Show all notes. The title is a link whose area covers the row, so the whole row
  * opens the Interview page, where it is edited; the notes sit above that, so their text can be
  * selected.
  */
-export function InterviewRow({ applicationId, interview }: { applicationId: string; interview: Interview }) {
+export function InterviewRow({
+  applicationId,
+  interview,
+  abandoned = false,
+}: {
+  applicationId: string;
+  interview: Interview;
+  abandoned?: boolean;
+}) {
   const completed = interview.completed;
+  // Over either way: it took place, or never will.
+  const over = completed || abandoned;
   return (
     <li className="group relative flex gap-4 border-t border-line py-5 first:border-t-0 first:pt-2">
-      <DateTile at={interview.at} tone={completed ? "muted" : "outline"} />
+      <DateTile at={interview.at} tone={completed ? "muted" : "outline"} abandoned={abandoned} />
       <div className="min-w-0 flex-1">
         <p className="m-0 flex flex-wrap items-center gap-x-2.5 gap-y-1">
           <Link
@@ -55,7 +68,9 @@ export function InterviewRow({ applicationId, interview }: { applicationId: stri
           )}
         </p>
         <p className="m-0 mt-1 text-sm text-body">
-          {interview.at === null ? (
+          {abandoned ? (
+            <span className="font-medium">{DIDNT_HAPPEN}</span>
+          ) : interview.at === null ? (
             <span className="font-medium text-fg-brand">{DATE_TBD}</span>
           ) : (
             <>
@@ -69,20 +84,20 @@ export function InterviewRow({ applicationId, interview }: { applicationId: stri
             </>
           )}
         </p>
-        {completed && hasInterviewNotes(interview) && <Notes interview={interview} />}
+        {over && hasInterviewNotes(interview) && <Notes interview={interview} />}
       </div>
-      <RowEnd completed={completed} hasNotes={hasInterviewNotes(interview)} />
+      <RowEnd over={over} hasNotes={hasInterviewNotes(interview)} />
     </li>
   );
 }
 
 /**
  * The row's right edge, for the eye: what opening it is for. The link says it all to screen readers.
- * A completed one shows Edit's look (BIG-240); one still ahead with no notes shows Add Interview notes
- * as the secondary button the Interview page has, on wider screens.
+ * One that is over, completed or Abandoned, shows Edit's look (BIG-240); one still ahead with no
+ * notes shows Add Interview notes as the secondary button the Interview page has, on wider screens.
  */
-function RowEnd({ completed, hasNotes }: { completed: boolean; hasNotes: boolean }) {
-  if (completed) return <EditMark className="shrink-0 self-center" />;
+function RowEnd({ over, hasNotes }: { over: boolean; hasNotes: boolean }) {
+  if (over) return <EditMark className="shrink-0 self-center" />;
   return (
     <span aria-hidden className="flex shrink-0 items-center self-center">
       {!hasNotes && <span className={`${ADD_NOTES_LOOK} hidden sm:inline-flex`}>Add Interview notes</span>}

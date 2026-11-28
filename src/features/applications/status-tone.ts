@@ -1,5 +1,5 @@
 import type { Tone } from "@/components/ui/badge";
-import { isUnscheduled, type ApplicationGroup, type Interview, type InterviewCategory, type Outcome, type Status } from "@/lib/applications";
+import { isAbandoned, isUnscheduled, type ApplicationGroup, type Interview, type InterviewCategory, type Outcome, type Status } from "@/lib/applications";
 
 // The Badge colour for each value. The values and their labels live in lib/applications.ts;
 // which colour a value shows is a presentation choice, so it lives here.
@@ -60,13 +60,21 @@ export const UNSCHEDULED_MARK = "bg-[repeating-linear-gradient(90deg,var(--brand
 /** The neutral pill of "Next round · date TBD" and "Upcoming · date TBD" (BIG-221): neither warning nor blue. */
 export const UNSCHEDULED_PILL = { pill: "border-line-medium bg-card-strong text-heading", dot: "bg-body-subtle" };
 
+/** An Abandoned Interview's mark (BIG-222): a dashed grey outline, empty inside, as it never took place. */
+export const ABANDONED_MARK = "border border-dashed border-tone-gray-fg";
+
+/** The grey pill of "Didn't happen" on an Abandoned Interview's page (BIG-222), as a Done Application's Completed ones. */
+export const ABANDONED_PILL = { pill: "border-tone-gray-line bg-tone-gray text-tone-gray-fg", dot: "bg-tone-gray-fg" };
+
 /**
  * Each Interview's mark in Progress and on the strip: completed ones as COMPLETED_MARK says, an
- * Unscheduled one of an In Progress Application dashed (UNSCHEDULED_MARK), the next one in the brand
- * colour, the ones after it muted.
+ * Unscheduled one of an In Progress Application dashed (UNSCHEDULED_MARK), an Abandoned one of a Done
+ * Application a dashed grey outline (ABANDONED_MARK), the next one in the brand colour, the ones after
+ * it muted.
  */
 export function interviewMark(interview: Interview, status: Status, next: boolean): string {
   if (interview.completed) return COMPLETED_MARK[status];
-  if (isUnscheduled(interview) && status === "in_progress") return UNSCHEDULED_MARK;
+  if (isAbandoned({ status }, interview)) return ABANDONED_MARK;
+  if (isUnscheduled(interview)) return UNSCHEDULED_MARK;
   return next ? "bg-brand" : "bg-line-medium";
 }

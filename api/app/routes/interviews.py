@@ -14,6 +14,7 @@ from app.models import (
     InterviewCreate,
     InterviewId,
     InterviewPatch,
+    check_done_interview_at,
     check_unscheduled,
 )
 from app.participants import prune_participants, set_participants
@@ -63,11 +64,13 @@ def create_interview(
     request: Request, job_seeker: JobSeekerId, application_id: ApplicationId, body: InterviewCreate
 ) -> Interview:
     """Add an Interview to an Application. The category, title, `at`, and at least one Participant are
-    required; `at: null` adds an Unscheduled Interview (docs/adr/0009), which a Done Application refuses (422).
+    required; `at: null` adds an Unscheduled Interview (docs/adr/0009). A Done Application's new Interview needs a
+    date in the past (422).
     Categories and titles can repeat, and Interview notes and Prep notes are optional. A Participant sent by
     `id` must be one of the Application's (422). The number of Interviews per Application is capped (409)."""
     with pool(request).connection() as conn, conn.transaction():
-        _check_unscheduled(owned(conn, job_seeker, application_id, lock=True), body.at)
+        application_status = owned(conn, job_seeker, application_id, lock=True)
+        _check_at(application_status, body.at, creating=True)
         count = conn.execute("select count(*) from interviews where application_id = %s", (application_id,)).fetchone()[
             "count"
         ]
@@ -108,10 +111,10 @@ def update_interview(
     """Change an Interview's category, title, date, Interview notes, Prep notes, or Participants.
 
     Only the fields sent change; send null for `what_they_asked`, `how_it_went`, `takeaway` or `prep_notes` to
-    clear it. The category and title can't be cleared. `at: null` makes the Interview Unscheduled, on an In
-    Progress Application only (422 on a Done one). `participants` replaces the Interview's
-    Participants: at least one, and a Participant left in no Interview is deleted. An `id` that isn't one of
-    the Application's Participants is refused (422).
+    clear it. The category and title can't be cleared. `at: null` makes the Interview Unscheduled, or, on a Done
+    Application, Abandoned (GLOSSARY.md), where a date in the future is refused (422). `participants` replaces
+    the Interview's Participants: at least one, and a Participant left in no Interview is deleted. An `id` that
+    isn't one of the Application's Participants is refused (422).
     """
     changes = body.model_dump(exclude_unset=True, exclude={"participants"})
     assignments = [sql.SQL("{} = %s").format(sql.Identifier(name)) for name in changes]
@@ -119,7 +122,7 @@ def update_interview(
     with pool(request).connection() as conn, conn.transaction():
         application_status = owned(conn, job_seeker, application_id)
         if "at" in changes:
-            _check_unscheduled(application_status, changes["at"])
+            _check_at(application_status, changes["at"])
         row = conn.execute(
             sql.SQL("update interviews set {} where id = %s and application_id = %s returning {}").format(
                 sql.SQL(", ").join(assignments), INTERVIEW_COLUMNS
@@ -149,8 +152,11 @@ def delete_interview(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Interview not found")
 
 
-def _check_unscheduled(application_status: str, at: datetime | None) -> None:
+def _check_at(application_status: str, at: datetime | None, *, creating: bool = False) -> None:
+    """A new Interview is Unscheduled only on an In Progress Application; a Done one's dates are in the past."""
     try:
-        check_unscheduled(application_status, at)
+        if creating:
+            check_unscheduled(application_status, at)
+        check_done_interview_at(application_status, at, datetime.now(UTC))
     except ValueError as error:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)) from error
