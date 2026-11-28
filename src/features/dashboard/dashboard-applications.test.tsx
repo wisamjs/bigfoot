@@ -1,8 +1,12 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { application } from "@/test/applications";
 import { DashboardApplications } from "./dashboard-applications";
+
+vi.mock("next/navigation", () => import("@/test/navigation"));
+
+afterEach(() => window.history.replaceState(null, "", "/dashboard"));
 
 const birch = application("birch", { company: "Birch", title: "Engineer" });
 const rejected = application("umbrella", { company: "Umbrella", status: "done", outcome: "rejected", is_waiting: false });
@@ -51,5 +55,62 @@ describe("Dashboard Applications", () => {
     expect(screen.getByRole("link", { name: "Add your first Application" })).toHaveAttribute("href", "/applications/new");
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+
+  describe("sorting (BIG-209)", () => {
+    const zeta = application("zeta", { company: "Zeta", location: "in_office", waiting_since: "2026-11-10" });
+    const alpha = application("alpha", { company: "Alpha", location: "remote", waiting_since: "2026-11-20" });
+    const companies = () =>
+      screen
+        .getAllByRole("link", { name: /^Open / })
+        .map((link) => link.textContent?.replace(/^Open /, "").split(",")[0]);
+
+    it("sorts by Progress until a column header is picked, then by that column, keeping it in the URL", async () => {
+      const user = userEvent.setup();
+      render(<DashboardApplications applications={[alpha, zeta]} />);
+      // Both Waiting with no Interviews: the longest wait first.
+      expect(companies()).toEqual(["Zeta", "Alpha"]);
+      expect(screen.getByRole("columnheader", { name: "Progress" })).toHaveAttribute("aria-sort", "ascending");
+
+      await user.click(screen.getByRole("button", { name: "Application" }));
+      expect(companies()).toEqual(["Alpha", "Zeta"]);
+      expect(window.location.search).toBe("?sort=application");
+      expect(screen.getByRole("columnheader", { name: "Application" })).toHaveAttribute("aria-sort", "ascending");
+      expect(screen.getByRole("columnheader", { name: "Progress" })).not.toHaveAttribute("aria-sort");
+
+      await user.click(screen.getByRole("button", { name: "Progress" }));
+      expect(window.location.search).toBe("");
+    });
+
+    it("opens in the sort the URL names", () => {
+      window.history.replaceState(null, "", "/dashboard?sort=location");
+      render(<DashboardApplications applications={[alpha, zeta]} />);
+      expect(companies()).toEqual(["Zeta", "Alpha"]); // In-Office before Remote
+      expect(screen.getByRole("columnheader", { name: "Location" })).toHaveAttribute("aria-sort", "ascending");
+    });
+
+    it("sorts from the Sort by menu on a phone", async () => {
+      const user = userEvent.setup();
+      render(<DashboardApplications applications={[alpha, zeta]} />);
+      const menu = screen.getByRole("combobox", { name: "Sort by" });
+      expect(within(menu).getAllByRole("option").map((o) => o.textContent)).toEqual(["Progress", "Application", "Next", "Location"]);
+
+      await user.selectOptions(menu, "Application");
+      expect(companies()).toEqual(["Alpha", "Zeta"]);
+      expect(window.location.search).toBe("?sort=application");
+    });
+
+    it("keeps Done Applications below the others in every sort", async () => {
+      const user = userEvent.setup();
+      window.history.replaceState(null, "", "/dashboard?sort=application");
+      render(<DashboardApplications applications={[zeta, rejected, alpha]} />);
+      await user.click(screen.getByRole("checkbox", { name: "Show done" }));
+      expect(companies()).toEqual(["Alpha", "Zeta", "Umbrella"]);
+    });
+
+    it("has no Sort by menu for a single Application", () => {
+      render(<DashboardApplications applications={[birch]} />);
+      expect(screen.queryByRole("combobox", { name: "Sort by" })).not.toBeInTheDocument();
+    });
   });
 });

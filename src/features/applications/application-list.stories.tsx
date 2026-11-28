@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect } from "storybook/test";
+import { expect, fn } from "storybook/test";
 import type { Application, InterviewCategory, Location, Outcome } from "@/lib/applications";
 import { previewApplications } from "@/lib/mock-data";
 import { application, interview as testInterview } from "@/test/applications";
@@ -417,6 +417,43 @@ export const RowsOpenTheApplication: Story = {
     await expect(canvas.getAllByRole("link", { name: /^Open Stripe/ })).toHaveLength(1);
   },
 };
+
+/** The companies in the table's rows, top to bottom. */
+function rowCompanies(canvasElement: HTMLElement) {
+  return [...canvasElement.querySelectorAll("tbody tr td:first-child > p:first-child")].map((p) =>
+    p.textContent?.replace(/^Open /, "").split(",")[0],
+  );
+}
+
+/**
+ * Sorted by Progress, the dashboard's default (BIG-209): Interviews booked first, the highest Round
+ * first (Asana and Okta both have Round 7 booked; Asana's is sooner), then Waiting with the most Interviews behind it first, then Offers.
+ * Each column header sorts by its column; the sorted one shows an arrow.
+ */
+export const SortedByProgress: Story = {
+  args: { sort: "progress", onSort: fn() },
+  play: async ({ canvas, canvasElement, args, userEvent }) => {
+    await expect(rowCompanies(canvasElement).slice(0, 2)).toEqual(["Asana", "Okta"]);
+    await expect(canvas.getByRole("columnheader", { name: "Progress" })).toHaveAttribute("aria-sort", "ascending");
+    await userEvent.click(canvas.getByRole("button", { name: "Location" }));
+    await expect(args.onSort).toHaveBeenCalledWith("location");
+  },
+};
+
+/** Sorted by Application: company A–Z, then role. */
+export const SortedByApplication: Story = {
+  args: { sort: "application", onSort: fn() },
+  play: async ({ canvasElement }) => {
+    const companies = rowCompanies(canvasElement);
+    await expect(companies).toEqual(companies.toSorted((a = "", b = "") => a.localeCompare(b, "en", { sensitivity: "base" })));
+  },
+};
+
+/** Sorted by Next: the soonest Interview first, then the longest wait, then Offers. */
+export const SortedByNext: Story = { args: { sort: "next", onSort: fn() } };
+
+/** Sorted by Location A–Z, Applications without one last; with Show done on, the Done ones stay at the bottom. */
+export const SortedByLocation: Story = { args: { sort: "location", onSort: fn(), showDone: true } };
 
 /** The landing page's decorative copy: hidden from screen readers, not interactive. */
 export const Decorative: Story = {
