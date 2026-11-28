@@ -45,7 +45,7 @@ Every route and field is in [`api/openapi.json`](api/openapi.json). Treat a toke
 
 ## Run it locally
 
-You need Node.js 24, [uv](https://docs.astral.sh/uv/getting-started/installation/), a Google account and a Supabase project.
+You need Node.js 24, [uv](https://docs.astral.sh/uv/getting-started/installation/), a Google account, and a Supabase project.
 
 1. Install dependencies and copy the environment file:
 

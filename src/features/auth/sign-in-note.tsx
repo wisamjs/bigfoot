@@ -15,7 +15,7 @@ export function SignInNote({ className = "" }: { className?: string }) {
       <Link href="/privacy" className={link}>
         Privacy Policy
       </Link>
-      . Signing in with Google shares your name, email and photo with Bigfoot.
+      . Signing in with Google shares your name, email, and photo with Bigfoot.
     </p>
   );
 }
