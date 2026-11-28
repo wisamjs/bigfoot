@@ -21,7 +21,7 @@ export const XSS_URLS = [
 /* eslint-enable no-script-url */
 
 /**
- * Elements a payload would create if it were parsed as HTML instead of shown as text. Bigfoot's own
- * illustrations are images with an empty alt (the Outcome card's, BIG-227); an injected one has none.
+ * Elements a payload would create if it were parsed as HTML instead of shown as text. The page's own
+ * Bigfoot art (src/features/shell/illustrations.tsx: an empty alt and a bigfoot- file) isn't one.
  */
-export const INJECTED_ELEMENTS = 'script, img:not([alt=""]), svg[onload], iframe, [onerror], [onload]';
+export const INJECTED_ELEMENTS = 'script, img:not([alt=""][src*="bigfoot-"]), svg[onload], iframe, [onerror], [onload]';

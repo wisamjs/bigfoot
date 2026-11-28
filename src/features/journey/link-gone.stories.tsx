@@ -38,3 +38,23 @@ export const ExpiredNoName: Story = {
     await expect(canvas.getByText("Ask the person who sent it to renew it.")).toBeVisible();
   },
 };
+
+/** Bigfoot looks over the card's top edge, right of the wordmark (BIG-229), on a light page. */
+export const ExpiredLight: Story = {
+  args: { kind: "expired", sharedBy: "Wisam Zaghal" },
+  globals: { theme: "light", viewport: { value: "desktop", isRotated: false } },
+  play: async ({ canvasElement }) => {
+    const art = canvasElement.querySelector('img[src*="bigfoot-peek-over"]');
+    await expect(art).toHaveAttribute("alt", "");
+    await expect(art).toBeVisible();
+  },
+};
+
+/** The same Bigfoot on a stopped link, which still names nobody. */
+export const NotActiveDesktop: Story = {
+  globals: { viewport: { value: "desktop", isRotated: false } },
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvasElement.querySelector('img[src*="bigfoot-peek-over"]')).toBeVisible();
+    await expect(canvas.getByText("Ask the person who sent it for a new one.")).toBeVisible();
+  },
+};

@@ -1,7 +1,7 @@
 "use client";
 
 import { Lightbulb, Pencil, Plus } from "lucide-react";
-import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useId, useRef, useState, type ComponentType, type ReactNode, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { FieldError, invalidProps } from "@/components/ui/field-error";
 import { inputClasses } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { PLACEHOLDERS } from "@/features/applications/placeholders";
 import { PrepLookBack, TakeawayShowsOn } from "@/features/applications/prep-look-back";
 import { SaveStatus } from "@/components/ui/save-status";
 import { useUnsavedChanges } from "@/features/applications/unsaved-changes";
+import { NotebookBigfoot, WritingBigfoot } from "@/features/shell/illustrations";
 import type { SaveResult, SaveTracker } from "@/hooks/use-save-status";
 import {
   INTERVIEW_NOTES_FIELDS,
@@ -54,6 +55,7 @@ export function notesFieldId(interviewId: string, field: NotesFieldName) {
  * (BIG-180). The takeaway's card says which upcoming Interviews' prep it shows on (BIG-181).
  * Edit turns them into fields, as the Details card does its details, and Done goes back to the
  * text, unless a save has failed or a field is over its limit: then focus goes to that field.
+ * While there are none to read, Bigfoot writes in the card's empty right side (BIG-228).
  *
  * Each field saves by itself, as a draft, with its own save status: about a second after typing in
  * it stops, and when it's left. Each save replaces that field's last one, so what's stored is
@@ -122,12 +124,13 @@ export function InterviewNotesForm({
   ) as Record<InterviewNotesField, string | null>;
   const any = hasInterviewNotes(shown);
   // An upcoming Interview with nothing written yet waits for afterwards.
-  const waiting = !interview.completed && !any && !editing;
+  const empty = !any && !editing;
+  const waiting = empty && !interview.completed;
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
       {!editing && shown.takeaway && <TakeawayCard takeaway={shown.takeaway} showsOn={showsOn} />}
-      <section aria-labelledby={headingId} className={cardClasses(editing, waiting)}>
+      <NotesCard labelledBy={headingId} editing={editing} waiting={waiting} empty={empty} Art={WritingBigfoot}>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <NotesHeading id={headingId} justFinished={editing && fresh && !asked} after={!interview.completed} />
           {!editing && <NotesStatuses trackers={trackers} canEdit={any} editRef={editRef} onEdit={edit} />}
@@ -151,14 +154,50 @@ export function InterviewNotesForm({
         ) : (
           <NotesRead notes={shown} waiting={waiting} editRef={editRef} onAdd={edit} />
         )}
-      </section>
+      </NotesCard>
     </div>
   );
 }
 
-/** The notes card's classes: outlined while editing, dashed while waiting for afterwards. */
-function cardClasses(editing: boolean, waiting: boolean) {
-  return ["card flex min-w-0 flex-col gap-4 p-5 sm:p-7", editing && "border-line-brand-subtle", waiting && "border-dashed"]
+/**
+ * A notes card: outlined while editing, dashed while waiting for afterwards, and, while `empty`,
+ * holding Bigfoot (`Art`) at its bottom right (BIG-228), with room kept for him so nothing runs
+ * under him. He is out of the flow, so the card keeps its size, and as tall as the card allows up
+ * to 150px. Decorative, and hidden on phones.
+ */
+function NotesCard({
+  labelledBy,
+  editing,
+  waiting = false,
+  empty,
+  Art,
+  children,
+}: {
+  labelledBy: string;
+  editing: boolean;
+  waiting?: boolean;
+  empty: boolean;
+  Art: ComponentType<{ className?: string }>;
+  children: ReactNode;
+}) {
+  return (
+    <section aria-labelledby={labelledBy} className={cardClasses(editing, waiting, empty)}>
+      {children}
+      {empty && (
+        <Art className="pointer-events-none absolute bottom-2.5 right-8 hidden h-[min(150px,calc(100%-1.25rem))] w-auto sm:block" />
+      )}
+    </section>
+  );
+}
+
+/** The notes card's classes; an `empty` one keeps room at its right for Bigfoot. */
+function cardClasses(editing: boolean, waiting: boolean, empty: boolean) {
+  return [
+    "card flex min-w-0 flex-col gap-4 p-5 sm:p-7",
+    editing && "border-line-brand-subtle",
+    waiting && "border-dashed",
+    empty && "relative sm:pr-48",
+  ]
     .filter(Boolean)
     .join(" ");
 }
@@ -514,7 +553,8 @@ export function TheyAsked({ questions: asked, className = "" }: { questions: str
  * ("Get ready for Wednesday"); afterwards it folds under the Interview notes, as their first lines
  * until opened, and is left out while empty. It reads, edits and saves like the Interview notes:
  * as text until Edit, saving by itself with its own save status. Before the Interview, the
- * takeaways that apply and They asked last time show under its heading (BIG-181).
+ * takeaways that apply and They asked last time show under its heading (BIG-181). Empty before
+ * the Interview, Bigfoot holds a blank notebook in its right side (BIG-228).
  */
 export function PrepNotesForm({
   interview,
@@ -561,9 +601,10 @@ export function PrepNotesForm({
   }
 
   // Prep notes of a completed Interview that has none aren't shown empty.
-  if (folded && !notes && !editing) return null;
+  const empty = !notes && !editing;
+  if (folded && empty) return null;
   return (
-    <section aria-labelledby={headingId} className={cardClasses(editing, false)}>
+    <NotesCard labelledBy={headingId} editing={editing} empty={empty} Art={NotebookBigfoot}>
       <PrepHeading
         id={headingId}
         folded={folded}
@@ -588,7 +629,7 @@ export function PrepNotesForm({
           onAdd={() => setEditing(true)}
         />
       )}
-    </section>
+    </NotesCard>
   );
 }
 
