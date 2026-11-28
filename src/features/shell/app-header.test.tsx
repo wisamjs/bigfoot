@@ -3,16 +3,23 @@
    reach them; this test counts them in the DOM. */
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useRouter } from "next/navigation";
 import { describe, expect, it, vi } from "vitest";
 import { signOutAction } from "@/app/actions";
 import { AppHeader } from "./app-header";
 import { initials } from "./avatar";
 
 vi.mock("@/app/actions", () => ({ signInWithGoogle: vi.fn(), signOutAction: vi.fn() }));
+vi.mock("next/navigation", () => import("@/test/navigation"));
 
 const user = { id: "u1", name: "Wisam Zaghal", firstName: "Wisam", email: "w@example.test", image: null };
 
 describe("AppHeader", () => {
+  it("prefetches the Account page, whose one link waits inside the closed menu (BIG-205)", () => {
+    render(<AppHeader user={user} current="/dashboard" />);
+    expect(vi.mocked(useRouter().prefetch).mock.calls.map(([href]) => href)).toContain("/account");
+  });
+
   it("opens the avatar's menu: who is signed in, Account and Sign out", async () => {
     const pointer = userEvent.setup();
     render(<AppHeader user={user} current="/dashboard" />);

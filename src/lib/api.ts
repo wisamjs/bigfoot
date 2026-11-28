@@ -47,7 +47,17 @@ async function token(jobSeekerId: string) {
 
 /** Names the job seeker to Sentry (a hash only) so errors in the requests that follow carry it. */
 async function identify(jobSeekerId: string) {
-  Sentry.setUser({ id: await jobSeekerTag(jobSeekerId) });
+  Sentry.setUser({ id: await sentryUserId(jobSeekerId) });
+}
+
+/**
+ * The hash, kept: it never changes for an id. Hashing is async work, and a prefetch stops at async
+ * work that isn't cached, so without this no prefetch would carry a page that reads the API (BIG-205).
+ */
+async function sentryUserId(jobSeekerId: string) {
+  "use cache";
+  cacheLife("max");
+  return jobSeekerTag(jobSeekerId);
 }
 
 async function request<T>(jobSeekerId: string, path: string, init: { method?: string; body?: unknown } = {}) {

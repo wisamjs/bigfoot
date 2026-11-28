@@ -13,18 +13,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar } from "@/features/shell/avatar";
+import { PrefetchRoutes } from "@/features/shell/prefetch-routes";
 import type { CurrentUser } from "@/lib/dal";
 
 /**
  * The header's avatar, which opens a menu (dropdown.md, "With Header"): who is signed in, Account,
  * and Sign out (BIG-173). The menu opens inside the header, so its items are in the banner landmark.
  */
+// The Account page's one link is inside this menu, so no <Link> prefetches it until the menu opens.
+// Prefetched with every signed-in page instead, Account shows at once from its kept reads (BIG-205).
+const ACCOUNT_HREFS = ["/account"];
+
 export function AccountMenu({ user }: { user: CurrentUser }) {
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const [signingOut, startSignOut] = useTransition();
 
   return (
     <div ref={setContainer} className="relative shrink-0">
+      <PrefetchRoutes hrefs={ACCOUNT_HREFS} />
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger
           className="grid size-11 cursor-pointer place-items-center rounded-full transition-shadow hover:ring-2 hover:ring-line-brand-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand data-[state=open]:ring-2 data-[state=open]:ring-line-brand"

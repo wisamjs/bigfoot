@@ -3,6 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+type PrefetchOptions = NonNullable<Parameters<ReturnType<typeof useRouter>["prefetch"]>[1]>;
+
+// The whole page, the data its URL picks included, as `<Link prefetch>` fetches it. The default
+// ("auto") fetches only what every page of the route shares, so an Interview page would still show
+// its skeleton. Next.js types `kind` with an enum it doesn't export; "full" is that enum's value.
+const FULL = "full" as PrefetchOptions["kind"];
+
 /**
  * Prefetches each of `hrefs`, in order, once the page is in the browser, and again whenever Next.js
  * says a prefetch went stale (a Server Action that expires its data, BIG-205), so the next click
@@ -16,11 +23,11 @@ export function PrefetchRoutes({ hrefs }: { hrefs: readonly string[] }) {
   const key = hrefs.join("\n");
   useEffect(() => {
     let cancelled = false;
-    for (const href of key.split("\n").filter(Boolean)) {
+    // Next.js fetches the newest prefetch first, so the last page is asked for first and the first
+    // page last, and the first page is the first to arrive.
+    for (const href of key.split("\n").filter(Boolean).toReversed()) {
       const prefetch = () => {
-        // The type asks for a `kind`, which Next.js doesn't export; left out, as in the docs'
-        // example, it is "auto", the same prefetch a <Link> makes.
-        if (!cancelled) router.prefetch(href, { onInvalidate: prefetch } as Parameters<typeof router.prefetch>[1]);
+        if (!cancelled) router.prefetch(href, { kind: FULL, onInvalidate: prefetch });
       };
       prefetch();
     }
