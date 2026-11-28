@@ -22,9 +22,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** On the dashboard, with initials where Google has no photo. */
+/** On the dashboard, with initials where Google has no photo, and Bigfoot beside the name: decorative, so an empty alt. */
 export const Default: Story = {
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvasElement.querySelector('img[src*="bigfoot-welcome"]')).toHaveAttribute("alt", "");
     await expect(canvas.getByRole("link", { name: "Dashboard" })).toHaveAttribute("aria-current", "page");
     await expect(canvas.getByRole("button", { name: "Account menu, Alex Morgan" })).toHaveTextContent("AM");
   },

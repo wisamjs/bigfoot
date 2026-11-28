@@ -65,11 +65,6 @@ export function FamilyBigfoot({ className }: Props) {
   return <Image src="/illustrations/bigfoot-family.webp" alt="" loading="eager" width={528} height={480} className={className} />;
 }
 
-/** Bigfoot hanging upside down: above the Interviews card on the Dashboard (BIG-226). */
-export function HangingBigfoot({ className }: Props) {
-  return <Image src="/illustrations/bigfoot-hanging.webp" alt="" loading="eager" width={550} height={447} className={className} />;
-}
-
 /** Bigfoot peeking over the top of a card: the link-gone pages (BIG-229). */
 export function PeekOverBigfoot({ className }: Props) {
   return <Image src="/illustrations/bigfoot-peek-over.webp" alt="" loading="eager" width={587} height={358} className={className} />;
@@ -103,4 +98,9 @@ export function CalendarSurprisedBigfoot({ className }: Props) {
 /** Bigfoot with two thumbs up: the home page's closing call to sign up (BIG-231). */
 export function DoubleThumbsUpBigfoot({ className }: Props) {
   return <Image src="/illustrations/bigfoot-double-thumbs-up.webp" alt="" loading="eager" width={343} height={480} className={className} />;
+}
+
+/** The welcome Bigfoot, header-sized: the signed-in header, beside the name. Its own small width so the image served stays small. */
+export function HeaderBigfoot({ className }: Props) {
+  return <Image src="/illustrations/bigfoot-welcome.webp" alt="" loading="eager" width={46} height={48} className={className} />;
 }

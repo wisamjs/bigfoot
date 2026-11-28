@@ -14,7 +14,7 @@ export function JourneyHeader({ id, sharedBy }: { id?: string; sharedBy: string 
   return (
     <header className="border-b border-line bg-card">
       <Container className="flex h-[72px] items-center gap-3 sm:gap-4">
-        <Wordmark tile />
+        <Wordmark mark="tile" />
         <span className="hidden items-center gap-1.5 rounded-full bg-card-strong px-3 py-1 text-sm font-medium text-heading sm:inline-flex">
           <Eye className="size-4" aria-hidden />
           View only
