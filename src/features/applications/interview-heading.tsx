@@ -279,7 +279,7 @@ export function InterviewHeading({
         <SaveStatus status={tracker.status} label={STATUS_LABEL} onRetry={tracker.retry} />
       </div>
       <div className="flex shrink-0 items-center gap-3">
-        <Button ref={editRef} variant="secondary" className="hidden sm:inline-flex" onClick={() => startEditing()}>
+        <Button ref={editRef} variant="tertiary" className="hidden sm:inline-flex" onClick={() => startEditing()}>
           <Pencil className="size-4" aria-hidden />
           Edit details
         </Button>

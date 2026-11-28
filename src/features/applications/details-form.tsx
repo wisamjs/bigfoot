@@ -1,9 +1,10 @@
 "use client";
 
-import { Eye, EyeOff, Pencil } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { updateApplicationAction } from "@/app/applications/actions";
 import { Button } from "@/components/ui/button";
+import { EditButton } from "@/components/ui/edit-button";
 import { ExternalLink } from "@/components/ui/external-link";
 import { RequiredNote } from "@/components/ui/field";
 import { SaveStatus } from "@/components/ui/save-status";
@@ -141,9 +142,7 @@ export function DetailsCard({ app }: { app: Application }) {
         {editing ? (
           <RequiredNote />
         ) : (
-          <Button ref={editRef} variant="tertiary" className="px-2.5" onClick={() => setEditing(true)} aria-label="Edit details">
-            <Pencil className="size-4" aria-hidden />
-          </Button>
+          <EditButton ref={editRef} label="Edit details" onClick={() => setEditing(true)} />
         )}
       </div>
       {editing ? (

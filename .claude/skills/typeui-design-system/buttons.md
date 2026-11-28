@@ -30,7 +30,7 @@ The primary/brand button uses a layered two-gradient fill — a solid-feeling ca
 - **Font size:** 18px (large), weight 500
 - **Cursor:** pointer
 - **Transition:** all 0.3s
-- **Hover:** drop the box-shadow (`none`) and reduce opacity to ~80%
+- **Hover:** darken the gradient (brightness ~88%), keeping the glow; opacity changes only for disabled
 
 > All gradient stops, borders, and shadows must stay within the brand/secondary candy palette (brand `#4F1135`, secondary `#B5538C`, and their derived shades). Never introduce out-of-palette accents for the gradient, rim, or glow.
 
@@ -50,7 +50,7 @@ The primary/brand button uses a layered two-gradient fill — a solid-feeling ca
 - **Background:** candy gradient fill (see Brand Gradient Recipe) — secondary-brand → brand
 - **Border:** 2px transparent with the brand gradient rim
 - **Text:** white
-- **Hover:** drop the resting wine glow and reduce opacity to ~80%
+- **Hover:** darken the gradient (brightness ~88%); opacity changes only for disabled
 - **Focus ring:** 4px, line-brand-subtle color
 - **Glint:** yes
 

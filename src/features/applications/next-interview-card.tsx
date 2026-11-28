@@ -71,7 +71,7 @@ export function NextInterviewCard({
         </div>
       )}
 
-      <Actions href={href} addDateHref={interview.at === null ? addDateHref(app.id, interview.id) : null} prepNotes={Boolean(prepNotes)} />
+      <Actions href={href} addDateHref={interview.at === null ? addDateHref(app.id, interview.id) : null} prepNotes={Boolean(prepNotes)} dashboard={dashboard} />
     </section>
   );
 }
@@ -93,30 +93,40 @@ function Where({ app, at, dashboard }: { app: Application; at: string | null; da
 
 /**
  * The card's buttons: Add the date for an Unscheduled Interview (`addDateHref`, BIG-221), which
- * opens Edit details on its page; Add Prep notes while it has none (secondary beside Add the date);
- * and on a phone, Open Interview. min-w-fit: on touch screens .btn's 44px floor replaces a flex
- * item's automatic minimum, so without it the flex-1 buttons squeeze below their labels instead of
- * wrapping (BIG-187).
+ * opens Edit details on its page; Add Prep notes while it has none; and on a phone, Open Interview.
+ * One brand button per page (BIG-240): Add the date is brand on the Application page, but the
+ * dashboard's is Add Application, so there every button here is secondary, and Add Prep notes always
+ * is. They keep their own width on a phone, as the cards' other add buttons do.
  */
-function Actions({ href, addDateHref, prepNotes }: { href: string; addDateHref: string | null; prepNotes: boolean }) {
+function Actions({
+  href,
+  addDateHref,
+  prepNotes,
+  dashboard,
+}: {
+  href: string;
+  addDateHref: string | null;
+  prepNotes: boolean;
+  dashboard: boolean;
+}) {
   return (
     <div className="flex flex-wrap items-center gap-3">
       {addDateHref && (
-        <Link href={addDateHref} className={`${buttonClasses("brand")} min-w-fit max-sm:flex-1`}>
+        <Link href={addDateHref} className={buttonClasses(dashboard ? "secondary" : "brand")}>
           <CalendarPlus className="size-4" aria-hidden />
           Add the date
         </Link>
       )}
       {!prepNotes && (
         <>
-          <Link href={href} className={`${buttonClasses(addDateHref ? "secondary" : "brand")} min-w-fit max-sm:flex-1`}>
+          <Link href={href} className={buttonClasses("secondary")}>
             <Plus className="size-4" aria-hidden />
             Add Prep notes
           </Link>
           <span className="hidden text-sm text-body sm:inline">No Prep notes yet.</span>
         </>
       )}
-      <Link href={href} className={`${buttonClasses("secondary")} min-w-fit max-sm:flex-1 sm:hidden`}>
+      <Link href={href} className={`${buttonClasses("secondary")} sm:hidden`}>
         Open Interview
       </Link>
     </div>

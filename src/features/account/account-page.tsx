@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Download } from "lucide-react";
+import { ChevronDown, Download } from "lucide-react";
 import { AppFooter } from "@/features/shell/app-footer";
 import { AppHeader } from "@/features/shell/app-header";
 import { Avatar } from "@/features/shell/avatar";
@@ -150,27 +150,36 @@ function AccountLayout({
                 You’ll be signed out. If you sign in again later, you start over as a new job seeker,
                 with new sample Applications.
               </p>
-              <Subheading>What stays for a while</Subheading>
-              <ul className={list}>
-                <li>Copies in our daily database backups, for up to {BACKUP_DAYS} days.</li>
-                <li>Server logs of your visits, for up to {SERVER_LOG_RETENTION}.</li>
-                <li>
-                  A record that an account was deleted, and when. It holds a one-way hash of your Google
-                  account id, not the id itself, so we can show we honoured your request.
-                </li>
-              </ul>
-              <Subheading>Your Google account</Subheading>
-              <p className="m-0">
-                Deleting your Bigfoot account doesn’t change your Google account. To also remove
-                Bigfoot’s access, go to{" "}
-                <a
-                  href={GOOGLE_PERMISSIONS_URL}
-                  className="rounded-control text-fg-brand underline underline-offset-4 transition-colors hover:no-underline"
-                >
-                  your Google account’s third-party connections
-                </a>{" "}
-                and remove Bigfoot.
-              </p>
+              {/* Folded so Delete account fits a phone's screen (BIG-240); what goes stays in view above. */}
+              <details className="group rounded-card border border-line bg-surface">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-card px-5 py-3 text-sm font-medium text-heading transition-colors hover:bg-card focus-visible:outline-2 focus-visible:outline-brand group-open:rounded-b-none group-open:bg-card [&::-webkit-details-marker]:hidden">
+                  What stays for a while, and your Google account
+                  <ChevronDown className="size-4 shrink-0 text-body transition-transform group-open:rotate-180" aria-hidden />
+                </summary>
+                <div className="flex flex-col gap-4 border-t border-line px-5 py-4">
+                  <Subheading>What stays for a while</Subheading>
+                  <ul className={list}>
+                    <li>Copies in our daily database backups, for up to {BACKUP_DAYS} days.</li>
+                    <li>Server logs of your visits, for up to {SERVER_LOG_RETENTION}.</li>
+                    <li>
+                      A record that an account was deleted, and when. It holds a one-way hash of your Google
+                      account id, not the id itself, so we can show we honoured your request.
+                    </li>
+                  </ul>
+                  <Subheading>Your Google account</Subheading>
+                  <p className="m-0">
+                    Deleting your Bigfoot account doesn’t change your Google account. To also remove
+                    Bigfoot’s access, go to{" "}
+                    <a
+                      href={GOOGLE_PERMISSIONS_URL}
+                      className="rounded-control text-fg-brand underline underline-offset-4 transition-colors hover:no-underline"
+                    >
+                      your Google account’s third-party connections
+                    </a>{" "}
+                    and remove Bigfoot.
+                  </p>
+                </div>
+              </details>
               <div className="mt-2 border-t border-line pt-6">
                 {user ? <DeleteAccountForm /> : <DeleteAccountFormSkeleton />}
               </div>

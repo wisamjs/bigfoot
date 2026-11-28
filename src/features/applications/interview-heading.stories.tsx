@@ -57,6 +57,8 @@ export const Upcoming: Story = {
     await expect(canvas.getByText("With Inés Ortega (Engineering Manager), Staff Engineer")).toBeVisible();
     await expect(canvas.getByText("Project Deep-dive")).toBeVisible();
     await expect(await canvas.findByText("Upcoming · in 2 days")).toBeVisible();
+    // An action for the whole page is a labelled tertiary button (BIG-240).
+    await expect(canvas.getByRole("button", { name: "Edit details" })).toHaveClass("btn-tertiary");
   },
 };
 

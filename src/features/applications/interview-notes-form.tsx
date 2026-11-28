@@ -1,8 +1,9 @@
 "use client";
 
-import { Lightbulb, Pencil, Plus } from "lucide-react";
+import { Lightbulb, Plus } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ComponentType, type ReactNode, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
+import { EditButton } from "@/components/ui/edit-button";
 import { FieldError, invalidProps } from "@/components/ui/field-error";
 import { inputClasses } from "@/components/ui/input";
 import { MarkdownView } from "@/components/ui/markdown-view";
@@ -224,32 +225,8 @@ function NotesStatuses({
           onRetry={trackers[field].retry}
         />
       ))}
-      {canEdit && <EditButton label="Edit Interview notes" editRef={editRef} onEdit={onEdit} />}
+      {canEdit && <EditButton ref={editRef} label="Edit Interview notes" onClick={onEdit} />}
     </span>
-  );
-}
-
-/** The Edit text button, in the brand colour (BIG-202), at a notes card's top right. */
-function EditButton({
-  label,
-  editRef,
-  onEdit,
-}: {
-  label: string;
-  editRef: RefObject<HTMLButtonElement | null>;
-  onEdit: () => void;
-}) {
-  return (
-    <button
-      ref={editRef}
-      type="button"
-      onClick={onEdit}
-      aria-label={label}
-      className="touch-target inline-flex items-center gap-1.5 rounded-control px-2 text-base font-semibold text-fg-brand transition-colors hover:text-fg-brand-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-    >
-      <Pencil className="size-4" aria-hidden />
-      Edit
-    </button>
   );
 }
 
@@ -611,7 +588,7 @@ export function PrepNotesForm({
         status={<SaveStatus status={tracker.status} label={PREP_NOTES_TITLE} onRetry={tracker.retry} />}
         edit={
           prepCanEdit({ editing, notes, folded, open }) && (
-            <EditButton label={`Edit ${PREP_NOTES_TITLE}`} editRef={editRef} onEdit={() => setEditing(true)} />
+            <EditButton ref={editRef} label={`Edit ${PREP_NOTES_TITLE}`} onClick={() => setEditing(true)} />
           )
         }
       />

@@ -108,6 +108,8 @@ export const Completed: Story = {
     await expect(within(notes).getByText(/Rambled on the roadmap question/)).toBeVisible();
     await expect(within(notes).getAllByRole("listitem")).toHaveLength(3);
     await expect(within(notes).getByRole("list", { name: "They asked" })).toBeVisible();
+    // A card's Edit is the icon-only EditButton (BIG-240): named, with no visible text.
+    await expect(within(notes).getByRole("button", { name: "Edit Interview notes" })).toHaveTextContent("");
     await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
   },
 };
