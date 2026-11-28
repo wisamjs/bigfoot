@@ -1,9 +1,9 @@
 "use server";
 
-import { refresh, updateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { signOut } from "@/auth";
-import { ACCOUNT_DELETED_PATH, DELETE_CONFIRMATION } from "@/lib/account";
+import { ACCOUNT_DELETED_PATH, accountTag, DELETE_CONFIRMATION } from "@/lib/account";
 import * as api from "@/lib/api";
 import { applicationsTag } from "@/lib/applications";
 import { findCurrentUser } from "@/lib/dal";
@@ -30,7 +30,7 @@ export async function createAccessTokenAction(
   if (nameError) return { error: null, nameError, created: null };
   try {
     const created = await api.createAccessToken(user.id, String(name));
-    refresh();
+    updateTag(accountTag(user.id));
     return { error: null, created };
   } catch (error) {
     if (error instanceof api.ApiError) return { error: error.message, created: null };
@@ -53,7 +53,7 @@ export async function revokeAccessTokenAction(id: string): Promise<{ ok: true } 
       return { ok: false, error: "Couldn’t reach Bigfoot’s server. The token was not revoked. Try again." };
     }
   }
-  refresh();
+  updateTag(accountTag(user.id));
   return { ok: true };
 }
 
@@ -81,7 +81,7 @@ export async function createShareLinkAction(_: CreateShareLinkState, form: FormD
   try {
     // The name Viewers see ("Wisam shared a job search with you"), from the Google account.
     const created = await api.createShareLink(user.id, String(label), String(passcode), user.name);
-    refresh();
+    updateTag(accountTag(user.id));
     return { error: null, created };
   } catch (error) {
     return { error: failure(error, "No link was created."), created: null };
@@ -96,7 +96,7 @@ export async function renewShareLinkAction(id: string): Promise<ShareLinkResult<
   if (!user) return { ok: false, error: SESSION_ENDED };
   try {
     const link = await api.renewShareLink(user.id, id);
-    refresh();
+    updateTag(accountTag(user.id));
     return { ok: true, link };
   } catch (error) {
     return { ok: false, error: failure(error, "The link was not renewed.") };
@@ -111,7 +111,7 @@ export async function changePasscodeAction(id: string, passcode: string): Promis
   if (problem) return { ok: false, error: problem };
   try {
     const link = await api.changeShareLinkPasscode(user.id, id, passcode);
-    refresh();
+    updateTag(accountTag(user.id));
     return { ok: true, link };
   } catch (error) {
     return { ok: false, error: failure(error, "The passcode was not changed.") };
@@ -130,7 +130,7 @@ export async function stopSharingAction(id: string): Promise<{ ok: true } | { ok
       return { ok: false, error: failure(error, "The link still works.") };
     }
   }
-  refresh();
+  updateTag(accountTag(user.id));
   return { ok: true };
 }
 
@@ -159,6 +159,7 @@ export async function deleteAccountAction(_: DeleteAccountState, form: FormData)
     return { error: "Couldn’t reach Bigfoot’s server. Nothing was deleted. Try again." };
   }
   updateTag(applicationsTag(user.id));
+  updateTag(accountTag(user.id));
   await signOut({ redirectTo: ACCOUNT_DELETED_PATH });
   return { error: null };
 }

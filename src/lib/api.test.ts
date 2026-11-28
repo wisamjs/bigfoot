@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { cacheLife, cacheTag } from "next/cache";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { decodeJwt } from "jose";
 import {
@@ -11,10 +12,12 @@ import {
   deleteAccount,
   deleteApplication,
   deleteInterview,
+  getAccessTokens,
   getApplications,
   getJobSeeker,
   getJourney,
   getShareLinkStatus,
+  getShareLinks,
   listAccessTokens,
   listApplications,
   listInterviews,
@@ -65,6 +68,29 @@ describe("getApplications", () => {
     vi.mocked(Sentry.setUser).mockClear();
     await listApplications("seeker-1");
     expect(Sentry.setUser).toHaveBeenCalledOnce();
+  });
+});
+
+describe("the Account page's kept reads (BIG-205)", () => {
+  it.each([
+    ["getAccessTokens", getAccessTokens, "/me/access-tokens"],
+    ["getShareLinks", getShareLinks, "/me/share-links"],
+  ])("%s reads from the API, tagged with the job seeker's Account and kept as long as their Applications", async (_, read, path) => {
+    await getApplications("seeker-1");
+    const [applicationsLife] = vi.mocked(cacheLife).mock.calls.find(([life]) => life !== "max")!;
+    vi.mocked(cacheLife).mockClear();
+    await read("seeker-1");
+    expect(fetchMock.mock.calls.at(-1)![0]).toMatch(new RegExp(`${path}$`));
+    expect(cacheTag).toHaveBeenLastCalledWith("account:seeker-1");
+    expect(cacheLife).toHaveBeenCalledWith(applicationsLife);
+  });
+});
+
+describe("naming the job seeker to Sentry", () => {
+  it("keeps the hash for good, so a prefetch isn't held up by hashing (BIG-205)", async () => {
+    await getApplications("seeker-1");
+    expect(cacheLife).toHaveBeenCalledWith("max");
+    expect(Sentry.setUser).toHaveBeenCalledWith({ id: expect.stringMatching(/^[0-9a-f]{64}$/) });
   });
 });
 

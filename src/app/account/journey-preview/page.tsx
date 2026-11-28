@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { JourneySkeleton } from "@/features/journey/journey-view";
 import { JourneyPreview } from "@/features/journey/journey-preview";
@@ -24,5 +25,7 @@ export default function Page() {
 
 async function Preview() {
   const user = await getCurrentUser();
+  // The Journey is read fresh and laid out around today, so it renders at request time, never in a prefetch.
+  await connection();
   return <JourneyPreview journey={await previewJourney(user.id)} sharedBy={user.name} />;
 }

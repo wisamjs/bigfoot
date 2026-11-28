@@ -2,6 +2,7 @@
 
 import { updateTag } from "next/cache";
 import { signIn, signOut } from "@/auth";
+import { accountTag } from "@/lib/account";
 import { applicationsTag } from "@/lib/applications";
 import { findCurrentUser } from "@/lib/dal";
 import { NEXT_PARAM, safeNext } from "@/lib/safe-next";
@@ -15,8 +16,11 @@ export async function signInWithGoogle(form?: FormData) {
 }
 
 export async function signOutAction() {
-  // The next sign-in, even as the same job seeker, reads their Applications fresh.
+  // The next sign-in, even as the same job seeker, reads their Applications and Account fresh.
   const user = await findCurrentUser();
-  if (user) updateTag(applicationsTag(user.id));
+  if (user) {
+    updateTag(applicationsTag(user.id));
+    updateTag(accountTag(user.id));
+  }
   await signOut({ redirectTo: "/" });
 }

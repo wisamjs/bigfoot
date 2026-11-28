@@ -18,6 +18,7 @@ import {
   progressCounts,
   hasInterviewNotes,
   interviewSections,
+  interviewsLatestFirst,
   paragraphs,
   parseDay,
   questions,
@@ -92,6 +93,24 @@ const rejected = application("rejected", {
   outcome: "rejected",
   is_waiting: false,
   interviews: [interview("old", "2026-11-03T15:00:00Z", true)],
+});
+
+describe("interviewsLatestFirst (BIG-205)", () => {
+  const added = (id: string, at: string | null, created_at: string): Interview => ({ ...interview(id, "", at !== null), at, created_at });
+  const first = added("first", "2026-11-02T15:00:00Z", "2026-10-01T09:00:00Z");
+  const second = added("second", "2026-11-09T15:00:00Z", "2026-10-02T09:00:00Z");
+  const tbd = added("tbd", null, "2026-09-01T09:00:00Z");
+  const tbdLater = added("tbd-later", null, "2026-10-05T09:00:00Z");
+
+  it("puts the latest Round first and Round 1 last, whatever order the list is in", () => {
+    const app = application("a", { interviews: [first, tbdLater, second, tbd] });
+    expect(interviewsLatestFirst(app).map((i) => roundNumber(app, i))).toEqual([4, 3, 2, 1]);
+    expect(interviewsLatestFirst(app).map((i) => i.id)).toEqual(["tbd-later", "tbd", "second", "first"]);
+  });
+
+  it("is empty for an Application with no Interviews", () => {
+    expect(interviewsLatestFirst(application("a", { interviews: [] }))).toEqual([]);
+  });
 });
 
 describe("roundNumber", () => {
