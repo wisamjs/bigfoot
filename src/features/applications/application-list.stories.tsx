@@ -440,9 +440,9 @@ export const SortedByProgress: Story = {
   },
 };
 
-/** Sorted by Application: company A–Z, then role. */
+/** Sorted by Application: company A–Z, then role; with Show done on, the Done ones sort with the rest (BIG-249). */
 export const SortedByApplication: Story = {
-  args: { sort: "application", onSort: fn() },
+  args: { sort: "application", onSort: fn(), showDone: true },
   play: async ({ canvasElement }) => {
     const companies = rowCompanies(canvasElement);
     await expect(companies).toEqual(companies.toSorted((a = "", b = "") => a.localeCompare(b, "en", { sensitivity: "base" })));
@@ -452,7 +452,7 @@ export const SortedByApplication: Story = {
 /** Sorted by Next: the soonest Interview first, then the longest wait, then Offers. */
 export const SortedByNext: Story = { args: { sort: "next", onSort: fn() } };
 
-/** Sorted by Location A–Z, Applications without one last; with Show done on, the Done ones stay at the bottom. */
+/** Sorted by Location A–Z, Applications without one last; with Show done on, the Done ones sort with the rest. */
 export const SortedByLocation: Story = { args: { sort: "location", onSort: fn(), showDone: true } };
 
 /** The landing page's decorative copy: hidden from screen readers, not interactive. */

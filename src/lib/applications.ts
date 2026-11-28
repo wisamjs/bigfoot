@@ -557,8 +557,6 @@ function within(group: ApplicationGroup["id"], rule: Compare): Compare {
   return (a, b) => (groupOf(a) === group && groupOf(b) === group ? rule(a, b) : 0);
 }
 
-const doneLast: Compare = (a, b) => Number(groupOf(a) === "done") - Number(groupOf(b) === "done");
-
 const COMPARE: Record<ApplicationSort, Compare> = {
   // Furthest along first: the highest Round booked, then the highest Round awaiting a date, then
   // the most Interviews behind a Waiting one.
@@ -569,16 +567,17 @@ const COMPARE: Record<ApplicationSort, Compare> = {
     within("unscheduled", (a, b) => nextRound(b) - nextRound(a)),
     within("waiting", (a, b) => completedCount(b) - completedCount(a)),
     within("waiting", byTime(waitingSince)),
+    byCompany,
   ),
-  application: inTurn(doneLast, byCompany),
+  application: byCompany,
   // Soonest Interview first, then those whose next date is TBD, then the longest wait, then Offers.
   next: inTurn(
     byGroup(["scheduled", "unscheduled", "waiting", "offer", "done"]),
     within("scheduled", byTime(nextAt)),
     within("waiting", byTime(waitingSince)),
+    byCompany,
   ),
   location: inTurn(
-    doneLast,
     (a, b) => Number(!a.location) - Number(!b.location),
     byText((a) => locationText(a) ?? ""),
     byCompany,
@@ -587,7 +586,8 @@ const COMPARE: Record<ApplicationSort, Compare> = {
 
 /**
  * The Applications list's rows in `sort` order (BIG-209): In Progress Applications and Offers, and
- * the other Done ones, below the rest whatever the sort, when showDone is set.
+ * the other Done ones when showDone is set, all in the one order (BIG-249). Progress and Next put
+ * the Done ones last, as they have no Interview ahead; ties fall back to company order.
  */
 export function sortApplications(
   apps: Application[],

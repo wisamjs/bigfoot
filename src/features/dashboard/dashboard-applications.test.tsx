@@ -103,12 +103,19 @@ describe("Dashboard Applications", () => {
       expect(screen.getByRole("button", { name: "Sort by Application" })).toBeInTheDocument();
     });
 
-    it("keeps Done Applications below the others in every sort", async () => {
+    it("sorts Done Applications with the others once Show done is on (BIG-249)", async () => {
       const user = userEvent.setup();
-      window.history.replaceState(null, "", "/dashboard?sort=application");
       render(<DashboardApplications applications={[zeta, rejected, alpha]} />);
       await user.click(screen.getByRole("switch", { name: "Show done" }));
-      expect(companies()).toEqual(["Alpha", "Zeta", "Umbrella"]);
+      // Progress: Done has no Interview ahead, so it comes last.
+      expect(companies()).toEqual(["Zeta", "Alpha", "Umbrella"]);
+
+      await user.click(screen.getByRole("button", { name: "Application" }));
+      expect(companies()).toEqual(["Alpha", "Umbrella", "Zeta"]);
+
+      await user.click(screen.getByRole("button", { name: "Sort by Application" }));
+      await user.click(within(screen.getByRole("menu")).getByRole("menuitemradio", { name: "Progress" }));
+      expect(companies()).toEqual(["Zeta", "Alpha", "Umbrella"]);
     });
 
     it("has no Sort by menu for a single Application", () => {
