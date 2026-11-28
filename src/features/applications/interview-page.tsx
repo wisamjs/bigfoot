@@ -2,7 +2,7 @@ import { InterviewEditor } from "@/features/applications/interview-editor";
 import { applicationHref } from "@/features/applications/routes";
 import { UnsavedChanges } from "@/features/applications/unsaved-changes";
 import { AppHeader } from "@/features/shell/app-header";
-import { DashboardBreadcrumb } from "@/features/shell/dashboard-link";
+import { ApplicationsBreadcrumb } from "@/features/shell/back-links";
 import { FormPage, TitleBlock } from "@/features/shell/form-page";
 import { QuestionSignBigfoot } from "@/features/shell/illustrations";
 import type { Application, Interview, PrepLookBack, PrepTakeaway } from "@/lib/applications";
@@ -38,9 +38,9 @@ export function InterviewPage({
   return (
     <FormPage
       wide
-      header={<AppHeader user={user} current="/dashboard" />}
+      header={<AppHeader user={user} current="/applications" />}
       title={app.company}
-      back={<DashboardBreadcrumb href={applicationHref(app.id)}>{app.company}</DashboardBreadcrumb>}
+      back={<ApplicationsBreadcrumb href={applicationHref(app.id)}>{app.company}</ApplicationsBreadcrumb>}
       guard={UnsavedChanges}
     >
       <InterviewEditor app={app} interview={interview} lookBack={lookBack} showsOn={showsOn} editDetails={editDetails} />
@@ -49,7 +49,7 @@ export function InterviewPage({
 }
 
 export function InterviewPageSkeleton() {
-  return <FormPage header={<AppHeader current="/dashboard" />} title="Interview" />;
+  return <FormPage header={<AppHeader current="/applications" />} title="Interview" />;
 }
 
 /**
@@ -61,7 +61,7 @@ export function InterviewPageSkeleton() {
 export function InterviewNotFoundPage({ user }: { user?: CurrentUser }) {
   return (
     <FormPage
-      header={<AppHeader user={user} current="/dashboard" />}
+      header={<AppHeader user={user} current="/applications" />}
       title={INTERVIEW_NOT_FOUND_TITLE}
       heading={<TitleBlock title={INTERVIEW_NOT_FOUND_TITLE} className="max-sm:pr-26" />}
     >

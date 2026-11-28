@@ -6,6 +6,7 @@ import { DeletedNotice } from "@/features/applications/deleted-notice";
 import { UnsavedChanges } from "@/features/applications/unsaved-changes";
 import { AppFooter } from "@/features/shell/app-footer";
 import { AppHeader } from "@/features/shell/app-header";
+import { ApplicationsBackLink } from "@/features/shell/back-links";
 import { FormPage } from "@/features/shell/form-page";
 import type { Application, PrepLookBack } from "@/lib/applications";
 import type { CurrentUser } from "@/lib/current-user";
@@ -32,8 +33,9 @@ export function ApplicationPage({
 }) {
   return (
     <FormPage
-      header={<AppHeader user={user} current="/dashboard" />}
+      header={<AppHeader user={user} current="/applications" />}
       title={app.company}
+      back={<ApplicationsBackLink />}
       notice={<DeletedNotice />}
       guard={UnsavedChanges}
       wide
@@ -44,7 +46,7 @@ export function ApplicationPage({
 }
 
 export function ApplicationPageSkeleton() {
-  return <FormPage header={<AppHeader current="/dashboard" />} title="Application" wide />;
+  return <FormPage header={<AppHeader current="/applications" />} title="Application" back={<ApplicationsBackLink />} wide />;
 }
 
 /**
@@ -59,7 +61,7 @@ export function ApplicationNotFoundPage({
   applications: { id: string; company: string; title: string }[];
 }) {
   return (
-    <NotFoundLayout header={<AppHeader user={user} current="/dashboard" />}>
+    <NotFoundLayout header={<AppHeader user={user} current="/applications" />}>
       <ApplicationNotFound applications={applications} />
     </NotFoundLayout>
   );

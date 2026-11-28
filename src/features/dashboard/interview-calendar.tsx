@@ -3,7 +3,8 @@
 import type { ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { DAY_PARAM, MONTH_PARAM, SHOW_MONTH_PARAM, setViewParams, useDashboardView } from "@/features/dashboard/dashboard-view";
+import { DAY_PARAM, MONTH_PARAM, SHOW_MONTH_PARAM, useDashboardView } from "@/features/dashboard/dashboard-view";
+import { setViewParams } from "@/features/shell/view-params";
 import { CalendarBigfoot, ClockBigfoot } from "@/features/shell/illustrations";
 import { interviewHref } from "@/features/applications/routes";
 import { capitalize } from "@/features/applications/when-text";

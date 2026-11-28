@@ -3,7 +3,8 @@ import { pageCost, parseShard, shardPages } from "./a11y-shard.mjs";
 import { PAGES } from "./pages.mjs";
 
 const rendered = PAGES.filter((page) => !page.redirect);
-const key = (page: (typeof PAGES)[number]) => `${page.path} ${page.signedIn} ${JSON.stringify(page.params ?? page.application ?? null)}`;
+const key = (page: (typeof PAGES)[number]) =>
+  `${page.path}${page.query ? `?${page.query}` : ""} ${page.signedIn} ${JSON.stringify(page.params ?? page.application ?? null)}`;
 const stateKeys = (pages: typeof PAGES) => pages.flatMap((page) => (page.states ?? []).map((state) => `${key(page)} ${state.name}`));
 
 describe("parseShard", () => {

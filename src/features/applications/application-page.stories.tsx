@@ -54,6 +54,8 @@ const waiting: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("heading", { level: 1, name: "Fernway Health" })).toBeVisible();
     await expect(canvas.getByRole("list", { name: "Completed" })).toBeVisible();
+    // "← Applications", back to the Applications list (BIG-252).
+    await expect(within(canvas.getByRole("main")).getByRole("link", { name: "Applications" })).toHaveAttribute("href", "/applications");
   },
 };
 export const WaitingDesktop: Story = { ...waiting, ...DESKTOP };

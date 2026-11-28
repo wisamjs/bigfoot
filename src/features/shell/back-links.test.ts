@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { rememberDashboardView, rememberedView } from "./dashboard-link";
+import { rememberedView, rememberView } from "./back-links";
 
 function storage(values: Record<string, string> = {}) {
   return {
@@ -12,18 +12,26 @@ function storage(values: Record<string, string> = {}) {
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("the dashboard's remembered view", () => {
+describe("a page's remembered view", () => {
   it("gives back the view this tab remembered", () => {
     vi.stubGlobal("sessionStorage", storage());
-    rememberDashboardView("?month=2026-12&day=2026-12-04");
-    expect(rememberedView()).toBe("?month=2026-12&day=2026-12-04");
+    rememberView("dashboard", "?month=2026-12&day=2026-12-04");
+    expect(rememberedView("dashboard")).toBe("?month=2026-12&day=2026-12-04");
+  });
+
+  it("keeps each page's view apart (BIG-252)", () => {
+    vi.stubGlobal("sessionStorage", storage());
+    rememberView("dashboard", "?month=2026-12");
+    rememberView("applications", "?progress=waiting&sort=next");
+    expect(rememberedView("dashboard")).toBe("?month=2026-12");
+    expect(rememberedView("applications")).toBe("?progress=waiting&sort=next");
   });
 
   it("is the default view when nothing was remembered, or something other than a search string", () => {
     vi.stubGlobal("sessionStorage", storage());
-    expect(rememberedView()).toBe("");
+    expect(rememberedView("applications")).toBe("");
     vi.stubGlobal("sessionStorage", storage({ "bigfoot:dashboard-view": "https://evil.example" }));
-    expect(rememberedView()).toBe("");
+    expect(rememberedView("dashboard")).toBe("");
   });
 
   it("is the default view when storage is blocked, and remembering fails quietly", () => {
@@ -31,7 +39,7 @@ describe("the dashboard's remembered view", () => {
       throw new DOMException("blocked", "SecurityError");
     };
     vi.stubGlobal("sessionStorage", { getItem: blocked, setItem: blocked });
-    expect(() => rememberDashboardView("?month=2026-12")).not.toThrow();
-    expect(rememberedView()).toBe("");
+    expect(() => rememberView("dashboard", "?month=2026-12")).not.toThrow();
+    expect(rememberedView("dashboard")).toBe("");
   });
 });

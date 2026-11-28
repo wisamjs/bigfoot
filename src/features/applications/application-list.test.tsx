@@ -69,17 +69,17 @@ describe("ApplicationList", () => {
     ]);
   });
 
-  it("orders rows Waiting, Interview scheduled and Offer, leaving other Done ones off", () => {
+  it("orders rows in Progress order, Interview scheduled, Waiting, then Offer, leaving other Done ones off", () => {
     render(<ApplicationList applications={all} />);
     expect(rows()).toEqual([
-      ["Acme", "Waiting · 19 days"],
       ["Birch", "Interview scheduled"],
+      ["Acme", "Waiting · 19 days"],
       ["Cedar", "Offer"],
     ]);
   });
 
   it("adds Done rows last when asked", () => {
-    render(<ApplicationList applications={all} showDone />);
+    render(<ApplicationList applications={all} shown="everything" />);
     expect(rows().at(-1)).toEqual(["Umbrella", "Done"]);
   });
 
@@ -104,12 +104,12 @@ describe("ApplicationList", () => {
 
   it("marks a Done Application's completed Interviews grey (BIG-177)", () => {
     const past = interview("u-past", { at: "2026-11-02T15:00:00Z", completed: true, category: "recruiter", title: "Recruiter Screen" });
-    render(<ApplicationList applications={[{ ...rejected, interviews: [past] }]} showDone />);
+    render(<ApplicationList applications={[{ ...rejected, interviews: [past] }]} shown="everything" />);
     expect(marks(cell("Umbrella", 1))).toEqual([expect.stringContaining("bg-tone-gray-fg")]);
   });
 
   it("labels Progress by group, each in its own colour", () => {
-    render(<ApplicationList applications={all} showDone />);
+    render(<ApplicationList applications={all} shown="everything" />);
     expect(within(cell("Acme", 1)).getByText("Waiting · 19 days")).toHaveClass("text-fg-warning");
     expect(within(cell("Birch", 1)).getByText("Interview scheduled")).toHaveClass("text-tone-blue-fg");
     expect(within(cell("Cedar", 1)).getByText("Offer")).toHaveClass("text-fg-success-strong");
@@ -184,7 +184,7 @@ describe("ApplicationList", () => {
   });
 
   it("shows a Done row's Outcome in Next, but not an Offer's, which Progress already says", () => {
-    render(<ApplicationList applications={[offer, rejected]} showDone />);
+    render(<ApplicationList applications={[offer, rejected]} shown="everything" />);
     expect(within(cell("Umbrella", 2)).getByText("Rejected")).toBeInTheDocument();
     expect(within(within(row("Cedar")).getAllByRole("cell")[2]).getByText("—")).toBeInTheDocument();
   });
@@ -205,8 +205,8 @@ describe("ApplicationList", () => {
     render(<ApplicationList applications={all} linked />);
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: /^Open/ }).map((link) => link.textContent)).toEqual([
-      expect.stringMatching(/^Open Acme/),
       expect.stringMatching(/^Open Birch/),
+      expect.stringMatching(/^Open Acme/),
       expect.stringMatching(/^Open Cedar/),
     ]);
     expect(within(row("Acme")).getAllByRole("cell").at(-1)).not.toBeEmptyDOMElement();
@@ -220,7 +220,7 @@ describe("ApplicationList", () => {
   it("is a single labelled picture when decorative", () => {
     render(<ApplicationList applications={all} decorative />);
     expect(
-      screen.getByRole("img", { name: "Applications ordered as Waiting, Interview scheduled, Offer" }),
+      screen.getByRole("img", { name: "Applications ordered as Interview scheduled, Waiting, Offer" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
