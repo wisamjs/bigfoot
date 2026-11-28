@@ -345,6 +345,47 @@ export const ShowDone: Story = {
   },
 };
 
+/** An Application with `tbd` Unscheduled Interviews after its others (BIG-221): through to a round with no date yet. */
+function withDateTbd(application: Application, ...titles: Title[]): Application {
+  const unscheduled = titles.map((title, i) => interview(application.id, 20 + i, title, "", false));
+  return {
+    ...application,
+    is_waiting: false,
+    waiting_since: null,
+    interviews: [...application.interviews, ...unscheduled.map((i) => ({ ...i, at: null }))],
+  };
+}
+
+const lumenTbd = withDateTbd(app("Lumen Bio", "Engineering Manager", { done: ["Recruiter Screen", "Hiring Manager"] }), "Hiring Manager");
+const northwindTbd = withDateTbd(
+  app("Northwind", "Engineering Manager", { done: ["Recruiter Screen"], next: [["Onsite Loop", 11]] }),
+  "Onsite Loop",
+);
+
+/**
+ * Unscheduled Interviews (BIG-221): Lumen Bio has only one ahead, so "Next round · date TBD" in a
+ * neutral pill, sorted after Waiting, with Next its title over "Date TBD". Northwind has a Scheduled
+ * one too, so it stays "Interview scheduled" and the Unscheduled one counts in "+1 later". Both end
+ * in a dashed mark in the brand colour.
+ */
+export const DateTbd: Story = {
+  args: { applications: [...jobSearch.filter((a) => ["stripe", "ramp"].includes(a.id)), lumenTbd, northwindTbd] },
+  play: async ({ canvasElement, canvas }) => {
+    // Progress is drawn twice, stacked for a phone and in its column wider: one of them shows.
+    await expect(canvas.getAllByText("Next round · date TBD").some((label) => label.checkVisibility())).toBe(true);
+    await expect(progressMarks(canvasElement, "lumen-bio").at(-1)?.className).toContain("repeating-linear-gradient");
+    await expect(progressMarks(canvasElement, "Northwind").at(-1)?.className).toContain("repeating-linear-gradient");
+    const lumen = canvasElement.querySelector('tr[data-application-id="lumen-bio"] td:nth-child(3)');
+    await expect(lumen).toHaveTextContent(/Hiring Manager\s*Date TBD/);
+    const northwind = canvasElement.querySelector('tr[data-application-id="northwind"] td:nth-child(3)');
+    await expect(northwind).toHaveTextContent("+1 later");
+    await expect(northwind).toHaveTextContent(/Onsite Loop, Hiring Manager, Date TBD/);
+  },
+};
+
+/** The same on a phone: Next on one line, "Hiring Manager · Date TBD". */
+export const DateTbdPhone: Story = { ...DateTbd, globals: { viewport: { value: "mobile1", isRotated: false } } };
+
 /** A row's Interview marks in its Progress column. */
 function progressMarks(canvasElement: HTMLElement, company: string) {
   const row = canvasElement.querySelector(`tr[data-application-id="${company.toLowerCase()}"]`);

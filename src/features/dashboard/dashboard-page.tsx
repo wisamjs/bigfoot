@@ -14,6 +14,7 @@ import { LoadingRegion, Skeleton } from "@/components/ui/skeleton";
 import {
   dashboardSummary,
   getCalendarInterviews,
+  getUnscheduled,
   getStats,
   nextUp,
   prepTakeaways,
@@ -44,7 +45,11 @@ export function DashboardPage({ user, applications, now }: { user: CurrentUser; 
       }
       applications={<DashboardApplications applications={applications} />}
       interviews={
-        <InterviewCalendar interviews={getCalendarInterviews(applications)} waiting={getStats(applications).waiting} />
+        <InterviewCalendar
+          interviews={getCalendarInterviews(applications)}
+          unscheduled={getUnscheduled(applications)}
+          waiting={getStats(applications).waiting}
+        />
       }
       addInterview={<AddInterviewLink />}
     />

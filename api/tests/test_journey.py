@@ -211,6 +211,21 @@ def test_waiting_since_is_the_last_completed_interview(client, token):
     assert datetime.fromisoformat(lumen["waiting_since"]) == datetime.fromisoformat(PAST)
 
 
+def test_an_unscheduled_interview_comes_last_undated_and_ends_the_wait(client, token):
+    me = token()
+    app = application(client, me, "Lumen Bio")
+    interview(client, me, app, None, title="Leadership", category="people_management")
+    interview(client, me, app, PAST)
+    link = create(client, me)
+    [lumen] = journey(client, link["id"], viewer_headers(client, link["id"])).json()["applications"]
+    assert [(i["title"], i["completed"]) for i in lumen["interviews"]] == [
+        ("Hiring Manager", True),
+        ("Leadership", False),
+    ]
+    assert lumen["interviews"][1]["at"] is None
+    assert (lumen["is_waiting"], lumen["waiting_since"]) == (False, None)
+
+
 def test_a_viewer_sees_only_the_job_seeker_who_made_the_link(client, token):
     application(client, token("bob"), "Bob's Application")
     application(client, token(), "Alice's Application")

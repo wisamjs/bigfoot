@@ -1,4 +1,4 @@
-"""Interviews (GLOSSARY.md): the list on an Application, and the derived Waiting data."""
+"""Interviews (GLOSSARY.md): the list on an Application, Unscheduled Interviews, and the derived Waiting data."""
 
 from datetime import UTC, datetime, timedelta
 
@@ -25,7 +25,7 @@ def add(client, headers, application, category="technical", at=PAST, title=None,
     body = {
         "category": category,
         "title": title or category.replace("_", " ").title(),
-        "at": at.isoformat(),
+        "at": None if at is None else at.isoformat(),
         "participants": participants,
     }
     res = client.post(f"/applications/{application['id']}/interviews", json=body, headers=headers)
@@ -49,8 +49,9 @@ def test_an_interview_has_a_required_category_title_and_date_and_time(client, to
     assert (dated["category"], dated["title"]) == ("system_design", "Retrospective System Design")
 
 
+# A key left out, unlike `at: null`, is refused, so an old script never adds an Unscheduled Interview by mistake.
 @pytest.mark.parametrize("at", [None, "2026-11-20", "", "not a date"])
-def test_create_needs_a_date_and_time(client, token, at):
+def test_create_needs_a_date_and_time_or_null(client, token, at):
     app = create_application(client, token())
     body = {
         "category": "technical",
@@ -127,12 +128,11 @@ def test_patch_changes_the_category_title_and_date(client, token):
         assert client.patch(url, json=body, headers=token()).status_code == 422
 
 
-@pytest.mark.parametrize("at", [None, "2026-11-20"])
-def test_patch_cannot_clear_the_date_or_drop_its_time(client, token, at):
+def test_patch_cannot_drop_the_time(client, token):
     app = create_application(client, token())
     interview = add(client, token(), app, "technical", FUTURE)
     url = f"/applications/{app['id']}/interviews/{interview['id']}"
-    res = client.patch(url, json={"at": at}, headers=token())
+    res = client.patch(url, json={"at": "2026-11-20"}, headers=token())
     assert res.status_code == 422
     assert [e["loc"] for e in res.json()["detail"]] == [["body", "at"]]
     assert reread(client, token(), app)["interviews"][0]["at"] == interview["at"]
@@ -338,6 +338,45 @@ def test_an_interview_is_found_only_under_its_own_application(client, token):
     assert client.delete(url, headers=token()).status_code == 404
 
 
+# Unscheduled (docs/adr/0009)
+
+
+def test_null_adds_an_unscheduled_interview_last_in_the_order_added(client, token):
+    app = create_application(client, token())
+    first = add(client, token(), app, "people_management", None)
+    add(client, token(), app, "recruiter", PAST)
+    add(client, token(), app, "technical", FUTURE)
+    second = add(client, token(), app, "culture", None)
+    assert first["at"] is None and first["completed"] is False
+    titles = [i["title"] for i in reread(client, token(), app)["interviews"]]
+    assert titles == ["Recruiter", "Technical", first["title"], second["title"]]
+    listed = client.get(f"/applications/{app['id']}/interviews", headers=token()).json()
+    assert [i["title"] for i in listed] == titles
+
+
+def test_patch_makes_an_interview_unscheduled_and_scheduled_again(client, token):
+    app = create_application(client, token())
+    interview = add(client, token(), app, "technical", FUTURE)
+    url = f"/applications/{app['id']}/interviews/{interview['id']}"
+    postponed = client.patch(url, json={"at": None}, headers=token())
+    assert postponed.status_code == 200, postponed.text
+    assert postponed.json()["at"] is None and postponed.json()["completed"] is False
+    booked = client.patch(url, json={"at": PAST.isoformat()}, headers=token()).json()
+    assert datetime.fromisoformat(booked["at"]) == PAST and booked["completed"] is True
+
+
+def test_a_done_application_refuses_an_unscheduled_interview(client, token):
+    app = create_application(client, token(), status="done", outcome="rejected")
+    body = {"category": "technical", "title": "Technical", "at": None, "participants": RECRUITER}
+    res = client.post(f"/applications/{app['id']}/interviews", json=body, headers=token())
+    assert res.status_code == 422
+    assert "In Progress" in res.json()["detail"]
+    dated = add(client, token(), app, "technical", PAST)
+    url = f"/applications/{app['id']}/interviews/{dated['id']}"
+    assert client.patch(url, json={"at": None}, headers=token()).status_code == 422
+    assert reread(client, token(), app)["interviews"][0]["at"] == dated["at"]
+
+
 # Waiting
 
 
@@ -358,6 +397,14 @@ def test_waiting_since_the_last_completed_interview(client, token):
 def test_an_upcoming_interview_ends_the_wait(client, token):
     app = create_application(client, token())
     add(client, token(), app, "technical", FUTURE)
+    after = reread(client, token(), app)
+    assert after["is_waiting"] is False and after["waiting_since"] is None
+
+
+def test_an_unscheduled_interview_ends_the_wait(client, token):
+    app = create_application(client, token())
+    add(client, token(), app, "recruiter", PAST)
+    add(client, token(), app, "people_management", None)
     after = reread(client, token(), app)
     assert after["is_waiting"] is False and after["waiting_since"] is None
 

@@ -248,9 +248,52 @@ describe("the Interview page heading", () => {
     await user.click(screen.getByRole("button", { name: "Clear" }));
     await user.click(within(form()).getByRole("button", { name: "Save" }));
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Enter the date and time.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Enter the date and time, or turn on Date TBD.");
     expect(within(form()).getByRole("button", { name: /^Date, / })).toHaveAttribute("aria-invalid", "true");
     expect(actions.updateInterviewAction).not.toHaveBeenCalled();
+  });
+
+  it("makes the Interview Unscheduled with the Date TBD switch, which clears and disables the date and time", async () => {
+    const { user } = openPage();
+    await user.click(editButton());
+    const tbd = within(form()).getByRole("switch", { name: "Date TBD" });
+    expect(tbd).not.toBeChecked();
+    await user.click(tbd);
+    expect(within(form()).getByRole("button", { name: /^Date, / })).toBeDisabled();
+    expect(within(form()).getByLabelText("Time")).toBeDisabled();
+    await user.click(within(form()).getByRole("button", { name: "Save" }));
+
+    expect(actions.updateInterviewAction).toHaveBeenCalledExactlyOnceWith("birch", "i1", { at: null, unscheduled: true });
+    expect(await screen.findByText("Date TBD")).toBeInTheDocument();
+    expect(screen.getByText("Upcoming · date TBD")).toBeInTheDocument();
+  });
+
+  it("shows an Unscheduled Interview as Date TBD, and asks for both when the switch is turned off", async () => {
+    const tbd = interview("i1", { application_id: "birch", title: "Leadership", at: null, completed: false, participants: [dana] });
+    const { user } = openPage(tbd, application("birch", { company: "Birch", interviews: [tbd] }));
+    expect(screen.getByText("Upcoming · date TBD")).toBeInTheDocument();
+    expect(screen.getByText("Get ready")).toBeInTheDocument();
+
+    await user.click(editButton());
+    const toggle = within(form()).getByRole("switch", { name: "Date TBD" });
+    expect(toggle).toBeChecked();
+    await user.click(toggle);
+    await user.click(within(form()).getByRole("button", { name: "Save" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Enter the date and time, or turn on Date TBD.");
+    expect(actions.updateInterviewAction).not.toHaveBeenCalled();
+
+    await user.click(within(form()).getByRole("button", { name: /^Date, / }));
+    await user.click(within(screen.getByRole("grid")).getByText("15"));
+    await user.type(within(form()).getByLabelText("Time"), "10:00");
+    await user.click(within(form()).getByRole("button", { name: "Save" }));
+    expect(actions.updateInterviewAction).toHaveBeenCalledExactlyOnceWith("birch", "i1", { at: expect.stringMatching(/T/) });
+  });
+
+  it("offers no Date TBD switch on a Done Application, whose Interviews keep a date", async () => {
+    const done = application("birch", { company: "Birch", status: "done", outcome: "rejected", interviews: [technical] });
+    const { user } = openPage(technical, done);
+    await user.click(editButton());
+    expect(within(form()).queryByRole("switch", { name: "Date TBD" })).not.toBeInTheDocument();
   });
 
   it("puts back the saved category, title and date on Escape, without saving", async () => {

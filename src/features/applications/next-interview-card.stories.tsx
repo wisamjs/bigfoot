@@ -125,3 +125,38 @@ export const FormattedPrepNotes: Story = {
 export const PrepNotesWithoutTakeaways: Story = {
   args: { lookBack: { takeaways: [], theyAsked: null } },
 };
+
+/**
+ * An Unscheduled Interview as the Application page's Next up (BIG-221), when nothing ahead is
+ * Scheduled: a "TBD" tile, "Next up · date TBD" and Add the date, which opens Edit details. The
+ * dashboard's Next up is only ever a Scheduled one.
+ */
+export const DateTbd: Story = {
+  args: {
+    on: "application",
+    interview: { ...deepDive, at: null, prep_notes: prepNotes },
+    app: { ...lumen, interviews: [lumen.interviews[0], { ...deepDive, at: null, prep_notes: prepNotes }] },
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText(/Next up · date TBD/i)).toBeVisible();
+    await expect(canvas.getByText("TBD")).toBeVisible();
+    await expect(canvas.getByRole("link", { name: "Add the date" })).toHaveAttribute(
+      "href",
+      "/applications/lumen/interviews/deep-dive?edit=details",
+    );
+  },
+};
+
+/** Date TBD with no Prep notes yet: Add the date leads, and Add Prep notes follows as a secondary button. */
+export const DateTbdWithoutPrepNotes: Story = {
+  args: {
+    on: "application",
+    interview: { ...deepDive, at: null },
+    app: { ...lumen, interviews: [lumen.interviews[0], { ...deepDive, at: null }] },
+    lookBack: { takeaways: [], theyAsked: null },
+  },
+  play: async ({ canvas }) => {
+    const links = canvas.getAllByRole("link").map((l) => l.textContent);
+    await expect(links.indexOf("Add the date")).toBeLessThan(links.indexOf("Add Prep notes"));
+  },
+};

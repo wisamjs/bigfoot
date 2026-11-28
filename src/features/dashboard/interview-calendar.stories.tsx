@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect } from "storybook/test";
 import { AddInterviewLink } from "@/features/applications/add-links";
-import type { DatedInterview, InterviewCategory } from "@/lib/applications";
+import type { DatedInterview, Interview, InterviewCategory } from "@/lib/applications";
 import { dayKey, monthParam, monthStart } from "@/lib/calendar";
 import { previewApplications } from "@/lib/mock-data";
 import { DashboardCard } from "./dashboard-card";
@@ -36,6 +36,17 @@ const interviews = [
   on("figma", ["system_design", "Retrospective System Design"], 5),
   on("notion", ["recruiter", "Recruiter Screen"], 9),
 ];
+
+/** An Unscheduled Interview of the sample Application `id` (BIG-221): through to the next round, no date yet. */
+function tbd(id: string, [category, title]: [InterviewCategory, string]): DatedInterview<Interview> {
+  const application = previewApplications().find((a) => a.id === id)!;
+  return {
+    application,
+    interview: { ...application.interviews[0], id: `${id}-${category}-tbd`, category, title, at: null, completed: false, created_at: new Date().toISOString() },
+  };
+}
+
+const unscheduled = [tbd("figma", ["people_management", "Leadership"]), tbd("notion", ["hiring_manager", "Hiring Manager"])];
 
 const meta = {
   component: InterviewCalendar,
@@ -192,3 +203,29 @@ export const PhoneMonth: Story = {
 
 /** What the server sends until the browser knows the job seeker's time zone. */
 export const Loading: Story = { render: () => <InterviewCalendarSkeleton /> };
+
+/**
+ * Unscheduled Interviews (BIG-221): a "Date TBD" group at the end of the agenda, outside its five,
+ * each with its company and Round number and a link to its Interview page. They're never on the grid.
+ */
+export const DateTbd: Story = {
+  args: { unscheduled },
+  play: async ({ canvas }) => {
+    const group = await canvas.findByRole("region", { name: "Date TBD" });
+    await expect(group).toHaveTextContent("2 Interviews");
+    await expect(canvas.getByRole("link", { name: /^Open Interview: Figma, Round \d+ · Leadership, Date TBD$/ })).toBeVisible();
+  },
+};
+
+/** Only Unscheduled Interviews: the Date TBD group shows, and Bigfoot's empty state gives way to it. */
+export const OnlyDateTbd: Story = {
+  args: { interviews: [], unscheduled, waiting: 1 },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole("region", { name: "Date TBD" })).toBeVisible();
+    await expect(canvas.queryByText("No Interviews this month")).not.toBeInTheDocument();
+    await expect(canvas.queryByText("All quiet in the woods")).not.toBeInTheDocument();
+  },
+};
+
+/** On a phone: the Date TBD group under the week's agenda. */
+export const DateTbdPhone: Story = { ...DateTbd, globals: { viewport: { value: "mobile1", isRotated: false } } };

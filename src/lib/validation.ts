@@ -203,12 +203,34 @@ function interviewTitleError(fields: InterviewInput, creating: boolean) {
   return creating || "title" in fields ? requiredText(fields.title, "Title", INTERVIEW_TITLE_MAX_LENGTH) : null;
 }
 
-/** The date and time's problem: required when creating, and never cleared by a change. */
-function interviewDateError(fields: InterviewInput, creating: boolean) {
-  if (!creating && !("at" in fields)) return null;
-  if (fields.at === undefined || fields.at === null || fields.at === "") return "Enter the date and time.";
+/** Whether no date and time was given. */
+const noDate = (at: unknown) => at === undefined || at === null || at === "";
+
+/**
+ * The date and time's problem (docs/adr/0009). A date and time, or Date TBD (`unscheduled`), is
+ * required when creating, and a change that sends `at` needs one of them too: nothing is assumed
+ * from a date left empty. `unscheduledAllowed` is false where Date TBD isn't offered, a Done
+ * Application's Interview, so the message doesn't point at it.
+ */
+function interviewDateError(fields: InterviewInput, creating: boolean, unscheduledAllowed: boolean) {
+  if (fields.unscheduled !== undefined && typeof fields.unscheduled !== "boolean") return "Choose a date and time, or Date TBD.";
+  if (fields.unscheduled === true) return unscheduledError(fields.at, unscheduledAllowed);
+  if (!creating && !("at" in fields) && fields.unscheduled === undefined) return null;
+  if (noDate(fields.at)) return missingDateError(creating, unscheduledAllowed);
   if (typeof fields.at !== "string" || !isTimestamp(fields.at)) return "Enter a date and time.";
   return null;
+}
+
+/** Date TBD chosen: fine with no date where it's offered. */
+function unscheduledError(at: unknown, unscheduledAllowed: boolean) {
+  if (!unscheduledAllowed) return "Enter the date and time.";
+  return noDate(at) ? null : "Choose a date and time, or Date TBD, not both.";
+}
+
+/** No date and no Date TBD: Add Interview's checkbox is chosen, Edit details' switch is turned on. */
+function missingDateError(creating: boolean, unscheduledAllowed: boolean) {
+  if (!unscheduledAllowed) return "Enter the date and time.";
+  return creating ? "Enter the date and time, or choose Date TBD." : "Enter the date and time, or turn on Date TBD.";
 }
 
 /** The Participants' problem: at least one when creating, and never emptied by a change. */
@@ -253,16 +275,21 @@ function personError(role: unknown, name: unknown): string | null {
 
 /**
  * Problems with an Interview's fields. `creating` checks a whole new Interview, so the category, the
- * title, the date and time and at least one Participant are required; otherwise only the fields
- * given are checked, as a change, and none of those four can be cleared.
+ * title, the date and time (or Date TBD) and at least one Participant are required; otherwise only
+ * the fields given are checked, as a change, and none of those can be cleared. `unscheduledAllowed`
+ * says whether Date TBD is offered: not on a Done Application, whose Interviews need a date.
  */
-export function interviewErrors(input: unknown, { creating = false }: { creating?: boolean } = {}): FieldErrors {
+export function interviewErrors(input: unknown, options: { creating?: boolean; unscheduledAllowed?: boolean } = {}): FieldErrors {
+  // Comparisons rather than defaults: creating only when asked, Date TBD offered unless refused.
+  const creating = options.creating === true;
+  const unscheduledAllowed = options.unscheduledAllowed !== false;
   if (typeof input !== "object" || input === null) return { form: "Nothing to save." };
   const fields = input as InterviewInput;
   const errors: FieldErrors = unknownFields(input, [
     "category",
     "title",
     "at",
+    "unscheduled",
     ...INTERVIEW_NOTES_FIELDS,
     "prep_notes",
     "participants",
@@ -270,7 +297,7 @@ export function interviewErrors(input: unknown, { creating = false }: { creating
   const required = {
     category: interviewCategoryError(fields, creating),
     title: interviewTitleError(fields, creating),
-    at: interviewDateError(fields, creating),
+    at: interviewDateError(fields, creating, unscheduledAllowed),
     participants: interviewParticipantsError(fields, creating),
   };
   for (const [field, problem] of Object.entries(required)) if (problem) errors[field] = problem;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LOCKED_MESSAGE, viewerCopy, type JourneyApplication, type JourneyInterview } from "@/lib/journey";
+import { LOCKED_MESSAGE, viewerCopy, type JourneyApplication, type ScheduledJourneyInterview } from "@/lib/journey";
 import { dayDotClasses, journeyNext, markClasses, nextMarkIndex, passcodeError, progressLabel } from "./journey-text";
 
 // Local times: the tests check the Viewer's own day, whatever time zone they run in.
@@ -8,7 +8,7 @@ const on = (day: number, hour = 14) => new Date(2026, 10, day, hour).toISOString
 // The Viewer's locale writes the times: "2:00 PM", "2:00 p.m.".
 const format = (at: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(undefined, options).format(new Date(at));
 
-function interview(at: string, title = "Technical"): JourneyInterview {
+function interview(at: string, title = "Technical"): ScheduledJourneyInterview {
   return { category: "technical", title, at, completed: new Date(at) <= NOW };
 }
 
@@ -20,6 +20,7 @@ describe("progressLabel", () => {
   it("names the Offer and Interviewing groups", () => {
     expect(progressLabel(app(), "offer", NOW)).toBe("Offer");
     expect(progressLabel(app(), "interviewing", NOW)).toBe("Interviewing");
+    expect(progressLabel(app(), "unscheduled", NOW)).toBe("Next round · date TBD");
   });
 
   it("counts the days waiting, in the singular for one, and none without a date", () => {
@@ -42,12 +43,23 @@ describe("nextMarkIndex and markClasses", () => {
     expect(markClasses(false, true)).toBe("bg-brand");
     expect(markClasses(false, false)).toBe("bg-line-medium");
   });
+
+  it("dashes an Unscheduled Interview's mark in the brand colour, next or not", () => {
+    expect(markClasses(false, true, true)).toContain("repeating-linear-gradient");
+    expect(markClasses(false, false, true)).toContain("var(--brand)");
+  });
 });
 
 describe("journeyNext", () => {
   it("is Thinking it over for an Offer, and Nothing booked yet with no Interview ahead", () => {
     expect(journeyNext(app({ offer: true, interviews: [interview(on(27))] }), NOW)).toEqual({ kind: "offer" });
     expect(journeyNext(app({ interviews: [interview(on(20))] }), NOW)).toEqual({ kind: "nothing" });
+  });
+
+  it("names the first Unscheduled Interview when nothing ahead is Scheduled, and prefers a Scheduled one", () => {
+    const tbd = { category: "people_management" as const, title: "Leadership", at: null, completed: false };
+    expect(journeyNext(app({ interviews: [interview(on(20)), tbd] }), NOW)).toEqual({ kind: "unscheduled", title: "Leadership" });
+    expect(journeyNext(app({ interviews: [interview(on(27), "Panel"), tbd] }), NOW)).toMatchObject({ kind: "interview", title: "Panel" });
   });
 
   it("writes today and tomorrow with the time, in the brand colour", () => {

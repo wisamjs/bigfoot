@@ -660,12 +660,9 @@ function firstLines(notes: string): string {
 }
 
 /** "Get ready for Wednesday", above Prep notes before the Interview. */
-function GetReadyLine({ at }: { at: string }) {
-  return (
-    <p className="m-0 text-base font-medium text-heading">
-      <GetReadyFor at={at} />
-    </p>
-  );
+/** "Get ready for Wednesday", or just "Get ready" for an Unscheduled Interview, which has no day yet. */
+function GetReadyLine({ at }: { at: string | null }) {
+  return <p className="m-0 text-base font-medium text-heading">{at === null ? "Get ready" : <GetReadyFor at={at} />}</p>;
 }
 
 /** The Prep notes heading, with its "Before" label while the Interview is ahead, the save status and Edit. */

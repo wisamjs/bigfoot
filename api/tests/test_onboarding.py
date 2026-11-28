@@ -45,7 +45,7 @@ def test_first_time_seeds_sample_applications(client, token):
 
     today = datetime.now(UTC).date()
     assert all(date.fromisoformat(a["applied_on"]) < today for a in apps)
-    # Every Interview has a date and time (docs/adr/0005).
+    # Every sample Interview is Scheduled: the samples show none Unscheduled (docs/adr/0009).
     assert all(i["at"] is not None for a in apps for i in a["interviews"])
     upcoming = [i for a in apps for i in a["interviews"] if not i["completed"]]
     assert upcoming and all(datetime.fromisoformat(i["at"]) > datetime.now(UTC) for i in upcoming)

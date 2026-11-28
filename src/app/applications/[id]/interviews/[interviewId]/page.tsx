@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { InterviewPage, InterviewPageSkeleton } from "@/features/applications/interview-page";
+import { EDIT_PARAM } from "@/features/applications/routes";
 import { getApplications } from "@/lib/api";
 import { prepLookBack, takeawayShowsOn } from "@/lib/applications";
 import { getCurrentUser } from "@/lib/dal";
@@ -12,17 +13,17 @@ export const metadata: Metadata = {
   title: "Interview · Bigfoot",
 };
 
-export default function Page({ params }: Props) {
+export default function Page({ params, searchParams }: Props) {
   return (
     <Suspense fallback={<InterviewPageSkeleton />}>
-      <InterviewPageBody params={params} />
+      <InterviewPageBody params={params} searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function InterviewPageBody({ params }: Pick<Props, "params">) {
+async function InterviewPageBody({ params, searchParams }: Pick<Props, "params" | "searchParams">) {
   const user = await getCurrentUser();
-  const [{ id, interviewId }, applications] = await Promise.all([params, getApplications(user.id)]);
+  const [{ id, interviewId }, search, applications] = await Promise.all([params, searchParams, getApplications(user.id)]);
   // The API has no single-Interview read: find it among the job seeker's own Applications. A
   // deleted Interview, a malformed id and another job seeker's all come up empty, and look the same.
   const app = applications.find((a) => a.id === id);
@@ -36,6 +37,8 @@ async function InterviewPageBody({ params }: Pick<Props, "params">) {
       // Worked out here, from every Application, so only what shows reaches the browser.
       lookBack={interview.completed ? undefined : prepLookBack(applications, app, interview)}
       showsOn={takeawayShowsOn(applications, app, interview)}
+      // Add the date on the Application page: Edit details opens at once.
+      editDetails={search[EDIT_PARAM] === "details"}
     />
   );
 }

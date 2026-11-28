@@ -184,7 +184,7 @@ describe("interviewErrors", () => {
     expect(interviewErrors({}, { creating: true })).toEqual({
       category: "Choose an Interview category.",
       title: "Enter the title.",
-      at: "Enter the date and time.",
+      at: "Enter the date and time, or choose Date TBD.",
       participants: "Add at least one person you’re meeting.",
     });
     const participants = [{ role: "EM", name: null }];
@@ -193,13 +193,34 @@ describe("interviewErrors", () => {
     });
   });
 
-  it("refuses clearing the date, the category or the title of an Interview", () => {
-    expect(interviewErrors({ at: null })).toEqual({ at: "Enter the date and time." });
+  it("accepts no date only as an explicit Date TBD choice (docs/adr/0009)", () => {
+    const base = { category: "technical", title: "Technical", participants: [{ role: "EM", name: null }] };
+    expect(interviewErrors({ ...base, at: null, unscheduled: true }, { creating: true })).toEqual({});
+    expect(interviewErrors({ ...base, at: null }, { creating: true })).toEqual({ at: "Enter the date and time, or choose Date TBD." });
+    expect(interviewErrors({ ...base, at: "2026-12-01T15:00:00.000Z", unscheduled: true }, { creating: true })).toEqual({
+      at: "Choose a date and time, or Date TBD, not both.",
+    });
+    expect(interviewErrors({ ...base, at: null, unscheduled: "yes" }, { creating: true })).toEqual({ at: "Choose a date and time, or Date TBD." });
+    expect(interviewErrors({ at: null, unscheduled: true })).toEqual({});
+    expect(interviewErrors({ unscheduled: false })).toEqual({ at: "Enter the date and time, or turn on Date TBD." });
+    expect(interviewErrors({ at: "2026-12-01T15:00:00.000Z", unscheduled: false })).toEqual({});
+  });
+
+  it("asks only for a date and time where Date TBD isn't offered", () => {
+    const options = { creating: true, unscheduledAllowed: false };
+    const base = { category: "technical", title: "Technical", participants: [{ role: "EM", name: null }] };
+    expect(interviewErrors({ ...base, at: null }, options)).toEqual({ at: "Enter the date and time." });
+    expect(interviewErrors({ ...base, at: null, unscheduled: true }, options)).toEqual({ at: "Enter the date and time." });
+    expect(interviewErrors({ at: null }, { unscheduledAllowed: false })).toEqual({ at: "Enter the date and time." });
+  });
+
+  it("refuses clearing the date without Date TBD, or the category or the title of an Interview", () => {
+    expect(interviewErrors({ at: null })).toEqual({ at: "Enter the date and time, or turn on Date TBD." });
     expect(interviewErrors({ category: null, title: null })).toEqual({
       category: "Choose an Interview category.",
       title: "Enter the title.",
     });
-    expect(interviewErrors({ at: "" })).toEqual({ at: "Enter the date and time." });
+    expect(interviewErrors({ at: "" })).toEqual({ at: "Enter the date and time, or turn on Date TBD." });
   });
 
   it("refuses emptying an Interview's Participants, and leaves them alone when not sent", () => {

@@ -37,6 +37,7 @@ from app.models import (
     check_done,
     check_office_days,
     check_outcome,
+    check_unscheduled,
     latest_done_on,
 )
 
@@ -311,12 +312,36 @@ def test_blank_interview_notes_are_null():
     )
 
 
-def test_an_interview_patch_cannot_clear_the_date_category_or_title():
-    assert errors(InterviewPatch, {"at": None}) == [
-        "at: Value error, cannot be cleared: an Interview always has a date and time"
-    ]
+def test_an_interview_patch_cannot_clear_the_category_or_title():
     assert errors(InterviewPatch, {"category": None}) == ["Value error, category cannot be cleared"]
     assert errors(InterviewPatch, {"title": None}) == ["Value error, title cannot be cleared"]
+
+
+def test_an_interview_patch_can_make_it_unscheduled():
+    patch = InterviewPatch.model_validate({"at": None})
+    assert patch.at is None and patch.model_fields_set == {"at"}
+
+
+def test_an_interview_is_unscheduled_when_at_is_null_but_never_when_at_is_left_out():
+    assert InterviewCreate.model_validate(INTERVIEW | {"at": None}).at is None
+    assert errors(InterviewCreate, {k: v for k, v in INTERVIEW.items() if k != "at"}) == ["at: Field required"]
+
+
+@pytest.mark.parametrize(
+    ("status", "at", "refused"),
+    [
+        ("in_progress", None, False),
+        ("in_progress", datetime(2026, 11, 20, tzinfo=UTC), False),
+        ("done", datetime(2026, 11, 20, tzinfo=UTC), False),
+        ("done", None, True),
+    ],
+)
+def test_only_an_in_progress_application_can_have_an_unscheduled_interview(status, at, refused):
+    if refused:
+        with pytest.raises(ValueError, match="In Progress"):
+            check_unscheduled(status, at)
+    else:
+        check_unscheduled(status, at)
 
 
 def test_an_interview_patch_can_move_the_date_and_clear_the_notes():

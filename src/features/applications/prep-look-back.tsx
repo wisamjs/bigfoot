@@ -52,8 +52,12 @@ function TakeawayBox({ takeaway: { rule, application, interview } }: { takeaway:
           {rule === "same_application" ? (
             <>
               Takeaway from {interview.title}
-              <Dot />
-              <ShortDay at={interview.at} />
+              {interview.at !== null && (
+                <>
+                  <Dot />
+                  <ShortDay at={interview.at} />
+                </>
+              )}
             </>
           ) : (
             <>
@@ -111,7 +115,9 @@ export function TakeawayShowsOn({ showsOn }: { showsOn: PrepTakeaway[] }) {
   return (
     <ul aria-label="Shows on" className="m-0 mt-3 flex list-none flex-col gap-1 p-0 text-sm leading-[1.4]">
       {showsOn.map(({ rule, application, interview, round }) => {
-        const when = today ? relativeDays(calendarDaysBetween(today, new Date(interview.at))) : null;
+        // An Unscheduled Interview says "date TBD" where a scheduled one says how far off it is.
+        const when =
+          interview.at === null ? "date TBD" : today ? relativeDays(calendarDaysBetween(today, new Date(interview.at))) : null;
         return (
           <li key={rule}>
             <Link

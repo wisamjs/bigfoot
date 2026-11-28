@@ -121,8 +121,8 @@ export type Interview = {
   category: InterviewCategory;
   /** Interview title: the job seeker's own name for it, never blank. */
   title: string;
-  /** ISO timestamp, required (docs/adr/0005). */
-  at: string;
+  /** ISO timestamp; null when the Interview is Unscheduled ("Date TBD", docs/adr/0009). */
+  at: string | null;
   /** Interview notes, What they asked: the questions, one per line; null when there are none. */
   what_they_asked: string | null;
   /** Interview notes, How it went: free text; null when there is none. */
@@ -133,7 +133,7 @@ export type Interview = {
   prep_notes: string | null;
   /** Participants: who the job seeker meets, in the order they listed them; empty for one from before Bigfoot recorded them. */
   participants: Participant[];
-  /** Derived by the API: the date is in the past. */
+  /** Derived by the API: the date is in the past. An Unscheduled Interview is never completed. */
   completed: boolean;
   created_at: string;
   updated_at: string;
@@ -160,9 +160,9 @@ export type Application = {
   done_on: string | null;
   /** Outcome note: what the company said when it ended; only while Done, and null when there is none. */
   outcome_note: string | null;
-  /** Ordered by date. */
+  /** Ordered by date, then Unscheduled Interviews in the order added. */
   interviews: Interview[];
-  /** Derived by the API: In Progress with no upcoming Interview, including a new Application. */
+  /** Derived by the API: In Progress with no upcoming Interview, Scheduled or Unscheduled, including a new Application. */
   is_waiting: boolean;
   /** While waiting: an ISO timestamp (the last completed Interview) or an ISO date (applied). */
   waiting_since: string | null;
@@ -178,9 +178,14 @@ export type ApplicationFields = Omit<
   "id" | "interviews" | "is_waiting" | "waiting_since" | "is_sample" | "created_at" | "updated_at"
 >;
 
-/** What a form sends: `at` is null while no date and time has been given, and validation refuses it. */
+/**
+ * What a form sends: `at` is null while no date and time has been given. Validation refuses that
+ * unless `unscheduled` is set: Date TBD was chosen, so null is sent and the Interview is Unscheduled.
+ */
 export type InterviewFields = Pick<Interview, "category" | "title" | InterviewNotesField | "prep_notes"> & {
   at: string | null;
+  /** Date TBD was chosen: the Interview is Unscheduled and `at` is sent as null. */
+  unscheduled?: boolean;
   participants: ParticipantInput[];
 };
 
@@ -273,31 +278,60 @@ export function isDone(app: Application) {
   return app.status === "done";
 }
 
-/** Interviews still ahead, soonest first. */
-export function upcomingInterviews(app: Application): Interview[] {
-  return app.interviews.filter((i) => !i.completed);
+/** What an Unscheduled Interview shows where its date would be. */
+export const DATE_TBD = "Date TBD";
+
+/** Unscheduled (GLOSSARY.md, docs/adr/0009): an upcoming Interview with no date and time yet, shown as "Date TBD". */
+export function isUnscheduled(interview: Pick<Interview, "at">): boolean {
+  return interview.at === null;
 }
 
-/** The soonest Interview still ahead, if any. */
-export function nextInterview(app: Application): Interview | null {
+/** An Interview known to have a date: a Scheduled one. */
+export type ScheduledInterview = Interview & { at: string };
+
+/** Whether an Interview is Scheduled: it has a date and time. */
+export function isScheduled(interview: Interview): interview is ScheduledInterview {
+  return interview.at !== null;
+}
+
+/**
+ * The order the API sends Interviews in (`at` with nulls last, `created_at`, `id`,
+ * api/app/queries.py): by date, then Unscheduled Interviews in the order they were added.
+ */
+export function byInterviewOrder(a: Pick<Interview, "at" | "created_at" | "id">, b: Pick<Interview, "at" | "created_at" | "id">): number {
+  return (
+    Number(a.at === null) - Number(b.at === null) ||
+    (a.at !== null && b.at !== null ? Date.parse(a.at) - Date.parse(b.at) : 0) ||
+    Date.parse(a.created_at) - Date.parse(b.created_at) ||
+    a.id.localeCompare(b.id)
+  );
+}
+
+/** Interviews still ahead, soonest first, then Unscheduled ones in the order added. */
+export function upcomingInterviews(app: Pick<Application, "interviews">): Interview[] {
+  return app.interviews.filter((i) => !i.completed).toSorted(byInterviewOrder);
+}
+
+/** The soonest Interview still ahead, or the first Unscheduled one when none is Scheduled. */
+export function nextInterview(app: Pick<Application, "interviews">): Interview | null {
   return upcomingInterviews(app)[0] ?? null;
+}
+
+/** The soonest Scheduled Interview still ahead, if any. */
+export function nextScheduledInterview(app: Pick<Application, "interviews">): ScheduledInterview | null {
+  return upcomingInterviews(app).find(isScheduled) ?? null;
 }
 
 /**
  * Round number (GLOSSARY.md, docs/adr/0007): the Interview's place among its Application's
  * Interviews by date, counting from 1, worked out on each read and never stored. Interviews at the
- * same time count in the order they were added, so deleting one renumbers the later ones. The
- * order is the API's (`at`, `created_at`, `id`, api/app/queries.py), applied here again so the
- * number doesn't depend on the list arriving sorted. 0 when the Interview isn't the Application's.
+ * same time count in the order they were added, so deleting one renumbers the later ones, and
+ * Unscheduled ones come last in the order added (docs/adr/0009). The order is the API's
+ * (byInterviewOrder), applied here again so the number doesn't depend on the list arriving sorted.
+ * 0 when the Interview isn't the Application's.
  */
 export function roundNumber(app: Pick<Application, "interviews">, interview: Pick<Interview, "id">): number {
-  const byDate = app.interviews.toSorted(
-    (a, b) =>
-      Date.parse(a.at) - Date.parse(b.at) ||
-      Date.parse(a.created_at) - Date.parse(b.created_at) ||
-      a.id.localeCompare(b.id),
-  );
-  return byDate.findIndex((i) => i.id === interview.id) + 1;
+  return app.interviews.toSorted(byInterviewOrder).findIndex((i) => i.id === interview.id) + 1;
 }
 
 /** "Round 3 · Retrospective System Design": an Interview's title with its Round number before it. */
@@ -329,56 +363,70 @@ function count(n: number, one: string, many: string) {
 export const SUMMARY_DAYS = 14;
 
 /** One count in the dashboard's summary line; `offers` shows in the success colour. */
-export type SummaryCount = { id: "offers" | "interviews" | "waiting"; text: string };
+export type SummaryCount = { id: "offers" | "interviews" | "awaiting" | "waiting"; text: string };
 
 /**
  * The line under the dashboard's heading (BIG-183), the counts that aren't zero, in order: Offers
- * to decide (Applications at Offer), upcoming Interviews of In Progress Applications in the next
- * 14 days from `now`, and Applications waiting to hear back. Empty when every count is zero.
+ * to decide (Applications at Offer), Scheduled Interviews of In Progress Applications in the next
+ * 14 days from `now`, their Unscheduled Interviews ("awaiting a date"), and Applications waiting
+ * to hear back. Empty when every count is zero.
  */
 export function dashboardSummary(apps: Application[], now: Date): SummaryCount[] {
   const until = now.getTime() + SUMMARY_DAYS * 24 * 60 * 60 * 1000;
   const stats = getStats(apps);
-  const soon = getUpcoming(apps).filter(({ interview }) => new Date(interview.at).getTime() <= until).length;
+  const soon = getUpcoming(apps).filter(({ interview }) => Date.parse(interview.at) <= until).length;
   const counts: [SummaryCount["id"], number, string, string][] = [
     ["offers", stats.offers, "Offer to decide", "Offers to decide"],
     ["interviews", soon, `Interview in the next ${SUMMARY_DAYS / 7} weeks`, `Interviews in the next ${SUMMARY_DAYS / 7} weeks`],
+    ["awaiting", getUnscheduled(apps).length, "awaiting a date", "awaiting a date"],
     ["waiting", stats.waiting, "waiting to hear back", "waiting to hear back"],
   ];
   return counts.filter(([, n]) => n > 0).map(([id, n, one, many]) => ({ id, text: count(n, one, many) }));
 }
 
-/** The dashboard's Next up: the soonest upcoming Interview of an In Progress Application, if any. */
+/** The dashboard's Next up: the soonest Scheduled upcoming Interview of an In Progress Application, if any. */
 export function nextUp(apps: Application[]): DatedInterview | null {
   return getUpcoming(apps)[0] ?? null;
 }
 
-export type DatedInterview = { application: Application; interview: Interview };
+/** An Interview with its Application; `I` narrows it, such as to a Scheduled one. */
+export type DatedInterview<I extends Interview = ScheduledInterview> = { application: Application; interview: I };
 
-function dated(application: Application, interviews: Interview[]): DatedInterview[] {
+function dated<I extends Interview>(application: Application, interviews: I[]): DatedInterview<I>[] {
   return interviews.map((interview) => ({ application, interview }));
 }
 
-/** Upcoming Interviews of open Applications, soonest first. */
+const byDate = (a: DatedInterview, b: DatedInterview) => a.interview.at.localeCompare(b.interview.at);
+
+/** Scheduled upcoming Interviews of open Applications, soonest first. Unscheduled ones are getUnscheduled's. */
 export function getUpcoming(apps: Application[]): DatedInterview[] {
   return apps
     .filter((a) => !isDone(a))
-    .flatMap((a) => dated(a, upcomingInterviews(a)))
-    .toSorted((a, b) => a.interview.at.localeCompare(b.interview.at));
+    .flatMap((a) => dated(a, upcomingInterviews(a).filter(isScheduled)))
+    .toSorted(byDate);
 }
 
 /**
- * The Interviews calendar's Interviews, by date: every one of open Applications, and the completed
- * ones of Done Applications (BIG-206). A Done Application's Interviews still to come never happen.
+ * Unscheduled Interviews of open Applications: the dashboard's "Date TBD" group and its "awaiting a
+ * date" count, in the order of the Applications, then each one's order added.
+ */
+export function getUnscheduled(apps: Application[]): DatedInterview<Interview>[] {
+  return apps.filter((a) => !isDone(a)).flatMap((a) => dated(a, upcomingInterviews(a).filter(isUnscheduled)));
+}
+
+/**
+ * The Interviews calendar's Interviews, by date: every Scheduled one of open Applications, and the
+ * completed ones of Done Applications (BIG-206). A Done Application's Interviews still to come never
+ * happen, and an Unscheduled Interview has no day to show on.
  */
 export function getCalendarInterviews(apps: Application[]): DatedInterview[] {
   return apps
-    .flatMap((a) => dated(a, isDone(a) ? a.interviews.filter((i) => i.completed) : a.interviews))
-    .toSorted((a, b) => a.interview.at.localeCompare(b.interview.at));
+    .flatMap((a) => dated(a, (isDone(a) ? a.interviews.filter((i) => i.completed) : a.interviews).filter(isScheduled)))
+    .toSorted(byDate);
 }
 
 export type ApplicationGroup = {
-  id: "waiting" | "scheduled" | "offer" | "done";
+  id: "waiting" | "unscheduled" | "scheduled" | "offer" | "done";
   label: string;
   applications: Application[];
 };
@@ -388,16 +436,25 @@ export function doneWithoutOffer(apps: Application[]): Application[] {
   return apps.filter((a) => isDone(a) && a.outcome !== "offer");
 }
 
+/** "Next round · date TBD": the Progress of an In Progress Application whose upcoming Interviews are all Unscheduled. */
+export const UNSCHEDULED_PROGRESS_LABEL = "Next round · date TBD";
+
 /**
- * The Applications list's groups: Waiting (In Progress, nothing upcoming), Interview scheduled
- * (In Progress, something upcoming) and Offer (Done with Outcome Offer). Other Done Applications
- * appear in a Done group only when showDone is set. Empty groups are left out.
+ * The Applications list's groups: Waiting (In Progress, nothing upcoming), Next round · date TBD
+ * (In Progress, only Unscheduled Interviews ahead), Interview scheduled (In Progress, a Scheduled
+ * Interview ahead) and Offer (Done with Outcome Offer). Other Done Applications appear in a Done
+ * group only when showDone is set. Empty groups are left out.
  */
 export function getApplicationGroups(apps: Application[], { showDone = false } = {}): ApplicationGroup[] {
   const open = apps.filter((a) => !isDone(a));
   const groups: ApplicationGroup[] = [
     { id: "waiting", label: "Waiting", applications: open.filter((a) => a.is_waiting) },
-    { id: "scheduled", label: "Interview scheduled", applications: open.filter((a) => nextInterview(a)) },
+    {
+      id: "unscheduled",
+      label: UNSCHEDULED_PROGRESS_LABEL,
+      applications: open.filter((a) => !a.is_waiting && !nextScheduledInterview(a)),
+    },
+    { id: "scheduled", label: "Interview scheduled", applications: open.filter((a) => nextScheduledInterview(a)) },
     { id: "offer", label: "Offer", applications: apps.filter((a) => isDone(a) && a.outcome === "offer") },
     { id: "done", label: "Done", applications: showDone ? doneWithoutOffer(apps) : [] },
   ];
@@ -452,16 +509,17 @@ export type PrepLookBack = {
 /** Whether an Interview counts as a source of takeaways: completed, with a Takeaway for next time. */
 const hasTakeaway = (i: Interview) => i.completed && Boolean(i.takeaway?.trim());
 
-/** The latest of some dated Interviews that pass `counts`, if any. */
-function latest(candidates: DatedInterview[], counts: (i: Interview) => boolean): DatedInterview | null {
-  return (
-    candidates.filter(({ interview }) => counts(interview)).toSorted((a, b) => a.interview.at.localeCompare(b.interview.at)).at(-1) ??
-    null
-  );
+/** The latest of some Interviews that pass `counts`, if any. Only completed ones pass, so each has a date. */
+function latest(candidates: DatedInterview<Interview>[], counts: (i: Interview) => boolean): DatedInterview | null {
+  const passing = candidates.filter((c): c is DatedInterview => counts(c.interview) && isScheduled(c.interview));
+  return passing.toSorted(byDate).at(-1) ?? null;
 }
 
 /** What each rule found, in order, as PrepTakeaways carrying only the Application's id and company. */
-function linked(own: DatedInterview | null | undefined, elsewhere: DatedInterview | null | undefined): PrepTakeaway[] {
+function linked(
+  own: DatedInterview<Interview> | null | undefined,
+  elsewhere: DatedInterview<Interview> | null | undefined,
+): PrepTakeaway[] {
   const rules = [
     { rule: "same_application" as const, match: own },
     { rule: "same_category" as const, match: elsewhere },
@@ -527,12 +585,12 @@ export function prepLookBack(apps: Application[], app: Application, interview: I
 export function takeawayShowsOn(apps: Application[], app: Application, interview: Interview): PrepTakeaway[] {
   if (!interview.completed) return [];
   const counts = (i: Interview) => i.id === interview.id || hasTakeaway(i);
-  const showsOn = (target: DatedInterview, rule: PrepTakeaway["rule"]) =>
+  const showsOn = (target: DatedInterview<Interview>, rule: PrepTakeaway["rule"]) =>
     findTakeaways(apps, target.application, target.interview, counts).some(
       (t) => t.rule === rule && t.interview.id === interview.id,
     );
   const own = dated(app, upcomingInterviews(app)).find((target) => showsOn(target, "same_application"));
-  const elsewhere = getUpcoming(apps).find(
+  const elsewhere = [...getUpcoming(apps), ...getUnscheduled(apps)].find(
     (target) =>
       target.application.id !== app.id && target.interview.category === interview.category && showsOn(target, "same_category"),
   );
@@ -582,13 +640,15 @@ export function relativeDays(days: number): string {
 export type Progress = { id: ApplicationGroup["id"]; label: string };
 
 /**
- * Where an Application stands, as the Applications list groups it: Waiting, Interview scheduled,
- * Offer, or Done with its Outcome ("Done · Rejected").
+ * Where an Application stands, as the Applications list groups it: Waiting, Next round · date TBD
+ * (only Unscheduled Interviews ahead), Interview scheduled, Offer, or Done with its Outcome
+ * ("Done · Rejected").
  */
 export function applicationProgress(app: Application): Progress {
   if (isDone(app)) {
     if (app.outcome === "offer") return { id: "offer", label: "Offer" };
     return { id: "done", label: app.outcome ? `Done · ${OUTCOME_OPTIONS[app.outcome].label}` : "Done" };
   }
-  return nextInterview(app) ? { id: "scheduled", label: "Interview scheduled" } : { id: "waiting", label: "Waiting" };
+  if (nextScheduledInterview(app)) return { id: "scheduled", label: "Interview scheduled" };
+  return nextInterview(app) ? { id: "unscheduled", label: UNSCHEDULED_PROGRESS_LABEL } : { id: "waiting", label: "Waiting" };
 }

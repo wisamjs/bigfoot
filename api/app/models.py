@@ -7,7 +7,7 @@ from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi import Path
-from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, Field, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 from app.auth import ACCESS_TOKEN_PREFIX
 from app.domain import (
@@ -113,8 +113,16 @@ def _has_a_time(value: Any) -> Any:
     return value
 
 
-# An Interview always has a date and time (docs/adr/0005).
+# A Scheduled Interview has a date and time together; an Unscheduled one has neither (docs/adr/0009).
 InterviewAt = Annotated[datetime, BeforeValidator(_has_a_time)]
+
+UNSCHEDULED_ON_DONE = "Only an In Progress Application's Interview can be Unscheduled (at: null)."
+
+
+def check_unscheduled(status: str, at: datetime | None) -> None:
+    """An Interview can be Unscheduled (no date) only on an In Progress Application (docs/adr/0009)."""
+    if at is None and status != "in_progress":
+        raise ValueError(UNSCHEDULED_ON_DONE)
 
 
 # Example values shared by the request and response schemas.
@@ -162,7 +170,20 @@ INTERVIEW_TITLE = (
     f"{INTERVIEW_TITLE_MAX_LENGTH} characters. Required; the ends are trimmed."
 )
 EXAMPLE_INTERVIEW_TITLE = "Retrospective System Design"
-AT = "When the Interview happens: a date and time, with a time zone. Required (docs/adr/0005)."
+AT = (
+    "When the Interview happens: a date and time, with a time zone. Null when the Interview is Unscheduled "
+    '(GLOSSARY.md, docs/adr/0009): upcoming, with no date and time yet, shown as "Date TBD".'
+)
+AT_CREATE = (
+    f"{AT} Required: send null for an Unscheduled Interview; leaving the key out is refused. Null is refused on a "
+    "Done Application (422)."
+)
+AT_PATCH = f"{AT} Send null to make it Unscheduled, on an In Progress Application only (422 on a Done one)."
+WAITING = (
+    "Derived (GLOSSARY.md, Waiting): In Progress with no upcoming Interview, Scheduled or Unscheduled, including a "
+    "new one."
+)
+COMPLETED = "Derived, never stored: the date is in the past. An Unscheduled Interview is never completed."
 # Interview notes (GLOSSARY.md) are these three fields together.
 WHAT_THEY_ASKED = (
     "What they asked (GLOSSARY.md, Interview notes): the questions the Interview asked, one per line, as plain "
@@ -190,7 +211,9 @@ PREP_NOTES = (
     "Null when there are none."
 )
 EXAMPLE_PREP_NOTES = "# Review\n\nThe caching chapter.\n\n1. Ask about the on-call rotation."
-INTERVIEW_ORDER_DESCRIPTION = "Ordered by date."
+INTERVIEW_ORDER_DESCRIPTION = (
+    "Ordered by date, then Unscheduled Interviews last in the order they were added (docs/adr/0009)."
+)
 PARTICIPANT_ROLE = (
     f"What the Participant does at the company, in the job seeker's words, at most {PARTICIPANT_ROLE_MAX_LENGTH} "
     "characters. Required; the ends are trimmed."
@@ -362,7 +385,7 @@ class InterviewCreate(BaseModel):
 
     category: InterviewCategory = Field(description=CATEGORY, examples=["system_design"])
     title: InterviewTitle = Field(description=INTERVIEW_TITLE, examples=[EXAMPLE_INTERVIEW_TITLE])
-    at: InterviewAt = Field(description=AT, examples=["2026-11-20T17:00:00Z"])
+    at: InterviewAt | None = Field(description=AT_CREATE, examples=["2026-11-20T17:00:00Z"])
     what_they_asked: WhatTheyAsked = Field(
         default=None, description=f"{WHAT_THEY_ASKED} Blank is stored as null.", examples=[None]
     )
@@ -377,7 +400,8 @@ class InterviewCreate(BaseModel):
 class InterviewPatch(BaseModel):
     """Only the fields sent are changed; send null for one of the Interview notes fields or `prep_notes` to clear it.
 
-    The date can't be cleared. `participants`, when sent, replaces the Interview's Participants and needs at least one.
+    Send `at: null` to make an In Progress Application's Interview Unscheduled. `participants`, when sent,
+    replaces the Interview's Participants and needs at least one.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -390,9 +414,7 @@ class InterviewPatch(BaseModel):
         description=f"{INTERVIEW_TITLE} Cannot be cleared.",
         examples=["Strategic Alignment with Sr Director"],
     )
-    at: InterviewAt | None = Field(
-        default=None, description=f"{AT} Cannot be cleared.", examples=["2026-11-27T15:30:00Z"]
-    )
+    at: InterviewAt | None = Field(default=None, description=AT_PATCH, examples=["2026-11-27T15:30:00Z"])
     what_they_asked: WhatTheyAsked = Field(
         default=None, description=f"{WHAT_THEY_ASKED} Blank is stored as null.", examples=[EXAMPLE_WHAT_THEY_ASKED]
     )
@@ -409,14 +431,6 @@ class InterviewPatch(BaseModel):
         default=None, description=f"{PARTICIPANTS} Cannot be cleared.", examples=[EXAMPLE_PARTICIPANTS]
     )
 
-    @field_validator("at")
-    @classmethod
-    def _at_not_cleared(cls, value: datetime | None) -> datetime | None:
-        # Runs only when `at` is sent, so null here means clearing it.
-        if value is None:
-            raise ValueError("cannot be cleared: an Interview always has a date and time")
-        return value
-
     @model_validator(mode="after")
     def _required_fields_not_cleared(self) -> "InterviewPatch":
         for field in ("category", "title", "participants"):
@@ -432,7 +446,7 @@ class Interview(BaseModel):
     application_id: UUID = Field(description="The Application this Interview belongs to.")
     category: InterviewCategory = Field(description=CATEGORY, examples=["system_design"])
     title: str = Field(description=INTERVIEW_TITLE, examples=[EXAMPLE_INTERVIEW_TITLE])
-    at: datetime = Field(description=AT, examples=["2026-11-20T17:00:00Z"])
+    at: datetime | None = Field(description=AT, examples=["2026-11-20T17:00:00Z"])
     what_they_asked: str | None = Field(description=WHAT_THEY_ASKED, examples=[EXAMPLE_WHAT_THEY_ASKED])
     how_it_went: str | None = Field(description=HOW_IT_WENT, examples=[EXAMPLE_HOW_IT_WENT])
     takeaway: str | None = Field(description=TAKEAWAY, examples=[EXAMPLE_TAKEAWAY])
@@ -444,7 +458,7 @@ class Interview(BaseModel):
         )
     )
     completed: bool = Field(
-        description="Derived, never stored: the date is in the past.",
+        description=COMPLETED,
         examples=[False],
     )
     created_at: datetime
@@ -467,9 +481,7 @@ class Application(BaseModel):
     done_on: date | None = Field(description=DONE_ON, examples=["2026-11-16"])
     outcome_note: str | None = Field(description=OUTCOME_NOTE, examples=[EXAMPLE_OUTCOME_NOTE])
     interviews: list[Interview] = Field(description=INTERVIEW_ORDER_DESCRIPTION)
-    is_waiting: bool = Field(
-        description="Derived (GLOSSARY.md, Waiting): In Progress with no upcoming Interview, including a new one."
-    )
+    is_waiting: bool = Field(description=WAITING)
     waiting_since: datetime | date | None = Field(
         description=(
             "While waiting: when the last dated, completed Interview happened (a timestamp), or else the "
@@ -629,8 +641,8 @@ class JourneyInterview(BaseModel):
 
     category: InterviewCategory = Field(description=CATEGORY, examples=["hiring_manager"])
     title: str = Field(description=INTERVIEW_TITLE, examples=["Hiring Manager"])
-    at: datetime = Field(description=AT, examples=["2026-11-24T19:00:00Z"])
-    completed: bool = Field(description="Derived, never stored: the date is in the past.", examples=[False])
+    at: datetime | None = Field(description=AT, examples=["2026-11-24T19:00:00Z"])
+    completed: bool = Field(description=COMPLETED, examples=[False])
 
 
 class JourneyApplication(BaseModel):
@@ -642,9 +654,7 @@ class JourneyApplication(BaseModel):
     title: str = TITLE
     applied_on: date = Field(description="When the job seeker applied.", examples=["2026-11-02"])
     offer: bool = Field(description="Done with an Offer; otherwise the Application is In Progress.")
-    is_waiting: bool = Field(
-        description="Derived (GLOSSARY.md, Waiting): In Progress with no upcoming Interview, including a new one."
-    )
+    is_waiting: bool = Field(description=WAITING)
     waiting_since: datetime | date | None = Field(
         description=(
             "While waiting: when the last completed Interview happened (a timestamp), or else the applied date. "

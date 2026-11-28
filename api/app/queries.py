@@ -8,6 +8,7 @@ from fastapi import HTTPException, Request, status
 from psycopg import sql
 from psycopg_pool import ConnectionPool
 
+from app.domain import is_completed, waiting_since
 from app.models import Application, Interview
 
 
@@ -29,12 +30,13 @@ INTERVIEW_COLUMNS = sql.SQL(
     "id, application_id, category, title, at, what_they_asked, how_it_went, takeaway, prep_notes, created_at,"
     " updated_at"
 )
-# By date alone (docs/adr/0005).
-INTERVIEW_ORDER = sql.SQL("order by at, created_at, id")
+# By date, then Unscheduled Interviews (no date) last in the order added: Postgres sorts nulls last
+# (docs/adr/0009).
+INTERVIEW_ORDER = sql.SQL("order by at nulls last, created_at, id")
 
 
 def interview_view(row: dict[str, Any], participants: list[dict[str, Any]], now: datetime) -> Interview:
-    return Interview(**row, participants=participants, completed=row["at"] <= now)
+    return Interview(**row, participants=participants, completed=is_completed(row["at"], now))
 
 
 def participants_of(conn: Any, interview_ids: list[UUID]) -> dict[UUID, list[dict[str, Any]]]:
@@ -62,7 +64,7 @@ def _application(row: dict[str, Any], views: list[Interview], now: datetime) -> 
     waiting = row["status"] == "in_progress" and not any(not i.completed for i in views)
     since: datetime | date | None = None
     if waiting:
-        since = max((i.at for i in views), default=row["applied_on"])
+        since = waiting_since([i.at for i in views], row["applied_on"])
     return Application(**row, interviews=views, is_waiting=waiting, waiting_since=since)
 
 
@@ -82,14 +84,15 @@ def application_views(conn: Any, rows: list[dict[str, Any]]) -> list[Application
     return [_application(row, by_application[row["id"]], now) for row in rows]
 
 
-def owned(conn: Any, job_seeker: str, application_id: UUID, *, lock: bool = False) -> None:
-    """404 unless the Application is the job seeker's. `lock` holds its row until the transaction
-    ends, so concurrent Interview inserts on it take turns."""
+def owned(conn: Any, job_seeker: str, application_id: UUID, *, lock: bool = False) -> str:
+    """The Application's Status; 404 unless the Application is the job seeker's. `lock` holds its row
+    until the transaction ends, so concurrent Interview inserts on it take turns."""
     found = conn.execute(
-        sql.SQL("select 1 from applications where id = %s and job_seeker_id = %s {}").format(
+        sql.SQL("select status from applications where id = %s and job_seeker_id = %s {}").format(
             sql.SQL("for update" if lock else "")
         ),
         (application_id, job_seeker),
     ).fetchone()
     if found is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Application not found")
+    return found["status"]

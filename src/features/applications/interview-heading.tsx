@@ -15,6 +15,7 @@ import { DateTimePicker, splitDateTime, type DateAndTime } from "@/components/ui
 import { Field, RequiredMark } from "@/components/ui/field";
 import { FieldError, invalidProps } from "@/components/ui/field-error";
 import { inputClasses } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { SaveStatus } from "@/components/ui/save-status";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useSaveStatus } from "@/hooks/use-save-status";
@@ -33,14 +34,16 @@ import {
   type ParticipantDraft,
   type ParticipantsProblem,
 } from "@/features/applications/participants-field";
-import { OUTCOME_TONE } from "@/features/applications/status-tone";
+import { OUTCOME_TONE, UNSCHEDULED_PILL } from "@/features/applications/status-tone";
 import { useUnsavedChanges } from "@/features/applications/unsaved-changes";
 import {
   applicationParticipants,
   calendarDaysBetween,
   categoryLabel,
+  DATE_TBD,
   INTERVIEW_CATEGORIES,
   INTERVIEW_TITLE_MAX_LENGTH,
+  isDone,
   OUTCOME_OPTIONS,
   parseDay,
   relativeDays,
@@ -58,7 +61,8 @@ import {
 import { interviewErrors, isValid, participantsError, type FieldErrors } from "@/lib/validation";
 
 type Saved = Pick<Interview, "category" | "title" | "at" | "participants">;
-type Values = Pick<Interview, "category" | "title"> & DateAndTime & { participants: ParticipantDraft[] };
+/** `unscheduled` is the Date TBD switch: on, the date and time are cleared and the Interview is Unscheduled. */
+type Values = Pick<Interview, "category" | "title"> & DateAndTime & { unscheduled: boolean; participants: ParticipantDraft[] };
 
 /** What the save status and Retry name: the fields Edit details changes. */
 const STATUS_LABEL = "Details";
@@ -68,6 +72,7 @@ function valuesOf(saved: Saved): Values {
     category: saved.category,
     title: saved.title,
     ...splitDateTime(toLocalInput(saved.at)),
+    unscheduled: saved.at === null,
     // An Interview from before Participants starts with a blank row to fill in.
     participants: saved.participants.length > 0 ? draftsOf(saved.participants) : [blankDraft()],
   };
@@ -88,12 +93,19 @@ function localOf(values: DateAndTime) {
   return values.date ? `${values.date}T${values.time}` : "";
 }
 
-/** What differs from what's saved. A date without a time is no date: no time is assumed. */
+/**
+ * What differs from what's saved. A date without a time is no date: no time is assumed. Turning
+ * Date TBD on clears the date (`unscheduled`); turning it off sends the date given, or no date for
+ * validation to ask for (docs/adr/0009).
+ */
 function changesOf(values: Values, saved: Saved): Partial<InterviewFields> {
   const changes: Partial<InterviewFields> = {};
+  const wasUnscheduled = saved.at === null;
   if (values.category !== saved.category) changes.category = values.category;
   if (values.title.trim() !== saved.title) changes.title = values.title.trim();
-  if (localOf(values) !== toLocalInput(saved.at)) {
+  if (values.unscheduled) {
+    if (!wasUnscheduled) Object.assign(changes, { at: null, unscheduled: true });
+  } else if (wasUnscheduled || localOf(values) !== toLocalInput(saved.at)) {
     changes.at = values.date && values.time ? fromLocalInput(localOf(values)) : null;
   }
   const { inputs } = participantInputs(values.participants);
@@ -113,12 +125,24 @@ function changesOf(values: Values, saved: Saved): Partial<InterviewFields> {
  * (EditableHeading); saving needs at least one Participant. ⋯ holds
  * Delete Interview, which asks first and goes back to the Application page. On a phone, Edit details
  * folds into ⋯. Enter, Save, or leaving the fields saves what changed, checked first with the API's
- * rules: the title and date can't be cleared and no time is assumed (docs/adr/0005). The title follows
+ * rules: the title can't be cleared and no time is assumed. On an In Progress Application, a Date TBD
+ * switch beside the date and time makes the Interview Unscheduled ("Date TBD", docs/adr/0009), as for
+ * one postponed with no new date: turning it on clears and disables them, and turning it off asks for
+ * both. An Unscheduled Interview's line reads "Date TBD" and "Upcoming · date TBD". `editOnOpen`
+ * opens Edit details at once, as the Application page's Add the date asks. The title follows
  * a new category while it is still the old category's name. A problem shows beside
  * its field and sends nothing. Escape and Cancel put back what was saved. Leaving the page with a
  * change not yet saved asks first (UnsavedChanges).
  */
-export function InterviewHeading({ app, interview }: { app: Application; interview: Interview }) {
+export function InterviewHeading({
+  app,
+  interview,
+  editOnOpen = false,
+}: {
+  app: Application;
+  interview: Interview;
+  editOnOpen?: boolean;
+}) {
   const id = useId();
   const saved: Saved = {
     category: interview.category,
@@ -128,7 +152,8 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
   };
   const [shown, setShown] = useState(saved);
   const [seen, setSeen] = useState(saved);
-  const [editing, setEditing] = useState(false);
+  // Add the date on the Application page opens this page with Edit details already open.
+  const [editing, setEditing] = useState(editOnOpen);
   const [values, setValues] = useState(() => valuesOf(saved));
   const [errors, setErrors] = useState<FieldErrors>({});
   // The Participants row a problem is about, to mark it.
@@ -142,6 +167,8 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
   // Only read while the menu is open and when editing ends, so the server's guess never shows.
   const wide = useMediaQuery("(min-width: 640px)");
   const dateId = `${id}-at`;
+  // Date TBD is for an Interview still ahead: a Done Application's Interviews keep a date.
+  const canBeUnscheduled = !isDone(app);
 
   // Taken in when it changes elsewhere, set during render the way React advises for state that follows a prop.
   if (
@@ -199,7 +226,7 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
       stopEditing();
       return;
     }
-    const problems = interviewErrors(changes);
+    const problems = interviewErrors(changes, { unscheduledAllowed: canBeUnscheduled });
     if (people) problems.participants = people.message;
     setErrors(problems);
     setParticipantsKey(people?.key);
@@ -216,7 +243,7 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
       setShown((prev) => ({
         category: changes.category ?? prev.category,
         title: changes.title ?? prev.title,
-        at: changes.at ?? prev.at,
+        at: "at" in changes ? (changes.at ?? null) : prev.at,
         // Until the page reloads with their ids, someone new is shown by what was typed.
         participants: changes.participants
           ? changes.participants.map((p, i) => ({ id: p.id ?? `new-${i}`, role: p.role, name: p.name }))
@@ -245,9 +272,7 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
         </h1>
         <Participants participants={shown.participants} onAdd={() => startEditing(true)} />
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-          <p className="m-0 text-base leading-[1.6] text-body md:text-lg">
-            <InterviewWhenLong at={shown.at} />
-          </p>
+          <WhenLine at={shown.at} />
           <WhenBadge app={app} at={shown.at} completed={interview.completed} />
           <DoneBadge app={app} />
         </div>
@@ -332,28 +357,21 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
           {...invalidProps(`${id}-title-error`, errors.title)}
         />
       </Field>
-      <div>
-        <div className="mb-2 block text-sm font-medium text-heading">
-          <span id={`${dateId}-label`}>Date and time</span>
-          <RequiredMark />
-        </div>
-        <fieldset aria-labelledby={`${dateId}-label`} className="m-0 min-w-0 border-0 p-0">
-          <DateTimePicker
-            id={dateId}
-            dateLabel="Date"
-            timeLabel="Time"
-            value={localOf(values)}
-            disabled={tracker.saving}
-            onInput={(next) => {
-              setValues((prev) => ({ ...prev, ...next }));
-              setErrors((prev) => ({ ...prev, at: shown.at || next.date ? undefined : prev.at }));
-            }}
-            invalid={errors.at ? { date: true, time: true } : undefined}
-            aria-describedby={`${dateId}-error`}
-          />
-        </fieldset>
-        <FieldError id={`${dateId}-error`} error={errors.at} />
-      </div>
+      <DateField
+        id={dateId}
+        values={values}
+        error={errors.at}
+        saving={tracker.saving}
+        canBeUnscheduled={canBeUnscheduled}
+        onInput={(next) => {
+          setValues((prev) => ({ ...prev, ...next }));
+          setErrors((prev) => ({ ...prev, at: shown.at || next.date ? undefined : prev.at }));
+        }}
+        onUnscheduled={(unscheduled) => {
+          setValues((prev) => ({ ...prev, unscheduled, date: "", time: "" }));
+          setErrors((prev) => ({ ...prev, at: undefined }));
+        }}
+      />
       <ParticipantsField
         id={participantsId}
         value={values.participants}
@@ -370,6 +388,70 @@ export function InterviewHeading({ app, interview }: { app: Application; intervi
   );
 }
 
+/** The day and time with the year, "Fri, Nov 13, 2026 · 11:00 AM", or "Date TBD" for an Unscheduled Interview. */
+function WhenLine({ at }: { at: string | null }) {
+  return <p className="m-0 text-base leading-[1.6] text-body md:text-lg">{at === null ? DATE_TBD : <InterviewWhenLong at={at} />}</p>;
+}
+
+/**
+ * Edit details' date and time, and beside them on an In Progress Application the Date TBD switch
+ * (BIG-221): on, it clears and disables them, as the date picker mounts again empty.
+ */
+function DateField({
+  id,
+  values,
+  error,
+  saving,
+  canBeUnscheduled,
+  onInput,
+  onUnscheduled,
+}: {
+  id: string;
+  values: Values;
+  error: string | undefined;
+  saving: boolean;
+  canBeUnscheduled: boolean;
+  onInput: (next: DateAndTime) => void;
+  onUnscheduled: (unscheduled: boolean) => void;
+}) {
+  return (
+    <div>
+      <div className="mb-2 block text-sm font-medium text-heading">
+        <span id={`${id}-label`}>Date and time</span>
+        <RequiredMark />
+      </div>
+      <fieldset aria-labelledby={`${id}-label`} className="m-0 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 border-0 p-0">
+        <div className="min-w-0 flex-[1_1_20rem]">
+          <DateTimePicker
+            key={values.unscheduled ? "tbd" : "dated"}
+            id={id}
+            dateLabel="Date"
+            timeLabel="Time"
+            value={localOf(values)}
+            disabled={saving || values.unscheduled}
+            onInput={onInput}
+            invalid={error ? { date: true, time: true } : undefined}
+            aria-describedby={`${id}-error`}
+          />
+        </div>
+        {canBeUnscheduled && (
+          <label htmlFor={`${id}-tbd`} className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-heading">
+            <Switch
+              id={`${id}-tbd`}
+              checked={values.unscheduled}
+              disabled={saving}
+              aria-describedby={error ? `${id}-error` : undefined}
+              onCheckedChange={onUnscheduled}
+            />
+            {DATE_TBD}
+          </label>
+        )}
+      </fieldset>
+      <FieldError id={`${id}-error`} error={error} />
+    </div>
+  );
+}
+
 /** "With Dana Lee (Recruiter), Sam (EM)", or, when nobody is recorded yet, "Add who you’re meeting". */
 function Participants({ participants, onAdd }: { participants: Participant[]; onAdd: () => void }) {
   const line = withParticipants(participants);
@@ -382,10 +464,21 @@ function Participants({ participants, onAdd }: { participants: Participant[]; on
   );
 }
 
-/** Where the Interview stands, as a pill: "Upcoming · in 2 days" (blue), or "Completed · 10 days ago" (green, grey once the Application is Done). */
-function WhenBadge({ app, at, completed }: { app: Application; at: string; completed: boolean }) {
+/**
+ * Where the Interview stands, as a pill: "Upcoming · in 2 days" (blue), "Completed · 10 days ago"
+ * (green, grey once the Application is Done), or "Upcoming · date TBD" (neutral) for an Unscheduled one.
+ */
+function WhenBadge({ app, at, completed }: { app: Application; at: string | null; completed: boolean }) {
   // The viewer's time zone counts the days, which the server doesn't know: the pill says just "Upcoming" until then.
   const today = useToday();
+  if (at === null) {
+    return (
+      <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium ${UNSCHEDULED_PILL.pill}`}>
+        <span aria-hidden className={`size-2 rounded-full ${UNSCHEDULED_PILL.dot}`} />
+        Upcoming · date TBD
+      </span>
+    );
+  }
   const tone = completed
     ? app.status === "done"
       ? { pill: "border-tone-gray-line bg-tone-gray text-tone-gray-fg", dot: "bg-tone-gray-fg" }

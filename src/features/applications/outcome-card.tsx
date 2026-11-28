@@ -80,7 +80,7 @@ export function OutcomeCard({ app }: { app: Application }) {
                   <p className="m-0 break-words text-base text-heading">{text}</p>
                   <p className="m-0 mt-1 text-sm text-body">
                     From {from.title}
-                    {isClient && ` · ${dayFormat.format(new Date(from.at))}`}
+                    {isClient && from.at !== null && ` · ${dayFormat.format(new Date(from.at))}`}
                   </p>
                 </div>
               </li>
