@@ -63,7 +63,7 @@ export default function PrivacyPage() {
             them, and that is all we use them for.
           </li>
           <li>
-            When you sign in with Google, we get your name, email address, profile photo and Google
+            When you sign in with Google, we get your name, email address, profile photo, and Google
             account id. We use them only to sign you in and show who is signed in.
           </li>
           <li>
@@ -92,7 +92,7 @@ export default function PrivacyPage() {
       <Section id="collect">
         <h3 className={h3}>From Google, when you sign in</h3>
         <p>
-          Your name, email address, profile photo and Google account id. We never see your Google
+          Your name, email address, profile photo, and Google account id. We never see your Google
           password. We keep your email and photo only in your browser’s sign-in cookie, not in our
           database, and your name too, unless you make a Share link (below). We store your Google
           account id in our database to know which Applications are yours.
@@ -100,14 +100,14 @@ export default function PrivacyPage() {
         <h3 className={h3}>What you enter</h3>
         <p>
           Your Applications: the company, job title, posting link, location, salary, the date you
-          applied, its Status and Outcome, once it is Done the date it ended and, if you write one,
-          an Outcome note (what the company said), and each Interview: its category, its title, its date and, if you give them, your Interview notes (what they asked, how it went and a takeaway for next
+          applied, its Status and Outcome, once it is Done the date it ended, and, if you write one,
+          an Outcome note (what the company said), and each Interview: its category, its title, its date, the names and roles of people you interview with, which you enter, and, if you give them, your Interview notes (what they asked, how it went, and a takeaway for next
           time) and your Prep notes, which hold whatever you write there.
         </p>
         <h3 className={h3}>Access tokens, if you create any</h3>
         <p>
           An Access token lets a script of yours use Bigfoot as you. For each one, we store the name
-          you give it, when you created it, when it was last used and when it expires. We store a
+          you give it, when you created it, when it was last used, and when it expires. We store a
           one-way hash of the token’s secret, not the secret itself, so we cannot show it to you
           again or use it ourselves.
         </p>
@@ -115,7 +115,7 @@ export default function PrivacyPage() {
         <p>
           A Share link is a private link you make on your Account page, so someone you choose can
           follow your search. For each one, we store who it is for (the label you write), when you
-          made it, when you last set its passcode, when it expires and when it was last opened. We
+          made it, when you last set its passcode, when it expires, and when it was last opened. We
           store a one-way hash of its passcode, not the passcode itself, so we cannot show it to
           you again. We also store your name with each link you make, so the person who opens it
           sees who shared it.
@@ -123,9 +123,9 @@ export default function PrivacyPage() {
         <p>
           Someone who opens your Share link and types its passcode sees only what the Account
           page’s “They’ll see” box lists: your name, your In Progress Applications and Offers (the
-          company, role and applied date), and each one’s Interviews (title, category and time).
-          They never see salaries, job postings, Locations, Prep notes, Interview notes, Outcome
-          notes or Applications that ended without an Offer, and they can’t change anything.
+          company, role, and applied date), and each one’s Interviews (title, category, and time).
+          They never see salaries, job postings, Locations, who you interview with, Prep notes, Interview notes, Outcome
+          notes, or Applications that ended without an Offer, and they can’t change anything.
         </p>
         <p>
           When someone types a wrong passcode, we store the time of the try with the link, to
@@ -135,13 +135,13 @@ export default function PrivacyPage() {
         <h3 className={h3}>Technical information</h3>
         <p>
           Like most websites, our servers keep short-lived logs of requests, such as your IP
-          address, browser type, the pages you open and the time.
+          address, browser type, the pages you open, and the time.
         </p>
         <p>
           When something breaks, the website or the API sends an error report to Sentry: what failed
           and where in our code, the page or API address, your browser type, and a one-way hash of
           your Google account id. Reports leave out your Applications, your email address, your IP
-          address and your cookies.
+          address, and your cookies.
         </p>
         <p>
           We do not use analytics or advertising tools. If we ever add analytics, we will update this
@@ -219,7 +219,7 @@ export default function PrivacyPage() {
         <p>
           <strong>Where your data is stored.</strong> Your Applications are stored in the United
           States. If you live in Canada, your information is stored and processed outside Canada
-          and outside your province, where the courts, police and government may be able to access
+          and outside your province, where the courts, police, and government may be able to access
           it under local law.
         </p>
         <p>
@@ -237,7 +237,7 @@ export default function PrivacyPage() {
         <ul className={list}>
           <li>
             a session cookie that keeps you signed in. It is encrypted, holds your name, email,
-            profile photo and Google account id, and expires after {SESSION_MAX_AGE_DAYS} days or
+            profile photo, and Google account id, and expires after {SESSION_MAX_AGE_DAYS} days or
             when you sign out;
             and
           </li>
@@ -249,7 +249,7 @@ export default function PrivacyPage() {
           link, and expires when the link does or when they press Lock. It stops working as soon as
           you stop sharing the link or change its passcode.
         </p>
-        <p>We do not set analytics, advertising or tracking cookies.</p>
+        <p>We do not set analytics, advertising, or tracking cookies.</p>
       </Section>
 
       <Section id="dnt">
@@ -306,7 +306,7 @@ export default function PrivacyPage() {
       <Section id="rights">
         <p>
           Wherever you live, you can do the following. Laws in California, other US states,
-          Canada and Quebec give you these rights, and we offer them to everyone.
+          Canada, and Quebec give you these rights, and we offer them to everyone.
         </p>
         <ul className={list}>
           <li>
@@ -324,7 +324,7 @@ export default function PrivacyPage() {
           <li>
             <strong>Delete it.</strong> Delete any Application in your dashboard. Delete your
             account on your <A href="/account">Account page</A>: it removes you, all of your
-            Applications, Access tokens and Share links straight away, and signs you out.
+            Applications, Access tokens, and Share links straight away, and signs you out.
           </li>
           <li>
             <strong>Withdraw consent.</strong> Delete your account on your{" "}
@@ -386,7 +386,7 @@ export default function PrivacyPage() {
 
       <Section id="contact">
         <p>
-          Questions, requests or complaints about privacy? Email us at <Email />. Your email goes to
+          Questions, requests, or complaints about privacy? Email us at <Email />. Your email goes to
           the person in charge of protecting personal information at Bigfoot.
         </p>
         <p>

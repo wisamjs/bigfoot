@@ -1,15 +1,18 @@
 "use client";
 
 import { Lightbulb, Pencil, Plus } from "lucide-react";
-import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useId, useRef, useState, type ComponentType, type ReactNode, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { FieldError, invalidProps } from "@/components/ui/field-error";
 import { inputClasses } from "@/components/ui/input";
+import { MarkdownView } from "@/components/ui/markdown-view";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { GetReadyFor } from "@/features/applications/application-when";
 import { PLACEHOLDERS } from "@/features/applications/placeholders";
 import { PrepLookBack, TakeawayShowsOn } from "@/features/applications/prep-look-back";
 import { SaveStatus } from "@/components/ui/save-status";
 import { useUnsavedChanges } from "@/features/applications/unsaved-changes";
+import { NotebookBigfoot, WritingBigfoot } from "@/features/shell/illustrations";
 import type { SaveResult, SaveTracker } from "@/hooks/use-save-status";
 import {
   INTERVIEW_NOTES_FIELDS,
@@ -17,7 +20,6 @@ import {
   INTERVIEW_NOTES_MAX_LENGTHS,
   INTERVIEW_PREP_NOTES_MAX_LENGTH,
   hasInterviewNotes,
-  noteBlocks,
   questions,
   type Interview,
   type InterviewNotesField,
@@ -46,13 +48,14 @@ export function notesFieldId(interviewId: string, field: NotesFieldName) {
 /**
  * An Interview's notes on its Interview page (BIG-178, BIG-179): What they asked, How it went and
  * Takeaway for next time, written, read and cleared here. They read as text until edited: the
- * takeaway in its own card above, then How it went (lines starting "- " as a list) and They asked,
+ * takeaway in its own card above, then How it went (Markdown, formatted: BIG-214) and They asked,
  * one question per line, with Edit at the top right (Add Interview notes while there are none).
  * A completed Interview with none opens straight into the three empty fields under "How did it go?";
  * an upcoming one is the "After" card, dashed with "Nothing yet, that's expected" until written
  * (BIG-180). The takeaway's card says which upcoming Interviews' prep it shows on (BIG-181).
  * Edit turns them into fields, as the Details card does its details, and Done goes back to the
  * text, unless a save has failed or a field is over its limit: then focus goes to that field.
+ * While there are none to read, Bigfoot writes in the card's empty right side (BIG-228).
  *
  * Each field saves by itself, as a draft, with its own save status: about a second after typing in
  * it stops, and when it's left. Each save replaces that field's last one, so what's stored is
@@ -121,12 +124,13 @@ export function InterviewNotesForm({
   ) as Record<InterviewNotesField, string | null>;
   const any = hasInterviewNotes(shown);
   // An upcoming Interview with nothing written yet waits for afterwards.
-  const waiting = !interview.completed && !any && !editing;
+  const empty = !any && !editing;
+  const waiting = empty && !interview.completed;
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
       {!editing && shown.takeaway && <TakeawayCard takeaway={shown.takeaway} showsOn={showsOn} />}
-      <section aria-labelledby={headingId} className={cardClasses(editing, waiting)}>
+      <NotesCard labelledBy={headingId} editing={editing} waiting={waiting} empty={empty} Art={WritingBigfoot}>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <NotesHeading id={headingId} justFinished={editing && fresh && !asked} after={!interview.completed} />
           {!editing && <NotesStatuses trackers={trackers} canEdit={any} editRef={editRef} onEdit={edit} />}
@@ -150,14 +154,50 @@ export function InterviewNotesForm({
         ) : (
           <NotesRead notes={shown} waiting={waiting} editRef={editRef} onAdd={edit} />
         )}
-      </section>
+      </NotesCard>
     </div>
   );
 }
 
-/** The notes card's classes: outlined while editing, dashed while waiting for afterwards. */
-function cardClasses(editing: boolean, waiting: boolean) {
-  return ["card flex min-w-0 flex-col gap-4 p-5 sm:p-7", editing && "border-line-brand-subtle", waiting && "border-dashed"]
+/**
+ * A notes card: outlined while editing, dashed while waiting for afterwards, and, while `empty`,
+ * holding Bigfoot (`Art`) at its bottom right (BIG-228), with room kept for him so nothing runs
+ * under him. He is out of the flow, so the card keeps its size, and as tall as the card allows up
+ * to 150px; on a phone, smaller and lower, beside the card's last row. Decorative.
+ */
+function NotesCard({
+  labelledBy,
+  editing,
+  waiting = false,
+  empty,
+  Art,
+  children,
+}: {
+  labelledBy: string;
+  editing: boolean;
+  waiting?: boolean;
+  empty: boolean;
+  Art: ComponentType<{ className?: string }>;
+  children: ReactNode;
+}) {
+  return (
+    <section aria-labelledby={labelledBy} className={cardClasses(editing, waiting, empty)}>
+      {children}
+      {empty && (
+        <Art className="pointer-events-none absolute bottom-2.5 right-3 h-[68px] w-auto sm:right-8 sm:h-[min(150px,calc(100%-1.25rem))]" />
+      )}
+    </section>
+  );
+}
+
+/** The notes card's classes; an `empty` one keeps room at its right for Bigfoot. */
+function cardClasses(editing: boolean, waiting: boolean, empty: boolean) {
+  return [
+    "card flex min-w-0 flex-col gap-4 p-5 sm:p-7",
+    editing && "border-line-brand-subtle",
+    waiting && "border-dashed",
+    empty && "relative sm:pr-48",
+  ]
     .filter(Boolean)
     .join(" ");
 }
@@ -367,7 +407,10 @@ function useNotesDraft<Field extends NotesFieldName>(
   };
 }
 
-/** One field while editing: its label and save status, the field, and its character count near the limit. */
+/**
+ * One field while editing: its label and save status, the field, and its character count near the
+ * limit. How it went formats as it's written (BIG-214); They asked stays a plain list, one per line.
+ */
 function NotesField({
   id,
   field,
@@ -385,6 +428,7 @@ function NotesField({
   const label = INTERVIEW_NOTES_LABELS[field];
   const max = INTERVIEW_NOTES_MAX_LENGTHS[field];
   const errorId = `${id}-error`;
+  const labelId = `${id}-label`;
   const nearLimit = draft.draft.length >= max * 0.9;
   const focusRef = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
   // Focus once, when the fields open at the job seeker's request.
@@ -403,12 +447,24 @@ function NotesField({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <label htmlFor={id} className="text-sm font-bold text-heading">
+        <label id={labelId} htmlFor={id} className="text-sm font-bold text-heading">
           {label}
         </label>
         <SaveStatus status={tracker.status} label={label} onRetry={tracker.retry} />
       </div>
-      {field === "takeaway" ? (
+      {field === "how_it_went" ? (
+        <RichTextEditor
+          id={id}
+          value={draft.draft}
+          onChange={draft.change}
+          onBlur={() => void draft.flush()}
+          placeholder={PLACEHOLDERS[field]}
+          labelledBy={labelId}
+          errorId={errorId}
+          error={draft.error}
+          focusOnOpen={focusFirst}
+        />
+      ) : field === "takeaway" ? (
         <input
           ref={focusRef}
           {...shared}
@@ -456,34 +512,13 @@ function TakeawayCard({ takeaway, showsOn }: { takeaway: string; showsOn: PrepTa
   );
 }
 
-/** How it went as text (lines starting "- " as a list, the rest as paragraphs), then They asked as a list. */
+/** How it went formatted from its Markdown, then They asked as a list. */
 function NotesText({ howItWent, whatTheyAsked }: { howItWent: string | null; whatTheyAsked: string | null }) {
   const asked = questions(whatTheyAsked);
   return (
     <div className="flex min-w-0 flex-col gap-4 break-words text-base leading-[1.7] text-heading md:text-lg">
-      {howItWent && <NoteBlocks notes={howItWent} />}
+      {howItWent && <MarkdownView markdown={howItWent} />}
       {asked.length > 0 && <TheyAsked questions={asked} />}
-    </div>
-  );
-}
-
-/** Some notes as text: lines starting "- " as a list, the rest as paragraphs. */
-function NoteBlocks({ notes }: { notes: string }) {
-  return (
-    <div className="flex flex-col gap-3">
-      {noteBlocks(notes).map((block) =>
-        block.type === "list" ? (
-          <ul key={block.id} className="m-0 flex list-disc flex-col gap-1 pl-5">
-            {block.items.map((item) => (
-              <li key={item.id}>{item.text}</li>
-            ))}
-          </ul>
-        ) : (
-          <p key={block.id} className="m-0 whitespace-pre-line">
-            {block.text}
-          </p>
-        ),
-      )}
     </div>
   );
 }
@@ -518,7 +553,8 @@ export function TheyAsked({ questions: asked, className = "" }: { questions: str
  * ("Get ready for Wednesday"); afterwards it folds under the Interview notes, as their first lines
  * until opened, and is left out while empty. It reads, edits and saves like the Interview notes:
  * as text until Edit, saving by itself with its own save status. Before the Interview, the
- * takeaways that apply and They asked last time show under its heading (BIG-181).
+ * takeaways that apply and They asked last time show under its heading (BIG-181). Empty before
+ * the Interview, Bigfoot holds a blank notebook in its right side (BIG-228).
  */
 export function PrepNotesForm({
   interview,
@@ -565,9 +601,10 @@ export function PrepNotesForm({
   }
 
   // Prep notes of a completed Interview that has none aren't shown empty.
-  if (folded && !notes && !editing) return null;
+  const empty = !notes && !editing;
+  if (folded && empty) return null;
   return (
-    <section aria-labelledby={headingId} className={cardClasses(editing, false)}>
+    <NotesCard labelledBy={headingId} editing={editing} empty={empty} Art={NotebookBigfoot}>
       <PrepHeading
         id={headingId}
         folded={folded}
@@ -592,7 +629,7 @@ export function PrepNotesForm({
           onAdd={() => setEditing(true)}
         />
       )}
-    </section>
+    </NotesCard>
   );
 }
 
@@ -699,7 +736,7 @@ function PrepRead({
   return (
     <>
       <div className="flex min-w-0 flex-col gap-4 break-words text-base leading-[1.7] text-heading md:text-lg">
-        <NoteBlocks notes={folded && !open ? firstLines(notes) : notes} />
+        <MarkdownView markdown={folded && !open ? firstLines(notes) : notes} />
       </div>
       {folded && (
         <Button variant="tertiary" className="self-start px-2.5" onClick={onToggle} aria-expanded={open}>
@@ -710,7 +747,7 @@ function PrepRead({
   );
 }
 
-/** The Prep notes textarea that saves by itself, its character count near the limit, its error and Done. */
+/** The Prep notes field that formats as it's written and saves by itself, its character count near the limit, its error and Done. */
 function PrepField({
   id,
   headingId,
@@ -727,20 +764,17 @@ function PrepField({
   return (
     <>
       <div>
-        <textarea
+        <RichTextEditor
           id={id}
-          aria-labelledby={headingId}
           value={draft.draft}
-          rows={3}
-          maxLength={max}
-          placeholder={PLACEHOLDERS.prep_notes}
-          // eslint-disable-next-line jsx-a11y/no-autofocus -- Pressing Edit or Add is the request to write.
-          autoFocus
-          onChange={(e) => draft.change(e.target.value)}
+          onChange={draft.change}
           onBlur={() => void draft.flush()}
-          {...invalidProps(errorId, draft.error)}
-          // Grows with the notes where the browser supports it; otherwise it scrolls and resizes.
-          className={`${inputClasses} field-sizing-content max-h-96 min-h-20 resize-y`}
+          placeholder={PLACEHOLDERS.prep_notes}
+          labelledBy={headingId}
+          errorId={errorId}
+          error={draft.error}
+          // Pressing Edit or Add is the request to write.
+          focusOnOpen
         />
         {draft.draft.length >= max * 0.9 && (
           <span className="text-xs font-medium text-body">

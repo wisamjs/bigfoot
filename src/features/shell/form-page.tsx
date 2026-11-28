@@ -66,9 +66,19 @@ export function FormPage({
 }
 
 /** The page's title, with its subtitle and badge under it. */
-function TitleBlock({ title, subtitle, badge }: { title: string; subtitle?: string; badge?: ReactNode }) {
+export function TitleBlock({
+  title,
+  subtitle,
+  badge,
+  className,
+}: {
+  title: string;
+  subtitle?: string;
+  badge?: ReactNode;
+  className?: string;
+}) {
   return (
-    <div>
+    <div className={className}>
       <h1 className="m-0 text-[32px] font-bold leading-[1.1] text-heading md:text-[40px]">{title}</h1>
       {Boolean(subtitle || badge) && (
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">

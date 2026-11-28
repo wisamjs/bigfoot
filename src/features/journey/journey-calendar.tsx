@@ -2,6 +2,8 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
+import { capitalize } from "@/features/applications/when-text";
+import { dayDotClasses } from "@/features/journey/journey-text";
 import { calendarDaysBetween, relativeDays } from "@/lib/applications";
 import { dayKey, groupByDay, monthStart, monthWeeks, type CalendarDay } from "@/lib/calendar";
 import type { DatedJourneyInterview } from "@/lib/journey";
@@ -16,8 +18,8 @@ const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute:
 /**
  * The Journey's Interviews card (BIG-197), read-only: the month grid with a dot under each day that
  * has Interviews (the brand colour while any is ahead, grey once all are done) and today outlined,
- * then the upcoming Interviews after the next one. On a phone the list comes first, as "Coming up",
- * and Show month opens the grid. Nothing here links anywhere: a Viewer can't open an Interview.
+ * then the upcoming Interviews after the next one, headed "After that" at every width so it doesn't
+ * read as the whole list (BIG-208). On a phone the list comes first, and Show month opens the grid. Nothing here links anywhere: a Viewer can't open an Interview.
  */
 export function JourneyCalendar({
   interviews,
@@ -36,11 +38,10 @@ export function JourneyCalendar({
   const byDay = groupByDay(interviews, (d) => d.interview.at);
 
   return (
-    <section aria-labelledby="journey-interviews-title" className="card flex min-w-0 flex-col border-line-card">
+    <section aria-labelledby="journey-interviews-title" className="card flex min-w-0 flex-col border-line-brand-subtle">
       <div className="flex items-center justify-between gap-3 px-4 py-5 sm:px-6">
         <h2 id="journey-interviews-title" className="m-0 text-xl font-bold leading-[1.25] text-heading">
-          <span className="sm:hidden">Coming up</span>
-          <span className="max-sm:hidden">Interviews</span>
+          Interviews
         </h2>
         <button
           type="button"
@@ -119,12 +120,6 @@ function tileClasses(isToday: boolean, has: boolean, inMonth: boolean) {
   return `flex h-full flex-col items-center justify-center gap-0.5 rounded-control border text-sm ${border} ${fill} ${text}`;
 }
 
-/** The brand colour while any of the day's Interviews is ahead, grey once all are done, none without any. */
-function dotClasses(items: DatedJourneyInterview[], now: Date) {
-  if (items.length === 0) return "";
-  return items.some((d) => new Date(d.interview.at) > now) ? "bg-brand" : "bg-body-subtle";
-}
-
 /** A day of the grid: its date, a dot when it has Interviews, outlined today. Not a control: nothing opens. */
 function DayCell({ day, items, isToday, now }: { day: CalendarDay; items: DatedJourneyInterview[]; isToday: boolean; now: Date }) {
   const has = items.length > 0;
@@ -141,7 +136,7 @@ function DayCell({ day, items, isToday, now }: { day: CalendarDay; items: DatedJ
             {dayFormat.format(day.date)}, {items.length} {items.length === 1 ? "Interview" : "Interviews"}
           </span>
         )}
-        <span aria-hidden className={`size-1.5 rounded-full ${dotClasses(items, now)}`} />
+        <span aria-hidden className={`size-1.5 rounded-full ${dayDotClasses(items, now)}`} />
       </span>
     </td>
   );
@@ -163,16 +158,16 @@ function Legend() {
   );
 }
 
-/** "After that" (or a phone's whole card): each upcoming Interview after the next, with how far off it is. */
+/** "After that": each upcoming Interview after the next, with how far off it is. */
 function UpcomingList({ upcoming, now }: { upcoming: DatedJourneyInterview[]; now: Date }) {
   return (
     <section aria-labelledby="journey-after-title" className="border-t border-line max-sm:border-t-0">
       <div className="flex items-baseline justify-between gap-3 px-4 pb-2 pt-4 max-sm:pt-0 sm:px-6">
-        <h3 id="journey-after-title" className="m-0 text-sm font-semibold text-heading max-sm:sr-only">
+        <h3 id="journey-after-title" className="m-0 text-sm font-semibold text-heading">
           After that
         </h3>
         {upcoming.length > 0 && (
-          <span className="text-[13px] text-body max-sm:hidden">
+          <span className="text-[13px] text-body">
             {upcoming.length} more {upcoming.length === 1 ? "Interview" : "Interviews"}
           </span>
         )}
@@ -197,7 +192,7 @@ function UpcomingItem({ item: { application, interview }, now }: { item: DatedJo
     <li className="flex items-center gap-3.5 rounded-control px-3 py-2.5">
       <time
         dateTime={interview.at}
-        className="flex w-12 flex-none flex-col items-center rounded-control border border-line-card py-1.5 text-heading"
+        className="flex w-12 flex-none flex-col items-center rounded-control border border-line-brand-subtle py-1.5 text-heading"
       >
         <span className="text-[11px] font-bold uppercase tracking-[0.06em]">{shortMonthFormat.format(at)}</span>
         <span className="text-xl font-bold leading-[1.1]">{at.getDate()}</span>
@@ -208,8 +203,7 @@ function UpcomingItem({ item: { application, interview }, now }: { item: DatedJo
       </span>
       <span className="flex shrink-0 flex-col items-end gap-px whitespace-nowrap text-sm text-body">
         <span className="text-heading">
-          {relative.charAt(0).toUpperCase()}
-          {relative.slice(1)}
+          {capitalize(relative)}
         </span>
         <span>{timeFormat.format(at)}</span>
       </span>

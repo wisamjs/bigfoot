@@ -2,19 +2,24 @@
 // reused (e.g. a dashboard notice when the policy changes).
 
 /** The date the current version of the policy takes effect (ISO yyyy-mm-dd). */
-export const PRIVACY_EFFECTIVE_DATE = "2026-11-27";
+export const PRIVACY_EFFECTIVE_DATE = "2026-11-28";
 
 /** Newest first. The first entry's date must equal PRIVACY_EFFECTIVE_DATE. */
 export const PRIVACY_CHANGES: readonly { date: string; summary: string }[] = [
   {
+    date: "2026-11-28",
+    summary:
+      "Each Interview now records who you’re meeting: the names and roles of people you interview with, which you enter (a role is required, a name is optional). We store them with the Application, include them in your data download, and delete each person once no Interview has them, or with the Application or your account. Someone you give a Share link never sees them.",
+  },
+  {
     date: "2026-11-27",
     summary:
-      "Someone you give a Share link and its passcode can now open it and see your Journey: your name, your In Progress Applications and Offers, and their Interviews’ titles, categories and times, never salaries, job postings, Locations or notes. We now store your name with each Share link you make, when a link was last opened, and the time of each wrong passcode typed for it (deleted after 15 minutes). Opening a link sets a cookie in that person’s browser for that link only.",
+      "Someone you give a Share link and its passcode can now open it and see your Journey: your name, your In Progress Applications and Offers, and their Interviews’ titles, categories, and times, never salaries, job postings, Locations, or notes. We now store your name with each Share link you make, when a link was last opened, and the time of each wrong passcode typed for it (deleted after 15 minutes). Opening a link sets a cookie in that person’s browser for that link only.",
   },
   {
     date: "2026-11-26",
     summary:
-      "You can make Share links on your Account page, so someone you choose can follow your search. For each one, we store who it is for, its dates and a one-way hash of its passcode, never the passcode itself. Your data download lists each link’s label and dates, and deleting your account deletes your Share links.",
+      "You can make Share links on your Account page, so someone you choose can follow your search. For each one, we store who it is for, its dates, and a one-way hash of its passcode, never the passcode itself. Your data download lists each link’s label and dates, and deleting your account deletes your Share links.",
   },
   {
     date: "2026-11-25",
@@ -29,12 +34,12 @@ export const PRIVACY_CHANGES: readonly { date: string; summary: string }[] = [
   {
     date: "2026-11-21",
     summary:
-      "We send reports of errors in Bigfoot to Sentry, so we can fix them. A report names you only by a one-way hash of your Google account id, and leaves out your Applications, email address, IP address and cookies. Sentry keeps reports for up to 90 days.",
+      "We send reports of errors in Bigfoot to Sentry, so we can fix them. A report names you only by a one-way hash of your Google account id, and leaves out your Applications, email address, IP address, and cookies. Sentry keeps reports for up to 90 days.",
   },
   {
     date: "2026-11-16",
     summary:
-      "You can create Access tokens on your Account page, so your own scripts can read and change your Applications. We store each token’s name and dates and a one-way hash of its secret, never the secret itself. You can also write Interview notes on each Interview: what they asked, how it went and a takeaway for next time. We store what you write there, include it in your data download, and delete it with the Interview or your account.",
+      "You can create Access tokens on your Account page, so your own scripts can read and change your Applications. We store each token’s name and dates and a one-way hash of its secret, never the secret itself. You can also write Interview notes on each Interview: what they asked, how it went, and a takeaway for next time. We store what you write there, include it in your data download, and delete it with the Interview or your account.",
   },
   {
     date: "2026-11-14",

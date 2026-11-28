@@ -17,23 +17,23 @@
 - Border: transparent
 
 ### Light
-- Background: neutral-primary-medium
+- Background: card
 - Text: heading color
-- Border: 1px, border-default
+- Border: 1px, line
 
 ## Popovers
 
 ### Core Specs
-- Background: neutral-primary
+- Background: surface-white
 - Radius: 24px (base)
 - Shadow: shadow-md
-- Border: 1px, border-default
+- Border: 1px, line
 - Transition: opacity, 300ms
 
 ### Header / Title
 - Padding: 12px horizontal, 8px vertical
-- Background: neutral-secondary-soft
-- Bottom border: border-default
+- Background: surface
+- Bottom border: line
 - Font: 14px, medium weight, heading color
 
 ### Body / Content

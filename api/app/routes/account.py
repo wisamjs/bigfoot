@@ -1,7 +1,9 @@
-"""The signed-in job seeker: onboarding, exporting and deleting the account."""
+"""The signed-in job seeker: onboarding, exporting, and deleting the account."""
 
 import hashlib
 from datetime import UTC, datetime
+from typing import Any
+from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request, status
 from psycopg import sql
@@ -53,13 +55,29 @@ def onboard(request: Request, job_seeker: SignedInJobSeekerId) -> Onboarding:
                     ),
                     list(values.values()),
                 ).fetchone()["id"]
-                for category, title, at in interviews:
-                    conn.execute(
-                        "insert into interviews (application_id, category, title, at) values (%s, %s, %s, %s)",
-                        (application_id, category, title, at),
-                    )
+                _seed_interviews(conn, application_id, interviews)
         conn.execute("update job_seekers set samples_seeded_at = now() where job_seeker_id = %s", (job_seeker,))
     return Onboarding(samples_seeded=not has_applications)
+
+
+def _seed_interviews(conn: Any, application_id: UUID, interviews: list[tuple]) -> None:
+    """A Sample Application's Interviews and their Participants: the same (role, name) is one Participant."""
+    participant_ids: dict[tuple[str, str | None], UUID] = {}
+    for category, title, at, participants in interviews:
+        interview_id = conn.execute(
+            "insert into interviews (application_id, category, title, at) values (%s, %s, %s, %s) returning id",
+            (application_id, category, title, at),
+        ).fetchone()["id"]
+        for position, (role, name) in enumerate(participants):
+            if (role, name) not in participant_ids:
+                participant_ids[role, name] = conn.execute(
+                    "insert into participants (application_id, role, name) values (%s, %s, %s) returning id",
+                    (application_id, role, name),
+                ).fetchone()["id"]
+            conn.execute(
+                "insert into interview_participants (interview_id, participant_id, position) values (%s, %s, %s)",
+                (interview_id, participant_ids[role, name], position),
+            )
 
 
 @router.get(
@@ -82,7 +100,8 @@ def get_job_seeker(request: Request, job_seeker: SignedInJobSeekerId) -> JobSeek
 
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT, summary="Delete the job seeker's account")
 def delete_account(request: Request, job_seeker: SignedInJobSeekerId) -> None:
-    """Delete the job seeker, all of their Applications, Access tokens and Share links, in one transaction.
+    """Delete the job seeker, all of their Applications (with their Interviews and Participants), Access tokens and
+    Share links, in one transaction.
 
     Idempotent: deleting an account that is already gone succeeds and logs nothing. Signing
     in again afterwards makes a new job seeker, who receives Sample Applications again.

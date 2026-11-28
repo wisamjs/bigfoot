@@ -9,31 +9,38 @@ import { fieldLabelClasses } from "@/components/ui/field";
 import { inputClasses } from "@/components/ui/input";
 import { ShareLinkFrame } from "@/features/journey/share-link-frame";
 import { initials } from "@/features/shell/avatar";
-import { LOCKED_MESSAGE, viewerCopy } from "@/lib/journey";
+import { PeekRightBigfoot } from "@/features/shell/illustrations";
+import { passcodeError } from "@/features/journey/journey-text";
+import { viewerCopy } from "@/lib/journey";
 
 const IDLE: PasscodeState = { status: "idle" };
-
-/** What a try that didn't open the Journey says under the field. */
-const ERRORS: Partial<Record<PasscodeState["status"], (copy: ReturnType<typeof viewerCopy>) => string>> = {
-  wrong: (copy) => copy.wrongPasscode,
-  error: () => "Couldn’t reach Bigfoot’s server. Try again.",
-};
 
 /**
  * A Share link's Passcode page (BIG-197): who shared it, the Passcode field with Show, and the
  * button that opens their Journey. A wrong Passcode says so under the field; 5 wrong ones in 15
- * minutes lock the link (`locked` on load, or the 5th try), and the button stays disabled.
+ * minutes lock the link (`locked` on load, or the 5th try), and the button stays disabled. Bigfoot
+ * leans out from behind the card's right edge, one paw on it (BIG-229), where there is room beside
+ * the card. Narrower than that, he peeks in from the screen's right edge instead, turned to face the
+ * card, over its empty corner beside the initials.
  */
 export function PasscodeForm({ id, sharedBy, locked = false }: { id: string; sharedBy: string | null; locked?: boolean }) {
   const copy = viewerCopy(sharedBy);
   const [state, submit, pending] = useActionState(openJourneyAction.bind(null, id), IDLE);
   const [shown, setShown] = useState(false);
   const isLocked = locked || state.status === "locked";
-  const error = isLocked ? LOCKED_MESSAGE : ERRORS[state.status]?.(copy);
+  const error = passcodeError(state.status, locked, sharedBy);
   const invalid = invalidProps("passcode-error", error);
 
   return (
-    <ShareLinkFrame>
+    <ShareLinkFrame
+      art={
+        // Wide: the sprite's straight left edge sits on the card's right border, so only the paw
+        // (inside the card's padding, clear of the field) overlaps the card. Narrow: mirrored, its
+        // straight edge on the screen's right edge (the card is centred, at most 30rem wide), the
+        // top above the card and the rest above the heading.
+        <PeekRightBigfoot className="pointer-events-none absolute -top-6 right-[min(-1rem,calc((30rem-100vw)/2))] h-auto w-20 -scale-x-100 md:left-[calc(100%-10px)] md:right-auto md:top-[70px] md:w-32 md:scale-x-100" />
+      }
+    >
       <span
         aria-hidden
         className="grid size-[72px] place-items-center rounded-full border-2 border-line-brand bg-brand-soft text-2xl font-bold text-fg-brand-strong"

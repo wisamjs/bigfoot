@@ -2,107 +2,192 @@
 @import "tw-animate-css";
 
 /*
- * TypeUI Candy tokens (.claude/skills/typeui-design-system).
- * Values live in CSS custom properties so dark mode resolves automatically;
- * Tailwind utilities reference them through @theme inline.
+ * Colour tokens, in two tiers (.claude/skills/typeui-design-system/colors.md):
+ *
+ * 1. Base colours: one numbered scale per hue, lightest (50) to darkest (950). The only hex values
+ *    in the app. They are the same in light and dark, and have no Tailwind utilities, so components
+ *    can't reach past the roles.
+ * 2. Role tokens: named for their job (surface, body, line…). Each points at a base step, and dark
+ *    mode points it at another. Tailwind utilities reference them through @theme inline.
+ *
+ * A new colour reuses a role or points a new role at a base step; `npm run tokens` fails on a hex
+ * value outside the base block, a base step repeated, and a token nothing uses.
  */
+
+/* @tokens base */
 :root {
-  /* Backgrounds */
-  --surface: #faebf1; /* neutral-primary-soft: every section */
-  --surface-white: #ffffff; /* neutral-primary */
-  --card: #f5d6e3; /* neutral-primary-medium */
-  --card-strong: #efc9dc; /* neutral-primary-strong: nested layer */
-  --secondary-medium: #f5d6e3;
-  --secondary-strong: #ecc1d7;
-  --tertiary-soft: #f5d6e3;
-  --tertiary-medium: #e8bad0;
+  /* Mauve: the pink-tinted neutrals, for surfaces, text and lines */
+  --mauve-50: #faebf1;
+  --mauve-100: #f5d6e3;
+  --mauve-200: #efc9dc;
+  --mauve-300: #e3c6d7;
+  --mauve-400: #c99fb8;
+  --mauve-500: #8a6275;
+  --mauve-600: #6e4258;
+  --mauve-700: #4a1632;
+  --mauve-800: #3a0f28;
+  --mauve-900: #2a0a1d;
+  --mauve-950: #1f0714;
 
-  --brand: #4f1135;
-  --brand-strong: #3a0b27;
-  --brand-soft: #f2d2e2;
-  --brand-softer: #fbeaf2;
-  --brand-medium: #e3aec9;
+  /* Pink: the brand, from bubblegum to wine */
+  --pink-50: #fbeaf2;
+  --pink-100: #f2d2e2;
+  --pink-200: #e3aec9;
+  --pink-300: #e59cc4;
+  --pink-400: #d9659f;
+  --pink-500: #b5538c;
+  --pink-600: #6e2a55;
+  --pink-800: #4f1135;
+  --pink-900: #3a0b27;
 
-  /* Text */
-  --heading: #3c0d28;
-  --body: #6e4258;
-  --body-subtle: #8a6275;
-  --fg-brand: #4f1135;
-  --fg-brand-strong: #3a0b27;
+  --white: #ffffff;
 
-  /* Borders */
-  --line: #e3c6d7; /* border-default */
-  --line-medium: #d9b3c9;
-  --line-brand-subtle: #e3aec9;
-  --line-brand: #4f1135;
-  /* The dashboard's cards (BIG-195): brand-tinted, and a step lighter than --line-brand-subtle in dark mode, where that is too close to --card to see. */
-  --line-card: #e3aec9;
+  /* Status and Round and Stage colours: a soft fill, its line, its text, and the dark-mode fill */
+  --green-50: #e1f3dc;
+  --green-200: #bfe3b4;
+  --green-700: #2f6b23;
+  --green-800: #065f46;
+  --green-950: #15301a;
 
-  /* Loading shapes (.skeleton): a step away from every surface they sit on */
-  --skeleton: #e3c6d7;
+  --red-50: #fdecec;
+  --red-200: #f5c2c2;
+  --red-300: #fca5a5;
+  --red-400: #f87171;
+  --red-600: #c53030;
+  --red-700: #9b1c1c;
+  --red-800: #7f1d1d;
+  --red-950: #3b0d0d;
 
-  /* Status */
-  --success-soft: #ecfdf5;
-  --fg-success-strong: #065f46;
-  --line-success-subtle: #a7f3d0;
-  --warning-soft: #fff7ed;
-  --fg-warning: #7c2d12;
-  --line-warning-subtle: #fed7aa;
+  --orange-50: #fff7ed;
+  --orange-100: #fbdccb;
+  --orange-200: #f3bc9c;
+  --orange-800: #7c2d12;
+  --orange-950: #3e1d0c;
 
-  /* Round and Stage colours (badges and dropdowns): background, text, border */
-  --on-brand: #ffffff;
-  --tone-purple: #ede4f7;
-  --tone-purple-fg: #5b2a86;
-  --tone-purple-line: #d6c2ee;
-  --tone-slate: #dfe9ee;
-  --tone-slate-fg: #2f4a57;
-  --tone-slate-line: #bcd2dc;
-  --tone-blue: #dce9fb;
-  --tone-blue-fg: #1e4f9c;
-  --tone-blue-line: #b7d0f5;
-  --tone-green: #e1f3dc;
-  --tone-green-fg: #2f6b23;
-  --tone-green-line: #bfe3b4;
-  --tone-yellow: #fcf1c7;
-  --tone-yellow-fg: #74560a;
-  --tone-yellow-line: #f2dc8a;
-  --tone-orange: #fbdccb;
-  --tone-orange-fg: #8a3a12;
-  --tone-orange-line: #f3bc9c;
-  --tone-red: #9b1c1c;
-  --tone-red-fg: #ffffff;
-  --tone-red-line: #7f1616;
-  --tone-gray: #ececec;
-  --tone-gray-fg: #3f3f46;
-  --tone-gray-line: #d4d4d8;
+  --yellow-100: #fcf1c7;
+  --yellow-200: #f2dc8a;
+  --yellow-800: #74560a;
+  --yellow-950: #3a2e08;
 
-  /* Danger (errors, destructive actions) */
-  --danger-soft: #fdecec;
-  --fg-danger: #9b1c1c;
-  --line-danger-subtle: #f5c2c2;
-  --line-danger: #c53030;
+  --blue-100: #dce9fb;
+  --blue-200: #b7d0f5;
+  --blue-800: #1e4f9c;
+  --blue-950: #14284a;
 
-  /* Google's "G" logo: brand colours, the same in light and dark */
+  --slate-100: #dfe9ee;
+  --slate-200: #bcd2dc;
+  --slate-800: #2f4a57;
+  --slate-950: #1c2a31;
+
+  --purple-100: #ede4f7;
+  --purple-200: #d6c2ee;
+  --purple-700: #5b2a86;
+  --purple-800: #4a2d6e;
+  --purple-950: #2e1a45;
+
+  --gray-100: #ececec;
+  --gray-300: #d4d4d8;
+  --gray-700: #3f3f46;
+  --gray-800: #27272a;
+
+  /* Google's "G" logo: Google's own colours, the same in light and dark */
   --google-red: #ea4335;
   --google-blue: #4285f4;
   --google-yellow: #fbbc05;
   --google-green: #34a853;
+}
 
-  /* Button glint */
-  --color-1-400: rgba(255, 255, 255, 0.3);
-  --color-1-700: rgba(79, 17, 53, 0.18);
+/* @tokens roles */
+:root {
+  /* Backgrounds */
+  --surface: var(--mauve-50); /* every section */
+  --surface-white: var(--white); /* fields, popovers and dialogs */
+  --card: var(--mauve-100);
+  --card-strong: var(--mauve-200); /* a layer nested in a card, and hover on a card-coloured control */
 
-  /* Shadows */
-  --shadow-xs: rgba(79, 17, 53, 0.1) 0px 4px 6px -1px, rgba(79, 17, 53, 0.06) 0px 2px 4px -1px;
-  --shadow-md: 0 4px 6px -1px rgba(79, 17, 53, 0.1), 0 2px 4px -2px rgba(79, 17, 53, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(79, 17, 53, 0.1), 0 4px 6px -4px rgba(79, 17, 53, 0.1);
-  --shadow-2xl: 0 25px 50px -12px rgba(79, 17, 53, 0.25);
+  --brand: var(--pink-800);
+  --brand-soft: var(--pink-100);
+  --brand-softer: var(--pink-50);
+  --on-brand: var(--white); /* text and icons on --brand */
 
-  /*
-   * shadcn/ui theme variables (components.json), pointed at the Candy tokens above so components
-   * added with `npx shadcn add` match Candy, and follow dark mode, without editing their colours.
-   * --card is shared: it is already Candy's card background.
-   */
+  /* Text */
+  --heading: var(--pink-900);
+  --body: var(--mauve-600);
+  --body-subtle: var(--mauve-500);
+  --fg-brand: var(--pink-800);
+  --fg-brand-strong: var(--pink-900);
+
+  /* Lines: borders, dividers, focus rings */
+  --line: var(--mauve-300);
+  --line-medium: var(--mauve-400);
+  --line-brand-subtle: var(--pink-200); /* brand-tinted: the dashboard's and Journey's cards, icon shapes, the button focus ring */
+  --line-brand: var(--pink-800);
+
+  /* Loading shapes (.skeleton): a step away from every surface they sit on, nested cards included */
+  --skeleton: var(--mauve-300);
+
+  /* Status */
+  --success-soft: var(--green-50);
+  --fg-success-strong: var(--green-800);
+  --line-success-subtle: var(--green-200);
+  --warning-soft: var(--orange-50);
+  --fg-warning: var(--orange-800);
+  --line-warning-subtle: var(--orange-200);
+  --danger-soft: var(--red-50);
+  --fg-danger: var(--red-700);
+  --line-danger-subtle: var(--red-200);
+  --line-danger: var(--red-600);
+
+  /* Round and Stage colours (badges and dropdowns): background, text, border */
+  --tone-purple: var(--purple-100);
+  --tone-purple-fg: var(--purple-700);
+  --tone-purple-line: var(--purple-200);
+  --tone-slate: var(--slate-100);
+  --tone-slate-fg: var(--slate-800);
+  --tone-slate-line: var(--slate-200);
+  --tone-blue: var(--blue-100);
+  --tone-blue-fg: var(--blue-800);
+  --tone-blue-line: var(--blue-200);
+  --tone-green: var(--green-50);
+  --tone-green-fg: var(--green-700);
+  --tone-green-line: var(--green-200);
+  --tone-yellow: var(--yellow-100);
+  --tone-yellow-fg: var(--yellow-800);
+  --tone-yellow-line: var(--yellow-200);
+  --tone-orange: var(--orange-100);
+  --tone-orange-fg: var(--orange-800);
+  --tone-orange-line: var(--orange-200);
+  --tone-red: var(--red-700);
+  --tone-red-fg: var(--white);
+  --tone-red-line: var(--red-800);
+  --tone-gray: var(--gray-100);
+  --tone-gray-fg: var(--gray-700);
+  --tone-gray-line: var(--gray-300);
+
+  /* Button glint (buttons.md): the inset top-edge highlight and the soft glow under a button */
+  --glint-highlight: color-mix(in srgb, var(--white) 30%, transparent);
+  --glint-shadow: color-mix(in srgb, var(--pink-800) 18%, transparent);
+
+  /* Shadows: tinted with the brand wine, not grey */
+  --shadow-xs:
+    color-mix(in srgb, var(--pink-800) 10%, transparent) 0px 4px 6px -1px,
+    color-mix(in srgb, var(--pink-800) 6%, transparent) 0px 2px 4px -1px;
+  --shadow-md:
+    0 4px 6px -1px color-mix(in srgb, var(--pink-800) 10%, transparent),
+    0 2px 4px -2px color-mix(in srgb, var(--pink-800) 10%, transparent);
+  --shadow-lg:
+    0 10px 15px -3px color-mix(in srgb, var(--pink-800) 10%, transparent),
+    0 4px 6px -4px color-mix(in srgb, var(--pink-800) 10%, transparent);
+  --shadow-2xl: 0 25px 50px -12px color-mix(in srgb, var(--pink-800) 25%, transparent);
+}
+
+/*
+ * shadcn/ui theme variables (components.json), pointed at the roles above so components added with
+ * `npx shadcn add` match Candy, and follow dark mode, without editing their colours. --card is
+ * shared: it is already the card background. `npm run tokens` doesn't fail these when unused.
+ */
+/* @tokens shadcn */
+:root {
   --background: var(--surface);
   --foreground: var(--body);
   --card-foreground: var(--body);
@@ -110,7 +195,7 @@
   --popover-foreground: var(--body);
   --primary: var(--brand);
   --primary-foreground: var(--on-brand);
-  --secondary: var(--secondary-medium);
+  --secondary: var(--card);
   --secondary-foreground: var(--body);
   --muted: var(--card);
   --muted-foreground: var(--body);
@@ -122,80 +207,74 @@
   --ring: var(--brand);
 }
 
+/* @tokens dark */
 @media (prefers-color-scheme: dark) {
   :root {
-    --surface: #2a0a1d;
-    --surface-white: #1f0714;
-    --card: #3a0f28;
-    --card-strong: #4a1632;
-    --secondary-medium: #3a0f28;
-    --secondary-strong: #4a1632;
-    --tertiary-soft: #2a0a1d;
-    --tertiary-medium: #4a1632;
+    --surface: var(--mauve-900);
+    --surface-white: var(--mauve-950);
+    --card: var(--mauve-800);
+    --card-strong: var(--mauve-700);
 
-    --brand: #d9659f;
-    --brand-strong: #b5538c;
-    --brand-soft: #4f1135;
-    --brand-softer: #2a0a1d;
-    --brand-medium: #4f1135;
+    --brand: var(--pink-400);
+    --brand-soft: var(--pink-800);
+    --brand-softer: var(--mauve-900);
+    --on-brand: var(--mauve-900);
 
-    --heading: #faebf1;
-    --body: #e3b9cf;
-    --body-subtle: #c99fb8;
-    --fg-brand: #e59cc4;
-    --fg-brand-strong: #f2d2e2;
+    --heading: var(--mauve-50);
+    --body: var(--mauve-300);
+    --body-subtle: var(--mauve-400);
+    --fg-brand: var(--pink-300);
+    --fg-brand-strong: var(--pink-100);
 
-    --line: #3a0f28;
-    --line-medium: #4a1632;
-    --line-brand-subtle: #4f1135;
-    --line-brand: #e59cc4;
-    --line-card: #6e2a55;
+    --line: var(--mauve-800);
+    --line-medium: var(--mauve-700);
+    /* A step lighter than --brand-soft, which is too close to --card to see (BIG-195) */
+    --line-brand-subtle: var(--pink-600);
+    --line-brand: var(--pink-300);
 
-    --skeleton: #5c1f40;
+    --skeleton: var(--pink-600);
 
-    --success-soft: #002c22;
-    --fg-success-strong: #10b981;
-    --line-success-subtle: #064e3b;
-    --warning-soft: #7c2d12;
-    --fg-warning: #fbbf24;
-    --line-warning-subtle: #7c2d12;
+    --success-soft: var(--green-950);
+    --fg-success-strong: var(--green-200);
+    --line-success-subtle: var(--green-700);
+    --warning-soft: var(--orange-950);
+    --fg-warning: var(--orange-200);
+    --line-warning-subtle: var(--orange-800);
+    --danger-soft: var(--red-950);
+    --fg-danger: var(--red-300);
+    --line-danger-subtle: var(--red-800);
+    --line-danger: var(--red-400);
 
-    --on-brand: #2a0a1d;
-    --tone-purple: #2e1a45;
-    --tone-purple-fg: #d9c2f5;
-    --tone-purple-line: #4a2d6e;
-    --tone-slate: #1c2a31;
-    --tone-slate-fg: #bcd2dc;
-    --tone-slate-line: #2f4a57;
-    --tone-blue: #14284a;
-    --tone-blue-fg: #b7d0f5;
-    --tone-blue-line: #1e4f9c;
-    --tone-green: #15301a;
-    --tone-green-fg: #bfe3b4;
-    --tone-green-line: #2f6b23;
-    --tone-yellow: #3a2e08;
-    --tone-yellow-fg: #f2dc8a;
-    --tone-yellow-line: #74560a;
-    --tone-orange: #3e1d0c;
-    --tone-orange-fg: #f3bc9c;
-    --tone-orange-line: #8a3a12;
-    --tone-red: #b42323;
-    --tone-red-fg: #ffffff;
-    --tone-red-line: #d14545;
-    --tone-gray: #27272a;
-    --tone-gray-fg: #d4d4d8;
-    --tone-gray-line: #3f3f46;
+    --tone-purple: var(--purple-950);
+    --tone-purple-fg: var(--purple-200);
+    --tone-purple-line: var(--purple-800);
+    --tone-slate: var(--slate-950);
+    --tone-slate-fg: var(--slate-200);
+    --tone-slate-line: var(--slate-800);
+    --tone-blue: var(--blue-950);
+    --tone-blue-fg: var(--blue-200);
+    --tone-blue-line: var(--blue-800);
+    --tone-green: var(--green-950);
+    --tone-green-fg: var(--green-200);
+    --tone-green-line: var(--green-700);
+    --tone-yellow: var(--yellow-950);
+    --tone-yellow-fg: var(--yellow-200);
+    --tone-yellow-line: var(--yellow-800);
+    --tone-orange: var(--orange-950);
+    --tone-orange-fg: var(--orange-200);
+    --tone-orange-line: var(--orange-800);
+    --tone-red: var(--red-600);
+    --tone-red-line: var(--red-400);
+    --tone-gray: var(--gray-800);
+    --tone-gray-fg: var(--gray-300);
+    --tone-gray-line: var(--gray-700);
 
-    --danger-soft: #3b0d0d;
-    --fg-danger: #fca5a5;
-    --line-danger-subtle: #7f1d1d;
-    --line-danger: #f87171;
-
-    --color-1-400: rgba(255, 255, 255, 0.14);
-    --color-1-700: rgba(0, 0, 0, 0.3);
+    --glint-highlight: color-mix(in srgb, var(--white) 14%, transparent);
+    --glint-shadow: color-mix(in srgb, var(--mauve-950) 30%, transparent);
   }
 }
 
+/* @tokens theme */
 @theme inline {
   --font-sans: var(--font-allo), ui-sans-serif, system-ui, sans-serif;
 
@@ -203,16 +282,10 @@
   --color-surface-white: var(--surface-white);
   --color-card: var(--card);
   --color-card-strong: var(--card-strong);
-  --color-secondary-medium: var(--secondary-medium);
-  --color-secondary-strong: var(--secondary-strong);
-  --color-tertiary-soft: var(--tertiary-soft);
-  --color-tertiary-medium: var(--tertiary-medium);
 
   --color-brand: var(--brand);
-  --color-brand-strong: var(--brand-strong);
   --color-brand-soft: var(--brand-soft);
   --color-brand-softer: var(--brand-softer);
-  --color-brand-medium: var(--brand-medium);
 
   --color-heading: var(--heading);
   --color-body: var(--body);
@@ -223,7 +296,6 @@
   --color-line: var(--line);
   --color-line-medium: var(--line-medium);
   --color-line-brand-subtle: var(--line-brand-subtle);
-  --color-line-card: var(--line-card);
   --color-line-brand: var(--line-brand);
 
   --color-success-soft: var(--success-soft);
@@ -372,24 +444,24 @@ body {
     transition: all 0.3s;
     box-shadow:
       var(--shadow-xs),
-      inset var(--color-1-400) 0 6px 0px -5px,
-      var(--color-1-700) 0 4px 10px -5px;
+      inset var(--glint-highlight) 0 6px 0px -5px,
+      var(--glint-shadow) 0 4px 10px -5px;
   }
   .btn:focus-visible {
-    outline: 4px solid var(--brand-medium);
+    outline: 4px solid var(--line-brand-subtle);
     outline-offset: 0;
   }
 
   /* Brand: candy gradient fill + lighter-to-darker rim, wine glow. */
   .btn-brand {
-    color: #ffffff;
-    text-shadow: 1px 1px 1px rgba(42, 10, 29, 0.25);
+    color: var(--white);
+    text-shadow: 1px 1px 1px color-mix(in srgb, var(--mauve-900) 25%, transparent);
     background:
-      linear-gradient(140deg, #b5538c 15%, #4f1135 115%) padding-box,
-      linear-gradient(142deg, #e59cc4 9%, #3a0b27 89%) border-box;
+      linear-gradient(140deg, var(--pink-500) 15%, var(--pink-800) 115%) padding-box,
+      linear-gradient(142deg, var(--pink-300) 9%, var(--pink-900) 89%) border-box;
     box-shadow:
-      inset var(--color-1-400) 0 6px 0px -5px,
-      8px 8px 20px 0 rgba(79, 17, 53, 0.35);
+      inset var(--glint-highlight) 0 6px 0px -5px,
+      8px 8px 20px 0 color-mix(in srgb, var(--pink-800) 35%, transparent);
   }
   .btn-brand:hover {
     box-shadow: none;
@@ -397,12 +469,12 @@ body {
   }
 
   .btn-secondary {
-    background: var(--secondary-medium);
+    background: var(--card);
     border-color: var(--line-medium);
     color: var(--body);
   }
   .btn-secondary:hover {
-    background: var(--tertiary-medium);
+    background: var(--card-strong);
     color: var(--heading);
   }
 
@@ -412,8 +484,52 @@ body {
     color: var(--body);
   }
   .btn-tertiary:hover {
-    background: var(--secondary-medium);
+    background: var(--card);
     color: var(--heading);
+  }
+
+  /*
+   * The notes editor's field (rich-text-editor.tsx, BIG-214): Tailwind's reset strips lists, and
+   * titles are paragraphs marked with their size, so the formats it writes look here as MarkdownView
+   * shows them; the placeholder shows in the empty first paragraph.
+   */
+  .rich-text > * + * {
+    margin-top: 0.5rem;
+  }
+  .rich-text [data-title="1"] {
+    font-size: var(--text-xl);
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .rich-text [data-title="2"] {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .rich-text [data-title="3"] {
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .rich-text ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+  }
+  .rich-text ol {
+    list-style: decimal;
+    padding-left: 1.25rem;
+  }
+  .rich-text li + li {
+    margin-top: 0.25rem;
+  }
+  .rich-text u {
+    text-underline-offset: 2px;
+  }
+  .rich-text p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    color: var(--body);
+    pointer-events: none;
   }
 
   /* Card (cards.md): derived tone of the section surface. */
@@ -431,7 +547,7 @@ body {
     box-sizing: border-box;
     background: linear-gradient(145deg, var(--brand-softer), var(--brand-soft));
     border: 1px solid var(--line-brand-subtle);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--white) 50%, transparent);
     color: var(--fg-brand-strong);
   }
 
@@ -452,7 +568,7 @@ body {
   /* Hero atmosphere (layout.md: layered backgrounds, not flat fills). */
   .hero-atmosphere {
     background:
-      radial-gradient(60% 50% at 15% 10%, color-mix(in srgb, var(--brand-medium) 45%, transparent), transparent 70%),
+      radial-gradient(60% 50% at 15% 10%, color-mix(in srgb, var(--line-brand-subtle) 45%, transparent), transparent 70%),
       radial-gradient(50% 45% at 90% 20%, color-mix(in srgb, var(--brand-soft) 80%, transparent), transparent 70%),
       var(--surface);
   }

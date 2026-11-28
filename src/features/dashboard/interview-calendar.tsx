@@ -6,6 +6,7 @@ import Link from "next/link";
 import { DAY_PARAM, MONTH_PARAM, SHOW_MONTH_PARAM, setViewParams, useDashboardView } from "@/features/dashboard/dashboard-view";
 import { CalendarBigfoot, ClockBigfoot } from "@/features/shell/illustrations";
 import { interviewHref } from "@/features/applications/routes";
+import { capitalize } from "@/features/applications/when-text";
 import { useIsClient } from "@/hooks/use-is-client";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -69,8 +70,7 @@ function parseDayKey(key: string | null): Date | null {
 
 /** "the next 2 weeks" as a heading: "Next 2 weeks"; "November" stays as it is. */
 function agendaTitle(span: string) {
-  const text = span.replace(/^the /, "");
-  return text.charAt(0).toUpperCase() + text.slice(1);
+  return capitalize(span.replace(/^the /, ""));
 }
 
 /**
@@ -543,7 +543,7 @@ function PhoneAgendaItem({
   const at = new Date(interview.at);
   const days = calendarDaysBetween(now, at);
   const relative = relativeDays(days);
-  const tile = soonest ? "bg-brand text-on-brand" : past ? "bg-card-strong text-body" : "border border-line-card text-heading";
+  const tile = soonest ? "bg-brand text-on-brand" : past ? "bg-card-strong text-body" : "border border-line-brand-subtle text-heading";
   return (
     <li>
       <Link
@@ -563,8 +563,7 @@ function PhoneAgendaItem({
         </span>
         <span aria-hidden className="flex shrink-0 flex-col items-end gap-px whitespace-nowrap text-sm text-body">
           <span className={soonest && days >= 0 && days <= 1 ? "font-semibold text-fg-brand" : "text-heading"}>
-            {relative.charAt(0).toUpperCase()}
-            {relative.slice(1)}
+            {capitalize(relative)}
           </span>
           <span>{timeFormat.format(at)}</span>
         </span>

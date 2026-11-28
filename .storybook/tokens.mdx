@@ -1,5 +1,5 @@
 import { Meta } from "@storybook/addon-docs/blocks";
-import { ColourTable, Radii, Shadows, Spacing, Typography } from "./tokens";
+import { BaseScales, RoleTable, Radii, Shadows, Spacing, Typography } from "./tokens";
 
 <Meta title="Design tokens" />
 
@@ -7,12 +7,25 @@ import { ColourTable, Radii, Shadows, Spacing, Typography } from "./tokens";
 
 TypeUI Candy's tokens, read from `src/app/globals.css`, the only file allowed to hold token values
 (`npm run tokens` checks the rest). Components use them through Tailwind utilities such as
-`bg-card`, `text-heading`, `rounded-control` and `shadow-md`. Swatches follow the toolbar's
-Theme (dark unless changed); the table lists both values.
+`bg-card`, `text-heading`, `rounded-control` and `shadow-md`.
 
 ## Colours
 
-<ColourTable />
+Colours come in two tiers (`.claude/skills/typeui-design-system/colors.md`).
+
+### Base scales
+
+One numbered scale per hue, lightest first: the app's only hex values, the same in light and dark.
+Components never use them directly.
+
+<BaseScales />
+
+### Roles
+
+What components use. Each role points at a base step, and dark mode points it at another.
+Swatches follow the toolbar's Theme (dark unless changed); the table lists both steps.
+
+<RoleTable />
 
 ## Type
 

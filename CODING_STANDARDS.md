@@ -1,12 +1,12 @@
 # Coding standards
 
 Read when reviewing a PR. These are the judgement calls; anything a check can catch is in
-`npm run verify`, `npm run smoke`, `npm run a11y` or CI instead.
+`npm run verify`, `npm run smoke`, `npm run a11y`, or CI instead.
 
 ## Every claim about data is backed
 
 User-facing copy that says what Bigfoot does with personal information (the Privacy Policy,
-the sign-in note, any future Terms or notice) says only what is true today. Each statement
+the sign-in note, any future Terms, or notice) says only what is true today. Each statement
 traces to one of:
 
 - code or config in the repo that makes it true, ideally read by the page instead of
@@ -15,19 +15,33 @@ traces to one of:
 - a Linear ticket that makes it true, named in the PR, and the copy says what happens until then.
 
 A statement backed by none of these is a defect, however reasonable it sounds. So is a change
-that makes an existing statement untrue, such as a new SDK, a plan change or a removed feature,
+that makes an existing statement untrue, such as a new SDK, a plan change, or a removed feature,
 without updating the copy and adding a `PRIVACY_CHANGES` entry.
 
 ## GLOSSARY.md describes the product as it is
 
 A PR that changes what a screen shows or does updates every GLOSSARY.md term that describes that
-screen, in the same PR. A definition that names a removed view, column or control is a defect.
+screen, in the same PR. A definition that names a removed view, column, or control is a defect.
 
 ## UI works on a phone
 
 Read [`docs/guidelines/mobile.md`](docs/guidelines/mobile.md). `npm run a11y` fails on touch
 targets under 44×44px and on text cut off by an ellipsis. A PR that changes UI attaches
 `npm run capture -- <page> --width 375` images (light and dark) for each page or state it touches.
+
+## A new colour reuses the palette
+
+`src/app/globals.css` has two tiers (the colour tokens in
+`.claude/skills/typeui-design-system/`): base scales, the only hex values, and roles that point at them. `npm run tokens` fails a hex value
+outside the base block, a repeated base step, and an unused token. Review judges the rest:
+
+- A change that needs a colour uses an existing role. Failing that, it points an existing or new
+  role at an existing base step; a new base step needs a reason no step on its scale works.
+- A new role names a job other components could share (`skeleton`, `line-danger`), never one
+  component (`line-card`, `dashboard-border`). A role that differs from another only in one
+  component's shade is a defect: reuse the other role.
+- A dark-mode change points the role at another base step in `@tokens dark`; it never adds a
+  colour of its own.
 
 ## Green CI before approval
 
@@ -40,7 +54,7 @@ needs GitHub Pro), so the review is the only gate.
 React escapes text, so typed values are shown as `{value}` and nothing else. A link built from
 typed input uses `ExternalLink` (`src/components/ui/external-link.tsx`), which drops anything
 but `http` and `https` and opens with `rel="noopener noreferrer"`. Typed values never go into
-`<script>`, JSON-LD, inline event handlers or page metadata unescaped. Rich text, such as
+`<script>`, JSON-LD, inline event handlers, or page metadata unescaped. Rich text, such as
 Markdown Interview notes, renders through a sanitizer (DOMPurify, or a Markdown renderer with
 raw HTML off), never `dangerouslySetInnerHTML`, which lint refuses. Forms check input with
 `src/lib/validation.ts`, and the Server Action checks it again with the same function.
@@ -51,12 +65,22 @@ display or form of typed text joins it.
 
 A change to a component in `src/components/ui/` or `src/features/` updates its stories in the same PR, so Storybook never shows an older app. `npm run stories` (`scripts/check-stories.mjs`) already fails a component with no stories file and no entry saying where else it is shown; review judges whether the stories cover the change:
 
-- A new component's stories have a story per state it has (default, empty, error, loading, long text, and hover, focus and disabled for controls). A new entry in the check's lists is a piece truly drawn only inside its parent, or a static page part; a component with states of its own gets stories.
-- A changed component gets a new story for each state it gains, and changes or removes stories for the states it changes or loses. A changed prop, label or behaviour updates the args and play functions that use it.
+- A new component's stories have a story per state it has (default, empty, error, loading, long text, and hover, focus, and disabled for controls). A new entry in the check's lists is a piece truly drawn only inside its parent, or a static page part; a component with states of its own gets stories.
+- A changed component gets a new story for each state it gains, and changes or removes stories for the states it changes or loses. A changed prop, label, or behaviour updates the args and play functions that use it.
 - A story that saves uses the Server Action spies in `__mocks__/actions.ts`, and its play function checks the call, or the error when a story makes the action fail.
 - A page's layout lives in its feature (`dashboard-page.tsx`, `account-page.tsx`, `application-page.tsx`, `interview-page.tsx`, `journey/shared-page.tsx`), and its route in `src/app/` only loads data and renders it. Its **Pages/** stories show each state a job seeker or Viewer sees, at desktop and phone width, from the fixtures and fixed today in `src/test/pages.ts`; a change to a page's states updates them.
 
 Review sends back a PR that changes a component's behaviour or look without touching its stories.
+
+## Which layer a frontend test goes in
+
+Each frontend test goes in the cheapest layer that can check it.
+
+- **Unit** (`*.test.ts`, Node): logic. Anything a function decides from its arguments: formatting, sorting, grouping, a label's wording, which date or choice to show, validation. Logic that a component makes inline moves into a plain function next to it (`when-text.ts`, `status-choices.ts`, `journey/journey-text.ts`) or into `src/lib`, and the component only renders what it returns. Stub what the code reads from outside, such as the API (`fetch`), the session (`@/auth`), or `sessionStorage`, as `src/lib/api.test.ts` and `src/lib/dal.test.ts` do.
+- **Component** (`*.test.tsx`, happy-dom): behaviour. What a job seeker does and what the component does back: typing, saving, errors from a Server Action, focus, what it announces.
+- **Story** (`*.stories.tsx`): each look and state, as "Storybook shows the app as it is" says.
+
+New or changed logic in `src/` gets a unit test in the same PR. Review sends back a PR whose new rule is tested only through a component or a story, as it does a component change without its stories.
 
 ## Which layer an API test goes in
 
@@ -76,7 +100,8 @@ coverage minus 2 points: raise it as tests are added, never lower it.
 
 | Tests | Floor | Set in |
 |---|---|---|
-| Frontend (Vitest, `npm test`) | statements 56, branches 56, functions 57, lines 56 | `thresholds` in `vitest.config.mts` |
+| Frontend (Vitest, `npm test`), every file in `src` but stories, tests, and `src/lib/mock-data.ts` | statements 84, branches 84, functions 80, lines 85 | `thresholds` in `vitest.config.mts` |
+| Frontend domain and data access alone, `src/lib` | statements 97, branches 97, functions 98, lines 97 | `"src/lib/**"` in `thresholds` in `vitest.config.mts` |
 | API (pytest-cov, `npm run test:api`), line and branch coverage of `api/app` | 97% | `fail_under` in `api/pyproject.toml` |
 | API unit tests alone (`npm run test:api:unit`), line and branch coverage of the logic modules: `auth`, `domain`, `models`, `monitoring`, `responses`, `samples`, `settings` | 98% | `--cov-fail-under` and the `--cov` list in `test:api:unit` in `package.json`; a new logic module joins the list |
 
@@ -93,11 +118,24 @@ coverage minus 2 points: raise it as tests are added, never lower it.
 
 Stories (`<name>.stories.tsx`) sit beside the component they show, under the same import rules. Storybook's stand-ins for Server Actions sit in `__mocks__/actions.ts` beside each `actions.ts`.
 
-A "dumb" component is one in `ui/`: it can't reach the domain, a server action or a feature, so
+A "dumb" component is one in `ui/`: it can't reach the domain, a server action, or a feature, so
 it can be reused anywhere. Who may import whom, including the few links between features, lives
 in `eslint.config.mjs` ("Architecture"); `scripts/boundaries.test.ts` checks it still bites. A
 new link between features is a design decision for review: the alternative is moving the shared
 piece down into `ui/`.
+
+## Where docs go
+
+Each doc has one reader. A PR's docs go in the one whose reader needs them, and the README is rarely it.
+
+| Doc | Reader | Holds |
+| --- | --- | --- |
+| `README.md` | A visitor, a job seeker with a script, someone running Bigfoot for the first time | What Bigfoot is, the API from a terminal, the tech stack, running it locally, links to the rest |
+| `docs/contributing.md` | A contributor | Checks, CI, test data, the local API docs, pictures. Says when to reach for a script, not what `package.json` already says |
+| `docs/runbooks/` | Whoever operates production | Databases, deployments, restores |
+| `docs/adr/` | Someone asking why | One decision each |
+| `GLOSSARY.md` | Everyone | The product's terms |
+| `AGENTS.md` | Every agent, every turn | Pointers and rules an agent would get wrong otherwise. Grows only when nothing above can hold it |
 
 ## Lint rule groups
 
@@ -114,8 +152,8 @@ change to this table, so the table must say the same.
 | Performance (ESLint React, core, `eslint-plugin-unicorn`) | `src/**/*.{ts,tsx}` | The `vercel-react-best-practices` rules a linter can check: default props and context values rebuilt on every render (`rerender-memo-with-default-value`), `await` in a loop (`async-parallel`), `export *` barrels (`bundle-barrel-imports`), `.sort()` mutating in place (`js-tosorted-immutable`), `.filter()` where `.find()` or `.some()` stops early (`js-early-exit`), `.map().flat()` (`js-flatmap-filter`), and `Array#includes` on a fixed list (`js-set-map-lookups`). The rest of the skill is for review. |
 | Script injection (ESLint React, core, typescript-eslint) | `src/**/*.{ts,tsx}` | Text a job seeker typed running as code: `dangerouslySetInnerHTML` and `javascript:` URLs in JSX (from ESLint React's preset), `eval`, `new Function`, `javascript:` strings, and string timers (`no-implied-eval`). |
 | `jsx-a11y` `strict`, plus every live rule it leaves off | `**/*.{jsx,tsx}` | Semantic HTML and ARIA mistakes: a `role` where a native element exists (`prefer-tag-over-role`: `<fieldset>`, `<section>`, `<output>`), controls with no label, focusable elements hidden with `aria-hidden`, vague link text, missing labels and alt text, invalid roles, click handlers on non-interactive elements, `autoFocus`, `tabIndex` on non-interactive elements. Heading order and landmarks are runtime checks in `npm run a11y`. |
-| `eslint-plugin-boundaries` (`dependencies`, `no-unknown-files`) | `src/**/*.{ts,tsx}` | Imports that cross the layers in "Where code goes": the design system reaching into a feature, the domain, `auth.ts` or a server action; `lib` importing UI; a feature importing a feature the config doesn't link it to, or a route; production code importing test fixtures. Anything not allowed is an error, and a file in a folder no rule covers is an error too. |
-| `complexity` (ESLint core) and Ruff `C90` (mccabe), maximum 10 | all, including tests and scripts; `api/` and `scripts/*.py` for Ruff | A function with more than 10 independent paths through it (each `if`, loop, `case`, `&&`, `||`, `?:` and `catch` adds one). Every path needs a test, and a function with many has more bugs and is slower to change. Split it into smaller functions, or into components in React. |
+| `eslint-plugin-boundaries` (`dependencies`, `no-unknown-files`) | `src/**/*.{ts,tsx}` | Imports that cross the layers in "Where code goes": the design system reaching into a feature, the domain, `auth.ts`, or a server action; `lib` importing UI; a feature importing a feature the config doesn't link it to, or a route; production code importing test fixtures. Anything not allowed is an error, and a file in a folder no rule covers is an error too. |
+| `complexity` (ESLint core) and Ruff `C90` (mccabe), maximum 10 | all, including tests and scripts; `api/` and `scripts/*.py` for Ruff | A function with more than 10 independent paths through it (each `if`, loop, `case`, `&&`, `||`, `?:`, and `catch` adds one). Every path needs a test, and a function with many has more bugs and is slower to change. Split it into smaller functions, or into components in React. |
 | Testing Library (React) and jest-dom | `**/*.test.tsx` | Tests that reach into the DOM instead of querying as a user would, misnamed render results, and assertions with a clearer jest-dom matcher. |
 
 An inline `eslint-disable` names its rule and gives a reason after `--`. Today's exceptions:

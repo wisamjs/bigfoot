@@ -33,7 +33,7 @@ Inside each section, follow this order:
 
 Each section has:
 - 96px vertical padding — and the top padding/margin MUST equal the bottom padding/margin so spacing between sections is symmetric
-- The single shared surface background (neutral-primary-soft, #FAEBF1) — every section across the whole app/website uses this same surface color; do not alternate section backgrounds
+- The single shared surface background (surface, #FAEBF1) — every section across the whole app/website uses this same surface color; do not alternate section backgrounds
 - A centered container (max-width 1152px, 24px horizontal padding)
 - A section header area with 48px bottom margin
 - Section content below

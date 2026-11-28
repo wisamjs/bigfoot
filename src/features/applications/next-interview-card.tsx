@@ -4,6 +4,7 @@ import { buttonClasses } from "@/components/ui/button-classes";
 import { DaysFromToday, InterviewDayTime } from "@/features/applications/application-when";
 import { CategoryBadge } from "@/features/applications/category-badge";
 import { DateTile } from "@/features/applications/date-tile";
+import { MarkdownView } from "@/components/ui/markdown-view";
 import { NO_LOOK_BACK } from "@/features/applications/interview-notes-form";
 import { PrepLookBack } from "@/features/applications/prep-look-back";
 import { interviewHref } from "@/features/applications/routes";
@@ -34,7 +35,7 @@ export function NextInterviewCard({
   const dashboard = on === "dashboard";
   const prepNotes = interview.prep_notes;
   return (
-    <section aria-labelledby="next-up-title" className="card flex flex-col gap-5 border-line-card p-5 sm:p-8">
+    <section aria-labelledby="next-up-title" className="card flex flex-col gap-5 border-line-brand-subtle p-5 sm:p-8">
       <div className="flex items-start gap-4">
         <DateTile at={interview.at} tone="brand" className="hidden sm:flex" />
         <div className="min-w-0 flex-1">
@@ -68,7 +69,7 @@ export function NextInterviewCard({
       {prepNotes && (
         <div className="min-w-0">
           <h3 className="m-0 text-sm font-medium text-body">Prep notes</h3>
-          <p className="m-0 mt-1 line-clamp-6 whitespace-pre-line break-words text-base text-heading">{prepNotes}</p>
+          <MarkdownView markdown={prepNotes} headingLevel={4} className="mt-1 line-clamp-6 text-base text-heading" />
         </div>
       )}
 

@@ -7,11 +7,11 @@ import { ApplicationList } from "./application-list";
 
 // The dashboard's Applications for a job search a few weeks in.
 
-const DAY = 24 * 60 * 60 * 1000;
 
 /** An ISO timestamp `days` from now (negative is past), at 10:00 or 14:30 local time. */
 function daysFromNow(days: number, afternoon = false) {
-  const at = new Date(Date.now() + days * DAY);
+  const at = new Date();
+  at.setDate(at.getDate() + days); // calendar days: days × 24h misses by one across a DST change
   at.setHours(afternoon ? 14 : 10, afternoon ? 30 : 0, 0, 0);
   return at.toISOString();
 }

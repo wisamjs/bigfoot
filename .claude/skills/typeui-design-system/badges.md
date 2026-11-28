@@ -19,32 +19,32 @@
 
 ### Brand
 - **Background:** brand-softer
-- **Border:** border-brand-subtle
+- **Border:** line-brand-subtle
 - **Text:** fg-brand-strong
 
 ### Alternative (Neutral Soft)
-- **Background:** neutral-primary-soft
-- **Border:** border-default
+- **Background:** surface
+- **Border:** line
 - **Text:** heading
 
 ### Gray (Neutral Medium)
-- **Background:** neutral-secondary-medium
-- **Border:** border-default
+- **Background:** card
+- **Border:** line
 - **Text:** heading
 
 ### Danger
 - **Background:** danger-soft
-- **Border:** border-danger-subtle
-- **Text:** fg-danger-strong
+- **Border:** line-danger-subtle
+- **Text:** fg-danger
 
 ### Success
 - **Background:** success-soft
-- **Border:** border-success-subtle
+- **Border:** line-success-subtle
 - **Text:** fg-success-strong
 
 ### Warning
 - **Background:** warning-soft
-- **Border:** border-warning-subtle
+- **Border:** line-warning-subtle
 - **Text:** fg-warning
 
 ### Dark
@@ -73,8 +73,8 @@ Badge content + a close button. Close button hover backgrounds per variant:
 | Variant | Close button hover background |
 |---|---|
 | Brand | brand-soft |
-| Alternative | neutral-tertiary |
-| Gray | neutral-quaternary |
+| Alternative | card-strong |
+| Gray | line |
 | Danger | danger-medium |
 | Success | success-medium |
 | Warning | warning-medium |

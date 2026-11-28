@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect } from "storybook/test";
-import { DESKTOP, journey, MOBILE, PAGE, SHARE_LINK_ID, user } from "@/test/pages";
+import { expectBigfootClear } from "@/test/art";
+import { DESKTOP, journey, MOBILE, NARROW, PAGE, SHARE_LINK_ID, user } from "@/test/pages";
 import { SharedPage, SharedPageSkeleton } from "./shared-page";
 
 // A Share link's page, whole, as /journey/[id] renders it for a Viewer (BIG-203), at a laptop's
@@ -18,6 +19,18 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/**
+ * Each page's Bigfoot (BIG-229): decorative, with an empty alt, and shown on a phone as well as a
+ * laptop (BIG-232), smaller or moved where the laptop's place doesn't fit, clear of text and controls.
+ */
+const withBigfoot = (story: Story, sprite: string): Story => ({
+  ...story,
+  play: async (context) => {
+    await story.play?.(context);
+    await expectBigfootClear(context.canvasElement, sprite);
+  },
+});
+
 /** In flight: an Offer, upcoming and completed Interviews, the calendar, and where each Application stands. */
 const inFlight: Story = {
   play: async ({ canvas }) => {
@@ -25,8 +38,10 @@ const inFlight: Story = {
     await expect(canvas.getByRole("region", { name: "Where things stand" })).toBeVisible();
   },
 };
-export const InFlightDesktop: Story = { ...inFlight, ...DESKTOP };
-export const InFlightMobile: Story = { ...inFlight, ...MOBILE };
+export const InFlightDesktop: Story = { ...withBigfoot(inFlight, "bigfoot-family"), ...DESKTOP };
+export const InFlightMobile: Story = { ...withBigfoot(inFlight, "bigfoot-family"), ...MOBILE };
+/** The narrowest phone, 320px: the family right of the heading, which wraps short of it. */
+export const InFlightNarrow: Story = { ...withBigfoot(inFlight, "bigfoot-family"), ...NARROW };
 
 /** Nothing In Progress and no Offers. */
 const nothing: Story = {
@@ -35,8 +50,8 @@ const nothing: Story = {
     await expect(canvas.getByText("No Applications in progress right now.")).toBeVisible();
   },
 };
-export const NothingInProgressDesktop: Story = { ...nothing, ...DESKTOP };
-export const NothingInProgressMobile: Story = { ...nothing, ...MOBILE };
+export const NothingInProgressDesktop: Story = { ...withBigfoot(nothing, "bigfoot-family"), ...DESKTOP };
+export const NothingInProgressMobile: Story = { ...withBigfoot(nothing, "bigfoot-family"), ...MOBILE };
 
 /** The Passcode page, before the Viewer has typed it. */
 const passcode: Story = {
@@ -46,8 +61,10 @@ const passcode: Story = {
     await expect(canvas.getByRole("button", { name: "See Alex’s progress" })).toBeEnabled();
   },
 };
-export const PasscodeDesktop: Story = { ...passcode, ...DESKTOP };
-export const PasscodeMobile: Story = { ...passcode, ...MOBILE };
+export const PasscodeDesktop: Story = { ...withBigfoot(passcode, "bigfoot-peek-right"), ...DESKTOP };
+export const PasscodeMobile: Story = { ...withBigfoot(passcode, "bigfoot-peek-right"), ...MOBILE };
+/** The narrowest phone, 320px: Bigfoot peeks in from the screen's edge, beside the initials. */
+export const PasscodeNarrow: Story = { ...withBigfoot(passcode, "bigfoot-peek-right"), ...NARROW };
 
 /** The Passcode page, locked after five wrong tries. */
 const locked: Story = {
@@ -56,8 +73,8 @@ const locked: Story = {
     await expect(canvas.getByRole("button", { name: "See Alex’s progress" })).toBeDisabled();
   },
 };
-export const LockedDesktop: Story = { ...locked, ...DESKTOP };
-export const LockedMobile: Story = { ...locked, ...MOBILE };
+export const LockedDesktop: Story = { ...withBigfoot(locked, "bigfoot-peek-right"), ...DESKTOP };
+export const LockedMobile: Story = { ...withBigfoot(locked, "bigfoot-peek-right"), ...MOBILE };
 
 /** The link expired. */
 const expired: Story = {
@@ -66,8 +83,10 @@ const expired: Story = {
     await expect(canvas.getByRole("heading", { level: 1, name: "This link has expired" })).toBeVisible();
   },
 };
-export const ExpiredDesktop: Story = { ...expired, ...DESKTOP };
-export const ExpiredMobile: Story = { ...expired, ...MOBILE };
+export const ExpiredDesktop: Story = { ...withBigfoot(expired, "bigfoot-peek-over"), ...DESKTOP };
+export const ExpiredMobile: Story = { ...withBigfoot(expired, "bigfoot-peek-over"), ...MOBILE };
+/** The narrowest phone, 320px: Bigfoot looks over the card, clear of the wordmark. */
+export const ExpiredNarrow: Story = { ...withBigfoot(expired, "bigfoot-peek-over"), ...NARROW };
 
 /** The link was stopped, or never existed. */
 const notActive: Story = {
@@ -76,8 +95,8 @@ const notActive: Story = {
     await expect(canvas.getByRole("heading", { level: 1, name: "This link isn’t active" })).toBeVisible();
   },
 };
-export const NotActiveDesktop: Story = { ...notActive, ...DESKTOP };
-export const NotActiveMobile: Story = { ...notActive, ...MOBILE };
+export const NotActiveDesktop: Story = { ...withBigfoot(notActive, "bigfoot-peek-over"), ...DESKTOP };
+export const NotActiveMobile: Story = { ...withBigfoot(notActive, "bigfoot-peek-over"), ...MOBILE };
 
 /** While the route asks which page the link shows. */
 const loading: Story = { render: () => <SharedPageSkeleton /> };

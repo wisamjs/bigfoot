@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Bigfoot API",
-    "description": "Bigfoot's data API: a job seeker's Applications and their Interviews, in Supabase Postgres.\n\nEvery route but `/health` and a Share link's status and Passcode check needs\n`Authorization: Bearer <token>`, and reads and writes only the data of the job seeker the token\nnames. There are two kinds of token that name a job seeker:\n\n- **Access token** (`AccessToken`): a secret starting with `bigfoot_` that a job seeker creates on\n  their Account page and gives a script, such as a cron job. It works on the Applications and\n  Interviews routes, expires after a year, and can be revoked\n  ([ADR 0003](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0003-access-tokens-open-fastapi-to-scripts.md)).\n- **Web token** (`WebToken`): a short-lived JWT the Next.js server signs for the signed-in job\n  seeker. The browser itself never calls this API. Web tokens work on every route, and are the only\n  way to use the Account, Access tokens and Share links routes\n  ([ADR 0001](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0001-fastapi-behind-nextjs-with-authjs.md)).\n\nA third kind, the **Viewer token** (`ViewerToken`), names a Share link instead: a Viewer gets one by\ntyping the link's Passcode, and it reads only that link's Journey\n([ADR 0008](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0008-a-share-link-lets-a-viewer-read-a-journey.md)).\n\nTerms such as Application, Interview, Waiting, Sample Application and Access token are defined in\n[GLOSSARY.md](https://github.com/wisamjs/bigfoot/blob/main/GLOSSARY.md).\n\nTo try a request, click **Authorize** and paste an Access token from the Account page, or a web\ntoken from `node scripts/dev-api-token.mjs`.\n",
+    "description": "Bigfoot's data API: a job seeker's Applications and their Interviews, in Supabase Postgres.\n\nEvery route but `/health` and a Share link's status and Passcode check needs\n`Authorization: Bearer <token>`, and reads and writes only the data of the job seeker the token\nnames. There are two kinds of token that name a job seeker:\n\n- **Access token** (`AccessToken`): a secret starting with `bigfoot_` that a job seeker creates on\n  their Account page and gives a script, such as a cron job. It works on the Applications and\n  Interviews routes, expires after a year, and can be revoked\n  ([ADR 0003](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0003-access-tokens-open-fastapi-to-scripts.md)).\n- **Web token** (`WebToken`): a short-lived JWT the Next.js server signs for the signed-in job\n  seeker. The browser itself never calls this API. Web tokens work on every route, and are the only\n  way to use the Account, Access tokens, and Share links routes\n  ([ADR 0001](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0001-fastapi-behind-nextjs-with-authjs.md)).\n\nA third kind, the **Viewer token** (`ViewerToken`), names a Share link instead: a Viewer gets one by\ntyping the link's Passcode, and it reads only that link's Journey\n([ADR 0008](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0008-a-share-link-lets-a-viewer-read-a-journey.md)).\n\nTerms such as Application, Interview, Waiting, Sample Application, and Access token are defined in\n[GLOSSARY.md](https://github.com/wisamjs/bigfoot/blob/main/GLOSSARY.md).\n\nTo try a request, click **Authorize** and paste an Access token from the Account page, or a web\ntoken from `node scripts/dev-api-token.mjs`.\n",
     "version": "0.1.0"
   },
   "paths": {
@@ -48,7 +48,7 @@
             }
           },
           "401": {
-            "description": "The bearer token is missing, expired or invalid.",
+            "description": "The bearer token is missing, expired, or invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -95,7 +95,7 @@
             }
           },
           "401": {
-            "description": "The bearer token is missing, expired or invalid.",
+            "description": "The bearer token is missing, expired, or invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -136,14 +136,14 @@
           "Account"
         ],
         "summary": "Delete the job seeker's account",
-        "description": "Delete the job seeker, all of their Applications, Access tokens and Share links, in one transaction.\n\nIdempotent: deleting an account that is already gone succeeds and logs nothing. Signing\nin again afterwards makes a new job seeker, who receives Sample Applications again.",
+        "description": "Delete the job seeker, all of their Applications (with their Interviews and Participants), Access tokens and\nShare links, in one transaction.\n\nIdempotent: deleting an account that is already gone succeeds and logs nothing. Signing\nin again afterwards makes a new job seeker, who receives Sample Applications again.",
         "operationId": "delete_account_me_delete",
         "responses": {
           "204": {
             "description": "Successful Response"
           },
           "401": {
-            "description": "The bearer token is missing, expired or invalid.",
+            "description": "The bearer token is missing, expired, or invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -194,7 +194,7 @@
             }
           },
           "401": {
-            "description": "The bearer token is missing, expired or invalid.",
+            "description": "The bearer token is missing, expired, or invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -249,7 +249,7 @@
             }
           },
           "401": {
-            "description": "The bearer token is missing, expired or invalid.",
+            "description": "The bearer token is missing, expired, or invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -318,7 +318,7 @@
             "description": "Successful Response"
           },
           "401": {
-            "description": "The bearer token is missing, expired or invalid.",
+            "description": "The bearer token is missing, expired, or invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -384,7 +384,7 @@
             }
           },
           "401": {
-            "description": "The bearer token is missing, expired or invalid.",
+            "description": "The bearer token is missing, expired, or invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -439,7 +439,7 @@
             }
           },
           "401": {
-            "description": "The bearer token is missing, expired or invalid.",
+            "description": "The bearer token is missing, expired, or invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -525,7 +525,7 @@
             }
           },
           "401": {
-            "description": "The bearer token is missing, expired or invalid.",
+            "description": "The bearer token is missing, expired, or invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -616,7 +616,7 @@
             }
           },
           "401": {
-            "description": "The bearer token is missing, expired or invalid.",
+            "description": "The bearer token is missing, expired, or invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -690,7 +690,7 @@
             "description": "Successful Response"
           },
           "401": {
-            "description": "The bearer token is missing, expired or invalid.",
+            "description": "The bearer token is missing, expired, or invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -890,7 +890,7 @@
           "Journey"
         ],
         "summary": "Read a Share link's Journey",
-        "description": "The job seeker's Journey: their In Progress Applications and Offers, with each one's company,\nrole, applied date and Interviews (category, title and time). Of the other Done Applications,\nonly when their completed Interviews happened, for the count of Interviews completed this month.\nSalary, job postings, Location, Prep notes, Interview notes and Outcome notes are never read.\n\nEvery request checks the link again, so stopping it, letting it expire or changing its Passcode\ncuts the Viewer off at once. Records when the link was last opened, to within a minute.",
+        "description": "The job seeker's Journey: their In Progress Applications and Offers, with each one's company,\nrole, applied date, and Interviews (category, title, and time). Of the other Done Applications,\nonly when their completed Interviews happened, for the count of Interviews completed this month.\nSalary, job postings, Location, Prep notes, Interview notes, and Outcome notes are never read.\n\nEvery request checks the link again, so stopping it, letting it expire, or changing its Passcode\ncuts the Viewer off at once. Records when the link was last opened, to within a minute.",
         "operationId": "get_journey_share_links__share_link_id__journey_get",
         "security": [
           {
@@ -989,7 +989,7 @@
             }
           },
           "401": {
-            "description": "The bearer token is missing, expired or invalid.",
+            "description": "The bearer token is missing, expired, or invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1037,7 +1037,7 @@
             }
           },
           "401": {
-            "description": "The bearer token is missing, expired or invalid.",
+            "description": "The bearer token is missing, expired, or invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1083,7 +1083,7 @@
           "Applications"
         ],
         "summary": "Edit an Application",
-        "description": "Change some of an Application's fields and return it with its Interviews.\n\nOnly the fields sent change. Setting the status to `in_progress` reopens the Application and clears\nits Outcome, Done date and Outcome note; setting it to `done` needs an Outcome, sent now or already\nset, and from `in_progress` sets the Done date to today unless one is sent. Setting the location to\nanything but `hybrid` clears its office days.",
+        "description": "Change some of an Application's fields and return it with its Interviews.\n\nOnly the fields sent change. Setting the status to `in_progress` reopens the Application and clears\nits Outcome, Done date, and Outcome note; setting it to `done` needs an Outcome, sent now or already\nset, and from `in_progress` sets the Done date to today unless one is sent. Setting the location to\nanything but `hybrid` clears its office days.",
         "operationId": "update_application_applications__application_id__patch",
         "security": [
           {
@@ -1129,7 +1129,7 @@
             }
           },
           "401": {
-            "description": "The bearer token is missing, expired or invalid.",
+            "description": "The bearer token is missing, expired, or invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1149,7 +1149,7 @@
             }
           },
           "422": {
-            "description": "The body is invalid (a list of field errors), or the change would leave a Done Application without an Outcome, an In Progress one with an Outcome, a Done date or an Outcome note, a Done date before the applied date, or office days on a Location that isn't Hybrid (a message).",
+            "description": "The body is invalid (a list of field errors), or the change would leave a Done Application without an Outcome, an In Progress one with an Outcome, a Done date, or an Outcome note, a Done date before the applied date, or office days on a Location that isn't Hybrid (a message).",
             "content": {
               "application/json": {
                 "schema": {
@@ -1201,7 +1201,7 @@
             "description": "Successful Response"
           },
           "401": {
-            "description": "The bearer token is missing, expired or invalid.",
+            "description": "The bearer token is missing, expired, or invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1279,7 +1279,7 @@
             }
           },
           "401": {
-            "description": "The bearer token is missing, expired or invalid.",
+            "description": "The bearer token is missing, expired, or invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1315,7 +1315,7 @@
           "Interviews"
         ],
         "summary": "Add an Interview",
-        "description": "Add an Interview to an Application. The category, title and date and time are required;\ncategories and titles can repeat, and Interview notes and Prep notes are optional. The number of\nInterviews per Application is capped (409).",
+        "description": "Add an Interview to an Application. The category, title, date and time, and at least one\nParticipant are required; categories and titles can repeat, and Interview notes and Prep notes are\noptional. A Participant sent by `id` must be one of the Application's (422). The number of Interviews per\nApplication is capped (409).",
         "operationId": "create_interview_applications__application_id__interviews_post",
         "security": [
           {
@@ -1361,7 +1361,7 @@
             }
           },
           "401": {
-            "description": "The bearer token is missing, expired or invalid.",
+            "description": "The bearer token is missing, expired, or invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1409,7 +1409,7 @@
           "Interviews"
         ],
         "summary": "Edit an Interview",
-        "description": "Change an Interview's category, title, date, Interview notes or Prep notes.\n\nOnly the fields sent change; send null for `what_they_asked`, `how_it_went`, `takeaway` or `prep_notes` to\nclear it. The category, title and date can't be cleared.",
+        "description": "Change an Interview's category, title, date, Interview notes, Prep notes, or Participants.\n\nOnly the fields sent change; send null for `what_they_asked`, `how_it_went`, `takeaway` or `prep_notes` to\nclear it. The category, title, and date can't be cleared. `participants` replaces the Interview's\nParticipants: at least one, and a Participant left in no Interview is deleted. An `id` that isn't one of\nthe Application's Participants is refused (422).",
         "operationId": "update_interview_applications__application_id__interviews__interview_id__patch",
         "security": [
           {
@@ -1467,7 +1467,7 @@
             }
           },
           "401": {
-            "description": "The bearer token is missing, expired or invalid.",
+            "description": "The bearer token is missing, expired, or invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1503,7 +1503,7 @@
           "Interviews"
         ],
         "summary": "Delete an Interview",
-        "description": "Delete an Interview, for example a cancelled one, and its Interview notes and Prep notes with it.",
+        "description": "Delete an Interview, for example a cancelled one, and its Interview notes and Prep notes with it, and\nits Participants who are in no other Interview.",
         "operationId": "delete_interview_applications__application_id__interviews__interview_id__delete",
         "security": [
           {
@@ -1544,7 +1544,7 @@
             "description": "Successful Response"
           },
           "401": {
-            "description": "The bearer token is missing, expired or invalid.",
+            "description": "The bearer token is missing, expired, or invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1574,6 +1574,53 @@
             }
           }
         }
+      }
+    },
+    "/me/journey": {
+      "get": {
+        "tags": [
+          "Share links"
+        ],
+        "summary": "Preview the job seeker's Journey",
+        "description": "The Journey every one of the job seeker's Share links shows, read as the signed-in job seeker,\nso they can check what a Viewer sees without a Passcode, before making a link or after. It\nrecords no Share link as opened. `shared_by` is null: Bigfoot stores the name only on a link.",
+        "operationId": "preview_journey_me_journey_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Journey"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The bearer token is missing, expired, or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The bearer token is an Access token, which can't use Account routes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "WebToken": []
+          }
+        ]
       }
     }
   },
@@ -1718,7 +1765,7 @@
               }
             ],
             "title": "Location",
-            "description": "How often the role is in the office (GLOSSARY.md, Location): in_office, remote or hybrid.",
+            "description": "How often the role is in the office (GLOSSARY.md, Location): in_office, remote, or hybrid.",
             "examples": [
               "hybrid"
             ]
@@ -1946,7 +1993,7 @@
               }
             ],
             "title": "Location",
-            "description": "How often the role is in the office (GLOSSARY.md, Location): in_office, remote or hybrid.",
+            "description": "How often the role is in the office (GLOSSARY.md, Location): in_office, remote, or hybrid.",
             "examples": [
               "hybrid"
             ]
@@ -2137,7 +2184,7 @@
               }
             ],
             "title": "Location",
-            "description": "How often the role is in the office (GLOSSARY.md, Location): in_office, remote or hybrid.",
+            "description": "How often the role is in the office (GLOSSARY.md, Location): in_office, remote, or hybrid.",
             "examples": [
               "hybrid"
             ]
@@ -2269,7 +2316,7 @@
         "additionalProperties": false,
         "type": "object",
         "title": "ApplicationPatch",
-        "description": "Only the fields sent are changed; send null to clear an optional field.\n\nSetting the status to in_progress without an outcome clears the outcome, Done date and Outcome note\n(reopening); setting it to done from in_progress without a done_on sets the Done date to today. Setting the\nlocation to anything but hybrid without office_days clears the office days."
+        "description": "Only the fields sent are changed; send null to clear an optional field.\n\nSetting the status to in_progress without an outcome clears the outcome, Done date, and Outcome note\n(reopening); setting it to done from in_progress without a done_on sets the Done date to today. Setting the\nlocation to anything but hybrid without office_days clears the office days."
       },
       "ErrorMessage": {
         "properties": {
@@ -2343,7 +2390,7 @@
               "decision_maker"
             ],
             "title": "Category",
-            "description": "What the Interview assesses (GLOSSARY.md, Interview category, docs/adr/0007): recruiter, hiring_manager, technical, system_design, project_deep_dive, people_management, project_delivery, collaboration, culture or decision_maker.",
+            "description": "What the Interview assesses (GLOSSARY.md, Interview category, docs/adr/0007): recruiter, hiring_manager, technical, system_design, project_deep_dive, people_management, project_delivery, collaboration, culture, or decision_maker.",
             "examples": [
               "system_design"
             ]
@@ -2390,9 +2437,9 @@
               }
             ],
             "title": "How It Went",
-            "description": "How it went (GLOSSARY.md, Interview notes): what the job seeker wrote about this Interview, as plain text of at most 20,000 characters. Null when there is none.",
+            "description": "How it went (GLOSSARY.md, Interview notes): what the job seeker wrote about this Interview, as Markdown: `#` to `###` titles, **bold**, *italics*, <u>underline</u>, `- ` and `1. ` lists, and a newline as a line break; other HTML in it is text. At most 20,000 characters of Markdown. Null when there is none.",
             "examples": [
-              "Friendly. The caching question ran long."
+              "**Friendly.** The caching question ran long.\n\n- Send a thank-you"
             ]
           },
           "takeaway": {
@@ -2420,10 +2467,18 @@
               }
             ],
             "title": "Prep Notes",
-            "description": "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its Interview notes, as plain text of at most 20,000 characters. Null when there are none.",
+            "description": "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its Interview notes, as Markdown: `#` to `###` titles, **bold**, *italics*, <u>underline</u>, `- ` and `1. ` lists, and a newline as a line break; other HTML in it is text. At most 20,000 characters of Markdown. Null when there are none.",
             "examples": [
-              "Review the caching chapter. Ask about the on-call rotation."
+              "# Review\n\nThe caching chapter.\n\n1. Ask about the on-call rotation."
             ]
+          },
+          "participants": {
+            "items": {
+              "$ref": "#/components/schemas/Participant"
+            },
+            "type": "array",
+            "title": "Participants",
+            "description": "Participants (GLOSSARY.md): who the job seeker meets, in the order they listed them. Empty for an Interview added before Bigfoot recorded Participants."
           },
           "completed": {
             "type": "boolean",
@@ -2455,6 +2510,7 @@
           "how_it_went",
           "takeaway",
           "prep_notes",
+          "participants",
           "completed",
           "created_at",
           "updated_at"
@@ -2479,7 +2535,7 @@
               "decision_maker"
             ],
             "title": "Category",
-            "description": "What the Interview assesses (GLOSSARY.md, Interview category, docs/adr/0007): recruiter, hiring_manager, technical, system_design, project_deep_dive, people_management, project_delivery, collaboration, culture or decision_maker.",
+            "description": "What the Interview assesses (GLOSSARY.md, Interview category, docs/adr/0007): recruiter, hiring_manager, technical, system_design, project_deep_dive, people_management, project_delivery, collaboration, culture, or decision_maker.",
             "examples": [
               "system_design"
             ]
@@ -2529,7 +2585,7 @@
               }
             ],
             "title": "How It Went",
-            "description": "How it went (GLOSSARY.md, Interview notes): what the job seeker wrote about this Interview, as plain text of at most 20,000 characters. Null when there is none. Blank is stored as null.",
+            "description": "How it went (GLOSSARY.md, Interview notes): what the job seeker wrote about this Interview, as Markdown: `#` to `###` titles, **bold**, *italics*, <u>underline</u>, `- ` and `1. ` lists, and a newline as a line break; other HTML in it is text. At most 20,000 characters of Markdown. Null when there is none. Blank is stored as null.",
             "examples": [
               null
             ]
@@ -2561,9 +2617,30 @@
               }
             ],
             "title": "Prep Notes",
-            "description": "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its Interview notes, as plain text of at most 20,000 characters. Null when there are none. Blank is stored as null.",
+            "description": "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its Interview notes, as Markdown: `#` to `###` titles, **bold**, *italics*, <u>underline</u>, `- ` and `1. ` lists, and a newline as a line break; other HTML in it is text. At most 20,000 characters of Markdown. Null when there are none. Blank is stored as null.",
             "examples": [
-              "Review the caching chapter. Ask about the on-call rotation."
+              "# Review\n\nThe caching chapter.\n\n1. Ask about the on-call rotation."
+            ]
+          },
+          "participants": {
+            "items": {
+              "$ref": "#/components/schemas/ParticipantInput"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Participants",
+            "description": "Participants (GLOSSARY.md): the people from the company the job seeker meets in this Interview, in the order the job seeker listed them, 1 to 20. Each is a Participant already on this Application, by `id`, or someone new, without one. Sending an existing Participant's `role` and `name` changes them on every Interview they are in. A Participant left in no Interview is deleted. Required.",
+            "examples": [
+              [
+                {
+                  "name": "Dana Lee",
+                  "role": "Recruiter"
+                },
+                {
+                  "role": "Engineering Manager"
+                }
+              ]
             ]
           }
         },
@@ -2572,7 +2649,8 @@
         "required": [
           "category",
           "title",
-          "at"
+          "at",
+          "participants"
         ],
         "title": "InterviewCreate",
         "description": "A new Interview for an Application."
@@ -2601,7 +2679,7 @@
               }
             ],
             "title": "Category",
-            "description": "What the Interview assesses (GLOSSARY.md, Interview category, docs/adr/0007): recruiter, hiring_manager, technical, system_design, project_deep_dive, people_management, project_delivery, collaboration, culture or decision_maker. Cannot be cleared.",
+            "description": "What the Interview assesses (GLOSSARY.md, Interview category, docs/adr/0007): recruiter, hiring_manager, technical, system_design, project_deep_dive, people_management, project_delivery, collaboration, culture, or decision_maker. Cannot be cleared.",
             "examples": [
               "hiring_manager"
             ]
@@ -2665,9 +2743,9 @@
               }
             ],
             "title": "How It Went",
-            "description": "How it went (GLOSSARY.md, Interview notes): what the job seeker wrote about this Interview, as plain text of at most 20,000 characters. Null when there is none. Blank is stored as null.",
+            "description": "How it went (GLOSSARY.md, Interview notes): what the job seeker wrote about this Interview, as Markdown: `#` to `###` titles, **bold**, *italics*, <u>underline</u>, `- ` and `1. ` lists, and a newline as a line break; other HTML in it is text. At most 20,000 characters of Markdown. Null when there is none. Blank is stored as null.",
             "examples": [
-              "Friendly. The caching question ran long."
+              "**Friendly.** The caching question ran long.\n\n- Send a thank-you"
             ]
           },
           "takeaway": {
@@ -2697,16 +2775,44 @@
               }
             ],
             "title": "Prep Notes",
-            "description": "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its Interview notes, as plain text of at most 20,000 characters. Null when there are none. Blank is stored as null.",
+            "description": "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its Interview notes, as Markdown: `#` to `###` titles, **bold**, *italics*, <u>underline</u>, `- ` and `1. ` lists, and a newline as a line break; other HTML in it is text. At most 20,000 characters of Markdown. Null when there are none. Blank is stored as null.",
             "examples": [
-              "Review the caching chapter. Ask about the on-call rotation."
+              "# Review\n\nThe caching chapter.\n\n1. Ask about the on-call rotation."
+            ]
+          },
+          "participants": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ParticipantInput"
+                },
+                "type": "array",
+                "maxItems": 20,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participants",
+            "description": "Participants (GLOSSARY.md): the people from the company the job seeker meets in this Interview, in the order the job seeker listed them, 1 to 20. Each is a Participant already on this Application, by `id`, or someone new, without one. Sending an existing Participant's `role` and `name` changes them on every Interview they are in. A Participant left in no Interview is deleted. Cannot be cleared.",
+            "examples": [
+              [
+                {
+                  "name": "Dana Lee",
+                  "role": "Recruiter"
+                },
+                {
+                  "role": "Engineering Manager"
+                }
+              ]
             ]
           }
         },
         "additionalProperties": false,
         "type": "object",
         "title": "InterviewPatch",
-        "description": "Only the fields sent are changed; send null for one of the Interview notes fields or `prep_notes` to clear it.\n\nThe date can't be cleared."
+        "description": "Only the fields sent are changed; send null for one of the Interview notes fields or `prep_notes` to clear it.\n\nThe date can't be cleared. `participants`, when sent, replaces the Interview's Participants and needs at least one."
       },
       "JobSeeker": {
         "properties": {
@@ -2879,7 +2985,7 @@
           "interviews"
         ],
         "title": "JourneyApplication",
-        "description": "An In Progress Application or an Offer as a Viewer sees it: no salary, job posting, Location or notes."
+        "description": "An In Progress Application or an Offer as a Viewer sees it: no salary, job posting, Location, or notes."
       },
       "JourneyInterview": {
         "properties": {
@@ -2898,7 +3004,7 @@
               "decision_maker"
             ],
             "title": "Category",
-            "description": "What the Interview assesses (GLOSSARY.md, Interview category, docs/adr/0007): recruiter, hiring_manager, technical, system_design, project_deep_dive, people_management, project_delivery, collaboration, culture or decision_maker.",
+            "description": "What the Interview assesses (GLOSSARY.md, Interview category, docs/adr/0007): recruiter, hiring_manager, technical, system_design, project_deep_dive, people_management, project_delivery, collaboration, culture, or decision_maker.",
             "examples": [
               "hiring_manager"
             ]
@@ -3116,6 +3222,92 @@
           "samples_seeded"
         ],
         "title": "Onboarding"
+      },
+      "Participant": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "description": "What the Participant does at the company, in the job seeker's words, at most 200 characters. Required; the ends are trimmed.",
+            "examples": [
+              "Sr Director, Product"
+            ]
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The Participant's name, at most 200 characters. Optional: null when the job seeker knows only the role.",
+            "examples": [
+              "Dana Lee"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "role",
+          "name"
+        ],
+        "title": "Participant",
+        "description": "Someone from the company whom the job seeker meets (GLOSSARY.md). Belongs to one Application and can be\nin several of its Interviews."
+      },
+      "ParticipantInput": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id",
+            "description": "A Participant already on this Application. Omit for someone new. Their role and name become those sent, on every Interview they are in."
+          },
+          "role": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Role",
+            "description": "What the Participant does at the company, in the job seeker's words, at most 200 characters. Required; the ends are trimmed.",
+            "examples": [
+              "Sr Director, Product"
+            ]
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The Participant's name, at most 200 characters. Optional: null when the job seeker knows only the role. Blank is stored as null."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "role"
+        ],
+        "title": "ParticipantInput",
+        "description": "A Participant as an Interview sends them: one already on the Application, by `id`, or someone new."
       },
       "PasscodeAttempt": {
         "properties": {
@@ -3384,7 +3576,7 @@
       },
       "ViewerToken": {
         "type": "http",
-        "description": "A Viewer token: an HS256 JWT this API returns when a Viewer types a Share link's Passcode. It reads that Share link's Journey only, and stops working when the link is stopped, expires or gets a new Passcode. The Next.js server keeps it in the Viewer's cookie for that link.",
+        "description": "A Viewer token: an HS256 JWT this API returns when a Viewer types a Share link's Passcode. It reads that Share link's Journey only, and stops working when the link is stopped, expires, or gets a new Passcode. The Next.js server keeps it in the Viewer's cookie for that link.",
         "scheme": "bearer",
         "bearerFormat": "JWT"
       },
@@ -3398,7 +3590,7 @@
   "tags": [
     {
       "name": "Account",
-      "description": "The signed-in job seeker: onboarding, exporting and deleting the account. Web tokens only."
+      "description": "The signed-in job seeker: onboarding, exporting, and deleting the account. Web tokens only."
     },
     {
       "name": "Access tokens",

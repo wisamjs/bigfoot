@@ -4,8 +4,8 @@
 
 ## Core Specs
 
-- Background: neutral-primary-soft
-- Right border: 1px, border-default (for left-sidebar); left border for right-sidebar
+- Background: surface
+- Right border: 1px, line (for left-sidebar); left border for right-sidebar
 - Width: 256px
 
 ## Anatomy
@@ -26,18 +26,18 @@ Hidden on mobile, visible at small breakpoint. Needs a toggle/trigger for mobile
 - Padding: 8px horizontal, 8px vertical
 - Text: heading color
 - Radius: 8px (default)
-- Hover: neutral-secondary-medium background
+- Hover: card background
 - Transition: colors
 - Icon: 20x20px, body color, hover → heading color, 75ms transition
 - Label: 12px left margin from icon
 
 ### Active Item
-- Background: neutral-secondary-strong
+- Background: card-strong
 - Text: fg-brand-strong
 
 ### Separator
 - 16px top padding, 16px top margin
-- Top border: border-default
+- Top border: line
 - 8px vertical spacing below
 
 ### Bottom CTA / Card

@@ -33,11 +33,18 @@
     "test:api:unit": "cd api && uv run pytest -m 'not db' -q --cov-reset --cov=app.auth --cov=app.domain --cov=app.models --cov=app.monitoring --cov=app.responses --cov=app.samples --cov=app.settings --cov-fail-under=98",
     "test:api": "node scripts/test-schema.mjs pytest",
     "db:drop-test-schema": "node scripts/test-schema.mjs drop",
-    "db:status": "cd api && uv run python ../scripts/db-status.py"
+    "db:status": "cd api && uv run python ../scripts/db-status.py",
+    "snapshots": "node scripts/snapshots.mjs"
   },
   "dependencies": {
     "@sentry/nextjs": "11.16.0",
     "@tanstack/react-table": "^9.3.1",
+    "@tiptap/extension-heading": "3.35.0",
+    "@tiptap/extensions": "3.35.0",
+    "@tiptap/markdown": "3.35.0",
+    "@tiptap/pm": "3.35.0",
+    "@tiptap/react": "3.35.0",
+    "@tiptap/starter-kit": "3.35.0",
     "allo-font": "^1.0.3",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
@@ -49,7 +56,9 @@
     "radix-ui": "^1.8.1",
     "react": "19.3.0",
     "react-day-picker": "^10.0.2",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "react-markdown": "10.1.0",
+    "remark-breaks": "4.0.0"
   },
   "devDependencies": {
     "@cspell/dict-en-ca": "1.0.69",
@@ -64,7 +73,9 @@
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.10",
+    "@types/mdast": "4.0.4",
     "@types/node": "^20",
+    "@types/pngjs": "6.0.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.3.0",
@@ -81,6 +92,7 @@
     "eslint-plugin-testing-library": "^7.16.2",
     "eslint-plugin-unicorn": "^65.0.1",
     "happy-dom": "^21.0.4",
+    "pngjs": "7.0.0",
     "storybook": "10.6.6",
     "storybook-addon-pseudo-states": "10.6.6",
     "tailwindcss": "4.3.3",

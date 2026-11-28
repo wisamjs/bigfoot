@@ -11,6 +11,8 @@
 //   --theme <name>    light, dark or both (default both)
 //   --selector <css>  capture only the first matching element (default: the full page)
 //   --state <name>    enter one of the page's `states` from scripts/pages.mjs first
+//   --expect <text>   pick the page whose `expect` is this text, where several share a path
+//                     (default: the first), e.g. --expect "Interview not found"
 //   --signed-out      capture the signed-out page
 //   --out <dir>       where to write (default .next/captures)
 // Prints each image's path. Uses this checkout's servers like smoke does (CAPTURE_URL, API_URL).
@@ -31,6 +33,7 @@ const { values: options, positionals } = parseArgs({
     theme: { type: "string", default: "both" },
     selector: { type: "string" },
     state: { type: "string" },
+    expect: { type: "string" },
     "signed-out": { type: "boolean", default: false },
     out: { type: "string", default: ".next/captures" },
   },
@@ -40,9 +43,12 @@ const signedIn = !options["signed-out"];
 const width = Number(options.width);
 const themes = options.theme === "both" ? ["light", "dark"] : [options.theme];
 
-const page = PAGES.find((p) => p.path === path && p.signedIn === signedIn && !p.redirect);
+const page = PAGES.find(
+  (p) => p.path === path && p.signedIn === signedIn && !p.redirect && (options.expect === undefined || p.expect === options.expect),
+);
 if (!page) {
-  console.error(`No page ${path} (${signedIn ? "signed in" : "signed out"}) in scripts/pages.mjs`);
+  const expecting = options.expect === undefined ? "" : ` expecting "${options.expect}"`;
+  console.error(`No page ${path} (${signedIn ? "signed in" : "signed out"})${expecting} in scripts/pages.mjs`);
   process.exit(1);
 }
 const state = options.state && page.states?.find((s) => s.name === options.state);
@@ -63,7 +69,14 @@ const { base } = await ensureServers(
 // Not the dev-session test user, so whatever that user has stays as it was.
 const CAPTURE_JOB_SEEKER_ID = "capture-user";
 const CAPTURE_EMPTY_JOB_SEEKER_ID = "capture-empty-user";
-const slug = [path.replaceAll(/[/[\]]/g, "-").replace(/^-+/, "").replace(/-+$/, "") || "home", state?.name, width].filter(Boolean).join("-");
+const slug = [
+  path.replaceAll(/[/[\]]/g, "-").replace(/^-+/, "").replace(/-+$/, "") || "home",
+  options.expect?.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-"),
+  state?.name,
+  width,
+]
+  .filter(Boolean)
+  .join("-");
 mkdirSync(options.out, { recursive: true });
 
 /** The clip for `selector` (its whole box, even below the fold), or the full page. */

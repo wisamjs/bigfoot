@@ -17,10 +17,22 @@ const allo = localFont({
   ],
 });
 
+const title = "Bigfoot: job application tracker";
+const description =
+  "Job hunting can feel like chasing Bigfoot. Track your Applications, organize your Interviews, and find yours.";
+
+// The home-screen icons (apple-icon.png, manifest.webmanifest) and the shared-link preview
+// (opengraph-image.png, twitter-image.png) are files beside this one; scripts/app-icons.sh makes
+// them from docs/brand/mascot.png. Every page, a Share link's Journey included, shares this
+// preview, so it never shows anything about a job seeker.
 export const metadata: Metadata = {
-  title: "Bigfoot: job application tracker",
-  description:
-    "Job hunting is chasing Bigfoot. Track every application, interview and follow-up in one place until you find yours.",
+  // Only main deploys (docs/runbooks/vercel.md), so preview images always point at Production.
+  metadataBase: new URL("https://bigfoot.wisamzaghal.com"),
+  title,
+  description,
+  appleWebApp: { title: "Bigfoot" },
+  openGraph: { type: "website", siteName: "Bigfoot", title, description },
+  twitter: { card: "summary_large_image", title, description },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

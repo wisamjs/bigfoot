@@ -7,9 +7,9 @@ import { NextInterviewCard } from "./next-interview-card";
 // The Next up card. On the Application page it is shown through application-editor.stories.tsx;
 // these stories are the dashboard's (BIG-183): the job seeker's soonest upcoming Interview, with
 // the takeaways that apply (prepTakeaways) and its Prep notes. Dates are counted from today.
-const DAY = 86_400_000;
 const daysFromNow = (days: number, hour = 15) => {
-  const date = new Date(Date.now() + days * DAY);
+  const date = new Date();
+  date.setDate(date.getDate() + days); // calendar days: days × 24h misses by one across a DST change
   date.setHours(hour, 0, 0, 0);
   return date.toISOString();
 };
@@ -105,6 +105,20 @@ export const WithoutTakeawaysOrPrepNotes: Story = {
 /** Takeaways, but no Prep notes yet. */
 export const TakeawaysWithoutPrepNotes: Story = {
   args: { app: lumen, interview: deepDive },
+};
+
+/** Formatted Prep notes (BIG-214): a title sits one level under the card's "Prep notes" heading, then bold and a list. */
+export const FormattedPrepNotes: Story = {
+  args: {
+    interview: { ...deepDive, prep_notes: "# Review\n\nThe **feature store** migration:\n\n1. Why we moved\n2. What broke" },
+    lookBack: { takeaways: [], theyAsked: null },
+  },
+  play: async ({ canvas }) => {
+    const card = canvas.getByRole("region", { name: "Round 2 · Technical Deep-Dive" });
+    await expect(within(card).getByRole("heading", { level: 4, name: "Review" })).toBeVisible();
+    await expect(within(card).getByText("feature store").tagName).toBe("STRONG");
+    await expect(within(card).getAllByRole("listitem")).toHaveLength(2);
+  },
 };
 
 /** Prep notes, but no takeaways apply. */

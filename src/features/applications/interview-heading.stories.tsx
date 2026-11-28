@@ -7,9 +7,9 @@ import { InterviewHeading } from "./interview-heading";
 // The Interview page's heading (BIG-178). Dates are counted from today, so the badge reads as it
 // would on the page. Server Actions are mocked (src/app/applications/__mocks__/actions.ts) and
 // succeed unless a story says otherwise.
-const DAY = 86_400_000;
 const daysFromNow = (days: number, hour = 15) => {
-  const date = new Date(Date.now() + days * DAY);
+  const date = new Date();
+  date.setDate(date.getDate() + days); // calendar days: days × 24h misses by one across a DST change
   date.setHours(hour, 0, 0, 0);
   return date.toISOString();
 };
@@ -20,8 +20,18 @@ const upcoming = interview("deep-dive", {
   title: "Technical Deep-Dive",
   at: daysFromNow(2, 11),
   completed: false,
+  participants: [
+    { id: "ines", role: "Engineering Manager", name: "Inés Ortega" },
+    { id: "staff", role: "Staff Engineer", name: null },
+  ],
 });
-const completed = interview("manager", { application_id: "lumen", category: "hiring_manager", title: "Hiring Manager", at: daysFromNow(-10, 11) });
+const completed = interview("manager", {
+  application_id: "lumen",
+  category: "hiring_manager",
+  title: "Hiring Manager",
+  at: daysFromNow(-10, 11),
+  participants: [{ id: "ines", role: "Engineering Manager", name: "Inés Ortega" }],
+});
 const lumen = application("lumen", {
   company: "Lumen Bio",
   title: "Engineering Manager, ML Platform",
@@ -38,12 +48,13 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * Coming up: "Round 2 · " and its title (its Round number, BIG-190), its date and time with the year, and its category tag beside a blue
- * "Upcoming · in 2 days".
+ * Coming up: "Round 2 · " and its title (its Round number, BIG-190), who the job seeker is meeting
+ * (BIG-191), its date and time with the year, and its category tag beside a blue "Upcoming · in 2 days".
  */
 export const Upcoming: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("heading", { level: 1, name: "Round 2 · Technical Deep-Dive" })).toBeVisible();
+    await expect(canvas.getByText("With Inés Ortega (Engineering Manager), Staff Engineer")).toBeVisible();
     await expect(canvas.getByText("Project Deep-dive")).toBeVisible();
     await expect(await canvas.findByText("Upcoming · in 2 days")).toBeVisible();
   },
@@ -64,6 +75,34 @@ export const DoneApplication: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByText("Done · Rejected")).toBeVisible();
     await expect(await canvas.findByText("Completed · 10 days ago")).toBeVisible();
+  },
+};
+
+/** An Interview from before Participants: "Add who you’re meeting" opens Edit details at the first person. */
+export const NobodyYet: Story = {
+  args: { interview: { ...upcoming, participants: [] } },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Add who you’re meeting" }));
+    await waitFor(() => expect(canvas.getByRole("textbox", { name: "Role" })).toHaveFocus());
+  },
+};
+
+/** Edit details lists who's in it; changing one says it changes them on every Interview they're in. */
+export const EditParticipants: Story = {
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Edit details" }));
+    const [, second] = canvas.getAllByRole("textbox", { name: /^Name/ });
+    await userEvent.type(second, "Ana Silva");
+    await expect(canvas.getByText(/changes them on every Interview they’re in/)).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(actions.updateInterviewAction).toHaveBeenCalledWith("lumen", upcoming.id, {
+        participants: [
+          { id: "ines", role: "Engineering Manager", name: "Inés Ortega" },
+          { id: "staff", role: "Staff Engineer", name: "Ana Silva" },
+        ],
+      }),
+    );
   },
 };
 

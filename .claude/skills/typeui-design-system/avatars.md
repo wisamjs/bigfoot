@@ -22,8 +22,8 @@
 
 ## Bordered Avatar
 
-- 4px padding, fully rounded, 2px outline in border-default color
-- Alternative: 2px box-shadow ring in border-default color
+- 4px padding, fully rounded, 2px outline in line color
+- Alternative: 2px box-shadow ring in line color
 
 ## Stacked Avatars
 

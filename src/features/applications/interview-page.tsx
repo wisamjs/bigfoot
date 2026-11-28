@@ -3,7 +3,8 @@ import { applicationHref } from "@/features/applications/routes";
 import { UnsavedChanges } from "@/features/applications/unsaved-changes";
 import { AppHeader } from "@/features/shell/app-header";
 import { DashboardBreadcrumb } from "@/features/shell/dashboard-link";
-import { FormPage } from "@/features/shell/form-page";
+import { FormPage, TitleBlock } from "@/features/shell/form-page";
+import { QuestionSignBigfoot } from "@/features/shell/illustrations";
 import type { Application, Interview, PrepLookBack, PrepTakeaway } from "@/lib/applications";
 import type { CurrentUser } from "@/lib/current-user";
 
@@ -49,14 +50,27 @@ export function InterviewPageSkeleton() {
   return <FormPage header={<AppHeader current="/dashboard" />} title="Interview" />;
 }
 
-/** Shown for a deleted Interview, a malformed id and another job seeker's Interview alike; without a `user` it is the loading state. */
+/**
+ * Shown for a deleted Interview, a malformed id and another job seeker's Interview alike; without a `user` it is the loading state.
+ * Bigfoot stands right of the title, his feet behind the card's top edge (BIG-228): out of the flow, so
+ * nothing moves, and clipped at that edge, so the card draws over his feet. Smaller on a phone, where
+ * the title keeps room for him at its right.
+ */
 export function InterviewNotFoundPage({ user }: { user?: CurrentUser }) {
   return (
-    <FormPage header={<AppHeader user={user} current="/dashboard" />} title={INTERVIEW_NOT_FOUND_TITLE}>
+    <FormPage
+      header={<AppHeader user={user} current="/dashboard" />}
+      title={INTERVIEW_NOT_FOUND_TITLE}
+      heading={<TitleBlock title={INTERVIEW_NOT_FOUND_TITLE} className="max-sm:pr-26" />}
+    >
       {user && (
-        <p className="m-0 text-base leading-[1.625] text-body">
-          This Interview doesn’t exist or has been deleted. Go back to the Dashboard to find your Interviews.
-        </p>
+        <div className="relative">
+          {/* The card's border and padding are 25px: the box ends 8px below the card's top edge, and those 8px are clipped. */}
+          <QuestionSignBigfoot className="pointer-events-none absolute -right-1 bottom-[calc(100%+17px)] h-auto w-20 [clip-path:inset(0_0_8px_0)] sm:w-[136px]" />
+          <p className="m-0 text-base leading-[1.625] text-body">
+            This Interview doesn’t exist or has been deleted. Go back to the Dashboard to find your Interviews.
+          </p>
+        </div>
       )}
     </FormPage>
   );

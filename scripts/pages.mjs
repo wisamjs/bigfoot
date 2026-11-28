@@ -141,13 +141,14 @@ export const PAGES = [
         expect: "Done",
       },
       {
-        // How it went over the limit (typed past the field's maxLength, as a paste could) fails its
-        // check and are never sent, so they stay unsaved and leaving asks first. A save that went
-        // through would let the job seeker leave before the prompt could be checked.
+        // What they asked over the limit (typed past the field's maxLength, as a paste could) fails
+        // its check and is never sent, so it stays unsaved and leaving asks first. A save that went
+        // through would let the job seeker leave before the prompt could be checked. (How it went is
+        // a formatting editor, not a textarea, since BIG-214.)
         name: "interview-unsaved-changes-prompt",
         steps: [
           { click: 'button[aria-label="Edit Interview notes"]' },
-          { fill: 'textarea[id^="how_it_went-"]', value: "x".repeat(20_001) },
+          { fill: 'textarea[id^="what_they_asked-"]', value: "x".repeat(20_001) },
           // "← Vercel", back to the Interview's Application page (BIG-166).
           { click: "main a", text: "Vercel" },
         ],
@@ -179,6 +180,14 @@ export const PAGES = [
         expect: "Done",
       },
     ],
+  },
+  {
+    // An upcoming Interview with no Prep notes: Bigfoot in both empty notes cards (BIG-228).
+    path: "/applications/[id]/interviews/[interviewId]",
+    signedIn: true,
+    application: "Airtable",
+    interview: "Hiring Manager",
+    expect: "Write down how it went",
   },
   {
     // A deleted Interview, a malformed id and another job seeker's Interview look the same.
@@ -301,6 +310,9 @@ export const PAGES = [
       },
     ],
   },
+  // The job seeker's own preview of their Journey (BIG-198), behind Google sign-in.
+  { path: "/account/journey-preview", signedIn: false, redirect: "/sign-in" },
+  { path: "/account/journey-preview", signedIn: true, expect: "This is what your Viewers see." },
   // A Share link (BIG-197), not behind Google sign-in. An id that was never a link, or a stopped one,
   // shows the same page and names nobody.
   { path: "/journey/[id]", signedIn: false, params: { id: "abcdefghij" }, expect: "This link isn’t active" },

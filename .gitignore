@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+# Pictures of every Pages story, retaken on every commit and kept on this machine only (scripts/snapshots.mjs)
+/docs/snapshots/
 
 # next.js
 /.next/

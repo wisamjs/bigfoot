@@ -11,9 +11,9 @@ Font: 14px. Items displayed as flex with -1px overlap for seamless borders.
 - Layout: flex, centered both axes
 - Size: 36x36px (or 40x40px)
 - Text: body color, medium weight
-- Background: neutral-secondary-medium
-- Border: 1px, border-default-medium
-- Hover: neutral-tertiary-medium background, heading text
+- Background: card
+- Border: 1px, line-medium
+- Hover: card-strong background, heading text
 - Focus: no outline
 - Overlap: -1px left margin
 
@@ -26,13 +26,13 @@ Font: 14px. Items displayed as flex with -1px overlap for seamless borders.
 ## Active Page Item
 
 - Text: fg-brand color
-- Background: neutral-tertiary-medium
+- Background: card-strong
 - Hover text: fg-brand (stays same)
 
 ## Rules
 
 - Display as flex with -1px child overlap for seamless borders
-- Items: neutral-secondary-medium background, border-default-medium border, body text
-- Active: fg-brand text, neutral-tertiary-medium background
+- Items: card background, line-medium border, body text
+- Active: fg-brand text, card-strong background
 - First item: rounded start, Last item: rounded end
 - All items need hover and focus states

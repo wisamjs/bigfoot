@@ -82,7 +82,7 @@ export const Hovered: Story = {
   ),
 };
 
-/** Focused from the keyboard: the 4px brand-medium ring. */
+/** Focused from the keyboard: the 4px line-brand-subtle ring. */
 export const Focused: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.tab();

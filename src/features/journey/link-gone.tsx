@@ -1,17 +1,24 @@
 import { Link2Off, TimerOff } from "lucide-react";
 import { ShareLinkFrame } from "@/features/journey/share-link-frame";
+import { PeekOverBigfoot } from "@/features/shell/illustrations";
 import { viewerCopy } from "@/lib/journey";
 
 /**
  * A Share link that no longer opens (BIG-197). A stopped link and an id that was never a link both
  * say "This link isn't active" and name nobody, so the page gives nothing away. An expired link
- * names the job seeker, who can renew it.
+ * names the job seeker, who can renew it. Bigfoot looks over the card's top edge, right of the
+ * wordmark (BIG-229); smaller on a phone, and nearer the card's corner, so he stays clear of it.
  */
 export function LinkGone({ kind, sharedBy = null }: { kind: "not_active" | "expired"; sharedBy?: string | null }) {
   const expired = kind === "expired";
   const Icon = expired ? TimerOff : Link2Off;
   return (
-    <ShareLinkFrame>
+    <ShareLinkFrame
+      art={
+        // Paws resting on the card's top edge, the rest of him above it, in the gap under the wordmark.
+        <PeekOverBigfoot className="pointer-events-none absolute bottom-[calc(100%-4px)] right-1 h-auto w-[76px] sm:right-2.5 sm:w-34" />
+      }
+    >
       <span className="grid size-16 place-items-center rounded-full bg-card-strong text-body">
         <Icon className="size-7" aria-hidden />
       </span>

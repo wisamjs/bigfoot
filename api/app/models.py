@@ -18,6 +18,9 @@ from app.domain import (
     OFFICE_DAYS_MAX,
     OFFICE_DAYS_MIN,
     OUTCOME_NOTE_MAX_LENGTH,
+    PARTICIPANT_NAME_MAX_LENGTH,
+    PARTICIPANT_ROLE_MAX_LENGTH,
+    PARTICIPANTS_PER_INTERVIEW_MAX,
     POSTING_URL_MAX_LENGTH,
     SALARY_MAX_LENGTH,
     TAKEAWAY_MAX_LENGTH,
@@ -88,6 +91,18 @@ WhatTheyAsked = Annotated[str | None, Field(max_length=WHAT_THEY_ASKED_MAX_LENGT
 HowItWent = Annotated[str | None, Field(max_length=HOW_IT_WENT_MAX_LENGTH), AfterValidator(_optional_text)]
 Takeaway = Annotated[str | None, Field(max_length=TAKEAWAY_MAX_LENGTH), AfterValidator(_optional_text)]
 PrepNotes = Annotated[str | None, Field(max_length=INTERVIEW_PREP_NOTES_MAX_LENGTH), AfterValidator(_optional_text)]
+ParticipantRole = Annotated[
+    str,
+    Field(max_length=PARTICIPANT_ROLE_MAX_LENGTH),
+    AfterValidator(_required_text),
+    AfterValidator(_no_control_characters),
+]
+ParticipantName = Annotated[
+    str | None,
+    Field(max_length=PARTICIPANT_NAME_MAX_LENGTH),
+    AfterValidator(_optional_text),
+    AfterValidator(lambda value: value if value is None else _no_control_characters(value)),
+]
 OutcomeNote = Annotated[str | None, Field(max_length=OUTCOME_NOTE_MAX_LENGTH), AfterValidator(_optional_text)]
 
 
@@ -112,7 +127,7 @@ TITLE = Field(description="The role's job title.", examples=[EXAMPLE_TITLE])
 POSTING_URL = Field(default=None, description="The job posting, as an http(s) URL.", examples=[EXAMPLE_URL])
 LOCATION = Field(
     default=None,
-    description="How often the role is in the office (GLOSSARY.md, Location): in_office, remote or hybrid.",
+    description="How often the role is in the office (GLOSSARY.md, Location): in_office, remote, or hybrid.",
     examples=["hybrid"],
 )
 OFFICE_DAYS = Field(
@@ -139,7 +154,7 @@ OUTCOME_NOTE = (
 EXAMPLE_OUTCOME_NOTE = "They went with an internal candidate."
 CATEGORY = (
     "What the Interview assesses (GLOSSARY.md, Interview category, docs/adr/0007): recruiter, hiring_manager, "
-    "technical, system_design, project_deep_dive, people_management, project_delivery, collaboration, culture or "
+    "technical, system_design, project_deep_dive, people_management, project_delivery, collaboration, culture, or "
     "decision_maker."
 )
 INTERVIEW_TITLE = (
@@ -153,24 +168,43 @@ WHAT_THEY_ASKED = (
     "What they asked (GLOSSARY.md, Interview notes): the questions the Interview asked, one per line, as plain "
     f"text of at most {WHAT_THEY_ASKED_MAX_LENGTH:,} characters. Null when there are none."
 )
+# How it went and Prep notes are Markdown (BIG-214); the limit counts the Markdown as stored.
+NOTES_MARKDOWN = (
+    "Markdown: `#` to `###` titles, **bold**, *italics*, <u>underline</u>, `- ` and `1. ` lists, and a newline as a "
+    "line break; other HTML in it is text."
+)
 HOW_IT_WENT = (
-    "How it went (GLOSSARY.md, Interview notes): what the job seeker wrote about this Interview, as plain text "
-    f"of at most {HOW_IT_WENT_MAX_LENGTH:,} characters. Null when there is none."
+    "How it went (GLOSSARY.md, Interview notes): what the job seeker wrote about this Interview, as "
+    f"{NOTES_MARKDOWN} At most {HOW_IT_WENT_MAX_LENGTH:,} characters of Markdown. Null when there is none."
 )
 TAKEAWAY = (
     "Takeaway for next time (GLOSSARY.md, Interview notes): one thing to do differently, as plain text of at "
     f"most {TAKEAWAY_MAX_LENGTH:,} characters. Null when there is none."
 )
 EXAMPLE_WHAT_THEY_ASKED = "How would you cache a feed?\nTell me about a disagreement with a designer."
-EXAMPLE_HOW_IT_WENT = "Friendly. The caching question ran long."
+EXAMPLE_HOW_IT_WENT = "**Friendly.** The caching question ran long.\n\n- Send a thank-you"
 EXAMPLE_TAKEAWAY = "Draw the diagram first."
 PREP_NOTES = (
     "Prep notes (GLOSSARY.md): what the job seeker wrote to get ready for this Interview, separate from its "
-    f"Interview notes, as plain text of at most {INTERVIEW_PREP_NOTES_MAX_LENGTH:,} characters. "
+    f"Interview notes, as {NOTES_MARKDOWN} At most {INTERVIEW_PREP_NOTES_MAX_LENGTH:,} characters of Markdown. "
     "Null when there are none."
 )
-EXAMPLE_PREP_NOTES = "Review the caching chapter. Ask about the on-call rotation."
+EXAMPLE_PREP_NOTES = "# Review\n\nThe caching chapter.\n\n1. Ask about the on-call rotation."
 INTERVIEW_ORDER_DESCRIPTION = "Ordered by date."
+PARTICIPANT_ROLE = (
+    f"What the Participant does at the company, in the job seeker's words, at most {PARTICIPANT_ROLE_MAX_LENGTH} "
+    "characters. Required; the ends are trimmed."
+)
+PARTICIPANT_NAME = (
+    f"The Participant's name, at most {PARTICIPANT_NAME_MAX_LENGTH} characters. Optional: null when the job seeker "
+    "knows only the role."
+)
+PARTICIPANTS = (
+    "Participants (GLOSSARY.md): the people from the company the job seeker meets in this Interview, in the order "
+    f"the job seeker listed them, 1 to {PARTICIPANTS_PER_INTERVIEW_MAX}. Each is a Participant already on this "
+    "Application, by `id`, or someone new, without one. Sending an existing Participant's `role` and `name` changes "
+    "them on every Interview they are in. A Participant left in no Interview is deleted."
+)
 
 
 ApplicationId = Annotated[UUID, Path(description="The Application's id.")]
@@ -217,7 +251,7 @@ class ApplicationCreate(BaseModel):
 class ApplicationPatch(BaseModel):
     """Only the fields sent are changed; send null to clear an optional field.
 
-    Setting the status to in_progress without an outcome clears the outcome, Done date and Outcome note
+    Setting the status to in_progress without an outcome clears the outcome, Done date, and Outcome note
     (reopening); setting it to done from in_progress without a done_on sets the Done date to today. Setting the
     location to anything but hybrid without office_days clears the office days.
     """
@@ -281,6 +315,46 @@ def check_office_days(location: str | None, office_days: int | None) -> None:
         raise ValueError("office_days is only for a hybrid location")
 
 
+class Participant(BaseModel):
+    """Someone from the company whom the job seeker meets (GLOSSARY.md). Belongs to one Application and can be
+    in several of its Interviews."""
+
+    id: UUID
+    role: str = Field(description=PARTICIPANT_ROLE, examples=["Sr Director, Product"])
+    name: str | None = Field(description=PARTICIPANT_NAME, examples=["Dana Lee"])
+
+
+class ParticipantInput(BaseModel):
+    """A Participant as an Interview sends them: one already on the Application, by `id`, or someone new."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: UUID | None = Field(
+        default=None,
+        description=(
+            "A Participant already on this Application. Omit for someone new. Their role and name become those "
+            "sent, on every Interview they are in."
+        ),
+    )
+    role: ParticipantRole = Field(description=PARTICIPANT_ROLE, examples=["Sr Director, Product"])
+    name: ParticipantName = Field(default=None, description=f"{PARTICIPANT_NAME} Blank is stored as null.")
+
+
+def _distinct_participants(value: list[ParticipantInput]) -> list[ParticipantInput]:
+    ids = [p.id for p in value if p.id is not None]
+    if len(ids) != len(set(ids)):
+        raise ValueError("lists the same Participant twice")
+    return value
+
+
+Participants = Annotated[
+    list[ParticipantInput],
+    Field(min_length=1, max_length=PARTICIPANTS_PER_INTERVIEW_MAX),
+    AfterValidator(_distinct_participants),
+]
+EXAMPLE_PARTICIPANTS = [{"role": "Recruiter", "name": "Dana Lee"}, {"role": "Engineering Manager", "name": None}]
+
+
 class InterviewCreate(BaseModel):
     """A new Interview for an Application."""
 
@@ -297,12 +371,13 @@ class InterviewCreate(BaseModel):
     prep_notes: PrepNotes = Field(
         default=None, description=f"{PREP_NOTES} Blank is stored as null.", examples=[EXAMPLE_PREP_NOTES]
     )
+    participants: Participants = Field(description=f"{PARTICIPANTS} Required.", examples=[EXAMPLE_PARTICIPANTS])
 
 
 class InterviewPatch(BaseModel):
     """Only the fields sent are changed; send null for one of the Interview notes fields or `prep_notes` to clear it.
 
-    The date can't be cleared.
+    The date can't be cleared. `participants`, when sent, replaces the Interview's Participants and needs at least one.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -330,6 +405,9 @@ class InterviewPatch(BaseModel):
     prep_notes: PrepNotes = Field(
         default=None, description=f"{PREP_NOTES} Blank is stored as null.", examples=[EXAMPLE_PREP_NOTES]
     )
+    participants: Participants | None = Field(
+        default=None, description=f"{PARTICIPANTS} Cannot be cleared.", examples=[EXAMPLE_PARTICIPANTS]
+    )
 
     @field_validator("at")
     @classmethod
@@ -340,8 +418,8 @@ class InterviewPatch(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def _category_and_title_not_cleared(self) -> "InterviewPatch":
-        for field in ("category", "title"):
+    def _required_fields_not_cleared(self) -> "InterviewPatch":
+        for field in ("category", "title", "participants"):
             if field in self.model_fields_set and getattr(self, field) is None:
                 raise ValueError(f"{field} cannot be cleared")
         return self
@@ -359,6 +437,12 @@ class Interview(BaseModel):
     how_it_went: str | None = Field(description=HOW_IT_WENT, examples=[EXAMPLE_HOW_IT_WENT])
     takeaway: str | None = Field(description=TAKEAWAY, examples=[EXAMPLE_TAKEAWAY])
     prep_notes: str | None = Field(description=PREP_NOTES, examples=[EXAMPLE_PREP_NOTES])
+    participants: list[Participant] = Field(
+        description=(
+            "Participants (GLOSSARY.md): who the job seeker meets, in the order they listed them. Empty for an "
+            "Interview added before Bigfoot recorded Participants."
+        )
+    )
     completed: bool = Field(
         description="Derived, never stored: the date is in the past.",
         examples=[False],
@@ -550,7 +634,7 @@ class JourneyInterview(BaseModel):
 
 
 class JourneyApplication(BaseModel):
-    """An In Progress Application or an Offer as a Viewer sees it: no salary, job posting, Location or notes."""
+    """An In Progress Application or an Offer as a Viewer sees it: no salary, job posting, Location, or notes."""
 
     model_config = ConfigDict(extra="forbid")
 

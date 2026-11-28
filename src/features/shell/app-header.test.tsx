@@ -48,6 +48,11 @@ describe("AppHeader without a user", () => {
 });
 
 describe("AppHeader on a page outside the nav", () => {
+  it("links the wordmark to the Dashboard", () => {
+    render(<AppHeader user={user} />);
+    expect(screen.getByRole("link", { name: "Bigfoot dashboard" })).toHaveAttribute("href", "/dashboard");
+  });
+
   it("highlights nothing", () => {
     render(<AppHeader user={user} />);
     const nav = screen.getByRole("navigation", { name: "Signed in" });

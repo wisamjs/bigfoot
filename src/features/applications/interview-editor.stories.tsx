@@ -3,15 +3,16 @@ import { expect, mocked, screen, waitFor, within } from "storybook/test";
 import { deleteInterviewAndLeaveAction, updateInterviewAction } from "@/app/applications/actions";
 import { prepLookBack, takeawayShowsOn } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
+import { expectBigfootClear } from "@/test/art";
 import { InterviewEditor } from "./interview-editor";
 import { UnsavedChanges } from "./unsaved-changes";
 
 // The Interview page under its "Dashboard / <company>" breadcrumb (BIG-178, BIG-202): the heading, the strip with this
 // Interview outlined, the Prep notes and Interview notes (BIG-180), and links to the Rounds either side. Dates are counted from today. Server Actions are
 // mocked (src/app/applications/__mocks__/actions.ts) and succeed unless a story says otherwise.
-const DAY = 86_400_000;
 const daysFromNow = (days: number, hour = 15) => {
-  const date = new Date(Date.now() + days * DAY);
+  const date = new Date();
+  date.setDate(date.getDate() + days); // calendar days: days × 24h misses by one across a DST change
   date.setHours(hour, 0, 0, 0);
   return date.toISOString();
 };
@@ -63,6 +64,9 @@ const fernway = application("fernway", {
 });
 const everyApplication = [lumen, tilth, fernway];
 const empty = { what_they_asked: null, how_it_went: null, takeaway: null };
+/** Bigfoot in an empty notes card (BIG-228): "notebook" in Prep notes, "writing" in Interview notes. */
+const art = (canvasElement: HTMLElement, name: "notebook" | "writing") =>
+  canvasElement.querySelector<HTMLImageElement>(`img[src*="bigfoot-${name}"]`);
 
 const meta = {
   component: InterviewEditor,
@@ -83,11 +87,13 @@ type Story = StoryObj<typeof meta>;
 /**
  * Filled: a completed Interview, "Completed · 10 days ago", this one outlined on the strip, the
  * Takeaway for next time in its own card, How it went as text and They asked as a list, and links
- * to Round 1 and Round 3 at the foot.
+ * to Round 1 and Round 3 at the foot. Written notes hold no Bigfoot.
  */
 export const Completed: Story = {
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     await expect(await canvas.findByText("Completed · 10 days ago")).toBeVisible();
+    // Notes written: no Bigfoot (BIG-228).
+    await expect(art(canvasElement, "writing")).not.toBeInTheDocument();
     await expect(canvas.getByRole("link", { name: /^Round \d · This interview · / })).toHaveAttribute("aria-current", "page");
     // The foot links to the Rounds either side (BIG-202).
     const rounds = canvas.getByRole("navigation", { name: "Other Rounds" });
@@ -126,17 +132,31 @@ export const TakeawayShowsOnPrep: Story = {
 /**
  * Coming up, with no Prep notes: "Upcoming · in 2 days", the Before card offering Add Prep notes
  * ("Get ready for <weekday>"), with nothing to look back at, and the After card waiting for how it went, which Add Interview
- * notes opens into the three fields.
+ * notes opens into the three fields. Each empty card holds Bigfoot (BIG-228); the open fields don't.
  */
 export const Upcoming: Story = {
   args: { interview: upcoming },
-  play: async ({ canvas, userEvent }) => {
+  play: async ({ canvas, canvasElement, userEvent }) => {
     await expect(await canvas.findByText("Upcoming · in 2 days")).toBeVisible();
     await expect(canvas.getByText(/^Get ready for /)).toBeVisible();
     await expect(canvas.getByRole("button", { name: "Add Prep notes" })).toBeVisible();
     await expect(canvas.getByText("Nothing yet, that’s expected")).toBeVisible();
+    await expect(art(canvasElement, "notebook")).toBeInTheDocument();
+    await expect(art(canvasElement, "writing")).toBeInTheDocument();
     await userEvent.click(canvas.getByRole("button", { name: "Add Interview notes" }));
     await expect(canvas.getByRole("textbox", { name: "What they asked" })).toHaveFocus();
+    await expect(art(canvasElement, "writing")).not.toBeInTheDocument();
+  },
+};
+
+/** Coming up, on the narrowest phone: each empty card's Bigfoot, smaller, beside its button and clear of the words (BIG-232). */
+export const UpcomingPhone: Story = {
+  args: { interview: upcoming },
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+  play: async ({ canvas, canvasElement }) => {
+    await expect(await canvas.findByText("Upcoming · in 2 days")).toBeVisible();
+    await expectBigfootClear(canvasElement, "bigfoot-notebook");
+    await expectBigfootClear(canvasElement, "bigfoot-writing");
   },
 };
 
@@ -159,10 +179,12 @@ export const UpcomingWithTakeaways: Story = {
   },
 };
 
-/** Coming up with Prep notes written: they show first, with Edit, above the After card. */
+/** Coming up with Prep notes written: they show first, with Edit, above the After card, and without Bigfoot. */
 export const UpcomingWithPrepNotes: Story = {
   args: { interview: { ...upcoming, prep_notes: "Review the caching chapter.\n\n- Draw the diagram first\n- Ask about the on-call rotation" } },
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
+    await expect(art(canvasElement, "notebook")).not.toBeInTheDocument();
+    await expect(art(canvasElement, "writing")).toBeInTheDocument();
     const headings = canvas.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
     await expect(headings).toEqual(["Prep notes", "Interview notes"]);
     await expect(within(canvas.getByRole("region", { name: "Prep notes" })).getAllByRole("listitem")).toHaveLength(2);
@@ -184,8 +206,8 @@ export const WritingPrepNotes: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: "Add Prep notes" }));
     const field = canvas.getByRole("textbox", { name: "Prep notes" });
-    await expect(field).toHaveFocus();
-    await userEvent.type(field, "Review caching.");
+    await waitFor(() => expect(field).toHaveFocus());
+    await userEvent.keyboard("Review caching.");
     await userEvent.tab();
     await waitFor(() =>
       expect(updateInterviewAction).toHaveBeenCalledWith("lumen", upcoming.id, { prep_notes: "Review caching." }),
@@ -221,7 +243,7 @@ export const EditingPrepNotes: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: "Show Prep notes" }));
     await userEvent.click(canvas.getByRole("button", { name: "Edit Prep notes" }));
-    await expect(canvas.getByRole("textbox", { name: "Prep notes" })).toHaveFocus();
+    await waitFor(() => expect(canvas.getByRole("textbox", { name: "Prep notes" })).toHaveFocus());
     await userEvent.click(canvas.getByRole("button", { name: "Done" }));
     await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
     await waitFor(() => expect(canvas.getByRole("button", { name: "Edit Prep notes" })).toHaveFocus());
@@ -235,7 +257,13 @@ export const JustFinished: Story = {
     await expect(canvas.getByText("Just finished · write it down while it’s fresh")).toBeVisible();
     await expect(canvas.getByRole("heading", { level: 2, name: "How did it go?" })).toBeVisible();
     await expect(canvas.getByRole("textbox", { name: "What they asked" })).toHaveAttribute("placeholder", "One question per line");
-    await expect(canvas.getByRole("textbox", { name: "How it went" })).toHaveAttribute("placeholder", "What landed, what didn't");
+    // How it went formats as it's written (BIG-214): its placeholder sits on its empty first paragraph.
+    await waitFor(() =>
+      expect(within(canvas.getByRole("textbox", { name: "How it went" })).getByText("", { selector: "p" })).toHaveAttribute(
+        "data-placeholder",
+        "What landed, what didn't",
+      ),
+    );
     await expect(canvas.getByRole("textbox", { name: "Takeaway for next time" })).toHaveAttribute(
       "placeholder",
       "One thing to do differently",
@@ -244,17 +272,80 @@ export const JustFinished: Story = {
   },
 };
 
+/** Done with nothing written: "No Interview notes yet." and Add Interview notes, with Bigfoot writing beside them (BIG-228). */
+export const ClosedWithoutNotes: Story = {
+  args: { interview: { ...completed, ...empty } },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await expect(art(canvasElement, "writing")).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "Done" }));
+    await expect(canvas.getByText("No Interview notes yet.")).toBeVisible();
+    await expect(art(canvasElement, "writing")).toBeInTheDocument();
+  },
+};
+
 /** Editing: Edit turns the notes into three fields; Done goes back to the text and gives focus back to Edit. */
 export const Editing: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: "Edit Interview notes" }));
     await expect(canvas.getByRole("textbox", { name: "What they asked" })).toHaveFocus();
-    await expect(canvas.getByRole("textbox", { name: "How it went" })).toHaveValue(completed.how_it_went);
+    await expect(await canvas.findByText("Rambled on the roadmap question.")).toBeVisible();
+    await expect(canvas.getByRole("toolbar", { name: "Formatting" })).toBeVisible();
     await expect(canvas.getByRole("textbox", { name: "Takeaway for next time" })).toHaveValue(completed.takeaway);
     await expect(canvas.queryByRole("region", { name: "Takeaway for next time" })).not.toBeInTheDocument();
     await userEvent.click(canvas.getByRole("button", { name: "Done" }));
     await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
     await waitFor(() => expect(canvas.getByRole("button", { name: "Edit Interview notes" })).toHaveFocus());
+  },
+};
+
+/** How it went written with titles, bold, italics, underline and lists (BIG-214), read back formatted. */
+export const FormattedNotes: Story = {
+  args: {
+    interview: {
+      ...completed,
+      how_it_went:
+        "# Round one\n\n**Strong** on the *incident story*, <u>weak</u> on the roadmap.\n\n## Follow up\n\n1. Send a thank-you\n2. Ask about on-call\n\n- Bring numbers\n- Draw first",
+    },
+  },
+  play: async ({ canvas }) => {
+    const notes = canvas.getByRole("region", { name: "Interview notes" });
+    await expect(within(notes).getByRole("heading", { level: 3, name: "Round one" })).toBeVisible();
+    await expect(within(notes).getByRole("heading", { level: 3, name: "Follow up" })).toBeVisible();
+    await expect(within(notes).getByText("Strong").tagName).toBe("STRONG");
+    await expect(within(notes).getByText("weak").tagName).toBe("U");
+    await expect(within(notes).getAllByRole("list")[0].tagName).toBe("OL");
+  },
+};
+
+/**
+ * Writing How it went with the toolbar and with "- " at a line's start, typed for real: it saves as
+ * Markdown, and Done reads it back formatted.
+ */
+export const WritingFormattedNotes: Story = {
+  args: { interview: { ...completed, ...empty } },
+  play: async ({ canvas, userEvent }) => {
+    const field = canvas.getByRole("textbox", { name: "How it went" });
+    // keyboard, not type: type clicks the field first, which would move the caret and drop Bold.
+    await userEvent.click(field);
+    await userEvent.click(canvas.getByRole("button", { name: "Large title" }));
+    await userEvent.keyboard("Round one{Enter}");
+    await userEvent.click(canvas.getByRole("button", { name: "Bold" }));
+    await expect(canvas.getByRole("button", { name: "Bold" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.keyboard("Strong");
+    await userEvent.click(canvas.getByRole("button", { name: "Bold" }));
+    await userEvent.keyboard(" start{Enter}- Send a thank-you");
+    await expect(canvas.getByRole("button", { name: "Bulleted list" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.tab();
+    await waitFor(() =>
+      expect(updateInterviewAction).toHaveBeenLastCalledWith("lumen", completed.id, {
+        how_it_went: "# Round one\n\n**Strong** start\n\n- Send a thank-you",
+      }),
+    );
+    await userEvent.click(canvas.getByRole("button", { name: "Done" }));
+    const notes = canvas.getByRole("region", { name: "Interview notes" });
+    await expect(within(notes).getByRole("heading", { level: 3, name: "Round one" })).toBeVisible();
+    await expect(within(notes).getByText("Strong").tagName).toBe("STRONG");
+    await expect(within(notes).getByRole("listitem")).toHaveTextContent("Send a thank-you");
   },
 };
 

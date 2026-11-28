@@ -70,7 +70,7 @@ viewer_token_bearer = HTTPBearer(
     bearerFormat="JWT",
     description=(
         "A Viewer token: an HS256 JWT this API returns when a Viewer types a Share link's Passcode. It reads "
-        "that Share link's Journey only, and stops working when the link is stopped, expires or gets a new "
+        "that Share link's Journey only, and stops working when the link is stopped, expires, or gets a new "
         "Passcode. The Next.js server keeps it in the Viewer's cookie for that link."
     ),
 )

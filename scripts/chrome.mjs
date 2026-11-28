@@ -1,11 +1,13 @@
 // Headless Chrome over the DevTools protocol, shared by scripts/screenshots.mjs, scripts/a11y.mjs
-// and scripts/capture.mjs. CHROME_PATH picks the binary (default: macOS Google Chrome; CI sets it).
+// and scripts/capture.mjs. CHROME_PATH picks the binary (default: macOS Google Chrome, else the
+// Linux one GitHub's runners have, which the unit tests use).
 import { spawn } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const chromePath = process.env.CHROME_PATH ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const MAC_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const chromePath = process.env.CHROME_PATH ?? (existsSync(MAC_CHROME) ? MAC_CHROME : "/usr/bin/google-chrome");
 
 /**
  * The DevTools port Chrome picked, from the file it writes into its profile; undefined until then.
@@ -194,13 +196,61 @@ export async function dialogKeyboardProblems(chrome) {
   return problems;
 }
 
+// How long the page must go without changing for settled() to call it ready, and how long to wait for that.
+const QUIET_MS = 300;
+const SETTLE_TIMEOUT_MS = PAGE_TEXT_TIMEOUT_MS;
+
+/**
+ * The expression settled() runs: resolves true once React has hydrated <main> and nothing has been
+ * added to or removed from the page for `quietMs`, or false after `timeoutMs`.
+ */
+function settledExpression(quietMs = QUIET_MS, timeoutMs = SETTLE_TIMEOUT_MS) {
+  return `new Promise((resolve) => {
+    const hydrated = () => {
+      const main = document.querySelector("main");
+      return !main || Object.keys(main).some((key) => key.startsWith("__reactProps$"));
+    };
+    let changed = performance.now();
+    const observer = new MutationObserver(() => (changed = performance.now()));
+    observer.observe(document.body, { childList: true, subtree: true });
+    const start = performance.now();
+    const check = () => {
+      const now = performance.now();
+      const ready = hydrated() && now - changed >= ${quietMs};
+      if (ready || now - start >= ${timeoutMs}) {
+        observer.disconnect();
+        resolve(ready);
+      } else setTimeout(check, 50);
+    };
+    check();
+  })`;
+}
+
+/**
+ * Waits until the page is ready for a key press to be judged: hydrated, and no longer swapping what
+ * it shows (a client component replacing its server skeleton, as the Journey does once the browser
+ * knows the Viewer's time zone). False if it never settles.
+ */
+async function settled(chrome) {
+  const { result } = await chrome.send("Runtime.evaluate", {
+    expression: settledExpression(),
+    awaitPromise: true,
+    returnByValue: true,
+  });
+  return result.value === true;
+}
+
 /**
  * The skip link on a freshly loaded page: the first Tab lands on it, and its target is the page's
  * one <main>. Pressing Enter on it scrolls there; Tab after that continues inside <main>.
+ * Each press waits for the page to settle first, and each judgment after it, so a slow machine (CI)
+ * judges the same page a fast one does, not one still swapping its skeleton for its content.
  * Returns one line per problem.
  */
 export async function skipLinkProblems(chrome) {
+  if (!(await settled(chrome))) return [`the page was still changing after ${SETTLE_TIMEOUT_MS / 1000}s, so the skip link wasn't checked`];
   await press(chrome, "Tab", 9);
+  await settled(chrome);
   const { result } = await chrome.send("Runtime.evaluate", {
     returnByValue: true,
     expression: `(() => {
@@ -214,12 +264,20 @@ export async function skipLinkProblems(chrome) {
   });
   if (result.value.length) return result.value;
   await press(chrome, "Enter", 13);
+  await settled(chrome);
   await press(chrome, "Tab", 9);
+  await settled(chrome);
   const { result: after } = await chrome.send("Runtime.evaluate", {
     returnByValue: true,
-    expression: `document.querySelector("main").contains(document.activeElement) || !document.querySelector("main").querySelector("a, button, input, select, textarea, summary, [tabindex]")`,
+    expression: `(() => {
+      const main = document.querySelector("main");
+      const el = document.activeElement;
+      if (main.contains(el) || !main.querySelector("a, button, input, select, textarea, summary, [tabindex]")) return null;
+      const label = (el.getAttribute("aria-label") ?? el.textContent).trim().slice(0, 40);
+      return el === document.body ? "<body>" : \`<\${el.tagName.toLowerCase()}> "\${label}"\`;
+    })()`,
   });
-  return after.value ? [] : ["after the skip link, Tab doesn't continue inside <main>"];
+  return after.value ? [`after the skip link, Tab doesn't continue inside <main>; it lands on ${after.value}`] : [];
 }
 
 /** Starts headless Chrome and returns a DevTools client for its first tab. */

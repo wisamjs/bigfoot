@@ -17,7 +17,7 @@ export const SUBPROCESSORS: readonly Subprocessor[] = [
     name: "Google",
     purpose: "Sign-in",
     receives:
-      "Your sign-in request. Google tells us your name, email address, profile photo and Google account id.",
+      "Your sign-in request. Google tells us your name, email address, profile photo, and Google account id.",
     location: "United States and other countries",
     privacyUrl: "https://policies.google.com/privacy",
   },
@@ -25,7 +25,7 @@ export const SUBPROCESSORS: readonly Subprocessor[] = [
     name: "Vercel",
     purpose: "Hosting the website and the API",
     receives:
-      "Every request your browser makes to Bigfoot, including your IP address, browser details and the pages you open, plus the Applications passing through our servers.",
+      "Every request your browser makes to Bigfoot, including your IP address, browser details, and the pages you open, plus the Applications passing through our servers.",
     // Functions run in one US region (Vercel's default for new projects is iad1); requests
     // enter through Vercel's nearest network location, which can be in Canada (e.g. yul1).
     location: "United States, reached through Vercel's worldwide network",
@@ -42,7 +42,7 @@ export const SUBPROCESSORS: readonly Subprocessor[] = [
     name: "Sentry",
     purpose: "Error monitoring",
     receives:
-      "Reports of errors in the website and the API: what failed and where in our code, the page or API address, your browser type, and a one-way hash of your Google account id. Not your Applications, your email address, your IP address or your cookies.",
+      "Reports of errors in the website and the API: what failed and where in our code, the page or API address, your browser type, and a one-way hash of your Google account id. Not your Applications, your email address, your IP address, or your cookies.",
     location: "United States",
     privacyUrl: "https://sentry.io/privacy/",
   },

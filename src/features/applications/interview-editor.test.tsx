@@ -8,6 +8,7 @@ import { InterviewEditor } from "./interview-editor";
 import { hasInterviewNotes, prepLookBack, takeawayShowsOn } from "@/lib/applications";
 import { NOTES_PAUSE_MS } from "./interview-notes-form";
 import { UnsavedChanges } from "./unsaved-changes";
+import { replaceRich, richValue, typeRich } from "@/test/rich-text";
 
 // The editor guards leaving the page, which needs the router.
 vi.mock("next/navigation", () => import("@/test/navigation"));
@@ -62,10 +63,10 @@ describe("the Interview page", () => {
   it("writes the Interview notes in a field opened by Edit, and saves them", async () => {
     const { user } = openPage();
     await user.click(editNotes());
-    expect(notesField()).toHaveValue("Asked about caching");
+    expect(await richValue(notesField())).toBe("Asked about caching");
     expect(askedField()).toHaveFocus();
 
-    await user.type(notesField(), " and queues");
+    await typeRich(notesField(), " and queues");
     await user.tab();
     expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { how_it_went: "Asked about caching and queues" });
     expect(await screen.findByText("Saved")).toBeInTheDocument();
@@ -75,7 +76,7 @@ describe("the Interview page", () => {
     const done = { ...birch, status: "done" as const, outcome: "rejected" as const };
     const { user } = openPage(done);
     await user.click(editNotes());
-    await user.type(notesField(), "!");
+    await typeRich(notesField(), "!");
     await user.tab();
     expect(actions.updateInterviewAction).toHaveBeenCalledWith("birch", "i1", { how_it_went: "Asked about caching!" });
   });
@@ -134,7 +135,7 @@ describe("the Interview page", () => {
     // Typing and then leaving at once: the link click blurs the notes, whose save hangs.
     vi.mocked(actions.updateInterviewAction).mockReturnValue(new Promise(() => {}));
     await user.click(editNotes());
-    await user.type(notesField(), " and queues");
+    await typeRich(notesField(), " and queues");
     await user.click(screen.getByRole("link", { name: "Dashboard" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("You have unsaved changes.");
     expect(screen.getByRole("button", { name: "Keep editing" })).toHaveFocus();
@@ -176,7 +177,7 @@ describe("Interview notes", () => {
 
   it("saves on leaving the field, trimmed, keeping line breaks", async () => {
     const { user, notes } = await openNotes();
-    await user.type(notes, " Friendly.{Enter}{Enter}Ask about the team. ");
+    await typeRich(notes, " Friendly.\nAsk about the team. ");
     expect(actions.updateInterviewAction).not.toHaveBeenCalled();
     await user.tab();
     expect(actions.updateInterviewAction).toHaveBeenCalledExactlyOnceWith("oak", "i1", {
@@ -186,9 +187,9 @@ describe("Interview notes", () => {
 
   it("saves after a pause in typing, and the pause starts over with each key", async () => {
     const { user, notes } = await openNotes();
-    await user.type(notes, "Fri");
+    await typeRich(notes, "Fri");
     pause(NOTES_PAUSE_MS / 2);
-    await user.type(notes, " end");
+    await typeRich(notes, " end");
     pause(NOTES_PAUSE_MS / 2);
     expect(actions.updateInterviewAction).not.toHaveBeenCalled();
 
@@ -202,15 +203,15 @@ describe("Interview notes", () => {
 
   it("clears notes when they are emptied, and has nothing to save when only spaces are typed", async () => {
     const { user, notes } = await openNotes(technical);
-    await user.clear(notes);
-    await user.type(notes, "  ");
+    await replaceRich(notes, "");
+    await typeRich(notes, "  ");
     await user.tab();
     expect(actions.updateInterviewAction).toHaveBeenCalledWith("oak", "i1", { how_it_went: null });
   });
 
   it("sends nothing when only spaces are typed into empty notes", async () => {
     const { user, notes } = await openNotes();
-    await user.type(notes, "   ");
+    await typeRich(notes, "   ");
     await user.tab();
     pause();
     expect(actions.updateInterviewAction).not.toHaveBeenCalled();
@@ -220,13 +221,11 @@ describe("Interview notes", () => {
     let settle!: (result: actions.ActionResult) => void;
     vi.mocked(actions.updateInterviewAction).mockReturnValueOnce(new Promise((resolve) => (settle = resolve)));
     const { user, notes } = await openNotes();
-    await user.type(notes, "One");
+    await typeRich(notes, "One");
     await user.tab();
     expect(screen.getAllByRole("status").map((status) => status.textContent)).toContain("How it went: Saving…");
 
-    await user.click(notes);
-    expect(notes).not.toHaveAttribute("readonly");
-    await user.type(notes, " two");
+    await typeRich(notes, " two");
     await user.tab();
     pause();
     expect(actions.updateInterviewAction).toHaveBeenCalledTimes(1);
@@ -234,25 +233,30 @@ describe("Interview notes", () => {
     await act(async () => settle({ ok: true }));
     expect(actions.updateInterviewAction).toHaveBeenCalledTimes(2);
     expect(actions.updateInterviewAction).toHaveBeenLastCalledWith("oak", "i1", { how_it_went: "One two" });
-    expect(notes).toHaveValue("One two");
+    expect(await richValue(notes)).toBe("One two");
   });
 
   it("keeps what was written and shows why saving failed", async () => {
     vi.mocked(actions.updateInterviewAction).mockResolvedValue({ ok: false, error: "Interview notes are too long" });
     const { user, notes } = await openNotes();
-    await user.type(notes, "Kept");
+    await typeRich(notes, "Kept");
     await user.tab();
     expect(await screen.findByRole("alert")).toHaveTextContent("Interview notes are too long");
-    expect(notes).toHaveValue("Kept");
+    expect(await richValue(notes)).toBe("Kept");
   });
 
-  it("counts characters only near the limit, and stops at it", async () => {
+  it("counts characters of the Markdown only near the limit, and refuses to save past it", async () => {
     const { user, notes } = await openNotes();
-    expect(notes).toHaveAttribute("maxlength", "20000");
     expect(document.body).not.toHaveTextContent("of 20,000 characters");
-    await user.click(notes);
-    await user.paste("x".repeat(18_000));
+    // Bold's ** count: the limit is on what's stored.
+    await replaceRich(notes, `**${"x".repeat(17_996)}**`);
     expect(document.body).toHaveTextContent("18,000 of 20,000 characters");
+
+    await replaceRich(notes, "x".repeat(20_001));
+    await user.tab();
+    expect(await screen.findByText("How it went can be at most 20,000 characters.")).toBeInTheDocument();
+    expect(notes).toHaveAttribute("aria-invalid", "true");
+    expect(actions.updateInterviewAction).not.toHaveBeenCalled();
   });
 
   it("says there are none, with Add Interview notes, which opens the field", async () => {
@@ -261,6 +265,23 @@ describe("Interview notes", () => {
     expect(screen.queryByRole("button", { name: "Edit Interview notes" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Add Interview notes" }));
     expect(askedField()).toHaveFocus();
+  });
+
+  it("reads How it went formatted from its Markdown", () => {
+    const formatted = interview("i1", {
+      application_id: "oak",
+      how_it_went: "# Round one\n\n**Strong** on *caching*, <u>weak</u> on queues.\n\n1. Send a thank-you\n2. Ask about on-call",
+    });
+    openPage({ ...oak, interviews: [formatted] }, formatted);
+    const region = screen.getByRole("region", { name: "Interview notes" });
+    // Under the card's h2, a "#" title is an h3.
+    expect(within(region).getByRole("heading", { level: 3, name: "Round one" })).toBeInTheDocument();
+    expect(within(region).getByText("Strong").tagName).toBe("STRONG");
+    expect(within(region).getByText("caching").tagName).toBe("EM");
+    expect(within(region).getByText("weak").tagName).toBe("U");
+    const list = within(region).getAllByRole("list")[0];
+    expect(list.tagName).toBe("OL");
+    expect(within(list).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["Send a thank-you", "Ask about on-call"]);
   });
 
   it("shows lines starting with a dash as a list", () => {
@@ -273,7 +294,7 @@ describe("Interview notes", () => {
 
   it("goes back to the text on Done, saving what was typed, and gives focus back to Edit", async () => {
     const { user, notes } = await openNotes(technical);
-    await user.type(notes, " More.");
+    await typeRich(notes, " More.");
     await user.click(screen.getByRole("button", { name: "Done" }));
     expect(actions.updateInterviewAction).toHaveBeenCalledExactlyOnceWith("oak", "i1", { how_it_went: "Asked about caching More." });
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
@@ -284,12 +305,12 @@ describe("Interview notes", () => {
   it("stays in the field on Done while a save has failed", async () => {
     vi.mocked(actions.updateInterviewAction).mockResolvedValue({ ok: false, error: "Couldn’t reach Bigfoot’s server." });
     const { user, notes } = await openNotes();
-    await user.type(notes, "Kept");
+    await typeRich(notes, "Kept");
     await user.tab();
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t reach Bigfoot’s server.");
     await user.click(screen.getByRole("button", { name: "Done" }));
     expect(notesField()).toHaveFocus();
-    expect(notesField()).toHaveValue("Kept");
+    expect(await richValue(notesField())).toBe("Kept");
   });
 
   it("saves each field by itself, with its own save status", async () => {
@@ -326,13 +347,13 @@ describe("Interview notes", () => {
     expect(screen.getByText("Went well.")).toBeInTheDocument();
   });
 
-  it("opens a completed Interview with no notes straight into the three empty fields, under How did it go?", () => {
+  it("opens a completed Interview with no notes straight into the three empty fields, under How did it go?", async () => {
     const fresh = interview("i1", { application_id: "oak" });
     openPage({ ...oak, interviews: [fresh] }, fresh);
     expect(screen.getByRole("heading", { level: 2, name: "How did it go?" })).toBeInTheDocument();
     expect(screen.getByText("Just finished · write it down while it’s fresh")).toBeInTheDocument();
     expect(askedField()).toHaveValue("");
-    expect(notesField()).toHaveValue("");
+    expect(await richValue(notesField())).toBe("");
     expect(takeawayField()).toHaveValue("");
     // Arriving at the page doesn't move focus into a field.
     expect(askedField()).not.toHaveFocus();
@@ -395,7 +416,7 @@ describe("Prep notes", () => {
     it("saves Prep notes by themselves, on their own field, leaving Interview notes alone", async () => {
       const { user } = page({ completed: false, at: inDays(2) });
       await user.click(screen.getByRole("button", { name: "Add Prep notes" }));
-      await user.type(prepField(), "  Review caching ");
+      await typeRich(prepField(), "  Review caching ");
       await user.tab();
       expect(actions.updateInterviewAction).toHaveBeenCalledExactlyOnceWith("elm", "i1", { prep_notes: "Review caching" });
       expect(await screen.findByText("Saved")).toBeInTheDocument();
@@ -404,7 +425,7 @@ describe("Prep notes", () => {
     it("edits with Edit and Done, gives focus back to Edit, and shows what was typed", async () => {
       const { user } = page({ completed: false, at: inDays(2), prep_notes: "Review caching" });
       await user.click(screen.getByRole("button", { name: "Edit Prep notes" }));
-      await user.type(prepField(), " and queues");
+      await typeRich(prepField(), " and queues");
       await user.click(screen.getByRole("button", { name: "Done" }));
       expect(actions.updateInterviewAction).toHaveBeenCalledWith("elm", "i1", { prep_notes: "Review caching and queues" });
       expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
@@ -415,7 +436,7 @@ describe("Prep notes", () => {
       const { user } = page({ completed: false, at: inDays(2) });
       vi.mocked(actions.updateInterviewAction).mockReturnValue(new Promise(() => {}));
       await user.click(screen.getByRole("button", { name: "Add Prep notes" }));
-      await user.type(prepField(), "Review caching");
+      await typeRich(prepField(), "Review caching");
       await user.click(screen.getByRole("link", { name: "Dashboard" }));
       expect(await screen.findByRole("alert")).toHaveTextContent("You have unsaved changes.");
     });
@@ -457,7 +478,7 @@ describe("Prep notes", () => {
       const { user } = page({ prep_notes: "Review caching" });
       await user.click(screen.getByRole("button", { name: "Show Prep notes" }));
       await user.click(screen.getByRole("button", { name: "Edit Prep notes" }));
-      await user.type(prepField(), "!");
+      await typeRich(prepField(), "!");
       await user.tab();
       expect(actions.updateInterviewAction).toHaveBeenCalledExactlyOnceWith("elm", "i1", { prep_notes: "Review caching!" });
     });

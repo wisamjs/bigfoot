@@ -7,9 +7,9 @@ import css from "../src/app/globals.css?raw";
 
 type Declaration = { name: string; value: string };
 
-/** The `--name: value;` declarations directly inside the first block that `opener` starts. */
-function declarationsIn(opener: RegExp): Declaration[] {
-  const start = css.search(opener);
+/** The `--name: value;` declarations in the block globals.css marks `@tokens <marker>` (scripts/check-tokens.mjs). */
+function declarationsIn(marker: string): Declaration[] {
+  const start = css.indexOf(`/* @tokens ${marker} */`);
   if (start < 0) return [];
   const open = css.indexOf("{", start);
   let depth = 0;
@@ -22,45 +22,74 @@ function declarationsIn(opener: RegExp): Declaration[] {
   return [...body.matchAll(/--([\w-]+):\s*([^;]+);/g)].map((m) => ({ name: m[1], value: m[2].trim() }));
 }
 
-const light = declarationsIn(/^:root\s*\{/m);
-const dark = new Map(declarationsIn(/@media \(prefers-color-scheme: dark\)/).map((d) => [d.name, d.value]));
-const theme = declarationsIn(/@theme inline\s*\{/);
+const base = declarationsIn("base");
+const roles = declarationsIn("roles");
+const dark = new Map(declarationsIn("dark").map((d) => [d.name, d.value]));
+const theme = declarationsIn("theme");
 
-const isColour = (value: string) => /^(#|rgba?\()/.test(value);
-export const colours = light.filter((d) => isColour(d.value));
+/** Base steps grouped by scale: mauve, pink, white, green… in the order globals.css lists them. */
+export const scales = [
+  ...base.reduce((groups, d) => {
+    const scale = d.name.replace(/-\d+$/, "");
+    groups.set(scale, [...(groups.get(scale) ?? []), d]);
+    return groups;
+  }, new Map<string, Declaration[]>()),
+];
+export const colourRoles = roles.filter((d) => d.value.startsWith("var(--"));
 export const radii = theme.filter((d) => d.name.startsWith("radius-"));
-export const shadows = light.filter((d) => d.name.startsWith("shadow-"));
+export const shadows = roles.filter((d) => d.name.startsWith("shadow-"));
 export const fontSans = theme.find((d) => d.name === "font-sans")?.value ?? "";
 const bodyRule = /\bbody\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
 const bodyValue = (property: string) => new RegExp(`${property}:\\s*([^;]+);`).exec(bodyRule)?.[1].trim() ?? "";
+/** `var(--pink-800)` → `pink-800`. */
+const step = (value: string) => /^var\(--([\w-]+)\)$/.exec(value)?.[1] ?? value;
 
 const cell = "border-b border-line px-3 py-2 text-left align-middle text-sm";
 const code = "font-mono text-xs text-heading";
 
-export function ColourTable() {
+/** Every base scale as a row of swatches, lightest first. These are the app's only hex values. */
+export function BaseScales() {
+  return (
+    <div className="flex flex-col gap-4">
+      {scales.map(([scale, steps]) => (
+        <div key={scale} className="flex flex-col gap-1">
+          <span className={code}>{scale}</span>
+          <div className="flex flex-wrap gap-2">
+            {steps.map(({ name, value }) => (
+              <div key={name} className="flex w-20 flex-col gap-1">
+                <span aria-hidden className="block h-10 rounded-control border border-line" style={{ background: value }} />
+                <span className="text-xs text-heading">{name.slice(scale.length + 1) || scale}</span>
+                <span className="font-mono text-xs">{value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Each role and the base step it points at, light and dark. Swatches follow the toolbar's Theme. */
+export function RoleTable() {
   return (
     <table className="w-full border-collapse">
       <thead>
         <tr>
           <th className={cell}>Swatch</th>
-          <th className={cell}>Token</th>
+          <th className={cell}>Role</th>
           <th className={cell}>Light</th>
           <th className={cell}>Dark</th>
         </tr>
       </thead>
       <tbody>
-        {colours.map(({ name, value }) => (
+        {colourRoles.map(({ name, value }) => (
           <tr key={name}>
             <td className={cell}>
-              <span
-                aria-hidden
-                className="block size-8 rounded-control border border-line"
-                style={{ background: `var(--${name})` }}
-              />
+              <span aria-hidden className="block size-8 rounded-control border border-line" style={{ background: `var(--${name})` }} />
             </td>
             <td className={`${cell} ${code}`}>--{name}</td>
-            <td className={`${cell} ${code}`}>{value}</td>
-            <td className={`${cell} ${code}`}>{dark.get(name) ?? "same"}</td>
+            <td className={`${cell} ${code}`}>{step(value)}</td>
+            <td className={`${cell} ${code}`}>{dark.has(name) ? step(dark.get(name) ?? "") : "same"}</td>
           </tr>
         ))}
       </tbody>

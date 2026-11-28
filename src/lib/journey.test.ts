@@ -60,10 +60,10 @@ describe("journeyGroups", () => {
     const offer = app({ company: "Cobalt", offer: true });
     const booked = app({ company: "Tilth", interviews: [interview(at(10, 19))] });
     const waiting = app({ company: "Fernway", is_waiting: true, waiting_since: "2026-11-05" });
-    expect(journeyGroups([waiting, booked, offer]).map((g) => [g.label, g.applications])).toEqual([
-      ["Got an Offer", [offer]],
-      ["Interviewing", [booked]],
-      ["Waiting to hear back", [waiting]],
+    expect(journeyGroups([waiting, booked, offer]).map((g) => [g.id, g.applications])).toEqual([
+      ["offer", [offer]],
+      ["interviewing", [booked]],
+      ["waiting", [waiting]],
     ]);
     expect(journeyGroups([waiting]).map((g) => g.id)).toEqual(["waiting"]);
     expect(journeyGroups([])).toEqual([]);
@@ -88,6 +88,11 @@ describe("journeyCounts", () => {
   it("counts the other Done Applications' Interviews completed this month too", () => {
     const journey = { applications: [app({ interviews: [interview(at(10, 10))] })], other_completed_interviews: [at(9, 28), at(10, 4), at(10, 12)] };
     expect(journeyCounts(journey, NOW).find((c) => c.id === "completed")?.value).toBe(3);
+  });
+
+  it("says one completed Interview in the singular", () => {
+    const journey = { applications: [], other_completed_interviews: [at(10, 4)] };
+    expect(journeyCounts(journey, NOW).find((c) => c.id === "completed")?.label).toBe("Interview completed this month");
   });
 
   it("says one or none in the singular or plural", () => {

@@ -8,9 +8,9 @@ import { ApplicationEditor } from "./application-editor";
 // The Application page under its "← Dashboard" link (BIG-174). Dates are counted from today, so
 // "in 2 days" reads as it would on the page. Server Actions are mocked
 // (src/app/applications/__mocks__/actions.ts) and succeed unless a story says otherwise.
-const DAY = 86_400_000;
 const daysFromNow = (days: number, hour = 15) => {
-  const date = new Date(Date.now() + days * DAY);
+  const date = new Date();
+  date.setDate(date.getDate() + days); // calendar days: days × 24h misses by one across a DST change
   date.setHours(hour, 0, 0, 0);
   return date.toISOString();
 };
@@ -147,6 +147,24 @@ export const Default: Story = {
       "Open Interview: Hiring Manager",
       "Open Interview: Recruiter Screen",
     ]);
+  },
+};
+
+/** A completed Interview's formatted How it went (BIG-214), inline in Completed: a title, bold and a numbered list. */
+export const FormattedNotes: Story = {
+  args: {
+    app: {
+      ...lumen,
+      interviews: lumen.interviews.map((i) =>
+        i.id === "screen" ? { ...i, how_it_went: "# Screen\n\n**Band** lines up.\n\n1. Send a thank-you\n2. Book the next round" } : i,
+      ),
+    },
+  },
+  play: async ({ canvas }) => {
+    const completed = canvas.getByRole("list", { name: "Completed" });
+    // Under the card's "Completed" h3, a title is an h4.
+    await expect(within(completed).getByRole("heading", { level: 4, name: "Screen" })).toBeVisible();
+    await expect(within(completed).getByText("Band").tagName).toBe("STRONG");
   },
 };
 

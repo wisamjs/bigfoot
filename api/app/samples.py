@@ -4,11 +4,14 @@ time they load the dashboard, to show how Bigfoot works before they add their ow
 Companies are made up. Dates are relative to when the job seeker is onboarded: applied in the
 past few weeks, with an Interview a few days ahead so the Interviews calendar isn't empty. Each
 sample shows a different state: one with a completed and an upcoming Interview, one new and
-Waiting, one Done with an Offer, one Done with Rejected. Each Interview is (category, title, at).
+Waiting, one Done with an Offer, one Done with Rejected. Each Interview is (category, title, at,
+Participants), each Participant (role, name); the same pair in two Interviews is one Participant.
 """
 
 from datetime import datetime, time, timedelta
 from typing import Any
+
+RECRUITER = ("Recruiter", "Dana Lee")
 
 
 def sample_applications(now: datetime) -> list[dict[str, Any]]:
@@ -24,8 +27,13 @@ def sample_applications(now: datetime) -> list[dict[str, Any]]:
             "title": "Frontend Engineer",
             "applied_on": today - timedelta(days=12),
             "interviews": [
-                ("recruiter", "Recruiter Screen", at(-6)),
-                ("system_design", "Frontend System Design", at(3)),
+                ("recruiter", "Recruiter Screen", at(-6), [RECRUITER]),
+                (
+                    "system_design",
+                    "Frontend System Design",
+                    at(3),
+                    [("Staff Engineer", "Sam Okafor"), ("Engineering Manager", None)],
+                ),
             ],
         },
         {
@@ -41,9 +49,9 @@ def sample_applications(now: datetime) -> list[dict[str, Any]]:
             "status": "done",
             "outcome": "offer",
             "interviews": [
-                ("recruiter", "Recruiter Screen", at(-20)),
-                ("technical", "Pair Programming", at(-13)),
-                ("hiring_manager", "Hiring Manager", at(-5)),
+                ("recruiter", "Recruiter Screen", at(-20), [("Talent Partner", "Maya Chen")]),
+                ("technical", "Pair Programming", at(-13), [("Senior Engineer", "Leo Martins")]),
+                ("hiring_manager", "Hiring Manager", at(-5), [("Engineering Manager", "Priya Shah")]),
             ],
         },
         {
@@ -52,6 +60,6 @@ def sample_applications(now: datetime) -> list[dict[str, Any]]:
             "applied_on": today - timedelta(days=19),
             "status": "done",
             "outcome": "rejected",
-            "interviews": [("recruiter", "Recruiter Screen", at(-11))],
+            "interviews": [("recruiter", "Recruiter Screen", at(-11), [("Recruiter", None)])],
         },
     ]

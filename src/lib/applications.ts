@@ -45,6 +45,44 @@ export type InterviewCategory = (typeof INTERVIEW_CATEGORIES)[number];
 /** The longest Interview title the API stores, in characters. */
 export const INTERVIEW_TITLE_MAX_LENGTH = 200;
 
+/**
+ * Participant (GLOSSARY.md): someone from the company the job seeker meets in an Interview. A role is
+ * required, a name optional; a Participant belongs to one Application and can be in several of its Interviews.
+ */
+export type Participant = { id: string; role: string; name: string | null };
+
+/**
+ * A Participant as a form sends them: one already on the Application, by `id` (their role and name
+ * become these, on every Interview they're in), or someone new, without one.
+ */
+export type ParticipantInput = { id?: string; role: string; name: string | null };
+
+/** The longest role and name the API stores for a Participant, and the most an Interview can have. */
+export const PARTICIPANT_MAX_LENGTHS = { role: 200, name: 200 } as const;
+export const PARTICIPANTS_PER_INTERVIEW_MAX = 20;
+
+/** "Dana Lee (Recruiter)", or just "Recruiter" without a name: how the Interview page lists who's in it. */
+export function participantText({ role, name }: Pick<Participant, "role" | "name">): string {
+  return name ? `${name} (${role})` : role;
+}
+
+/** "Dana Lee · Recruiter", or "Recruiter": a Participant as a choice when adding them to another Interview. */
+export function participantOption({ role, name }: Pick<Participant, "role" | "name">): string {
+  return name ? `${name} · ${role}` : role;
+}
+
+/** "With Dana Lee (Recruiter), Sam (EM)": the Interview page heading's line; null when there's nobody. */
+export function withParticipants(participants: Pick<Participant, "role" | "name">[]): string | null {
+  return participants.length > 0 ? `With ${participants.map(participantText).join(", ")}` : null;
+}
+
+/** Everyone on an Application: each Participant once, in the order they first appear by date. */
+export function applicationParticipants(app: Pick<Application, "interviews">): Participant[] {
+  const seen = new Map<string, Participant>();
+  for (const interview of app.interviews) for (const p of interview.participants) if (!seen.has(p.id)) seen.set(p.id, p);
+  return [...seen.values()];
+}
+
 /** Interview notes (GLOSSARY.md): three optional plain-text fields on an Interview, in the order they're written. */
 export const INTERVIEW_NOTES_FIELDS = ["what_they_asked", "how_it_went", "takeaway"] as const;
 export type InterviewNotesField = (typeof INTERVIEW_NOTES_FIELDS)[number];
@@ -93,6 +131,8 @@ export type Interview = {
   takeaway: string | null;
   /** Prep notes: plain text the job seeker wrote to get ready for this Interview; null when there are none. */
   prep_notes: string | null;
+  /** Participants: who the job seeker meets, in the order they listed them; empty for one from before Bigfoot recorded them. */
+  participants: Participant[];
   /** Derived by the API: the date is in the past. */
   completed: boolean;
   created_at: string;
@@ -139,7 +179,10 @@ export type ApplicationFields = Omit<
 >;
 
 /** What a form sends: `at` is null while no date and time has been given, and validation refuses it. */
-export type InterviewFields = Pick<Interview, "category" | "title" | InterviewNotesField | "prep_notes"> & { at: string | null };
+export type InterviewFields = Pick<Interview, "category" | "title" | InterviewNotesField | "prep_notes"> & {
+  at: string | null;
+  participants: ParticipantInput[];
+};
 
 /** Whether an Interview has Interview notes: any of the three fields has text. */
 export function hasInterviewNotes(interview: Pick<Interview, InterviewNotesField>): boolean {
@@ -205,9 +248,9 @@ export const INTERVIEW_CATEGORY_EXPLAINED: Record<InterviewCategory, string> = {
   hiring_manager: "a conversation with the person this role reports to, about the work and how the team runs.",
   technical: "a hands-on session solving technical problems, often by writing code.",
   system_design: "designing a software system out loud, talking through the trade-offs.",
-  project_deep_dive: "a close look at one past project: the decisions, the problems and the results.",
-  people_management: "questions about leading people: hiring, feedback, growth and hard conversations.",
-  project_delivery: "questions about getting projects done: planning, priorities and surprises along the way.",
+  project_deep_dive: "a close look at one past project: the decisions, the problems, and the results.",
+  people_management: "questions about leading people: hiring, feedback, growth, and hard conversations.",
+  project_delivery: "questions about getting projects done: planning, priorities, and surprises along the way.",
   collaboration: "questions about working with other people and teams, disagreements included.",
   culture: "a conversation about values and how the team works together.",
   decision_maker: "a conversation with a senior leader, often the one who makes the final call.",
@@ -523,44 +566,6 @@ export function paragraphs(notes: string | null): string[] {
     .split(/\n\s*\n/)
     .map((p) => p.trim())
     .filter(Boolean);
-}
-
-/**
- * One block of Interview notes as the Interview page reads them: a run of text, or a run of "- "
- * lines. Each block and item has an `id`, the number of the line it starts on, to key it by.
- */
-export type NoteBlock =
-  | { type: "text"; id: number; text: string }
-  | { type: "list"; id: number; items: { id: number; text: string }[] };
-
-/**
- * Interview notes as blocks for reading: lines starting "- " become a list, the other lines run
- * together as text, and a blank line ends a block. Nothing here changes what is stored.
- */
-export function noteBlocks(notes: string | null): NoteBlock[] {
-  const blocks: NoteBlock[] = [];
-  // The lines of the text block being gathered; a blank line, a list or the end closes it.
-  let text: { id: number; lines: string[] } | null = null;
-  const closeText = () => {
-    if (text) blocks.push({ type: "text", id: text.id, text: text.lines.join("\n") });
-    text = null;
-  };
-  for (const [id, raw] of (notes ?? "").split("\n").entries()) {
-    const line = raw.trim();
-    const bullet = /^- +(.*)$/.exec(line);
-    if (!bullet) {
-      if (!line) closeText();
-      else if (text) text.lines.push(line);
-      else text = { id, lines: [line] };
-      continue;
-    }
-    closeText();
-    const last = blocks.at(-1);
-    if (last?.type === "list") last.items.push({ id, text: bullet[1] });
-    else blocks.push({ type: "list", id, items: [{ id, text: bullet[1] }] });
-  }
-  closeText();
-  return blocks;
 }
 
 /**

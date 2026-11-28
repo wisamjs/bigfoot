@@ -7,7 +7,7 @@ import { buttonClasses } from "@/components/ui/button-classes";
 import { DaysFromToday } from "@/features/applications/application-when";
 import { InterviewRow } from "@/features/applications/interview-row";
 import { addInterviewHref } from "@/features/applications/routes";
-import { InterviewCardsBigfoot } from "@/features/shell/illustrations";
+import { PonderingCalendarBigfoot } from "@/features/shell/illustrations";
 import { isDone, type Application, type Interview } from "@/lib/applications";
 
 const ADD_INTERVIEW_ID = "add-interview";
@@ -105,7 +105,7 @@ function Group({
 function NoInterviews({ app }: { app: Application }) {
   return (
     <div className="flex flex-col items-center gap-4 pb-4 pt-6 text-center">
-      <InterviewCardsBigfoot className="h-auto w-[340px] max-w-full" />
+      <PonderingCalendarBigfoot className="h-auto w-[340px] max-w-full" />
       <div className="flex max-w-[480px] flex-col gap-2">
         <h3 className="m-0 text-2xl font-bold leading-[1.25] text-heading">No Interviews yet</h3>
         <p className="m-0 text-base leading-[1.7] text-body">

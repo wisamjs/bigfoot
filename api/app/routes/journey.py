@@ -1,13 +1,15 @@
 """A Viewer's side of a Share link (GLOSSARY.md, docs/adr/0008): the Passcode page's status, the
 Passcode check that issues a Viewer token, and the Journey that token reads. No job seeker signs
-these requests; the link id and the Passcode are the only way in."""
+these requests; the link id and the Passcode are the only way in. Also the job seeker's own preview
+of the same Journey (BIG-198), which they sign."""
 
 from datetime import UTC, date, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, status
+from psycopg import Connection
 
-from app.auth import ViewerOf, new_viewer_token, passcode_matches
+from app.auth import SignedInJobSeekerId, ViewerOf, new_viewer_token, passcode_matches
 from app.models import (
     ErrorMessage,
     Journey,
@@ -19,8 +21,11 @@ from app.models import (
     ViewerToken,
 )
 from app.queries import pool
+from app.responses import ACCOUNT_ONLY, UNAUTHORIZED
 
 router = APIRouter(prefix="/share-links/{share_link_id}", tags=["Journey"])
+# The job seeker's own preview: an Account route like their Share links, so web tokens only.
+preview_router = APIRouter(prefix="/me", tags=["Share links"], responses={**UNAUTHORIZED, **ACCOUNT_ONLY})
 
 # 5 wrong Passcodes within 15 minutes lock the link until the oldest of them is 15 minutes old.
 WRONG_TRIES_MAX = 5
@@ -128,11 +133,11 @@ def open_share_link(request: Request, share_link_id: ShareLinkId, body: Passcode
 )
 def get_journey(request: Request, share_link_id: ShareLinkId, viewer: ViewerOf) -> Journey:
     """The job seeker's Journey: their In Progress Applications and Offers, with each one's company,
-    role, applied date and Interviews (category, title and time). Of the other Done Applications,
+    role, applied date, and Interviews (category, title, and time). Of the other Done Applications,
     only when their completed Interviews happened, for the count of Interviews completed this month.
-    Salary, job postings, Location, Prep notes, Interview notes and Outcome notes are never read.
+    Salary, job postings, Location, Prep notes, Interview notes, and Outcome notes are never read.
 
-    Every request checks the link again, so stopping it, letting it expire or changing its Passcode
+    Every request checks the link again, so stopping it, letting it expire, or changing its Passcode
     cuts the Viewer off at once. Records when the link was last opened, to within a minute."""
     if viewer.share_link_id != share_link_id:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "This token is for another Share link")
@@ -159,25 +164,40 @@ def get_journey(request: Request, share_link_id: ShareLinkId, viewer: ViewerOf) 
             raise HTTPException(status.HTTP_410_GONE, EXPIRED)
         if link["passcode_version"] != viewer.passcode_version:
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "The Passcode has changed")
-        applications = conn.execute(
-            "select id, company, title, applied_on, outcome is not distinct from 'offer' as offer from applications"
-            " where job_seeker_id = %s and (status = 'in_progress' or outcome = 'offer')"
-            " order by applied_on, created_at, id",
-            (link["job_seeker_id"],),
-        ).fetchall()
-        interviews = conn.execute(
-            "select application_id, category, title, at from interviews where application_id = any(%s)"
-            " order by at, created_at, id",
-            ([a["id"] for a in applications],),
-        ).fetchall()
-        other_completed = conn.execute(
-            "select i.at from interviews i join applications a on a.id = i.application_id"
-            " where a.job_seeker_id = %s and a.status <> 'in_progress' and a.outcome is distinct from 'offer'"
-            " and i.at <= now() order by i.at",
-            (link["job_seeker_id"],),
-        ).fetchall()
+        return journey_of(conn, link["job_seeker_id"], _shared_by(link["shared_by"]))
+
+
+@preview_router.get("/journey", summary="Preview the job seeker's Journey")
+def preview_journey(request: Request, job_seeker: SignedInJobSeekerId) -> Journey:
+    """The Journey every one of the job seeker's Share links shows, read as the signed-in job seeker,
+    so they can check what a Viewer sees without a Passcode, before making a link or after. It
+    records no Share link as opened. `shared_by` is null: Bigfoot stores the name only on a link."""
+    with pool(request).connection() as conn:
+        return journey_of(conn, job_seeker, None)
+
+
+def journey_of(conn: Connection[dict[str, Any]], job_seeker_id: str, shared_by: str | None) -> Journey:
+    """The one projection of a job seeker's Applications into a Journey, for a Viewer and for the
+    job seeker's own preview alike."""
+    applications = conn.execute(
+        "select id, company, title, applied_on, outcome is not distinct from 'offer' as offer from applications"
+        " where job_seeker_id = %s and (status = 'in_progress' or outcome = 'offer')"
+        " order by applied_on, created_at, id",
+        (job_seeker_id,),
+    ).fetchall()
+    interviews = conn.execute(
+        "select application_id, category, title, at from interviews where application_id = any(%s)"
+        " order by at, created_at, id",
+        ([a["id"] for a in applications],),
+    ).fetchall()
+    other_completed = conn.execute(
+        "select i.at from interviews i join applications a on a.id = i.application_id"
+        " where a.job_seeker_id = %s and a.status <> 'in_progress' and a.outcome is distinct from 'offer'"
+        " and i.at <= now() order by i.at",
+        (job_seeker_id,),
+    ).fetchall()
     return Journey(
-        shared_by=_shared_by(link["shared_by"]),
+        shared_by=shared_by,
         applications=_project(applications, interviews),
         other_completed_interviews=[row["at"] for row in other_completed],
     )

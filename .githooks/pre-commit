@@ -2,7 +2,9 @@
 # npm run verify (spelling, design tokens, stories present, Python lint, the API unit tests, the staged OpenAPI schema, types, lint,
 # then every Vitest test with the coverage floor, then the story tests in Chrome) before every commit; a failing test blocks it.
 # Committing is the verify run: AGENTS.md and the pick-up-ticket skill rely on it.
-# A commit of only .md files runs just the spelling check, as CI's review gate skips them too
+# Verify runs under scripts/snapshots.mjs, so its story tests also retake the picture of every Pages story, dark and light,
+# in docs/snapshots/ (only the ones whose pixels changed). That folder is git-ignored: the pictures stay on this machine.
+# A commit of only .md files runs just the spelling check, and takes no pictures, as CI's review gate skips them too
 # (scripts/review-needed.mjs).
 # A worktree without its own node_modules is stopped first: see scripts/check-worktree-packages.mjs.
 # Installed by `npm install` (the "prepare" script) and by the SessionStart hook in .claude/settings.json.
@@ -11,4 +13,4 @@ staged=$(git diff --cached --name-only)
 if [ -n "$staged" ] && ! printf '%s\n' "$staged" | grep -qv '\.md$'; then
   exec npm run --silent spell
 fi
-exec npm run --silent verify
+exec node scripts/snapshots.mjs npm run --silent verify

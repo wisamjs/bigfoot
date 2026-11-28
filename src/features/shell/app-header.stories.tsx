@@ -30,10 +30,11 @@ export const Default: Story = {
   },
 };
 
-/** On the Account page, which isn't in the nav (it's in the avatar's menu): nothing is highlighted. */
+/** On the Account page, which isn't in the nav (it's in the avatar's menu): nothing is highlighted, and the wordmark leads back to the Dashboard. */
 export const Account: Story = {
   args: { current: undefined },
   play: async ({ canvas }) => {
+    await expect(canvas.getByRole("link", { name: "Bigfoot dashboard" })).toHaveAttribute("href", "/dashboard");
     await expect(canvas.getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current");
     await expect(canvas.queryByRole("link", { name: "Account" })).not.toBeInTheDocument();
   },

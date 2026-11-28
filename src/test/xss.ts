@@ -20,5 +20,8 @@ export const XSS_URLS = [
 ] as const;
 /* eslint-enable no-script-url */
 
-/** Elements a payload would create if it were parsed as HTML instead of shown as text. */
-export const INJECTED_ELEMENTS = "script, img, svg[onload], iframe, [onerror], [onload]";
+/**
+ * Elements a payload would create if it were parsed as HTML instead of shown as text. The page's own
+ * Bigfoot art (src/features/shell/illustrations.tsx: an empty alt and a bigfoot- file) isn't one.
+ */
+export const INJECTED_ELEMENTS = 'script, img:not([alt=""][src*="bigfoot-"]), svg[onload], iframe, [onerror], [onload]';

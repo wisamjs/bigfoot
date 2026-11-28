@@ -84,6 +84,7 @@ const FIELD_LABELS: Record<string, string> = {
   how_it_went: "How it went",
   takeaway: "Takeaway for next time",
   prep_notes: "Prep notes",
+  participants: "Participants",
   name: "Name",
   label: "Who it’s for",
   passcode: "Passcode",
@@ -99,7 +100,8 @@ async function apiError(res: Response): Promise<{ message: string; fieldErrors?:
     if (typeof detail === "string") return { message: detail };
     if (Array.isArray(detail)) {
       const problems = detail.map((d: { loc?: unknown[]; msg?: string }) => {
-        const field = String(d.loc?.at(-1) ?? "");
+        // A Participant's role or name ("body", "participants", 0, "role") belongs to the Participants field.
+        const field = d.loc?.includes("participants") ? "participants" : String(d.loc?.at(-1) ?? "");
         const message = `${FIELD_LABELS[field] ?? "A field"} ${(d.msg ?? "is invalid").replace(/^Value error, /, "")}`;
         return [field, message] as const;
       });
@@ -211,6 +213,14 @@ export function changeShareLinkPasscode(jobSeekerId: string, id: string, passcod
 
 export function stopSharing(jobSeekerId: string, id: string) {
   return request<void>(jobSeekerId, `/me/share-links/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+/**
+ * The Journey every Share link of the job seeker shows, for their own preview (BIG-198). The same
+ * projection a Viewer reads, but it marks no link as opened, and `shared_by` is null.
+ */
+export function previewJourney(jobSeekerId: string) {
+  return request<Journey>(jobSeekerId, "/me/journey");
 }
 
 // A Viewer's side of a Share link (docs/adr/0008). No job seeker signs these requests: the status

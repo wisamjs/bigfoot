@@ -14,20 +14,20 @@
 
 ### Brand
 - **Background:** brand-softer
-- **Border:** border-brand-subtle
+- **Border:** line-brand-subtle
 - **Text:** fg-brand-strong
 
 ### Success
 - **Background:** success-soft
-- **Border:** border-success-subtle
+- **Border:** line-success-subtle
 - **Text:** fg-success-strong
 
 ### Danger
 - **Background:** danger-soft
-- **Border:** border-danger-subtle
-- **Text:** fg-danger-strong
+- **Border:** line-danger-subtle
+- **Text:** fg-danger
 
 ### Warning
 - **Background:** warning-soft
-- **Border:** border-warning-subtle
+- **Border:** line-warning-subtle
 - **Text:** fg-warning

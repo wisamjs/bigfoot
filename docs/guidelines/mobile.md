@@ -11,8 +11,8 @@ Other guidelines (BIG-78) are added to this folder beside this file.
    WCAG 2.5.5 Target Size (Enhanced, AAA); we exceed the AA minimum of 24px (2.5.8). Inline text
    links in a sentence are exempt; a link alone in its own list item is not. The icon can stay
    small: grow the hit area with `.touch-target` (globals.css) or `pointer-coarse:` utilities.
-   Buttons, fields and selects already grow on touch screens. *Checked by `npm run a11y`.*
-2. **Text that matters isn't cut off with an ellipsis at 375px.** A company, a date or a heading
+   Buttons, fields, and selects already grow on touch screens. *Checked by `npm run a11y`.*
+2. **Text that matters isn't cut off with an ellipsis at 375px.** A company, a date, or a heading
    that is cut to "…" says little. Wrap it (`break-words`) or shorten it. *Checked by
    `npm run a11y`.*
 3. **A sheet's or form's primary action is reachable without scrolling to the end.** On a phone
