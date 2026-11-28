@@ -1,3 +1,5 @@
+import { interviewsLatestFirst, type Application } from "@/lib/applications";
+
 /** The Add Application page. */
 export const ADD_APPLICATION_HREF = "/applications/new";
 
@@ -22,6 +24,18 @@ export function applicationHref(id: string, { added = false }: { added?: boolean
 /** An Interview's own page, under its Application's. */
 export function interviewHref(applicationId: string, interviewId: string) {
   return `${applicationHref(applicationId)}/interviews/${encodeURIComponent(interviewId)}`;
+}
+
+/**
+ * The pages to have ready from an Application's page, or with `openInterviewId` from one of its
+ * Interview pages (BIG-205): its Interview pages from the latest Round back to Round 1, leaving out
+ * the one open, then from an Interview page the Application page it goes back to.
+ */
+export function prefetchHrefs(app: Pick<Application, "id" | "interviews">, openInterviewId?: string): string[] {
+  const interviews = interviewsLatestFirst(app)
+    .filter((interview) => interview.id !== openInterviewId)
+    .map((interview) => interviewHref(app.id, interview.id));
+  return openInterviewId ? [...interviews, applicationHref(app.id)] : interviews;
 }
 
 /** The Interview page's search param that opens Edit details at once, as Add the date does. */

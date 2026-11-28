@@ -1,4 +1,4 @@
-import { refresh, updateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "@/lib/api";
 import { signOut } from "@/auth";
@@ -28,7 +28,7 @@ vi.mock("@/lib/api", async () => {
   };
 });
 vi.mock("@/lib/dal", () => ({ findCurrentUser: vi.fn() }));
-vi.mock("next/cache", () => ({ refresh: vi.fn(), updateTag: vi.fn() }));
+vi.mock("next/cache", () => ({ updateTag: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 // actions.ts imports Auth.js for signing out, which needs a Next.js server.
 vi.mock("@/auth", () => ({ signOut: vi.fn() }));
@@ -59,11 +59,11 @@ beforeEach(() => {
 });
 
 describe("createAccessTokenAction", () => {
-  it("creates the token as the signed-in job seeker, returns its secret and refreshes the list", async () => {
+  it("creates the token as the signed-in job seeker, returns its secret and expires the cached list", async () => {
     vi.mocked(api.createAccessToken).mockResolvedValue(created);
     expect(await createAccessTokenAction(nothing, form("Calendar cron job"))).toEqual({ error: null, created });
     expect(api.createAccessToken).toHaveBeenCalledWith("seeker-1", "Calendar cron job");
-    expect(refresh).toHaveBeenCalledOnce();
+    expect(updateTag).toHaveBeenCalledExactlyOnceWith("account:seeker-1");
   });
 
   it("asks a signed-out job seeker to sign in again, without calling the API", async () => {
@@ -94,7 +94,7 @@ describe("createAccessTokenAction", () => {
       error: "Name must not be blank",
       created: null,
     });
-    expect(refresh).not.toHaveBeenCalled();
+    expect(updateTag).not.toHaveBeenCalled();
   });
 
   it("says no token was created for any other failure, and logs it", async () => {
@@ -108,16 +108,16 @@ describe("createAccessTokenAction", () => {
 });
 
 describe("revokeAccessTokenAction", () => {
-  it("revokes the token as the signed-in job seeker, then refreshes the list", async () => {
+  it("revokes the token as the signed-in job seeker, then expires the cached list", async () => {
     expect(await revokeAccessTokenAction("t1")).toEqual({ ok: true });
     expect(api.revokeAccessToken).toHaveBeenCalledWith("seeker-1", "t1");
-    expect(refresh).toHaveBeenCalledOnce();
+    expect(updateTag).toHaveBeenCalledExactlyOnceWith("account:seeker-1");
   });
 
   it("treats a token that is already gone as revoked", async () => {
     vi.mocked(api.revokeAccessToken).mockRejectedValue(new api.ApiError(404, "Access token not found"));
     expect(await revokeAccessTokenAction("t1")).toEqual({ ok: true });
-    expect(refresh).toHaveBeenCalledOnce();
+    expect(updateTag).toHaveBeenCalledExactlyOnceWith("account:seeker-1");
   });
 
   it("asks a signed-out job seeker to sign in again, without calling the API", async () => {
@@ -126,12 +126,12 @@ describe("revokeAccessTokenAction", () => {
     expect(api.revokeAccessToken).not.toHaveBeenCalled();
   });
 
-  it("reports a failure without refreshing, so the token still shows", async () => {
+  it("reports a failure without expiring the cached list, so the token still shows", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(api.revokeAccessToken).mockRejectedValue(new TypeError("fetch failed"));
     const result = await revokeAccessTokenAction("t1");
     expect(result).toEqual({ ok: false, error: expect.stringMatching(/was not revoked/) });
-    expect(refresh).not.toHaveBeenCalled();
+    expect(updateTag).not.toHaveBeenCalled();
     expect(log).toHaveBeenCalled();
 
     vi.mocked(api.revokeAccessToken).mockRejectedValue(new api.ApiError(500, "Request failed (500)"));
@@ -159,11 +159,11 @@ function shareForm(label: string | null, passcode: string | null) {
 describe("createShareLinkAction", () => {
   const created = { ...shareLink, passcode: "maple-river-42" };
 
-  it("creates the link as the signed-in job seeker, returns its Passcode and refreshes the list", async () => {
+  it("creates the link as the signed-in job seeker, returns its Passcode and expires the cached list", async () => {
     vi.mocked(api.createShareLink).mockResolvedValue(created);
     expect(await createShareLinkAction(nothing, shareForm("Mom & Dad", "maple-river-42"))).toEqual({ error: null, created });
     expect(api.createShareLink).toHaveBeenCalledWith("seeker-1", "Mom & Dad", "maple-river-42", "Sam");
-    expect(refresh).toHaveBeenCalledOnce();
+    expect(updateTag).toHaveBeenCalledExactlyOnceWith("account:seeker-1");
   });
 
   it("asks a signed-out job seeker to sign in again, without calling the API", async () => {
@@ -197,16 +197,16 @@ describe("createShareLinkAction", () => {
     vi.mocked(api.createShareLink).mockRejectedValue(new TypeError("fetch failed"));
     expect((await createShareLinkAction(nothing, shareForm("Mom", "maple-river-42"))).error).toMatch(/No link was created/);
     expect(log).toHaveBeenCalled();
-    expect(refresh).not.toHaveBeenCalled();
+    expect(updateTag).not.toHaveBeenCalled();
   });
 });
 
 describe("renewShareLinkAction", () => {
-  it("renews the link as the signed-in job seeker, then refreshes the list", async () => {
+  it("renews the link as the signed-in job seeker, then expires the cached list", async () => {
     vi.mocked(api.renewShareLink).mockResolvedValue(shareLink);
     expect(await renewShareLinkAction("k7Qm2x9PaB")).toEqual({ ok: true, link: shareLink });
     expect(api.renewShareLink).toHaveBeenCalledWith("seeker-1", "k7Qm2x9PaB");
-    expect(refresh).toHaveBeenCalledOnce();
+    expect(updateTag).toHaveBeenCalledExactlyOnceWith("account:seeker-1");
   });
 
   it("asks a signed-out job seeker to sign in again", async () => {
@@ -215,10 +215,10 @@ describe("renewShareLinkAction", () => {
     expect(api.renewShareLink).not.toHaveBeenCalled();
   });
 
-  it("reports a failure without refreshing", async () => {
+  it("reports a failure without expiring the cached list", async () => {
     vi.mocked(api.renewShareLink).mockRejectedValue(new api.ApiError(404, "Share link not found"));
     expect(await renewShareLinkAction("k7Qm2x9PaB")).toEqual({ ok: false, error: "Share link not found" });
-    expect(refresh).not.toHaveBeenCalled();
+    expect(updateTag).not.toHaveBeenCalled();
   });
 });
 
@@ -228,7 +228,7 @@ describe("changePasscodeAction", () => {
     vi.mocked(api.changeShareLinkPasscode).mockResolvedValue(changed);
     expect(await changePasscodeAction("k7Qm2x9PaB", "otter-lake-77")).toEqual({ ok: true, link: changed });
     expect(api.changeShareLinkPasscode).toHaveBeenCalledWith("seeker-1", "k7Qm2x9PaB", "otter-lake-77");
-    expect(refresh).toHaveBeenCalledOnce();
+    expect(updateTag).toHaveBeenCalledExactlyOnceWith("account:seeker-1");
   });
 
   it("checks the Passcode first, and asks a signed-out job seeker to sign in again", async () => {
@@ -252,10 +252,10 @@ describe("changePasscodeAction", () => {
 });
 
 describe("stopSharingAction", () => {
-  it("stops sharing as the signed-in job seeker, then refreshes the list", async () => {
+  it("stops sharing as the signed-in job seeker, then expires the cached list", async () => {
     expect(await stopSharingAction("k7Qm2x9PaB")).toEqual({ ok: true });
     expect(api.stopSharing).toHaveBeenCalledWith("seeker-1", "k7Qm2x9PaB");
-    expect(refresh).toHaveBeenCalledOnce();
+    expect(updateTag).toHaveBeenCalledExactlyOnceWith("account:seeker-1");
   });
 
   it("treats a link that is already gone as stopped", async () => {
@@ -269,11 +269,11 @@ describe("stopSharingAction", () => {
     expect(api.stopSharing).not.toHaveBeenCalled();
   });
 
-  it("reports a failure without refreshing, so the link still shows", async () => {
+  it("reports a failure without expiring the cached list, so the link still shows", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(api.stopSharing).mockRejectedValue(new TypeError("fetch failed"));
     expect(await stopSharingAction("k7Qm2x9PaB")).toEqual({ ok: false, error: expect.stringMatching(/The link still works/) });
-    expect(refresh).not.toHaveBeenCalled();
+    expect(updateTag).not.toHaveBeenCalled();
   });
 });
 
@@ -284,10 +284,11 @@ describe("deleteAccountAction", () => {
     return data;
   }
 
-  it("deletes the account, drops the job seeker's cached Applications and signs them out", async () => {
+  it("deletes the account, drops the job seeker's cached Applications and Account and signs them out", async () => {
     await deleteAccountAction({ error: null }, confirmation("DELETE"));
     expect(api.deleteAccount).toHaveBeenCalledWith("seeker-1");
-    expect(updateTag).toHaveBeenCalledExactlyOnceWith("applications:seeker-1");
+    expect(updateTag).toHaveBeenCalledWith("applications:seeker-1");
+    expect(updateTag).toHaveBeenCalledWith("account:seeker-1");
     expect(signOut).toHaveBeenCalledOnce();
   });
 

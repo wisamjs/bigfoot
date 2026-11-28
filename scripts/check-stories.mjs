@@ -58,6 +58,7 @@ export const ON_PAGE = {
   "src/features/landing/account-deleted-notice.tsx": "/",
   "src/features/legal/legal.tsx": "/privacy",
   "src/features/shell/app-footer.tsx": "/dashboard",
+  "src/features/shell/prefetch-routes.tsx": "/applications/[id]",
   "src/features/shell/dashboard-link.tsx": "/applications/new",
   "src/features/shell/form-page.tsx": "/applications/new",
   "src/features/shell/theme-script.tsx": "/",

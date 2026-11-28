@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { InterviewPage, InterviewPageSkeleton } from "@/features/applications/interview-page";
-import { EDIT_PARAM } from "@/features/applications/routes";
+import { EDIT_PARAM, prefetchHrefs } from "@/features/applications/routes";
+import { PrefetchRoutes } from "@/features/shell/prefetch-routes";
 import { getApplications } from "@/lib/api";
 import { prepLookBack, takeawayShowsOn } from "@/lib/applications";
 import { getCurrentUser } from "@/lib/dal";
@@ -30,15 +31,19 @@ async function InterviewPageBody({ params, searchParams }: Pick<Props, "params" 
   const interview = app?.interviews.find((i) => i.id === interviewId);
   if (!app || !interview) notFound();
   return (
-    <InterviewPage
-      user={user}
-      app={app}
-      interview={interview}
-      // Worked out here, from every Application, so only what shows reaches the browser.
-      lookBack={interview.completed ? undefined : prepLookBack(applications, app, interview)}
-      showsOn={takeawayShowsOn(applications, app, interview)}
-      // Add the date on the Application page: Edit details opens at once.
-      editDetails={search[EDIT_PARAM] === "details"}
-    />
+    <>
+      <InterviewPage
+        user={user}
+        app={app}
+        interview={interview}
+        // Worked out here, from every Application, so only what shows reaches the browser.
+        lookBack={interview.completed ? undefined : prepLookBack(applications, app, interview)}
+        showsOn={takeawayShowsOn(applications, app, interview)}
+        // Add the date on the Application page: Edit details opens at once.
+        editDetails={search[EDIT_PARAM] === "details"}
+      />
+      {/* The other Rounds, latest first, then the Application page, also after a save expires them. */}
+      <PrefetchRoutes hrefs={prefetchHrefs(app, interview.id)} />
+    </>
   );
 }

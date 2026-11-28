@@ -34,10 +34,10 @@ describe("signInWithGoogle", () => {
 });
 
 describe("signOutAction", () => {
-  it("drops the job seeker's cached Applications, then signs them out", async () => {
+  it("drops the job seeker's cached Applications and Account, then signs them out", async () => {
     vi.mocked(findCurrentUser).mockResolvedValue(user);
     await signOutAction();
-    expect(updateTag).toHaveBeenCalledExactlyOnceWith("applications:seeker-1");
+    expect(vi.mocked(updateTag).mock.calls).toEqual([["applications:seeker-1"], ["account:seeker-1"]]);
     expect(signOut).toHaveBeenCalledWith({ redirectTo: "/" });
   });
 
