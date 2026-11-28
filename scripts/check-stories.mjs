@@ -60,6 +60,7 @@ export const ON_PAGE = {
   "src/features/shell/app-footer.tsx": "/dashboard",
   "src/features/shell/dashboard-link.tsx": "/applications/new",
   "src/features/shell/form-page.tsx": "/applications/new",
+  "src/features/shell/theme-script.tsx": "/",
 };
 
 const ROOTS = ["src/components/ui", ...readdirSync("src/features").map((name) => join("src/features", name))];

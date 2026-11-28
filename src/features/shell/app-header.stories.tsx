@@ -28,6 +28,19 @@ export const Default: Story = {
     await expect(canvasElement.querySelector('img[src*="bigfoot-welcome"]')).toHaveAttribute("alt", "");
     await expect(canvas.getByRole("link", { name: "Dashboard" })).toHaveAttribute("aria-current", "page");
     await expect(canvas.getByRole("button", { name: "Account menu, Alex Morgan" })).toHaveTextContent("AM");
+    // The dark mode toggle sits just before the avatar (BIG-251).
+    await expect(canvas.getByRole("button", { name: "Dark mode" })).toBeVisible();
+  },
+};
+
+/** On a 320 px phone: the wordmark, Dashboard, the dark mode toggle and the avatar all fit in the bar. */
+export const Phone: Story = {
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+  play: async ({ canvas, canvasElement }) => {
+    const doc = canvasElement.ownerDocument.documentElement;
+    await expect(doc.scrollWidth).toBeLessThanOrEqual(doc.clientWidth);
+    await expect(canvas.getByRole("button", { name: "Dark mode" })).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "Account menu, Alex Morgan" })).toBeVisible();
   },
 };
 

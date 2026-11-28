@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { buttonClasses } from "@/components/ui/button-classes";
+import { ThemeScript } from "@/features/shell/theme-script";
 import "./globals.css";
 
 // Allo (allo-font, SIL OFL 1.1), self-hosted from the npm package so dev, smoke and build
@@ -37,7 +38,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${allo.variable} antialiased`}>
+    // The theme script sets data-theme on <html> before React hydrates (BIG-251).
+    <html lang="en" className={`${allo.variable} antialiased`} suppressHydrationWarning>
+      <head>
+        <ThemeScript />
+      </head>
       <body className="min-h-dvh font-sans">
         {/* First stop for Tab on every page. Each page's <main> has id="main". */}
         <a href="#main" className={`skip-link ${buttonClasses("brand")}`}>

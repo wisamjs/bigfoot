@@ -58,6 +58,10 @@ export const Mobile: Story = {
     const button = within(hero).getByRole("link", { name: "Find your Bigfoot" }).getBoundingClientRect();
     await expect(button.height).toBeGreaterThanOrEqual(44);
     await expect(button.width).toBeGreaterThan(doc.clientWidth - 64);
+    // The dark mode toggle stays in the bar beside the menu button, not inside the menu (BIG-251).
+    const banner = canvas.getByRole("banner");
+    await expect(within(banner).getByRole("button", { name: "Dark mode" })).toBeVisible();
+    await expect(within(banner).getByRole("button", { name: "Open menu" })).toBeVisible();
     const art = canvasElement.querySelector('img[src*="bigfoot-welcome"]')!.getBoundingClientRect();
     const heading = canvas.getByRole("heading", { level: 1 }).getBoundingClientRect();
     await expect(art.bottom).toBeLessThanOrEqual(heading.top);

@@ -151,6 +151,7 @@ export const Phone: Story = {
   globals: { viewport: { value: "mobile1", isRotated: false } },
   play: async ({ canvas, canvasElement }) => {
     await expect(canvas.getByText("View only · shared by Wisam Zaghal")).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "Dark mode" })).toBeVisible();
     // The Bigfoot family, smaller, right of the heading (BIG-232).
     await expectBigfootClear(canvasElement, "bigfoot-family");
     await expect(canvas.getByRole("heading", { name: "Interviews" })).toBeVisible();

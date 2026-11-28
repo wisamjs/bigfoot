@@ -6,6 +6,7 @@ import Link from "next/link";
 import { SignInNote } from "@/features/auth/sign-in-note";
 import { buttonClasses } from "@/components/ui/button-classes";
 import { Container } from "@/components/ui/container";
+import { ThemeToggle } from "@/features/shell/theme-toggle";
 import { Wordmark } from "@/features/shell/wordmark";
 
 export function Navbar() {
@@ -18,25 +19,25 @@ export function Navbar() {
           <Wordmark />
         </a>
 
-        <div className="hidden items-center gap-3 md:flex">
-          <Link href="/sign-in" className={buttonClasses("tertiary", "sm")}>
+        <div className="flex items-center gap-2 md:gap-3">
+          <ThemeToggle />
+          <Link href="/sign-in" className={`${buttonClasses("tertiary", "sm")} hidden md:inline-flex`}>
             Sign in
           </Link>
-          <Link href="/sign-up" className={buttonClasses("brand", "sm")}>
+          <Link href="/sign-up" className={`${buttonClasses("brand", "sm")} hidden md:inline-flex`}>
             Find your Bigfoot
           </Link>
+          <button
+            type="button"
+            className="btn btn-tertiary size-11 md:hidden"
+            aria-expanded={open}
+            aria-controls="mobile-menu"
+            aria-label={open ? "Close menu" : "Open menu"}
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? <X className="size-4" aria-hidden /> : <Menu className="size-4" aria-hidden />}
+          </button>
         </div>
-
-        <button
-          type="button"
-          className="btn btn-tertiary size-11 md:hidden"
-          aria-expanded={open}
-          aria-controls="mobile-menu"
-          aria-label={open ? "Close menu" : "Open menu"}
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? <X className="size-4" aria-hidden /> : <Menu className="size-4" aria-hidden />}
-        </button>
       </Container>
 
       {open && (
