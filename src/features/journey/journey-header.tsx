@@ -2,10 +2,11 @@ import { Eye, Lock } from "lucide-react";
 import { lockAction } from "@/app/journey/[id]/actions";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { ThemeToggle } from "@/features/shell/theme-toggle";
 import { Wordmark } from "@/features/shell/wordmark";
 
 /**
- * The Journey's header (BIG-197): Bigfoot, "View only", who shared it, and Lock, which forgets the
+ * The Journey's header (BIG-197): Bigfoot, "View only", who shared it, the light and dark mode toggle, and Lock, which forgets the
  * Viewer's cookie and goes back to the Passcode page. On a phone, "View only · shared by …" moves to
  * a band under the bar. The job seeker's own preview (BIG-198) has no link `id`, so no Lock.
  */
@@ -21,6 +22,7 @@ export function JourneyHeader({ id, sharedBy }: { id?: string; sharedBy: string 
         </span>
         <span className="flex-1" />
         {sharedByText && <span className="hidden text-sm text-body sm:inline">{sharedByText}</span>}
+        <ThemeToggle />
         {id && (
           <form action={lockAction.bind(null, id)}>
             <Button type="submit" variant="secondary">

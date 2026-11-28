@@ -18,10 +18,9 @@ sb.mock(import("../src/app/applications/actions.ts"));
 sb.mock(import("../src/app/account/actions.ts"));
 sb.mock(import("../src/app/journey/[id]/actions.ts"));
 
-// Pages with no stories (tokens.mdx) run no decorator: start dark, apply again once linked sheets
-// (a built Storybook's CSS) have loaded, and follow the toolbar from the preview channel.
+// Pages with no stories (tokens.mdx) run no decorator: start dark, and follow the toolbar from the
+// preview channel.
 applyTheme();
-window.addEventListener("load", () => applyTheme(), { once: true });
 addons.getChannel().on("globalsUpdated", ({ globals }: { globals: Record<string, unknown> }) =>
   applyTheme(globals.theme === "light" ? "light" : "dark"),
 );

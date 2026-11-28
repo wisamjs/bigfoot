@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* dark: follows data-theme on <html>, as the dark tokens do, not the system setting alone. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /*
  * Colour tokens, in two tiers (.claude/skills/typeui-design-system/colors.md):
  *
@@ -208,70 +211,71 @@
 }
 
 /* @tokens dark */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface: var(--mauve-900);
-    --surface-white: var(--mauve-950);
-    --card: var(--mauve-800);
-    --card-strong: var(--mauve-700);
+/* Dark mode, chosen by data-theme on <html>: src/features/shell/theme.ts sets it before the first
+   paint, from the saved choice or the system setting (BIG-251). */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: var(--mauve-900);
+  --surface-white: var(--mauve-950);
+  --card: var(--mauve-800);
+  --card-strong: var(--mauve-700);
 
-    --brand: var(--pink-400);
-    --brand-soft: var(--pink-800);
-    --brand-softer: var(--mauve-900);
-    --on-brand: var(--mauve-900);
+  --brand: var(--pink-400);
+  --brand-soft: var(--pink-800);
+  --brand-softer: var(--mauve-900);
+  --on-brand: var(--mauve-900);
 
-    --heading: var(--mauve-50);
-    --body: var(--mauve-300);
-    --body-subtle: var(--mauve-400);
-    --fg-brand: var(--pink-300);
-    --fg-brand-strong: var(--pink-100);
+  --heading: var(--mauve-50);
+  --body: var(--mauve-300);
+  --body-subtle: var(--mauve-400);
+  --fg-brand: var(--pink-300);
+  --fg-brand-strong: var(--pink-100);
 
-    --line: var(--mauve-800);
-    --line-medium: var(--mauve-700);
-    /* A step lighter than --brand-soft, which is too close to --card to see (BIG-195) */
-    --line-brand-subtle: var(--pink-600);
-    --line-brand: var(--pink-300);
+  --line: var(--mauve-800);
+  --line-medium: var(--mauve-700);
+  /* A step lighter than --brand-soft, which is too close to --card to see (BIG-195) */
+  --line-brand-subtle: var(--pink-600);
+  --line-brand: var(--pink-300);
 
-    --skeleton: var(--pink-600);
+  --skeleton: var(--pink-600);
 
-    --success-soft: var(--green-950);
-    --fg-success-strong: var(--green-200);
-    --line-success-subtle: var(--green-700);
-    --warning-soft: var(--orange-950);
-    --fg-warning: var(--orange-200);
-    --line-warning-subtle: var(--orange-800);
-    --danger-soft: var(--red-950);
-    --fg-danger: var(--red-300);
-    --line-danger-subtle: var(--red-800);
-    --line-danger: var(--red-400);
+  --success-soft: var(--green-950);
+  --fg-success-strong: var(--green-200);
+  --line-success-subtle: var(--green-700);
+  --warning-soft: var(--orange-950);
+  --fg-warning: var(--orange-200);
+  --line-warning-subtle: var(--orange-800);
+  --danger-soft: var(--red-950);
+  --fg-danger: var(--red-300);
+  --line-danger-subtle: var(--red-800);
+  --line-danger: var(--red-400);
 
-    --tone-purple: var(--purple-950);
-    --tone-purple-fg: var(--purple-200);
-    --tone-purple-line: var(--purple-800);
-    --tone-slate: var(--slate-950);
-    --tone-slate-fg: var(--slate-200);
-    --tone-slate-line: var(--slate-800);
-    --tone-blue: var(--blue-950);
-    --tone-blue-fg: var(--blue-200);
-    --tone-blue-line: var(--blue-800);
-    --tone-green: var(--green-950);
-    --tone-green-fg: var(--green-200);
-    --tone-green-line: var(--green-700);
-    --tone-yellow: var(--yellow-950);
-    --tone-yellow-fg: var(--yellow-200);
-    --tone-yellow-line: var(--yellow-800);
-    --tone-orange: var(--orange-950);
-    --tone-orange-fg: var(--orange-200);
-    --tone-orange-line: var(--orange-800);
-    --tone-red: var(--red-600);
-    --tone-red-line: var(--red-400);
-    --tone-gray: var(--gray-800);
-    --tone-gray-fg: var(--gray-300);
-    --tone-gray-line: var(--gray-700);
+  --tone-purple: var(--purple-950);
+  --tone-purple-fg: var(--purple-200);
+  --tone-purple-line: var(--purple-800);
+  --tone-slate: var(--slate-950);
+  --tone-slate-fg: var(--slate-200);
+  --tone-slate-line: var(--slate-800);
+  --tone-blue: var(--blue-950);
+  --tone-blue-fg: var(--blue-200);
+  --tone-blue-line: var(--blue-800);
+  --tone-green: var(--green-950);
+  --tone-green-fg: var(--green-200);
+  --tone-green-line: var(--green-700);
+  --tone-yellow: var(--yellow-950);
+  --tone-yellow-fg: var(--yellow-200);
+  --tone-yellow-line: var(--yellow-800);
+  --tone-orange: var(--orange-950);
+  --tone-orange-fg: var(--orange-200);
+  --tone-orange-line: var(--orange-800);
+  --tone-red: var(--red-600);
+  --tone-red-line: var(--red-400);
+  --tone-gray: var(--gray-800);
+  --tone-gray-fg: var(--gray-300);
+  --tone-gray-line: var(--gray-700);
 
-    --glint-highlight: color-mix(in srgb, var(--white) 14%, transparent);
-    --glint-shadow: color-mix(in srgb, var(--mauve-950) 30%, transparent);
-  }
+  --glint-highlight: color-mix(in srgb, var(--white) 14%, transparent);
+  --glint-shadow: color-mix(in srgb, var(--mauve-950) 30%, transparent);
 }
 
 /* @tokens theme */

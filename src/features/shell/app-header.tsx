@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AccountMenu } from "@/features/shell/account-menu";
+import { ThemeToggle } from "@/features/shell/theme-toggle";
 import { Wordmark } from "@/features/shell/wordmark";
 import type { CurrentUser } from "@/lib/dal";
 
@@ -9,8 +10,8 @@ import type { CurrentUser } from "@/lib/dal";
 const links = [{ href: "/dashboard", label: "Dashboard" }] as const;
 
 /**
- * Header for signed-in pages (BIG-173): Bigfoot and the wordmark (a link to the Dashboard), the signed-in pages as pills, and the job
- * seeker's avatar, which opens the Account menu with Sign out. Without a user (a page's loading
+ * Header for signed-in pages (BIG-173): Bigfoot and the wordmark (a link to the Dashboard), the signed-in pages as pills, the light and dark mode toggle,
+ * and the job seeker's avatar, which opens the Account menu with Sign out. Without a user (a page's loading
  * state) it is the same header with a shape where the avatar goes. A page not in the nav (Account)
  * leaves `current` out and highlights nothing.
  */
@@ -36,6 +37,7 @@ export function AppHeader({ user, current }: { user?: CurrentUser; current?: (ty
             ))}
           </ul>
         </nav>
+        <ThemeToggle />
         {user ? <AccountMenu user={user} /> : <Skeleton className="size-10 rounded-full" />}
       </Container>
     </header>
