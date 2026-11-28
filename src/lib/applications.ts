@@ -334,6 +334,14 @@ export function roundNumber(app: Pick<Application, "interviews">, interview: Pic
   return app.interviews.toSorted(byInterviewOrder).findIndex((i) => i.id === interview.id) + 1;
 }
 
+/**
+ * An Application's Interviews from the latest Round to Round 1, so Unscheduled ones come first: the
+ * order its Interview pages are prefetched in (BIG-205).
+ */
+export function interviewsLatestFirst(app: Pick<Application, "interviews">): Interview[] {
+  return app.interviews.toSorted(byInterviewOrder).toReversed();
+}
+
 /** "Round 3 · Retrospective System Design": an Interview's title with its Round number before it. */
 export function roundTitle(round: number, title: string): string {
   return `Round ${round} · ${title}`;

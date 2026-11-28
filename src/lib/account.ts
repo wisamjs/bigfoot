@@ -25,3 +25,12 @@ export const SHARE_LINKS_MAX = 10;
 
 /** How long a Share link works after it is created or renewed; set by the API. */
 export const SHARE_LINK_LIFETIME_DAYS = 7;
+
+/**
+ * The cache tag of one job seeker's Access tokens and Share links: the Account page's reads
+ * (`getAccessTokens` and `getShareLinks` in src/lib/api.ts). Every Account Server Action that changes
+ * either, signing out and deleting the account expire it.
+ */
+export function accountTag(jobSeekerId: string) {
+  return `account:${jobSeekerId}`;
+}

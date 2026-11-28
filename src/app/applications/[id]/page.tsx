@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ApplicationPage, ApplicationPageSkeleton } from "@/features/applications/application-page";
-import { ADDED_PARAM } from "@/features/applications/routes";
+import { ADDED_PARAM, prefetchHrefs } from "@/features/applications/routes";
+import { PrefetchRoutes } from "@/features/shell/prefetch-routes";
 import { getApplications } from "@/lib/api";
 import { nextInterview, prepLookBack } from "@/lib/applications";
 import { getCurrentUser } from "@/lib/dal";
@@ -28,12 +29,16 @@ async function Application({ params, searchParams }: Pick<PageProps<"/applicatio
   if (!app) notFound();
   const next = nextInterview(app);
   return (
-    <ApplicationPage
-      user={user}
-      app={app}
-      justAdded={query[ADDED_PARAM] === "1"}
-      // Worked out here, from every Application, so only what shows reaches the browser.
-      lookBack={next ? prepLookBack(applications, app, next) : undefined}
-    />
+    <>
+      <ApplicationPage
+        user={user}
+        app={app}
+        justAdded={query[ADDED_PARAM] === "1"}
+        // Worked out here, from every Application, so only what shows reaches the browser.
+        lookBack={next ? prepLookBack(applications, app, next) : undefined}
+      />
+      {/* Every Interview page, latest first, so the first click into one shows it at once. */}
+      <PrefetchRoutes hrefs={prefetchHrefs(app)} />
+    </>
   );
 }

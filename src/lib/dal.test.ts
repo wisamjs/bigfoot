@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-vi.mock("next/server", () => ({ connection: vi.fn(async () => {}) }));
+vi.mock("next/cache", () => ({ cacheLife: vi.fn() }));
 vi.mock("next/navigation", () => ({
   redirect: vi.fn((path: string) => {
     throw new Error(`NEXT_REDIRECT ${path}`);
@@ -9,7 +9,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 
-const { connection } = await import("next/server");
+const { cacheLife } = await import("next/cache");
 const { redirect } = await import("next/navigation");
 const { auth } = await import("@/auth");
 const { findCurrentUser, getCurrentUser } = await import("./dal");
@@ -19,12 +19,10 @@ const signedIn = { user: { id: "g-1", name: "Wisam Zaghal", email: "wisam@exampl
 afterEach(() => vi.clearAllMocks());
 
 describe("findCurrentUser", () => {
-  it("opts into request time before reading the session", async () => {
-    vi.mocked(auth).mockImplementation((async () => {
-      expect(connection).toHaveBeenCalledOnce();
-      return signedIn;
-    }) as never);
+  it("keeps the session as long as the pages' reads, so a prefetch can carry them (BIG-205)", async () => {
+    vi.mocked(auth).mockResolvedValue(signedIn as never);
     expect(await findCurrentUser()).toMatchObject({ id: "g-1", firstName: "Wisam" });
+    expect(cacheLife).toHaveBeenCalledExactlyOnceWith({ stale: 300 });
   });
 
   it("is null when nobody is signed in", async () => {

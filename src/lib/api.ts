@@ -2,6 +2,7 @@ import "server-only";
 import * as Sentry from "@sentry/nextjs";
 import { SignJWT } from "jose";
 import { cacheLife, cacheTag } from "next/cache";
+import { accountTag } from "@/lib/account";
 import { applicationsTag, type Application, type ApplicationFields, type Interview, type InterviewFields } from "@/lib/applications";
 import type { Journey, ShareLinkStatus } from "@/lib/journey";
 import { jobSeekerTag } from "@/lib/sentry";
@@ -11,6 +12,14 @@ import { jobSeekerTag } from "@/lib/sentry";
 
 /** Where the API is. Also the address a job seeker's scripts call with an Access token (docs/adr/0003). */
 export const API_URL = process.env.API_URL ?? "http://localhost:8000";
+
+/**
+ * How long the signed-in pages' reads are kept (docs/adr/0006). stale: the browser reuses a page it
+ * already holds, with no request, for 5 minutes, so going back shows it at once; it is also the least
+ * a read needs for a prefetch to carry it. revalidate: after a minute the server refreshes the read
+ * in the background on the next visit. expire: after an hour unused, the next visit waits for the API.
+ */
+const PAGE_CACHE_LIFE = { stale: 300, revalidate: 60, expire: 3600 };
 
 export class ApiError extends Error {
   constructor(
@@ -38,7 +47,17 @@ async function token(jobSeekerId: string) {
 
 /** Names the job seeker to Sentry (a hash only) so errors in the requests that follow carry it. */
 async function identify(jobSeekerId: string) {
-  Sentry.setUser({ id: await jobSeekerTag(jobSeekerId) });
+  Sentry.setUser({ id: await sentryUserId(jobSeekerId) });
+}
+
+/**
+ * The hash, kept: it never changes for an id. Hashing is async work, and a prefetch stops at async
+ * work that isn't cached, so without this no prefetch would carry a page that reads the API (BIG-205).
+ */
+async function sentryUserId(jobSeekerId: string) {
+  "use cache";
+  cacheLife("max");
+  return jobSeekerTag(jobSeekerId);
 }
 
 async function request<T>(jobSeekerId: string, path: string, init: { method?: string; body?: unknown } = {}) {
@@ -163,6 +182,23 @@ export function listAccessTokens(jobSeekerId: string) {
   return request<AccessToken[]>(jobSeekerId, "/me/access-tokens");
 }
 
+/**
+ * The job seeker's Access tokens, kept like `getApplications` for the Account page (BIG-205). Their
+ * changes through the Account Server Actions expire them at once; a token's last use by a script
+ * shows once the lifetime runs out. `listAccessTokens` always asks the API.
+ */
+export async function getAccessTokens(jobSeekerId: string) {
+  await identify(jobSeekerId);
+  return cachedAccessTokens(jobSeekerId);
+}
+
+async function cachedAccessTokens(jobSeekerId: string) {
+  "use cache";
+  cacheTag(accountTag(jobSeekerId));
+  cacheLife(PAGE_CACHE_LIFE);
+  return send<AccessToken[]>(jobSeekerId, "/me/access-tokens");
+}
+
 export function createAccessToken(jobSeekerId: string, name: string) {
   return request<NewAccessToken>(jobSeekerId, "/me/access-tokens", { method: "POST", body: { name } });
 }
@@ -190,6 +226,23 @@ export type NewShareLink = ShareLink & { passcode: string };
 
 export function listShareLinks(jobSeekerId: string) {
   return request<ShareLink[]>(jobSeekerId, "/me/share-links");
+}
+
+/**
+ * The job seeker's Share links, kept like `getApplications` for the Account page (BIG-205). Their
+ * changes through the Account Server Actions expire them at once; a Viewer opening one shows once the
+ * lifetime runs out. `listShareLinks` always asks the API.
+ */
+export async function getShareLinks(jobSeekerId: string) {
+  await identify(jobSeekerId);
+  return cachedShareLinks(jobSeekerId);
+}
+
+async function cachedShareLinks(jobSeekerId: string) {
+  "use cache";
+  cacheTag(accountTag(jobSeekerId));
+  cacheLife(PAGE_CACHE_LIFE);
+  return send<ShareLink[]>(jobSeekerId, "/me/share-links");
 }
 
 /** `sharedBy` is the job seeker's name as their Viewers see it: "Shared by Wisam Zaghal". */
@@ -284,10 +337,7 @@ export async function getApplications(jobSeekerId: string) {
 async function cachedApplications(jobSeekerId: string) {
   "use cache";
   cacheTag(applicationsTag(jobSeekerId));
-  // stale: the browser reuses a page it already holds, with no request, for 5 minutes, so going back
-  // shows it at once. revalidate: after a minute the server refreshes the read in the background on
-  // the next visit. expire: after an hour unused, the next visit waits for the API.
-  cacheLife({ stale: 300, revalidate: 60, expire: 3600 });
+  cacheLife(PAGE_CACHE_LIFE);
   return send<Application[]>(jobSeekerId, "/applications");
 }
 

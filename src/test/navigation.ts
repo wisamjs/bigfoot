@@ -31,5 +31,7 @@ export function useSearchParams() {
   return new URLSearchParams(search);
 }
 
+// One router for the test's life, as Next.js gives, so effects that depend on it run once.
+const router = { push: vi.fn(), replace: vi.fn(), back: vi.fn(), prefetch: vi.fn() };
 // eslint-disable-next-line @eslint-react/no-unnecessary-use-prefix -- it stands in for next/navigation's useRouter, so it keeps that name.
-export const useRouter = () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() });
+export const useRouter = () => router;
