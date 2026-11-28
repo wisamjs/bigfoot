@@ -18,6 +18,22 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/**
+ * Each page's Bigfoot (BIG-229): decorative, with an empty alt, shown on a laptop and, where it
+ * would crowd the card or the heading, hidden on a phone.
+ */
+const withBigfoot = (story: Story, sprite: string, shown: boolean): Story => ({
+  ...story,
+  play: async (context) => {
+    await story.play?.(context);
+    const art = context.canvasElement.querySelector<HTMLImageElement>(`img[src*="${sprite}"]`);
+    await expect(art).toBeInTheDocument();
+    await expect(art).toHaveAttribute("alt", "");
+    if (shown) await expect(art).toBeVisible();
+    else await expect(art).not.toBeVisible();
+  },
+});
+
 /** In flight: an Offer, upcoming and completed Interviews, the calendar, and where each Application stands. */
 const inFlight: Story = {
   play: async ({ canvas }) => {
@@ -25,8 +41,8 @@ const inFlight: Story = {
     await expect(canvas.getByRole("region", { name: "Where things stand" })).toBeVisible();
   },
 };
-export const InFlightDesktop: Story = { ...inFlight, ...DESKTOP };
-export const InFlightMobile: Story = { ...inFlight, ...MOBILE };
+export const InFlightDesktop: Story = { ...withBigfoot(inFlight, "bigfoot-family", true), ...DESKTOP };
+export const InFlightMobile: Story = { ...withBigfoot(inFlight, "bigfoot-family", false), ...MOBILE };
 
 /** Nothing In Progress and no Offers. */
 const nothing: Story = {
@@ -35,8 +51,8 @@ const nothing: Story = {
     await expect(canvas.getByText("No Applications in progress right now.")).toBeVisible();
   },
 };
-export const NothingInProgressDesktop: Story = { ...nothing, ...DESKTOP };
-export const NothingInProgressMobile: Story = { ...nothing, ...MOBILE };
+export const NothingInProgressDesktop: Story = { ...withBigfoot(nothing, "bigfoot-family", true), ...DESKTOP };
+export const NothingInProgressMobile: Story = { ...withBigfoot(nothing, "bigfoot-family", false), ...MOBILE };
 
 /** The Passcode page, before the Viewer has typed it. */
 const passcode: Story = {
@@ -46,8 +62,8 @@ const passcode: Story = {
     await expect(canvas.getByRole("button", { name: "See Alex’s progress" })).toBeEnabled();
   },
 };
-export const PasscodeDesktop: Story = { ...passcode, ...DESKTOP };
-export const PasscodeMobile: Story = { ...passcode, ...MOBILE };
+export const PasscodeDesktop: Story = { ...withBigfoot(passcode, "bigfoot-peek-right", true), ...DESKTOP };
+export const PasscodeMobile: Story = { ...withBigfoot(passcode, "bigfoot-peek-right", false), ...MOBILE };
 
 /** The Passcode page, locked after five wrong tries. */
 const locked: Story = {
@@ -56,8 +72,8 @@ const locked: Story = {
     await expect(canvas.getByRole("button", { name: "See Alex’s progress" })).toBeDisabled();
   },
 };
-export const LockedDesktop: Story = { ...locked, ...DESKTOP };
-export const LockedMobile: Story = { ...locked, ...MOBILE };
+export const LockedDesktop: Story = { ...withBigfoot(locked, "bigfoot-peek-right", true), ...DESKTOP };
+export const LockedMobile: Story = { ...withBigfoot(locked, "bigfoot-peek-right", false), ...MOBILE };
 
 /** The link expired. */
 const expired: Story = {
@@ -66,8 +82,8 @@ const expired: Story = {
     await expect(canvas.getByRole("heading", { level: 1, name: "This link has expired" })).toBeVisible();
   },
 };
-export const ExpiredDesktop: Story = { ...expired, ...DESKTOP };
-export const ExpiredMobile: Story = { ...expired, ...MOBILE };
+export const ExpiredDesktop: Story = { ...withBigfoot(expired, "bigfoot-peek-over", true), ...DESKTOP };
+export const ExpiredMobile: Story = { ...withBigfoot(expired, "bigfoot-peek-over", false), ...MOBILE };
 
 /** The link was stopped, or never existed. */
 const notActive: Story = {
@@ -76,8 +92,8 @@ const notActive: Story = {
     await expect(canvas.getByRole("heading", { level: 1, name: "This link isn’t active" })).toBeVisible();
   },
 };
-export const NotActiveDesktop: Story = { ...notActive, ...DESKTOP };
-export const NotActiveMobile: Story = { ...notActive, ...MOBILE };
+export const NotActiveDesktop: Story = { ...withBigfoot(notActive, "bigfoot-peek-over", true), ...DESKTOP };
+export const NotActiveMobile: Story = { ...withBigfoot(notActive, "bigfoot-peek-over", false), ...MOBILE };
 
 /** While the route asks which page the link shows. */
 const loading: Story = { render: () => <SharedPageSkeleton /> };
