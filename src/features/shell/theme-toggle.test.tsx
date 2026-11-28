@@ -6,6 +6,18 @@ import { ThemeToggle } from "./theme-toggle";
 
 const html = document.documentElement;
 
+/**
+ * Storage that throws, as in a private window or with site data turned off. It replaces the global
+ * rather than spying on localStorage: happy-dom's Storage is a Proxy that a spy outlives, which left
+ * storage blocked for every later test.
+ */
+function blockStorage() {
+  const blocked = () => {
+    throw new Error("blocked");
+  };
+  vi.stubGlobal("localStorage", { getItem: blocked, setItem: blocked });
+}
+
 /** A system colour scheme the tests can change, with the listeners matchMedia gave out. */
 function systemScheme(dark: boolean) {
   const listeners = new Set<() => void>();
@@ -31,8 +43,14 @@ function runThemeScript() {
   new Function(THEME_SCRIPT)();
 }
 
-beforeEach(() => delete html.dataset.theme);
-afterEach(() => vi.restoreAllMocks());
+beforeEach(() => {
+  delete html.dataset.theme;
+  localStorage.clear();
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe("the theme script", () => {
   it("follows the system setting while nothing is saved, live", () => {
@@ -61,9 +79,8 @@ describe("the theme script", () => {
   });
 
   it("follows the system when storage is blocked", () => {
-    vi.spyOn(localStorage, "getItem").mockImplementation(() => {
-      throw new Error("blocked");
-    });
+    localStorage.setItem(THEME_KEY, "light");
+    blockStorage();
     systemScheme(true);
     runThemeScript();
     expect(html.dataset.theme).toBe("dark");
@@ -108,9 +125,7 @@ describe("ThemeToggle", () => {
 
   it("still switches the page when storage is blocked", async () => {
     const user = userEvent.setup();
-    vi.spyOn(localStorage, "setItem").mockImplementation(() => {
-      throw new Error("blocked");
-    });
+    blockStorage();
     html.dataset.theme = "light";
     render(<ThemeToggle />);
     await user.click(screen.getByRole("button", { name: "Dark mode" }));
