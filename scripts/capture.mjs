@@ -4,7 +4,7 @@
 // own job seeker holding the Applications from scripts/dev-applications.mjs, emptied afterwards
 // (none, for a state with `applications: "none"`).
 //   npm run capture -- /dashboard --width 1000 --selector 'section[aria-labelledby="applications-title"]'
-//   npm run capture -- /dashboard --state show-done --width 400 --theme dark
+//   npm run capture -- /dashboard --state account-menu --width 400 --theme dark
 //   npm run capture -- '/applications/[id]' --state delete-confirmation
 // Options:
 //   --width <px>      viewport width (default 1440)

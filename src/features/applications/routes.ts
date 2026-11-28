@@ -1,3 +1,13 @@
+import type { ProgressFilter } from "@/lib/applications";
+
+/** The Applications list's search param for its Progress filter (BIG-252): `?progress=waiting`. */
+export const PROGRESS_PARAM = "progress";
+
+/** The Applications list, filtered to one Progress value when `progress` names one; All leaves no param. */
+export function applicationsHref(progress: ProgressFilter = "all") {
+  return progress === "all" ? "/applications" : `/applications?${new URLSearchParams({ [PROGRESS_PARAM]: progress })}`;
+}
+
 /** The Add Application page. */
 export const ADD_APPLICATION_HREF = "/applications/new";
 

@@ -352,8 +352,8 @@ function dateErrors(at: DateAndTime, problem: string | undefined): FieldErrors<"
 
 /**
  * The date and time, two controls under one label, so a fieldset; each names itself "Date" and
- * "Time". Under them, Date TBD (BIG-221) unless the Application is Done: a native checkbox, like the
- * dashboard's Show done, whose label is its 44px touch target. Ticking it clears and disables the
+ * "Time". Under them, Date TBD (BIG-221) unless the Application is Done: a native checkbox whose label
+ * is its 44px touch target. Ticking it clears and disables the
  * date and time, as the picker mounts again empty.
  */
 function DateOrTbdField({

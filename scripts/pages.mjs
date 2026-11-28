@@ -39,8 +39,6 @@ export const PAGES = [
     signedIn: true,
     expect: "Add Application",
     states: [
-      { name: "show-done", steps: [{ click: "label", text: "Show done" }], expect: "Rejected" },
-      { name: "sorted-by-location", steps: [{ click: "button", text: "Location" }], expect: "Remote" },
       { name: "nothing-scheduled", applications: "none", steps: [], expect: "All quiet in the woods" },
       { name: "account-menu", steps: [{ click: "button", text: "Account menu", pointer: true }], expect: "Sign out" },
     ],

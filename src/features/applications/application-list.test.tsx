@@ -78,9 +78,9 @@ describe("ApplicationList", () => {
     ]);
   });
 
-  it("adds Done rows last when asked", () => {
-    render(<ApplicationList applications={all} shown="everything" />);
-    expect(rows().at(-1)).toEqual(["Umbrella", "Done"]);
+  it("shows only the Done rows when Done is picked", () => {
+    render(<ApplicationList applications={all} shown="done" />);
+    expect(rows()).toEqual([["Umbrella", "Done"]]);
   });
 
   it("marks every Interview: completed green, the next in the brand colour, later ones muted", () => {
@@ -104,12 +104,12 @@ describe("ApplicationList", () => {
 
   it("marks a Done Application's completed Interviews grey (BIG-177)", () => {
     const past = interview("u-past", { at: "2026-11-02T15:00:00Z", completed: true, category: "recruiter", title: "Recruiter Screen" });
-    render(<ApplicationList applications={[{ ...rejected, interviews: [past] }]} shown="everything" />);
+    render(<ApplicationList applications={[{ ...rejected, interviews: [past] }]} shown="done" />);
     expect(marks(cell("Umbrella", 1))).toEqual([expect.stringContaining("bg-tone-gray-fg")]);
   });
 
   it("labels Progress by group, each in its own colour", () => {
-    render(<ApplicationList applications={all} shown="everything" />);
+    render(<ApplicationList applications={all} />);
     expect(within(cell("Acme", 1)).getByText("Waiting · 19 days")).toHaveClass("text-fg-warning");
     expect(within(cell("Birch", 1)).getByText("Interview scheduled")).toHaveClass("text-tone-blue-fg");
     expect(within(cell("Cedar", 1)).getByText("Offer")).toHaveClass("text-fg-success-strong");
@@ -184,7 +184,8 @@ describe("ApplicationList", () => {
   });
 
   it("shows a Done row's Outcome in Next, but not an Offer's, which Progress already says", () => {
-    render(<ApplicationList applications={[offer, rejected]} shown="everything" />);
+    render(<ApplicationList applications={[offer]} />);
+    render(<ApplicationList applications={[rejected]} shown="done" />);
     expect(within(cell("Umbrella", 2)).getByText("Rejected")).toBeInTheDocument();
     expect(within(within(row("Cedar")).getAllByRole("cell")[2]).getByText("—")).toBeInTheDocument();
   });
