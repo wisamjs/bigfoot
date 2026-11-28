@@ -9,6 +9,7 @@ import { fieldLabelClasses } from "@/components/ui/field";
 import { inputClasses } from "@/components/ui/input";
 import { ShareLinkFrame } from "@/features/journey/share-link-frame";
 import { initials } from "@/features/shell/avatar";
+import { PeekRightBigfoot } from "@/features/shell/illustrations";
 import { passcodeError } from "@/features/journey/journey-text";
 import { viewerCopy } from "@/lib/journey";
 
@@ -17,7 +18,9 @@ const IDLE: PasscodeState = { status: "idle" };
 /**
  * A Share link's Passcode page (BIG-197): who shared it, the Passcode field with Show, and the
  * button that opens their Journey. A wrong Passcode says so under the field; 5 wrong ones in 15
- * minutes lock the link (`locked` on load, or the 5th try), and the button stays disabled.
+ * minutes lock the link (`locked` on load, or the 5th try), and the button stays disabled. Bigfoot
+ * leans out from behind the card's right edge, one paw on it (BIG-229), where there is room beside
+ * the card: wide screens only.
  */
 export function PasscodeForm({ id, sharedBy, locked = false }: { id: string; sharedBy: string | null; locked?: boolean }) {
   const copy = viewerCopy(sharedBy);
@@ -28,7 +31,13 @@ export function PasscodeForm({ id, sharedBy, locked = false }: { id: string; sha
   const invalid = invalidProps("passcode-error", error);
 
   return (
-    <ShareLinkFrame>
+    <ShareLinkFrame
+      art={
+        // The sprite's straight left edge sits on the card's right border, so only the paw (inside
+        // the card's padding, clear of the field) overlaps the card.
+        <PeekRightBigfoot className="pointer-events-none absolute left-[calc(100%-10px)] top-[70px] hidden h-auto w-32 md:block" />
+      }
+    >
       <span
         aria-hidden
         className="grid size-[72px] place-items-center rounded-full border-2 border-line-brand bg-brand-soft text-2xl font-bold text-fg-brand-strong"

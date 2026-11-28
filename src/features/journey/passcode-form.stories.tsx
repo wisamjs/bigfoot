@@ -26,6 +26,16 @@ export const EnterPasscode: Story = {
   },
 };
 
+/** Bigfoot leans out from behind the card's right edge (BIG-229), on a light page wide enough for him. */
+export const BigfootLight: Story = {
+  globals: { theme: "light", viewport: { value: "desktop", isRotated: false } },
+  play: async ({ canvasElement }) => {
+    const art = canvasElement.querySelector('img[src*="bigfoot-peek-right"]');
+    await expect(art).toHaveAttribute("alt", "");
+    await expect(art).toBeVisible();
+  },
+};
+
 /** Show reveals what was typed. */
 export const ShowPasscode: Story = {
   play: async ({ canvas }) => {

@@ -9,6 +9,7 @@ import { JourneyApplications } from "@/features/journey/journey-applications";
 import { JourneyCalendar } from "@/features/journey/journey-calendar";
 import { JourneyHeader } from "@/features/journey/journey-header";
 import { JourneyNextInterview } from "@/features/journey/journey-next-interview";
+import { FamilyBigfoot } from "@/features/shell/illustrations";
 import { useToday } from "@/hooks/use-today";
 import {
   journeyCounts,
@@ -39,7 +40,8 @@ function timeZoneName(now: Date) {
  * counts, the next Interview, the Interviews calendar, and Where things stand. Times and days are
  * the Viewer's own, so it renders in the browser; the server sends JourneySkeleton. `now` is for
  * stories and tests; the page leaves it out. The job seeker's own preview (BIG-198) passes no link
- * `id`, so there is no Lock, and a `banner` above it all.
+ * `id`, so there is no Lock, and a `banner` above it all. Right of the heading, a Bigfoot family in a
+ * group hug (BIG-229): the people the Journey is shared with.
  */
 export function JourneyView({
   id,
@@ -61,7 +63,10 @@ export function JourneyView({
       <JourneyHeader id={id} sharedBy={journey.shared_by} />
       <main id="main" className="flex-1 py-8 sm:py-12">
         <Container className="flex flex-col gap-6 max-sm:px-4">
-          <div>
+          <div className="relative sm:pr-28">
+            {/* Out of the flow, so nothing moves; the padding keeps a long name from running under it.
+                Hidden on a phone, where it would crowd the heading. */}
+            <FamilyBigfoot className="pointer-events-none absolute right-0 top-1/2 hidden h-auto w-24 -translate-y-1/2 sm:block" />
             <h1 className="m-0 text-[32px] font-bold leading-[1.1] tracking-[-0.01em] text-heading sm:text-[44px]">
               {copy.heading}
             </h1>

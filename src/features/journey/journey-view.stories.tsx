@@ -123,6 +123,16 @@ export const WithOffers: Story = {
   },
 };
 
+/** The Bigfoot family right of the heading (BIG-229), on a light page. */
+export const BigfootLight: Story = {
+  globals: { theme: "light", viewport: { value: "desktop", isRotated: false } },
+  play: async ({ canvasElement }) => {
+    const art = canvasElement.querySelector('img[src*="bigfoot-family"]');
+    await expect(art).toHaveAttribute("alt", "");
+    await expect(art).toBeVisible();
+  },
+};
+
 /** No pronouns, and nothing private: no salary, notes or Applications that ended without an Offer. */
 export const NoPronouns: Story = {
   play: async ({ canvasElement }) => {
@@ -138,8 +148,10 @@ export const NoPronouns: Story = {
  */
 export const Phone: Story = {
   globals: { viewport: { value: "mobile1", isRotated: false } },
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     await expect(canvas.getByText("View only · shared by Wisam Zaghal")).toBeVisible();
+    // The Bigfoot family would crowd the heading on a phone (BIG-229).
+    await expect(canvasElement.querySelector('img[src*="bigfoot-family"]')).not.toBeVisible();
     await expect(canvas.getByRole("heading", { name: "Interviews" })).toBeVisible();
     await expect(canvas.getByRole("heading", { name: "After that" })).toBeVisible();
     await expect(canvas.queryByRole("heading", { name: "Coming up" })).not.toBeInTheDocument();
