@@ -110,7 +110,7 @@ describe("Add Interview", () => {
     await user.click(within(form!).getByRole("button", { name: "Add Interview" }));
     expect(actions.createInterviewAction).toHaveBeenCalledWith(
       "oak",
-      expect.objectContaining({ at: null, unscheduled: true, title: "Recruiter" }),
+      expect.objectContaining({ at: null, noDate: true, title: "Recruiter" }),
     );
 
     // Clearing the box gives the date and time back, empty: nothing is assumed.

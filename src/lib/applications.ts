@@ -45,6 +45,9 @@ export type InterviewCategory = (typeof INTERVIEW_CATEGORIES)[number];
 /** The longest Interview title the API stores, in characters. */
 export const INTERVIEW_TITLE_MAX_LENGTH = 200;
 
+/** The most Interviews an Application can have (api/app/domain.py). */
+export const INTERVIEWS_PER_APPLICATION_MAX = 50;
+
 /**
  * Participant (GLOSSARY.md): someone from the company the job seeker meets in an Interview. A role is
  * required, a name optional; a Participant belongs to one Application and can be in several of its Interviews.
@@ -121,7 +124,10 @@ export type Interview = {
   category: InterviewCategory;
   /** Interview title: the job seeker's own name for it, never blank. */
   title: string;
-  /** ISO timestamp; null when the Interview is Unscheduled ("Date TBD", docs/adr/0009). */
+  /**
+   * ISO timestamp; null when the Interview is Unscheduled ("Date TBD", docs/adr/0009), or Abandoned
+   * once its Application is Done ("Didn't happen").
+   */
   at: string | null;
   /** Interview notes, What they asked: the questions, one per line; null when there are none. */
   what_they_asked: string | null;
@@ -133,7 +139,7 @@ export type Interview = {
   prep_notes: string | null;
   /** Participants: who the job seeker meets, in the order they listed them; empty for one from before Bigfoot recorded them. */
   participants: Participant[];
-  /** Derived by the API: the date is in the past. An Unscheduled Interview is never completed. */
+  /** Derived by the API: the date is in the past. An Interview with no date, Unscheduled or Abandoned, is never completed. */
   completed: boolean;
   created_at: string;
   updated_at: string;
@@ -179,13 +185,23 @@ export type ApplicationFields = Omit<
 >;
 
 /**
+ * Whether one Interview happened, as the Mark done dialog answers it (GLOSSARY.md, Abandoned): the
+ * date it took place, the date it already has (kept), or null when it didn't happen.
+ */
+export type InterviewAnswer = { id: string; at: string | null };
+
+/** A change to an Application: its fields, and when marking it Done, the Mark done dialog's answers. */
+export type ApplicationChanges = Partial<ApplicationFields> & { interviews?: InterviewAnswer[] };
+
+/**
  * What a form sends: `at` is null while no date and time has been given. Validation refuses that
- * unless `unscheduled` is set: Date TBD was chosen, so null is sent and the Interview is Unscheduled.
+ * unless `noDate` is set: the job seeker chose no date (Date TBD, or Didn't happen on a Done
+ * Application), so null is sent and the Interview is Unscheduled, or Abandoned.
  */
 export type InterviewFields = Pick<Interview, "category" | "title" | InterviewNotesField | "prep_notes"> & {
   at: string | null;
-  /** Date TBD was chosen: the Interview is Unscheduled and `at` is sent as null. */
-  unscheduled?: boolean;
+  /** No date was chosen (Date TBD, or Didn't happen): `at` is sent as null. */
+  noDate?: boolean;
   participants: ParticipantInput[];
 };
 
@@ -286,6 +302,18 @@ export function isUnscheduled(interview: Pick<Interview, "at">): boolean {
   return interview.at === null;
 }
 
+/** What an Abandoned Interview shows where its date would be. */
+export const DIDNT_HAPPEN = "Didn’t happen";
+
+/**
+ * Abandoned (GLOSSARY.md, docs/adr/0009): an Interview with no date on a Done Application. It never
+ * took place because the Application ended first. Worked out, never stored, so Reopen makes it
+ * Unscheduled again.
+ */
+export function isAbandoned(app: Pick<Application, "status">, interview: Pick<Interview, "at">): boolean {
+  return app.status === "done" && interview.at === null;
+}
+
 /** An Interview known to have a date: a Scheduled one. */
 export type ScheduledInterview = Interview & { at: string };
 
@@ -307,18 +335,28 @@ export function byInterviewOrder(a: Pick<Interview, "at" | "created_at" | "id">,
   );
 }
 
-/** Interviews still ahead, soonest first, then Unscheduled ones in the order added. */
-export function upcomingInterviews(app: Pick<Application, "interviews">): Interview[] {
-  return app.interviews.filter((i) => !i.completed).toSorted(byInterviewOrder);
+/** Interviews still ahead, soonest first, then Unscheduled ones in the order added. Abandoned ones never are. */
+export function upcomingInterviews(app: Pick<Application, "interviews" | "status">): Interview[] {
+  return app.interviews.filter((i) => !i.completed && !isAbandoned(app, i)).toSorted(byInterviewOrder);
 }
 
 /** The soonest Interview still ahead, or the first Unscheduled one when none is Scheduled. */
-export function nextInterview(app: Pick<Application, "interviews">): Interview | null {
+export function nextInterview(app: Pick<Application, "interviews" | "status">): Interview | null {
   return upcomingInterviews(app)[0] ?? null;
 }
 
+/**
+ * The Interviews the Mark done dialog asks about, when an In Progress Application is marked Done
+ * (BIG-222): its Unscheduled ones, and its Scheduled ones dated after `now`, in Round order. Empty for
+ * a Done Application, whose Outcome can change without asking again.
+ */
+export function interviewsToAsk(app: Pick<Application, "interviews" | "status">, now: Date): Interview[] {
+  if (app.status === "done") return [];
+  return app.interviews.filter((i) => i.at === null || Date.parse(i.at) > now.getTime()).toSorted(byInterviewOrder);
+}
+
 /** The soonest Scheduled Interview still ahead, if any. */
-export function nextScheduledInterview(app: Pick<Application, "interviews">): ScheduledInterview | null {
+export function nextScheduledInterview(app: Pick<Application, "interviews" | "status">): ScheduledInterview | null {
   return upcomingInterviews(app).find(isScheduled) ?? null;
 }
 
@@ -683,12 +721,20 @@ export function applicationsTag(jobSeekerId: string) {
   return `applications:${jobSeekerId}`;
 }
 
-/** The Application page's Interviews (BIG-174): the next one, the others still ahead, and the completed ones, newest first. */
-export type InterviewSections = { next: Interview | null; later: Interview[]; completed: Interview[] };
+/**
+ * The Application page's Interviews (BIG-174): the next one, the others still ahead, the completed
+ * ones, newest first, and a Done Application's Abandoned ones, in Round order (BIG-222).
+ */
+export type InterviewSections = { next: Interview | null; later: Interview[]; completed: Interview[]; abandoned: Interview[] };
 
 export function interviewSections(app: Application): InterviewSections {
   const [next = null, ...later] = upcomingInterviews(app);
-  return { next, later, completed: app.interviews.filter((i) => i.completed).toReversed() };
+  return {
+    next,
+    later,
+    completed: app.interviews.filter((i) => i.completed).toReversed(),
+    abandoned: app.interviews.filter((i) => isAbandoned(app, i)).toSorted(byInterviewOrder),
+  };
 }
 
 /** The paragraphs of some notes: runs of text split by blank lines, trimmed. */
@@ -719,13 +765,41 @@ export type PrepLookBack = {
   theyAsked: { from: Interview; questions: string[] } | null;
 };
 
-/** Whether an Interview counts as a source of takeaways: completed, with a Takeaway for next time. */
-const hasTakeaway = (i: Interview) => i.completed && Boolean(i.takeaway?.trim());
+/**
+ * Whether an Interview can be a source of takeaways: it is over, completed or Abandoned (BIG-222). A
+ * lesson written for an Interview that never took place still carries over.
+ */
+function isOver(app: Application, interview: Interview): boolean {
+  return interview.completed || isAbandoned(app, interview);
+}
 
-/** The latest of some Interviews that pass `counts`, if any. Only completed ones pass, so each has a date. */
-function latest(candidates: DatedInterview<Interview>[], counts: (i: Interview) => boolean): DatedInterview | null {
-  const passing = candidates.filter((c): c is DatedInterview => counts(c.interview) && isScheduled(c.interview));
-  return passing.toSorted(byDate).at(-1) ?? null;
+/** What counts as having a takeaway to show: one over (isOver) with a Takeaway for next time. */
+type Counts = (candidate: DatedInterview<Interview>) => boolean;
+
+const hasTakeaway: Counts = ({ application, interview }) =>
+  isOver(application, interview) && Boolean(interview.takeaway?.trim());
+
+const DAY_MS = 86_400_000;
+
+/**
+ * When a source of takeaways counts as from, to find the latest one; never shown. A completed
+ * Interview's date. An Abandoned one has none, so it counts as from the end of the day its
+ * Application ended (its Done date), or, for one Done before Bigfoot kept that date, its last dated
+ * Interview, or the day it was applied for.
+ */
+function overAt({ application, interview }: DatedInterview<Interview>): number {
+  if (interview.at !== null) return Date.parse(interview.at);
+  if (application.done_on) return parseDay(application.done_on).getTime() + DAY_MS - 1;
+  const dates = application.interviews.flatMap((i) => (i.at === null ? [] : [Date.parse(i.at)]));
+  return Math.max(parseDay(application.applied_on).getTime(), ...dates);
+}
+
+/** The latest of some Interviews that pass `counts`, if any; on a tie, the one with the later Round. */
+function latest(candidates: DatedInterview<Interview>[], counts: Counts): DatedInterview<Interview> | null {
+  return candidates.filter(counts).reduce<DatedInterview<Interview> | null>(
+    (found, candidate) => (found === null || overAt(candidate) >= overAt(found) ? candidate : found),
+    null,
+  );
 }
 
 /** What each rule found, in order, as PrepTakeaways carrying only the Application's id and company. */
@@ -752,13 +826,8 @@ function linked(
 }
 
 /** prepTakeaways, with what counts as having a takeaway given, so takeawayShowsOn can ask "if it had one". */
-function findTakeaways(
-  apps: Application[],
-  app: Application,
-  interview: Interview,
-  counts: (i: Interview) => boolean,
-): PrepTakeaway[] {
-  const own = latest(dated(app, app.interviews), counts);
+function findTakeaways(apps: Application[], app: Application, interview: Interview, counts: Counts): PrepTakeaway[] {
+  const own = latest(dated(app, app.interviews.toSorted(byInterviewOrder)), counts);
   const elsewhere = latest(
     apps.filter((a) => a.id !== app.id).flatMap((a) => dated(a, a.interviews.filter((i) => i.category === interview.category))),
     counts,
@@ -768,9 +837,9 @@ function findTakeaways(
 
 /**
  * The takeaways an upcoming Interview's prep shows (BIG-181), at most two, nothing stored about
- * where a takeaway goes: first, from the latest completed Interview of the same Application that
- * has a Takeaway for next time; then, from the job seeker's latest completed Interview of the same
- * category at another Application, Done ones included (a lesson from a rejected Application is still a
+ * where a takeaway goes: first, from the latest Interview of the same Application that is over
+ * (completed, or Abandoned, BIG-222) and has a Takeaway for next time; then, from the job seeker's
+ * latest such Interview of the same category at another Application, Done ones included (a lesson from a rejected Application is still a
  * lesson). The two rules never pick the same Interview, as the second looks only at other
  * Applications, so each takeaway shows once.
  */
@@ -789,15 +858,15 @@ export function prepLookBack(apps: Application[], app: Application, interview: I
 }
 
 /**
- * Where a completed Interview's Takeaway for next time shows (BIG-181), prepTakeaways read the
+ * Where a completed or Abandoned Interview's Takeaway for next time shows (BIG-181), prepTakeaways read the
  * other way, as if it has one: the soonest upcoming Interview of its Application whose prep shows
  * it, and the soonest upcoming Interview of the same category at another In Progress Application whose
  * prep shows it. Empty for an upcoming Interview, and when neither exists yet or a later
  * takeaway shows instead.
  */
 export function takeawayShowsOn(apps: Application[], app: Application, interview: Interview): PrepTakeaway[] {
-  if (!interview.completed) return [];
-  const counts = (i: Interview) => i.id === interview.id || hasTakeaway(i);
+  if (!isOver(app, interview)) return [];
+  const counts: Counts = (candidate) => candidate.interview.id === interview.id || hasTakeaway(candidate);
   const showsOn = (target: DatedInterview<Interview>, rule: PrepTakeaway["rule"]) =>
     findTakeaways(apps, target.application, target.interview, counts).some(
       (t) => t.rule === rule && t.interview.id === interview.id,

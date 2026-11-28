@@ -17,11 +17,13 @@ import { useSaveStatus } from "@/hooks/use-save-status";
 import { useToday } from "@/hooks/use-today";
 import { DeleteApplicationDialog } from "@/features/applications/application-dialogs";
 import { StatusMenuItems, type StatusChange } from "@/features/applications/change-status-menu";
+import { MarkDoneDialog, type MarkDoneAsking } from "@/features/applications/mark-done-dialog";
 import { SampleBadge } from "@/features/applications/sample-badge";
 import { UNSCHEDULED_PILL } from "@/features/applications/status-tone";
 import {
   applicationProgress,
   calendarDaysBetween,
+  interviewsToAsk,
   locationText,
   parseDay,
   type Application,
@@ -41,15 +43,21 @@ const PROGRESS_TONE: Record<Progress["id"], { pill: string; dot: string }> = {
 /**
  * The Application page's heading (BIG-174): the company, its role and Location, and on the right
  * where it stands (its Progress badge), Mark done… (the Change Status choices) and ⋯, which holds
- * Delete application. On a phone, Mark done… folds into ⋯.
+ * Delete application. On a phone, Mark done… folds into ⋯. Marking an In Progress Application Done
+ * with Unscheduled Interviews, or ones dated after now, first asks whether each happened (the Mark
+ * done dialog, BIG-222); otherwise the pick saves at once.
  */
 export function ApplicationHeader({ app }: { app: Application }) {
   const tracker = useSaveStatus();
   const [deleting, setDeleting] = useState(false);
+  const [asking, setAsking] = useState<MarkDoneAsking | null>(null);
   const location = locationText(app);
 
   function change(picked: StatusChange) {
-    void tracker.run(() => updateApplicationAction(app.id, picked));
+    // "Dated after now" is worked out as the Outcome is picked; the server checks it again.
+    const interviews = picked.status === "done" ? interviewsToAsk(app, new Date()) : [];
+    if (interviews.length > 0) setAsking({ change: picked, interviews });
+    else void tracker.run(() => updateApplicationAction(app.id, picked));
   }
 
   return (
@@ -79,6 +87,12 @@ export function ApplicationHeader({ app }: { app: Application }) {
         <SaveStatus status={tracker.status} label="Status" onRetry={tracker.retry} />
       </div>
       <DeleteApplicationDialog app={app} open={deleting} onClose={() => setDeleting(false)} />
+      <MarkDoneDialog
+        app={app}
+        asking={asking}
+        onConfirm={(changes) => tracker.run(() => updateApplicationAction(app.id, changes))}
+        onClose={() => setAsking(null)}
+      />
     </div>
   );
 }

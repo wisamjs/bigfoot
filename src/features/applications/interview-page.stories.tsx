@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, within } from "storybook/test";
-import { prepLookBack, takeawayShowsOn, type Application } from "@/lib/applications";
+import { isAbandoned, prepLookBack, takeawayShowsOn, type Application } from "@/lib/applications";
 import { expectBigfootClear } from "@/test/art";
 import {
   applications,
@@ -28,7 +28,7 @@ function page(app: Application, id: string, all = applications) {
   return {
     app,
     interview,
-    lookBack: interview.completed ? undefined : prepLookBack(all, app, interview),
+    lookBack: interview.completed || isAbandoned(app, interview) ? undefined : prepLookBack(all, app, interview),
     showsOn: takeawayShowsOn(all, app, interview),
   };
 }
@@ -151,3 +151,35 @@ const addTheDate: Story = {
 };
 export const AddTheDateDesktop: Story = { ...addTheDate, ...DESKTOP };
 export const AddTheDateMobile: Story = { ...addTheDate, ...MOBILE };
+
+/** Harbour, Rejected before its Leadership Interview was booked: that Interview is Abandoned (BIG-222). */
+const harbourRejected: Application = { ...harbour, status: "done", outcome: "rejected", done_on: harbour.applied_on, is_waiting: false };
+
+/**
+ * Abandoned (BIG-222): "Didn't happen" in a grey badge, "No date", the strip's dashed grey segment
+ * ("Round 3 of 3 · Didn't happen" on a phone), Prep notes first without "Get ready", and Interview
+ * notes that can still be added, with nothing asking how it went.
+ */
+const abandoned: Story = {
+  args: page(harbourRejected, "leadership", unscheduledApplications.map((a) => (a.id === "harbour" ? harbourRejected : a))),
+  play: async ({ canvas }) => {
+    await expect(canvas.getAllByText("Didn’t happen")[0]).toBeVisible();
+    await expect(canvas.getByText("No date")).toBeVisible();
+    await expect(canvas.queryByText("Get ready")).not.toBeInTheDocument();
+    await expect(canvas.queryByText("How did it go?")).not.toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "Add Interview notes" })).toBeVisible();
+  },
+};
+export const AbandonedDesktop: Story = { ...abandoned, ...DESKTOP };
+export const AbandonedMobile: Story = { ...abandoned, ...MOBILE };
+
+/** Edit details on an Abandoned Interview: the Didn't happen switch is on, and turning it off asks for a past date. */
+const abandonedEditing: Story = {
+  args: { ...abandoned.args, editDetails: true },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("switch", { name: "Didn’t happen" })).toBeChecked();
+    await expect(canvas.queryByRole("switch", { name: "Date TBD" })).not.toBeInTheDocument();
+  },
+};
+export const AbandonedEditingDesktop: Story = { ...abandonedEditing, ...DESKTOP };
+export const AbandonedEditingMobile: Story = { ...abandonedEditing, ...MOBILE };

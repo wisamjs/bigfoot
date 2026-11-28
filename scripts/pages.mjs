@@ -77,6 +77,15 @@ export const PAGES = [
         expect: "Stays hidden while you edit",
       },
       { name: "salary-revealed", steps: [{ click: "button", text: "Reveal" }], expect: "Hide" },
+      // Datadog's Technical is still ahead, so Mark Rejected first asks whether it happened (BIG-222).
+      {
+        name: "mark-done-dialog",
+        steps: [
+          { click: "button", text: "Mark done…", pointer: true },
+          { click: '[role="menuitem"]', text: "Mark Rejected" },
+        ],
+        expect: "Did these Interviews happen?",
+      },
       // ⋯ holds Delete application, and on a phone the Change Status choices too. Mark done…, the
       // wide-screen menu, is checked by its story (application-editor.stories.tsx, MarkDone).
       {

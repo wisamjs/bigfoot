@@ -3,7 +3,14 @@ import * as Sentry from "@sentry/nextjs";
 import { SignJWT } from "jose";
 import { cacheLife, cacheTag } from "next/cache";
 import { accountTag } from "@/lib/account";
-import { applicationsTag, type Application, type ApplicationFields, type Interview, type InterviewFields } from "@/lib/applications";
+import {
+  applicationsTag,
+  type Application,
+  type ApplicationChanges,
+  type ApplicationFields,
+  type Interview,
+  type InterviewFields,
+} from "@/lib/applications";
 import type { Journey, ShareLinkStatus } from "@/lib/journey";
 import { jobSeekerTag } from "@/lib/sentry";
 
@@ -345,7 +352,7 @@ export function createApplication(jobSeekerId: string, fields: Partial<Applicati
   return request<Application>(jobSeekerId, "/applications", { method: "POST", body: fields });
 }
 
-export function updateApplication(jobSeekerId: string, id: string, changes: Partial<ApplicationFields>) {
+export function updateApplication(jobSeekerId: string, id: string, changes: ApplicationChanges) {
   return request<Application>(jobSeekerId, `/applications/${encodeURIComponent(id)}`, {
     method: "PATCH",
     body: changes,
@@ -361,11 +368,12 @@ export function listInterviews(jobSeekerId: string, applicationId: string) {
 }
 
 /**
- * The API's body for some Interview fields: `unscheduled` is the forms' Date TBD choice, which the
- * API reads as `at: null` (docs/adr/0009), so it becomes that and isn't sent itself.
+ * The API's body for some Interview fields: `noDate` is the forms' choice of no date (Date TBD, or
+ * Didn't happen on a Done Application), which the API reads as `at: null` (docs/adr/0009), so it
+ * becomes that and isn't sent itself.
  */
-export function interviewBody({ unscheduled, ...fields }: Partial<InterviewFields>): Partial<InterviewFields> {
-  return unscheduled ? { ...fields, at: null } : fields;
+export function interviewBody({ noDate, ...fields }: Partial<InterviewFields>): Partial<InterviewFields> {
+  return noDate ? { ...fields, at: null } : fields;
 }
 
 export function createInterview(jobSeekerId: string, applicationId: string, fields: Partial<InterviewFields>) {

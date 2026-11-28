@@ -57,6 +57,13 @@ def interview(client, headers, app, at, title="Hiring Manager", category="hiring
     }
     res = client.post(f"/applications/{app['id']}/interviews", json=body, headers=headers)
     assert res.status_code == 201, res.text
+    return res.json()
+
+
+def mark_done(client, headers, app, outcome, interviews=None):
+    body = {"status": "done", "outcome": outcome, **({} if interviews is None else {"interviews": interviews})}
+    res = client.patch(f"/applications/{app['id']}", json=body, headers=headers)
+    assert res.status_code == 200, res.text
 
 
 # The Passcode page's status
@@ -184,9 +191,11 @@ def test_the_journey_has_only_in_progress_applications_and_offers_with_exactly_t
 
 def test_other_done_applications_give_only_when_their_completed_interviews_happened(client, token):
     me = token()
-    rejected = application(client, me, "Rejected Co", status="done", outcome="rejected")
+    rejected = application(client, me, "Rejected Co")
     interview(client, me, rejected, PAST, title="Secret Loop")
-    interview(client, me, rejected, SOON, title="Cancelled Loop")
+    # Booked after the rejection arrived, its date kept when the Application was marked Done (BIG-222).
+    kept = interview(client, me, rejected, SOON, title="Cancelled Loop")
+    mark_done(client, me, rejected, "rejected", [{"id": kept["id"], "at": kept["at"]}])
     offer = application(client, me, "Cobalt Genomics", status="done", outcome="offer")
     interview(client, me, offer, PAST)
     open_app = application(client, me, "Tilth Agritech")
@@ -224,6 +233,19 @@ def test_an_unscheduled_interview_comes_last_undated_and_ends_the_wait(client, t
     ]
     assert lumen["interviews"][1]["at"] is None
     assert (lumen["is_waiting"], lumen["waiting_since"]) == (False, None)
+
+
+def test_an_offers_abandoned_interviews_are_left_out(client, token):
+    me = token()
+    offer = application(client, me, "Cobalt Genomics")
+    interview(client, me, offer, PAST)
+    interview(client, me, offer, None, title="Never Booked", category="decision_maker")
+    mark_done(client, me, offer, "offer")
+    link = create(client, me)
+    res = journey(client, link["id"], viewer_headers(client, link["id"]))
+    [cobalt] = res.json()["applications"]
+    assert [i["title"] for i in cobalt["interviews"]] == ["Hiring Manager"]
+    assert "Never Booked" not in res.text
 
 
 def test_a_viewer_sees_only_the_job_seeker_who_made_the_link(client, token):

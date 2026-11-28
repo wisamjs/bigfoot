@@ -198,9 +198,31 @@ export const Postpone: Story = {
     await expect(canvas.getByRole("button", { name: /^Date, / })).toBeDisabled();
     await userEvent.click(canvas.getByRole("button", { name: "Save" }));
     await waitFor(() =>
-      expect(actions.updateInterviewAction).toHaveBeenCalledWith("lumen", upcoming.id, { at: null, unscheduled: true }),
+      expect(actions.updateInterviewAction).toHaveBeenCalledWith("lumen", upcoming.id, { at: null, noDate: true }),
     );
     await expect(await canvas.findByText("Upcoming · date TBD")).toBeVisible();
+  },
+};
+
+/** The Leadership Interview of Lumen Bio once Rejected: it never took place, so it's Abandoned (BIG-222). */
+const rejected = { ...lumen, status: "done" as const, outcome: "rejected" as const, interviews: [completed, upcoming, unscheduled] };
+
+/** Abandoned (BIG-222): "No date" where the date would be, a grey "Didn't happen", and "Done · Rejected". */
+export const Abandoned: Story = {
+  args: { app: rejected, interview: unscheduled },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("No date")).toBeVisible();
+    await expect(canvas.getByText("Didn’t happen")).toBeVisible();
+    await expect(canvas.getByText("Done · Rejected")).toBeVisible();
+  },
+};
+
+/** Edit details on a Done Application: Didn't happen instead of Date TBD, on for an Abandoned Interview. */
+export const AbandonedEditing: Story = {
+  args: { ...Abandoned.args, editOnOpen: true },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("switch", { name: "Didn’t happen" })).toBeChecked();
+    await expect(canvas.queryByRole("switch", { name: "Date TBD" })).not.toBeInTheDocument();
   },
 };
 

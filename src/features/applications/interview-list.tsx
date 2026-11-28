@@ -8,25 +8,27 @@ import { DaysFromToday } from "@/features/applications/application-when";
 import { InterviewRow } from "@/features/applications/interview-row";
 import { addInterviewHref } from "@/features/applications/routes";
 import { PonderingCalendarBigfoot } from "@/features/shell/illustrations";
-import { isDone, type Application, type Interview } from "@/lib/applications";
+import { DIDNT_HAPPEN, isDone, type Application, type Interview } from "@/lib/applications";
 
 const ADD_INTERVIEW_ID = "add-interview";
 
 /**
  * The Application page's Interviews card (BIG-174): Add Interview, then the Interviews still ahead
- * after the next one (Later; the next one has its own card above) and the completed ones, newest
- * first (Completed). Each row opens its Interview page. With no Interviews, Bigfoot and a first Add
- * Interview instead.
+ * after the next one (Later; the next one has its own card above), the completed ones, newest
+ * first (Completed), and a Done Application's Abandoned ones (Didn't happen, BIG-222). Each row
+ * opens its Interview page. With no Interviews, Bigfoot and a first Add Interview instead.
  */
 export function InterviewList({
   app,
   later,
   completed,
+  abandoned,
   justAdded = false,
 }: {
   app: Application;
   later: Interview[];
   completed: Interview[];
+  abandoned: Interview[];
   justAdded?: boolean;
 }) {
   const [announcement, setAnnouncement] = useState("");
@@ -63,11 +65,12 @@ export function InterviewList({
         <NoInterviews app={app} />
       ) : (
         <div className="mt-6 flex flex-col">
-          {later.length === 0 && completed.length === 0 && (
+          {later.length === 0 && completed.length === 0 && abandoned.length === 0 && (
             <p className="m-0 mt-4 text-sm text-body">Nothing else booked yet.</p>
           )}
           <Group id="interviews-later" title="Later" interviews={later} applicationId={app.id} />
           <Group id="interviews-completed" title="Completed" interviews={completed} applicationId={app.id} />
+          <Group id="interviews-abandoned" title={DIDNT_HAPPEN} interviews={abandoned} applicationId={app.id} abandoned />
         </div>
       )}
       <output className="sr-only">{announcement}</output>
@@ -80,11 +83,13 @@ function Group({
   title,
   interviews,
   applicationId,
+  abandoned = false,
 }: {
   id: string;
   title: string;
   interviews: Interview[];
   applicationId: string;
+  abandoned?: boolean;
 }) {
   if (interviews.length === 0) return null;
   return (
@@ -94,7 +99,7 @@ function Group({
       </h3>
       <ul aria-labelledby={id} className="m-0 mt-2 list-none p-0">
         {interviews.map((interview) => (
-          <InterviewRow key={interview.id} applicationId={applicationId} interview={interview} />
+          <InterviewRow key={interview.id} applicationId={applicationId} interview={interview} abandoned={abandoned} />
         ))}
       </ul>
     </div>

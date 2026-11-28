@@ -4,7 +4,7 @@ import { refresh, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { interviewDeletedHref } from "@/features/applications/routes";
 import * as api from "@/lib/api";
-import { applicationsTag, type ApplicationFields, type InterviewFields } from "@/lib/applications";
+import { applicationsTag, type ApplicationChanges, type ApplicationFields, type InterviewFields } from "@/lib/applications";
 import { findCurrentUser } from "@/lib/dal";
 import { applicationErrors, interviewErrors, isValid, summarize, type FieldErrors } from "@/lib/validation";
 
@@ -48,7 +48,7 @@ export async function createApplicationAction(fields: Partial<ApplicationFields>
   return result.ok ? { ok: true, id } : result;
 }
 
-export async function updateApplicationAction(id: string, changes: Partial<ApplicationFields>) {
+export async function updateApplicationAction(id: string, changes: ApplicationChanges) {
   return run(
     (jobSeekerId) => api.updateApplication(jobSeekerId, id, changes),
     applicationErrors(changes, { creating: false }),

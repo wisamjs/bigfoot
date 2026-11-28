@@ -57,3 +57,11 @@ export const Unscheduled: Story = {
 
 /** An Unscheduled Interview as the next one (the Next up card): brand-soft inside the dashed outline. */
 export const UnscheduledNext: Story = { args: { at: null, tone: "brand" } };
+
+/** An Abandoned Interview in a list (BIG-222): a dash in a dashed grey outline, as it never took place. */
+export const Abandoned: Story = {
+  args: { at: null, abandoned: true },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("–")).toBeVisible();
+  },
+};

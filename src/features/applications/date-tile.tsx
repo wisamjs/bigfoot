@@ -20,21 +20,37 @@ const TBD_TONES: Record<keyof typeof TONES, string> = {
   muted: "border-2 border-dashed border-line-brand text-fg-brand",
 };
 
+/** An Abandoned Interview's tile (BIG-222): a dash inside a dashed grey border, as its mark on the strip. */
+const ABANDONED_TILE = "border-2 border-dashed border-tone-gray-line text-tone-gray-fg";
+
 /**
- * An Interview's month and day as a small calendar tile ("NOV / 25"), in the viewer's time zone, or
- * "TBD" for an Unscheduled Interview (`at` null). Decorative: the date, or "Date TBD", is always
- * written out beside it, so screen readers skip the tile.
+ * An Interview's month and day as a small calendar tile ("NOV / 25"), in the viewer's time zone,
+ * "TBD" for an Unscheduled Interview (`at` null), or a dash for an Abandoned one (`abandoned`).
+ * Decorative: the date, "Date TBD" or "Didn't happen" is always written out beside it, so screen
+ * readers skip the tile.
  */
 export function DateTile({
   at,
   tone = "outline",
+  abandoned = false,
   className = "",
 }: {
   at: string | null;
   tone?: keyof typeof TONES;
+  abandoned?: boolean;
   className?: string;
 }) {
   const isClient = useIsClient();
+  if (abandoned) {
+    return (
+      <span
+        aria-hidden
+        className={`flex size-14 shrink-0 items-center justify-center rounded-control text-xl font-bold leading-none ${ABANDONED_TILE} ${className}`}
+      >
+        –
+      </span>
+    );
+  }
   if (at === null) {
     return (
       <span
