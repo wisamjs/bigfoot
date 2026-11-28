@@ -4,7 +4,7 @@
   "description": "Track every application, interview and follow-up in one place.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f4eafe",
+  "background_color": "#faebf1",
   "theme_color": "#faebf1",
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
