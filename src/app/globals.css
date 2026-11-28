@@ -463,9 +463,9 @@ body {
       inset var(--glint-highlight) 0 6px 0px -5px,
       8px 8px 20px 0 color-mix(in srgb, var(--pink-800) 35%, transparent);
   }
-  .btn-brand:hover {
-    box-shadow: none;
-    opacity: 0.8;
+  /* Hover darkens the gradient; only a disabled button fades (BIG-240). */
+  .btn-brand:hover:not(:disabled, [aria-disabled="true"]) {
+    filter: brightness(0.88);
   }
 
   .btn-secondary {

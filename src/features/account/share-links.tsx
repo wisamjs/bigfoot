@@ -1,8 +1,8 @@
 "use client";
 
-import { Check, CircleCheck, Copy, Eye, EyeOff, Info, Link2, Plus } from "lucide-react";
+import { Check, CircleCheck, Copy, Ellipsis, Eye, EyeOff, Info, KeyRound, Link2, Plus, RefreshCw, Unlink } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useId, useState, useTransition, type ReactElement, type ReactNode } from "react";
+import { useActionState, useId, useRef, useState, useTransition, type ReactElement, type ReactNode } from "react";
 import {
   changePasscodeAction,
   createShareLinkAction,
@@ -11,6 +11,7 @@ import {
   type CreateShareLinkState,
 } from "@/app/account/actions";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Field } from "@/components/ui/field";
 import { invalidProps } from "@/components/ui/field-error";
 import { inputClasses } from "@/components/ui/input";
@@ -335,13 +336,27 @@ function ShareLinkCard({
       }`}
     >
       <ShareLinkFacts link={link} />
-      <CopyField label={`Link for ${link.label}`} hideLabel value={url} copyText="Copy link" />
+      <CopyField
+        label={`Link for ${link.label}`}
+        hideLabel
+        value={url}
+        copyText="Copy link"
+        aside={
+          <LinkMenu
+            label={link.label}
+            isRenewing={isRenewing}
+            onChangePasscode={onChangePasscode}
+            onRenew={renew}
+            onStop={onStop}
+          />
+        }
+      />
       {error && (
         <p role="alert" className="m-0 text-sm text-fg-danger">
           {error}
         </p>
       )}
-      <div className="-mx-2 flex flex-wrap gap-x-1">
+      <div className="-mx-2 hidden flex-wrap gap-x-1 sm:flex">
         <Button variant="tertiary" size="sm" onClick={onChangePasscode} aria-label={`Change passcode for ${link.label}`}>
           Change passcode
         </Button>
@@ -359,6 +374,58 @@ function ShareLinkCard({
         </Button>
       </div>
     </li>
+  );
+}
+
+/**
+ * On a phone, ⋯ beside Copy link (BIG-240): Change passcode, Renew, and Stop sharing, which the card
+ * shows as buttons on wider screens. Stop sharing still asks first, in its dialog.
+ */
+function LinkMenu({
+  label,
+  isRenewing,
+  onChangePasscode,
+  onRenew,
+  onStop,
+}: {
+  label: string;
+  isRenewing: boolean;
+  onChangePasscode: () => void;
+  onRenew: () => void;
+  onStop: () => void;
+}) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  // The menu opens inside the page's main landmark, not at the end of <body>.
+  const [container, setContainer] = useState<HTMLElement | null>(null);
+  // A dialog returns focus to what had it when it opened: ⋯, not the menu item, which goes.
+  const fromTrigger = (then: () => void) => () => {
+    triggerRef.current?.focus();
+    then();
+  };
+  return (
+    <div ref={setContainer} className="relative sm:hidden">
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button ref={triggerRef} variant="secondary" className="px-3" aria-label={`More actions, link for ${label}`}>
+            <Ellipsis className="size-4" aria-hidden />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" container={container}>
+          <DropdownMenuItem onSelect={fromTrigger(onChangePasscode)}>
+            <KeyRound aria-hidden />
+            Change passcode
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled={isRenewing} onSelect={onRenew}>
+            <RefreshCw aria-hidden />
+            {isRenewing ? "Renewing…" : "Renew"}
+          </DropdownMenuItem>
+          <DropdownMenuItem variant="destructive" onSelect={fromTrigger(onStop)}>
+            <Unlink aria-hidden />
+            Stop sharing
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }
 
@@ -405,12 +472,15 @@ function CopyField({
   copyText = "Copy",
   hideLabel = false,
   brand = false,
+  aside,
 }: {
   label: string;
   value: string;
   copyText?: string;
   hideLabel?: boolean;
   brand?: boolean;
+  /** Beside the Copy button, such as a Share link's ⋯ on a phone. */
+  aside?: ReactNode;
 }) {
   const id = useId();
   const [copied, setCopied] = useState(false);
@@ -437,14 +507,17 @@ function CopyField({
           onFocus={(e) => e.currentTarget.select()}
           className={`${inputClasses} min-w-0 flex-1 font-mono`}
         />
-        <Button
-          variant={brand && !copied ? "brand" : "secondary"}
-          onClick={copy}
-          aria-label={`${copied ? "Copied" : copyText}: ${label}`}
-          className={`shrink-0 self-start sm:self-auto ${copied ? "border-line-success-subtle text-fg-success-strong" : ""}`}
-        >
-          <CopyLabel copied={copied} text={copyText} />
-        </Button>
+        <div className="flex shrink-0 gap-2 self-start sm:self-auto">
+          <Button
+            variant={brand && !copied ? "brand" : "secondary"}
+            onClick={copy}
+            aria-label={`${copied ? "Copied" : copyText}: ${label}`}
+            className={copied ? "border-line-success-subtle text-fg-success-strong" : ""}
+          >
+            <CopyLabel copied={copied} text={copyText} />
+          </Button>
+          {aside}
+        </div>
       </div>
     </div>
   );

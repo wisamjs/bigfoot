@@ -335,7 +335,7 @@ export const NextHasPrepNotes: Story = {
 };
 
 /**
- * A phone: Add Prep notes and Open Interview share a row only while both fit, and never get
+ * A phone: Add Prep notes and Open Interview keep their own width (BIG-240), share a row only while both fit, and never get
  * narrower than their labels (BIG-187).
  */
 export const NextUpOnAPhone: Story = {

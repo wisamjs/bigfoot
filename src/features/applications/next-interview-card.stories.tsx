@@ -84,7 +84,10 @@ export const WithTakeawaysAndPrepNotes: Story = {
   },
 };
 
-/** No takeaways apply and no Prep notes yet: Add Prep notes opens its Interview page. */
+/**
+ * No takeaways apply and no Prep notes yet: Add Prep notes opens its Interview page. It is
+ * secondary, as Add Application is the dashboard's one brand button (BIG-240).
+ */
 export const WithoutTakeawaysOrPrepNotes: Story = {
   args: {
     app: lumen,
@@ -99,6 +102,7 @@ export const WithoutTakeawaysOrPrepNotes: Story = {
       "/applications/lumen/interviews/deep-dive",
     );
     await expect(within(card).getByText("No Prep notes yet.")).toBeVisible();
+    await expect(within(card).getByRole("link", { name: "Add Prep notes" })).toHaveClass("btn-secondary");
   },
 };
 
@@ -158,5 +162,7 @@ export const DateTbdWithoutPrepNotes: Story = {
   play: async ({ canvas }) => {
     const links = canvas.getAllByRole("link").map((l) => l.textContent);
     await expect(links.indexOf("Add the date")).toBeLessThan(links.indexOf("Add Prep notes"));
+    // The Application page's one brand button (BIG-240).
+    await expect(canvas.getByRole("link", { name: "Add the date" })).toHaveClass("btn-brand");
   },
 };

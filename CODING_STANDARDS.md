@@ -29,6 +29,15 @@ Read [`docs/guidelines/mobile.md`](docs/guidelines/mobile.md). `npm run a11y` fa
 targets under 44×44px and on text cut off by an ellipsis. A PR that changes UI attaches
 `npm run capture -- <page> --width 375` images (light and dark) for each page or state it touches.
 
+## Buttons follow importance
+
+Each view (a page, or a dialog over it) has at most one brand button, for its main job: Add
+Application on the dashboard. Other adds, such as Add Prep notes and Add Interview, are secondary.
+A card's edit is `EditButton` (`src/components/ui/edit-button.tsx`): the icon-only tertiary pencil,
+named for what it edits ("Edit details"). An action for the whole page is a labelled tertiary
+button. Buttons that do the same kind of job have the same width on a phone. A second brand button
+in one view is a defect.
+
 ## A new colour reuses the palette
 
 `src/app/globals.css` has two tiers (the colour tokens in

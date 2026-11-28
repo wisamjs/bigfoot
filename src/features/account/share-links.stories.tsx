@@ -239,3 +239,35 @@ export const LongText: Story = {
     links: [{ ...momAndDad, label: "Grandma Rosalind, Grandpa Theodore and everyone else at the Sunday dinner table" }],
   },
 };
+
+/**
+ * A phone (BIG-240): each card has Copy link and ⋯, which holds Change passcode, Renew, and Stop
+ * sharing; Stop sharing still asks first.
+ */
+export const OnAPhone: Story = {
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+  play: async ({ canvas, userEvent }) => {
+    await expect(canvas.getByRole("button", { name: "Copy link: Link for Mom & Dad" })).toBeVisible();
+    // The wide-screen buttons are hidden, so out of the accessibility tree.
+    await expect(canvas.queryByRole("button", { name: "Stop sharing with Mom & Dad" })).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "More actions, link for Mom & Dad" }));
+    const items = await screen.findAllByRole("menuitem");
+    await expect(items.map((item) => item.textContent)).toEqual(["Change passcode", "Renew", "Stop sharing"]);
+    await userEvent.click(screen.getByRole("menuitem", { name: "Stop sharing" }));
+    const dialog = await screen.findByRole("dialog", { name: "Stop sharing with Mom & Dad?" });
+    await expect(within(dialog).getByRole("button", { name: "Cancel" })).toHaveFocus();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await expect(canvas.getByRole("button", { name: "More actions, link for Mom & Dad" })).toHaveFocus();
+    await expect(stopSharingAction).not.toHaveBeenCalled();
+  },
+};
+
+/** Renew from ⋯ on a phone renews the link. */
+export const RenewOnAPhone: Story = {
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "More actions, link for Mom & Dad" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Renew" }));
+    await waitFor(() => expect(renewShareLinkAction).toHaveBeenCalledWith("k7Qm2x9PaB"));
+  },
+};

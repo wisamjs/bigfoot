@@ -155,7 +155,7 @@ function CreateTokenForm({
           }}
           className={`${inputClasses} sm:max-w-xs`}
         />
-        <Button type="submit" aria-disabled={isCreating || undefined} className="self-start">
+        <Button type="submit" variant="secondary" aria-disabled={isCreating || undefined} className="self-start">
           <Plus className="size-4" aria-hidden />
           {isCreating ? "Creating…" : "Create Access token"}
         </Button>

@@ -32,7 +32,7 @@ export const NoneMobile: Story = { ...none, ...MOBILE };
 
 /** Two Share links in use and one expired; one Access token in use and one expired. */
 const withLinks: Story = {
-  play: async ({ canvas }) => {
+  play: async ({ canvas, userEvent }) => {
     const share = within(canvas.getByRole("region", { name: "Share your progress" }));
     await expect(share.getByText("Mom & Dad")).toBeVisible();
     await expect(share.getByText("Old flatmate")).toBeVisible();
@@ -40,6 +40,12 @@ const withLinks: Story = {
     const tokens = within(canvas.getByRole("region", { name: "Access tokens" }));
     await expect(tokens.getByText("Calendar cron job")).toBeVisible();
     await expect(canvas.getByText(/all 8 of your Applications/)).toBeVisible();
+    // What stays and the Google account fold away (BIG-240); what gets deleted stays in view.
+    const google = canvas.getByRole("link", { name: "your Google account’s third-party connections" });
+    await expect(google).not.toBeVisible();
+    await userEvent.click(canvas.getByText("What stays for a while, and your Google account"));
+    await expect(google).toBeVisible();
+    await userEvent.click(canvas.getByText("What stays for a while, and your Google account"));
   },
 };
 export const WithLinksDesktop: Story = { ...withLinks, ...DESKTOP };
