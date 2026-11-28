@@ -186,7 +186,7 @@ export const PAGES = [
     signedIn: true,
     application: "Airtable",
     interview: "Hiring Manager",
-    expect: "Add Prep notes",
+    expect: "Write down how it went",
   },
   {
     // A deleted Interview, a malformed id and another job seeker's Interview look the same.
