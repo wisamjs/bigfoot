@@ -1,7 +1,7 @@
 #!/bin/sh
 # npm run verify (spelling, design tokens, stories present, Python lint, the API unit tests, the staged OpenAPI schema, types, lint,
 # then every Vitest test with the coverage floor, then the story tests in Chrome) before every commit; a failing test blocks it.
-# Committing is the verify run: AGENTS.md and the pick-up-ticket skill rely on it.
+# Committing is the verify run: AGENTS.md, docs/contributing.md, and the pick-up-ticket skill rely on it.
 # Verify runs under scripts/snapshots.mjs, so its story tests also retake the picture of every Pages story, dark and light,
 # in docs/snapshots/ (only the ones whose pixels changed). That folder is git-ignored: the pictures stay on this machine.
 # A commit of only .md files runs just the spelling check, and takes no pictures, as CI's review gate skips them too

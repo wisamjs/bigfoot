@@ -5,6 +5,8 @@
 // package", and `npm run verify` runs on the main checkout's packages, which can lag this branch
 // and fail unrelated tests; the pre-commit hook refuses that case. It also installs the Chromium
 // Storybook's story tests (`npm run test-storybook`) run in. An existing .env.local is kept.
+// It raises git's HTTP post buffer, as the SessionStart hook in .claude/settings.json does: a
+// push that carries PNG screenshots fails with "RPC failed; HTTP 400" at the default size.
 import { execFileSync } from "node:child_process";
 import { copyFileSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -25,6 +27,9 @@ if (existsSync(target)) {
   console.error(`✗ no .env.local in ${main} to copy; create one from .env.example (see README.md)`);
   process.exitCode = 1;
 }
+
+git("config", "http.postBuffer", "524288000");
+console.log("✓ raised git's http.postBuffer for pushes with screenshots");
 
 execFileSync("npm", ["ci"], { cwd: ROOT, stdio: "inherit" });
 console.log("✓ installed node_modules");

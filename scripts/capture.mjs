@@ -15,8 +15,13 @@
 //                     (default: the first), e.g. --expect "Interview not found"
 //   --signed-out      capture the signed-out page
 //   --out <dir>       where to write (default .next/captures)
+//   --help            print this and stop
 // Prints each image's path. Uses this checkout's servers like smoke does (CAPTURE_URL, API_URL).
-import { mkdirSync, writeFileSync } from "node:fs";
+// To look closer, crop or compare the PNGs with ImageMagick (Python's Pillow isn't installed):
+//   magick in.png -crop 400x300+0+120 out.png          width x height + left + top, in pixels
+//   magick compare -metric AE a.png b.png diff.png     prints how many pixels differ; diff.png marks them
+// Without ImageMagick, read pixels in Node with pngjs (a dev dependency), as scripts/snapshot-store.mjs does.
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { enterState, launchChrome, openPage } from "./chrome.mjs";
@@ -36,8 +41,15 @@ const { values: options, positionals } = parseArgs({
     expect: { type: "string" },
     "signed-out": { type: "boolean", default: false },
     out: { type: "string", default: ".next/captures" },
+    help: { type: "boolean", default: false },
   },
 });
+if (options.help) {
+  // The comment at the top of this file is the usage text.
+  const usage = readFileSync(new URL(import.meta.url), "utf8").split("\nimport ")[0];
+  console.log(usage.replace(/^#!.*\n/, "").replaceAll(/^\/\/ ?/gm, ""));
+  process.exit(0);
+}
 const path = positionals[0] ?? "/dashboard";
 const signedIn = !options["signed-out"];
 const width = Number(options.width);

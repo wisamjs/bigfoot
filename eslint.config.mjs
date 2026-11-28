@@ -7,6 +7,7 @@ import testingLibrary from "eslint-plugin-testing-library";
 import jestDom from "eslint-plugin-jest-dom";
 import unicorn from "eslint-plugin-unicorn";
 import boundaries from "eslint-plugin-boundaries";
+import eslintComments from "@eslint-community/eslint-plugin-eslint-comments/configs";
 
 // Rule groups and what each guards are listed in CODING_STANDARDS.md ("Lint rule groups").
 
@@ -28,6 +29,18 @@ const componentTestFiles = ["**/*.test.tsx"];
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+
+  // Inline disables: each names its rule and says why after `--`, and one that no longer
+  // silences anything is an error (CODING_STANDARDS.md, "Lint rule groups").
+  { linterOptions: { reportUnusedDisableDirectives: "error" } },
+  asErrors(eslintComments.recommended),
+  {
+    rules: {
+      "@eslint-community/eslint-comments/require-description": ["error", { ignore: ["eslint-enable"] }],
+      // A disable at the top of a file covers the whole file on purpose.
+      "@eslint-community/eslint-comments/disable-enable-pair": ["error", { allowWholeFile: true }],
+    },
+  },
 
   // Complexity: no function with more than 10 independent paths through it (CODING_STANDARDS.md,
   // "Lint rule groups"). Every linted file, tests and scripts included; Ruff's C901 does the same for Python.

@@ -9,11 +9,25 @@ prints a short summary.
 """
 
 import json
+import re
 import shutil
 import sys
 from pathlib import Path
 
 SKILL_DIRS = [".claude/skills/typeui-design-system", ".agents/skills/typeui-design-system"]
+# TypeUI writes a description that names no task ("Candy design skill for AI coding agents."), and
+# the description is what tells an agent when to load the skill, so it is replaced on every apply.
+DESCRIPTION = (
+    "Use when writing or restyling UI components, pages, or colours: Bigfoot's TypeUI Candy design"
+    " system, with one module per kind of component."
+)
+
+
+def with_description(path, content):
+    """Return a SKILL.md's content with DESCRIPTION in its frontmatter; other files unchanged."""
+    if Path(path).name != "SKILL.md":
+        return content
+    return re.sub(r"^description: .*$", f'description: "{DESCRIPTION}"', content, count=1, flags=re.M)
 
 
 def find_files(node):
@@ -53,7 +67,7 @@ def main():
         if root.resolve() not in target.parents:
             sys.exit(f"Refusing to write outside the project: {f['path']}")
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(f["content"])
+        target.write_text(with_description(f["path"], f["content"]))
 
     names = sorted({Path(f["path"]).name for f in files})
     name_line = next((line for line in result.get("text", "").splitlines() if line.startswith("Prepared")), "")
