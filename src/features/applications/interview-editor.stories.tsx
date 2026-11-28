@@ -63,6 +63,9 @@ const fernway = application("fernway", {
 });
 const everyApplication = [lumen, tilth, fernway];
 const empty = { what_they_asked: null, how_it_went: null, takeaway: null };
+/** Bigfoot in an empty notes card (BIG-228): "notebook" in Prep notes, "writing" in Interview notes. */
+const art = (canvasElement: HTMLElement, name: "notebook" | "writing") =>
+  canvasElement.querySelector<HTMLImageElement>(`img[src*="bigfoot-${name}"]`);
 
 const meta = {
   component: InterviewEditor,
@@ -83,11 +86,13 @@ type Story = StoryObj<typeof meta>;
 /**
  * Filled: a completed Interview, "Completed · 10 days ago", this one outlined on the strip, the
  * Takeaway for next time in its own card, How it went as text and They asked as a list, and links
- * to Round 1 and Round 3 at the foot.
+ * to Round 1 and Round 3 at the foot. Written notes hold no Bigfoot.
  */
 export const Completed: Story = {
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     await expect(await canvas.findByText("Completed · 10 days ago")).toBeVisible();
+    // Notes written: no Bigfoot (BIG-228).
+    await expect(art(canvasElement, "writing")).not.toBeInTheDocument();
     await expect(canvas.getByRole("link", { name: /^Round \d · This interview · / })).toHaveAttribute("aria-current", "page");
     // The foot links to the Rounds either side (BIG-202).
     const rounds = canvas.getByRole("navigation", { name: "Other Rounds" });
@@ -126,17 +131,20 @@ export const TakeawayShowsOnPrep: Story = {
 /**
  * Coming up, with no Prep notes: "Upcoming · in 2 days", the Before card offering Add Prep notes
  * ("Get ready for <weekday>"), with nothing to look back at, and the After card waiting for how it went, which Add Interview
- * notes opens into the three fields.
+ * notes opens into the three fields. Each empty card holds Bigfoot (BIG-228); the open fields don't.
  */
 export const Upcoming: Story = {
   args: { interview: upcoming },
-  play: async ({ canvas, userEvent }) => {
+  play: async ({ canvas, canvasElement, userEvent }) => {
     await expect(await canvas.findByText("Upcoming · in 2 days")).toBeVisible();
     await expect(canvas.getByText(/^Get ready for /)).toBeVisible();
     await expect(canvas.getByRole("button", { name: "Add Prep notes" })).toBeVisible();
     await expect(canvas.getByText("Nothing yet, that’s expected")).toBeVisible();
+    await expect(art(canvasElement, "notebook")).toBeInTheDocument();
+    await expect(art(canvasElement, "writing")).toBeInTheDocument();
     await userEvent.click(canvas.getByRole("button", { name: "Add Interview notes" }));
     await expect(canvas.getByRole("textbox", { name: "What they asked" })).toHaveFocus();
+    await expect(art(canvasElement, "writing")).not.toBeInTheDocument();
   },
 };
 
@@ -159,10 +167,12 @@ export const UpcomingWithTakeaways: Story = {
   },
 };
 
-/** Coming up with Prep notes written: they show first, with Edit, above the After card. */
+/** Coming up with Prep notes written: they show first, with Edit, above the After card, and without Bigfoot. */
 export const UpcomingWithPrepNotes: Story = {
   args: { interview: { ...upcoming, prep_notes: "Review the caching chapter.\n\n- Draw the diagram first\n- Ask about the on-call rotation" } },
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
+    await expect(art(canvasElement, "notebook")).not.toBeInTheDocument();
+    await expect(art(canvasElement, "writing")).toBeInTheDocument();
     const headings = canvas.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
     await expect(headings).toEqual(["Prep notes", "Interview notes"]);
     await expect(within(canvas.getByRole("region", { name: "Prep notes" })).getAllByRole("listitem")).toHaveLength(2);
@@ -247,6 +257,17 @@ export const JustFinished: Story = {
       "One thing to do differently",
     );
     await expect(canvas.getByRole("textbox", { name: "What they asked" })).not.toHaveFocus();
+  },
+};
+
+/** Done with nothing written: "No Interview notes yet." and Add Interview notes, with Bigfoot writing beside them (BIG-228). */
+export const ClosedWithoutNotes: Story = {
+  args: { interview: { ...completed, ...empty } },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await expect(art(canvasElement, "writing")).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "Done" }));
+    await expect(canvas.getByText("No Interview notes yet.")).toBeVisible();
+    await expect(art(canvasElement, "writing")).toBeInTheDocument();
   },
 };
 

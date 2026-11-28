@@ -181,6 +181,14 @@ export const PAGES = [
     ],
   },
   {
+    // An upcoming Interview with no Prep notes: Bigfoot in both empty notes cards (BIG-228).
+    path: "/applications/[id]/interviews/[interviewId]",
+    signedIn: true,
+    application: "Airtable",
+    interview: "Hiring Manager",
+    expect: "Add Prep notes",
+  },
+  {
     // A deleted Interview, a malformed id and another job seeker's Interview look the same.
     path: "/applications/[id]/interviews/[interviewId]",
     signedIn: true,

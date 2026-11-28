@@ -4,6 +4,7 @@ import { UnsavedChanges } from "@/features/applications/unsaved-changes";
 import { AppHeader } from "@/features/shell/app-header";
 import { DashboardBreadcrumb } from "@/features/shell/dashboard-link";
 import { FormPage } from "@/features/shell/form-page";
+import { QuestionSignBigfoot } from "@/features/shell/illustrations";
 import type { Application, Interview, PrepLookBack, PrepTakeaway } from "@/lib/applications";
 import type { CurrentUser } from "@/lib/current-user";
 
@@ -49,14 +50,23 @@ export function InterviewPageSkeleton() {
   return <FormPage header={<AppHeader current="/dashboard" />} title="Interview" />;
 }
 
-/** Shown for a deleted Interview, a malformed id and another job seeker's Interview alike; without a `user` it is the loading state. */
+/**
+ * Shown for a deleted Interview, a malformed id and another job seeker's Interview alike; without a `user` it is the loading state.
+ * Bigfoot stands right of the title, his feet behind the card's top edge (BIG-228): out of the flow, so
+ * nothing moves, and clipped at that edge, so the card draws over his feet. Hidden on phones, where he
+ * would cover the title.
+ */
 export function InterviewNotFoundPage({ user }: { user?: CurrentUser }) {
   return (
     <FormPage header={<AppHeader user={user} current="/dashboard" />} title={INTERVIEW_NOT_FOUND_TITLE}>
       {user && (
-        <p className="m-0 text-base leading-[1.625] text-body">
-          This Interview doesn’t exist or has been deleted. Go back to the Dashboard to find your Interviews.
-        </p>
+        <div className="relative">
+          {/* The card's border and padding are 25px: the box ends 8px below the card's top edge, and those 8px are clipped. */}
+          <QuestionSignBigfoot className="pointer-events-none absolute -right-1 bottom-[calc(100%+17px)] hidden h-auto w-[136px] [clip-path:inset(0_0_8px_0)] sm:block" />
+          <p className="m-0 text-base leading-[1.625] text-body">
+            This Interview doesn’t exist or has been deleted. Go back to the Dashboard to find your Interviews.
+          </p>
+        </div>
       )}
     </FormPage>
   );
