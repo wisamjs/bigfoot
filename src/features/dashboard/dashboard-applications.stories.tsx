@@ -30,7 +30,7 @@ export const Default: Story = {
 /** Show done adds the Done Applications, and the line goes. */
 export const ShowDone: Story = {
   play: async ({ canvas }) => {
-    await userEvent.click(canvas.getByRole("checkbox", { name: "Show done" }));
+    await userEvent.click(canvas.getByRole("switch", { name: "Show done" }));
     await expect(canvas.getByRole("link", { name: /^Open Maple Health\b/ })).toBeVisible();
     await expect(canvas.queryByText(/Done Applications are hidden/)).not.toBeInTheDocument();
   },
@@ -58,10 +58,12 @@ export const SortedByLocation: Story = {
   },
 };
 
-/** On a phone, where the column headers are hidden, "Sort by" sits beside Show done. */
+/** On a phone, where the column headers are hidden, the Sort by menu sits beside Show done, open here. */
 export const PhoneSortBy: Story = {
   globals: { viewport: { value: "mobile1", isRotated: false } },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole("combobox", { name: "Sort by" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Sort by Progress" }));
+    await expect(canvas.getByRole("menuitemradio", { name: "Progress" })).toBeChecked();
+    await expect(canvas.getByRole("menuitemradio", { name: "Location" })).toBeVisible();
   },
 };

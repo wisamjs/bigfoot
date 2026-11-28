@@ -29,7 +29,7 @@ describe("Dashboard Applications", () => {
     expect(screen.queryByText("Umbrella")).not.toBeInTheDocument();
     expect(screen.getByText("1 Done Application is hidden. Turn on “Show done” to see it.")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("checkbox", { name: "Show done" }));
+    await user.click(screen.getByRole("switch", { name: "Show done" }));
     const umbrella = screen.getAllByRole("row").find((row) => row.textContent?.includes("Umbrella"))!;
     expect(within(umbrella).getAllByText("Done")[0]).toBeInTheDocument();
     expect(screen.queryByText(/Done Application is hidden/)).not.toBeInTheDocument();
@@ -37,7 +37,7 @@ describe("Dashboard Applications", () => {
 
   it("has no Show done when no Application is Done", () => {
     render(<DashboardApplications applications={[birch]} />);
-    expect(screen.queryByRole("checkbox", { name: "Show done" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "Show done" })).not.toBeInTheDocument();
     expect(screen.queryByText(/hidden/)).not.toBeInTheDocument();
   });
 
@@ -45,7 +45,7 @@ describe("Dashboard Applications", () => {
     const user = setUpDashboard();
     expect(screen.getByRole("link", { name: /^Open Birch\b/ })).toHaveAttribute("href", "/applications/birch");
 
-    await user.click(screen.getByRole("checkbox", { name: "Show done" }));
+    await user.click(screen.getByRole("switch", { name: "Show done" }));
     expect(screen.getByRole("link", { name: /^Open Umbrella\b/ })).toHaveAttribute("href", "/applications/umbrella");
   });
 
@@ -92,25 +92,28 @@ describe("Dashboard Applications", () => {
     it("sorts from the Sort by menu on a phone", async () => {
       const user = userEvent.setup();
       render(<DashboardApplications applications={[alpha, zeta]} />);
-      const menu = screen.getByRole("combobox", { name: "Sort by" });
-      expect(within(menu).getAllByRole("option").map((o) => o.textContent)).toEqual(["Progress", "Application", "Next", "Location"]);
+      await user.click(screen.getByRole("button", { name: "Sort by Progress" }));
+      const menu = screen.getByRole("menu");
+      expect(within(menu).getAllByRole("menuitemradio").map((o) => o.textContent)).toEqual(["Progress", "Application", "Next", "Location"]);
+      expect(within(menu).getByRole("menuitemradio", { name: "Progress" })).toBeChecked();
 
-      await user.selectOptions(menu, "Application");
+      await user.click(within(menu).getByRole("menuitemradio", { name: "Application" }));
       expect(companies()).toEqual(["Alpha", "Zeta"]);
       expect(window.location.search).toBe("?sort=application");
+      expect(screen.getByRole("button", { name: "Sort by Application" })).toBeInTheDocument();
     });
 
     it("keeps Done Applications below the others in every sort", async () => {
       const user = userEvent.setup();
       window.history.replaceState(null, "", "/dashboard?sort=application");
       render(<DashboardApplications applications={[zeta, rejected, alpha]} />);
-      await user.click(screen.getByRole("checkbox", { name: "Show done" }));
+      await user.click(screen.getByRole("switch", { name: "Show done" }));
       expect(companies()).toEqual(["Alpha", "Zeta", "Umbrella"]);
     });
 
     it("has no Sort by menu for a single Application", () => {
       render(<DashboardApplications applications={[birch]} />);
-      expect(screen.queryByRole("combobox", { name: "Sort by" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /^Sort by/ })).not.toBeInTheDocument();
     });
   });
 });
