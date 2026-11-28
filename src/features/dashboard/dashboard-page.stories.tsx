@@ -18,6 +18,20 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** Bigfoot hanging above the Interviews card (BIG-226): shown on a laptop, hidden on a phone. */
+const hangingBigfoot = (canvasElement: HTMLElement) =>
+  canvasElement.querySelector<HTMLImageElement>('img[src*="bigfoot-hanging"]');
+const withBigfoot = (story: Story, shown: boolean): Story => ({
+  ...story,
+  play: async (context) => {
+    await story.play?.(context);
+    const art = hangingBigfoot(context.canvasElement);
+    await expect(art).toBeInTheDocument();
+    if (shown) await expect(art).toBeVisible();
+    else await expect(art).not.toBeVisible();
+  },
+});
+
 /** A new job seeker who deleted the samples: no Applications, and nothing on the calendar. */
 const empty: Story = {
   args: { applications: [] },
@@ -26,8 +40,8 @@ const empty: Story = {
     await expect(canvas.getByText("All quiet in the woods")).toBeVisible();
   },
 };
-export const EmptyDesktop: Story = { ...empty, ...DESKTOP };
-export const EmptyMobile: Story = { ...empty, ...MOBILE };
+export const EmptyDesktop: Story = { ...withBigfoot(empty, true), ...DESKTOP };
+export const EmptyMobile: Story = { ...withBigfoot(empty, false), ...MOBILE };
 
 /** A new job seeker's first look: only Sample Applications. */
 const samplesOnly: Story = {
@@ -36,8 +50,8 @@ const samplesOnly: Story = {
     await expect(canvas.getAllByText("Sample").length).toBeGreaterThan(0);
   },
 };
-export const SamplesDesktop: Story = { ...samplesOnly, ...DESKTOP };
-export const SamplesMobile: Story = { ...samplesOnly, ...MOBILE };
+export const SamplesDesktop: Story = { ...withBigfoot(samplesOnly, true), ...DESKTOP };
+export const SamplesMobile: Story = { ...withBigfoot(samplesOnly, false), ...MOBILE };
 
 /**
  * A search in flight: Applications Waiting, Interviewing and at Offer; Next up is the Interview this
@@ -52,8 +66,8 @@ const inFlight: Story = {
     await expect(canvas.getByText(/Done Applications are hidden/)).toBeVisible();
   },
 };
-export const InFlightDesktop: Story = { ...inFlight, ...DESKTOP };
-export const InFlightMobile: Story = { ...inFlight, ...MOBILE };
+export const InFlightDesktop: Story = { ...withBigfoot(inFlight, true), ...DESKTOP };
+export const InFlightMobile: Story = { ...withBigfoot(inFlight, false), ...MOBILE };
 
 /** Show done: the Done Applications join the In Progress ones. */
 const showDone: Story = {
@@ -63,8 +77,8 @@ const showDone: Story = {
     await expect(canvas.queryByText(/Done Applications are hidden/)).not.toBeInTheDocument();
   },
 };
-export const ShowDoneDesktop: Story = { ...showDone, ...DESKTOP };
-export const ShowDoneMobile: Story = { ...showDone, ...MOBILE };
+export const ShowDoneDesktop: Story = { ...withBigfoot(showDone, true), ...DESKTOP };
+export const ShowDoneMobile: Story = { ...withBigfoot(showDone, false), ...MOBILE };
 
 /** While the Applications load. */
 const loading: Story = {
@@ -73,5 +87,5 @@ const loading: Story = {
     await expect(canvas.getByRole("heading", { level: 1, name: "Dashboard" })).toBeVisible();
   },
 };
-export const LoadingDesktop: Story = { ...loading, ...DESKTOP };
-export const LoadingMobile: Story = { ...loading, ...MOBILE };
+export const LoadingDesktop: Story = { ...withBigfoot(loading, true), ...DESKTOP };
+export const LoadingMobile: Story = { ...withBigfoot(loading, false), ...MOBILE };
