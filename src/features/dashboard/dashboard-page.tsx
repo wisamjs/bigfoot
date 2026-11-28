@@ -3,9 +3,8 @@ import { AppFooter } from "@/features/shell/app-footer";
 import { AppHeader } from "@/features/shell/app-header";
 import { SummaryLine } from "@/features/shell/summary-line";
 import { AddInterviewLink } from "@/features/applications/add-links";
-import { ApplicationListSkeleton } from "@/features/applications/application-list";
 import { NextInterviewCard } from "@/features/applications/next-interview-card";
-import { DashboardApplications } from "@/features/dashboard/dashboard-applications";
+import { DashboardApplications, DashboardApplicationsSkeleton } from "@/features/dashboard/dashboard-applications";
 import { DashboardCard } from "@/features/dashboard/dashboard-card";
 import { InterviewCalendar, InterviewCalendarSkeleton } from "@/features/dashboard/interview-calendar";
 import { Container } from "@/components/ui/container";
@@ -70,17 +69,7 @@ export function DashboardPageSkeleton() {
           </p>
         }
         nextUp={null}
-        applications={
-          <DashboardCard
-            id="applications-title"
-            title="Applications"
-            actions={<Skeleton className="h-11 w-44" />}
-          >
-            <div className="pb-2">
-              <ApplicationListSkeleton flush />
-            </div>
-          </DashboardCard>
-        }
+        applications={<DashboardApplicationsSkeleton />}
         interviews={<InterviewCalendarSkeleton />}
         addInterview={<Skeleton className="h-11 w-40" />}
       />

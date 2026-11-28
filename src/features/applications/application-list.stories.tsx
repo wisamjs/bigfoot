@@ -256,7 +256,7 @@ const jobSearch: Application[] = [
     outcome: "offer",
   }),
 
-  // Done without an Offer: shown with "Show done".
+  // Done without an Offer: shown when the list is filtered to Done.
   app("Atlassian", "Senior Frontend Engineer", {
     done: ["Recruiter Screen", "Technical"],
     outcome: "rejected",
@@ -334,11 +334,11 @@ export const Phone: Story = {
 };
 
 /**
- * With "Show done" on, the Done Applications follow, each showing its Outcome, their completed
- * Interviews marked in grey: the hiring process is over.
+ * Filtered to Done: each Done Application shows its Outcome, its completed Interviews marked in
+ * grey, as the hiring process is over.
  */
-export const ShowDone: Story = {
-  args: { shown: "everything" },
+export const Done: Story = {
+  args: { shown: "done" },
   play: async ({ canvasElement }) => {
     await expect(progressMarks(canvasElement, "Instacart")).not.toHaveLength(0);
     await expect(progressMarks(canvasElement, "Instacart").every((mark) => mark.classList.contains("bg-tone-gray-fg"))).toBe(true);
@@ -440,9 +440,9 @@ export const SortedByProgress: Story = {
   },
 };
 
-/** Sorted by Application: company A–Z, then role; with Show done on, the Done ones sort with the rest (BIG-249). */
+/** Sorted by Application: company A–Z, then role. */
 export const SortedByApplication: Story = {
-  args: { sort: "application", onSort: fn(), shown: "everything" },
+  args: { sort: "application", onSort: fn() },
   play: async ({ canvasElement }) => {
     const companies = rowCompanies(canvasElement);
     await expect(companies).toEqual(companies.toSorted((a = "", b = "") => a.localeCompare(b, "en", { sensitivity: "base" })));
@@ -452,8 +452,8 @@ export const SortedByApplication: Story = {
 /** Sorted by Next: the soonest Interview first, then the longest wait, then Offers. */
 export const SortedByNext: Story = { args: { sort: "next", onSort: fn() } };
 
-/** Sorted by Location A–Z, Applications without one last; with Show done on, the Done ones sort with the rest. */
-export const SortedByLocation: Story = { args: { sort: "location", onSort: fn(), shown: "everything" } };
+/** Sorted by Location A–Z, Applications without one last. */
+export const SortedByLocation: Story = { args: { sort: "location", onSort: fn() } };
 
 /** The landing page's decorative copy: hidden from screen readers, not interactive. */
 export const Decorative: Story = {

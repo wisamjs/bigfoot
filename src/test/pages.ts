@@ -257,6 +257,16 @@ export const northwindWithPanel: Application = {
 /** The search with Unscheduled Interviews (BIG-221): Harbour has only one ahead, Northwind has one after a Scheduled one. */
 export const unscheduledApplications = [lumen, tilth, northwindWithPanel, fernway, harbour, cobalt, brightwater, plinth];
 
+/** Waiting since applying, no Interview yet. */
+export const saltmarsh = inProgress("saltmarsh", { company: "Saltmarsh Energy", title: "Engineering Manager", applied_on: dayOf(-18) });
+export const brightline = inProgress("brightline", { company: "Brightline Robotics", title: "Director of Engineering", applied_on: dayOf(-9) });
+
+/**
+ * Every Progress group on the dashboard's Applications card (BIG-253): three with an Interview
+ * scheduled, Harbour alone awaiting a date, four Waiting ("+1 more"), and Cobalt's Offer alone.
+ */
+export const everyGroupApplications = [...unscheduledApplications, quillon, saltmarsh, brightline];
+
 /** The Journey a Viewer sees of `apps`: In Progress Applications and Offers, and when the other Done Applications' Interviews happened. */
 function journeyOf(apps: Application[]): Journey {
   return {

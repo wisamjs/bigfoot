@@ -17,7 +17,7 @@ import {
   type Application,
   type ApplicationListRow,
   type ApplicationSort,
-  type ApplicationsShown,
+  type ProgressFilter,
 } from "@/lib/applications";
 
 // Also draws the landing page's decorative list (src/features/landing/hero.tsx): after a
@@ -26,12 +26,12 @@ import {
 type Props = {
   applications: Application[];
   /** Which Applications show (BIG-252): In Progress ones and Offers by default. */
-  shown?: ApplicationsShown;
+  shown?: ProgressFilter;
   /** Makes each row a link to its Application's page. */
   linked?: boolean;
   /** Render as a decorative picture (landing page) instead of readable content. */
   decorative?: boolean;
-  /** Draw the table edge to edge inside a card (the Applications page's, the dashboard's) instead of in a frame of its own. */
+  /** Draw the table edge to edge inside a card (the Applications page's) instead of in a frame of its own. */
   flush?: boolean;
   /**
    * Sorts the rows (BIG-209), and with `onSort` makes each column header a button that sorts by
@@ -83,7 +83,7 @@ export function ApplicationList({
   );
 }
 
-function listRows(applications: Application[], shown: ApplicationsShown, sort: ApplicationSort | undefined): ApplicationListRow[] {
+function listRows(applications: Application[], shown: ProgressFilter, sort: ApplicationSort | undefined): ApplicationListRow[] {
   if (sort) return sortApplications(applications, { sort, shown });
   return getApplicationGroups(applications, { shown }).flatMap((group) =>
     group.applications.map((application) => ({ application, group })),
