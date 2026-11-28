@@ -13,11 +13,12 @@ export function fillParams(path, params = {}) {
 }
 
 /**
- * Whether opening `page` needs scripts/dev-applications.mjs's data: an Application, or the test
- * Share link (`shareLink`, its label), whose id is made fresh each run.
+ * Whether opening `page` needs scripts/dev-applications.mjs's data: an Application, its
+ * Applications (`holdsApplications`), or the test Share link (`shareLink`, its label), whose id is
+ * made fresh each run.
  */
 export function needsData(page) {
-  return Boolean(page.application || page.shareLink);
+  return Boolean(page.application || page.holdsApplications || page.shareLink);
 }
 
 /**

@@ -2,6 +2,9 @@
 // scripts/pages.test.ts fails when a src/app page.tsx has no entry here for either state.
 //   expect    text the page must show
 //   query     a search string to open the page with, without the "?" (`progress=waiting`)
+//   holdsApplications
+//             opens the page as the job seeker holding scripts/dev-applications.mjs's Applications,
+//             as `application` does, for a page that lists them
 //   params, application, interview
 //             what fills a dynamic route's [id] and [interviewId] (scripts/page-path.mjs); a page
 //             with `application` is opened by a job seeker holding scripts/dev-applications.mjs's
@@ -47,19 +50,19 @@ export const PAGES = [
   {
     path: "/applications",
     signedIn: true,
-    // Only the loaded page has a table row's link; the skeleton has the heading and the filter's label.
-    expect: "Done Applications aren’t shown",
+    holdsApplications: true,
+    // In the loaded page, with Applications or none (applications-none), not the skeleton: it has
+    // the heading and the filter's label, and a shape where the avatar goes.
+    expect: "Account menu",
     states: [
       { name: "applications-sorted-by-location", steps: [{ click: "button", text: "Location" }], expect: "Remote" },
-      {
-        name: "applications-filter-menu",
-        steps: [{ click: 'button[aria-label^="Filter:"]', pointer: true }],
-        expect: "Filter by Progress",
-      },
+      // The wide-screen toggle group: states open at a laptop's width, so the phone's filter menu is
+      // checked by its stories instead (applications-page.stories.tsx, FilterMenuMobile).
+      { name: "applications-filtered", steps: [{ click: 'button[role="radio"]', text: "Done" }], expect: "Showing 2 Done" },
       { name: "applications-none", applications: "none", steps: [], expect: "Your search starts here" },
     ],
   },
-  { path: "/applications", query: "progress=waiting", signedIn: true, expect: "Showing" },
+  { path: "/applications", query: "progress=waiting", signedIn: true, holdsApplications: true, expect: "Showing" },
   // A dynamic route's entry fills its [id]: `application` is the company of one of the
   // Applications from scripts/dev-applications.mjs, `params` the value itself (scripts/page-path.mjs).
   { path: "/applications/[id]", signedIn: false, params: { id: "unknown" }, redirect: "/sign-in" },
