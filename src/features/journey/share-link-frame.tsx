@@ -12,7 +12,7 @@ export function ShareLinkFrame({ children, art }: { children: ReactNode; art?: R
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="flex justify-center px-4 pb-8 pt-10 sm:pt-14">
-        <Wordmark tile />
+        <Wordmark mark="tile" />
       </header>
       <main id="main" className="flex-1 px-4">
         <div className="card relative mx-auto flex max-w-[480px] flex-col items-center border-line-brand-subtle p-6 text-center sm:p-8">

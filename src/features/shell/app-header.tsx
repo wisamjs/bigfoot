@@ -19,7 +19,7 @@ export function AppHeader({ user, current }: { user?: CurrentUser; current?: (ty
     <header className="sticky top-0 z-50 border-b border-line bg-card">
       <Container className="flex h-[72px] items-center gap-2 sm:gap-8">
         <Link href="/dashboard" aria-label="Bigfoot dashboard" className="touch-target rounded-control">
-          <Wordmark compact bigfoot />
+          <Wordmark compact mark="bigfoot" />
         </Link>
         <nav aria-label="Signed in" className="min-w-0 flex-1">
           <ul className="m-0 flex list-none items-center gap-1 p-0">
