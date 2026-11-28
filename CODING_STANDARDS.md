@@ -35,8 +35,10 @@ Each view (a page, or a dialog over it) has at most one brand button, for its ma
 Application on the dashboard. Other adds, such as Add Prep notes and Add Interview, are secondary.
 A card's edit is `EditButton` (`src/components/ui/edit-button.tsx`): the icon-only tertiary pencil,
 named for what it edits ("Edit details"). An action for the whole page is a labelled tertiary
-button. Buttons that do the same kind of job have the same width on a phone. A second brand button
-in one view is a defect.
+button. On a phone, a card's buttons share one row, splitting it equally, at most two to a row; a
+label too long for its half shortens to words from its full name, which stays its accessible name
+(axe's label-content-name-mismatch); a lone button keeps its own width. A second brand button in
+one view is a defect.
 
 ## A new colour reuses the palette
 

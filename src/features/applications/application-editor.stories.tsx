@@ -3,6 +3,7 @@ import { expect, mocked, waitFor, within } from "storybook/test";
 import * as actions from "@/app/applications/actions";
 import { prepLookBack } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
+import { expectButtonsShareARow } from "@/test/phone-buttons";
 import { ApplicationEditor } from "./application-editor";
 
 // The Application page under its "← Dashboard" link (BIG-174). Dates are counted from today, so
@@ -335,17 +336,23 @@ export const NextHasPrepNotes: Story = {
 };
 
 /**
- * A phone: Add Prep notes and Open Interview keep their own width (BIG-240), share a row only while both fit, and never get
- * narrower than their labels (BIG-187).
+ * A 320 px phone: Add Prep notes and Open Interview share one row, splitting it equally, their
+ * labels fitting their halves (BIG-254).
  */
 export const NextUpOnAPhone: Story = {
   globals: { viewport: { value: "mobile1", isRotated: false } },
   play: async ({ canvas }) => {
     const next = canvas.getByRole("region", { name: "Round 3 · Technical Deep-Dive" });
-    const links = ["Add Prep notes", "Open Interview"].map((name) =>
-      within(next).getAllByRole("link", { name }).find((l) => l.checkVisibility()),
-    );
-    await expect(links.every((link) => link && link.scrollWidth <= link.clientWidth)).toBe(true);
+    await expectButtonsShareARow(next, ["Add Prep notes", "Open Interview"]);
+  },
+};
+
+/** The same on a 375 px phone. */
+export const NextUpOnA375Phone: Story = {
+  globals: { viewport: { value: "phone", isRotated: false } },
+  play: async ({ canvas }) => {
+    const next = canvas.getByRole("region", { name: "Round 3 · Technical Deep-Dive" });
+    await expectButtonsShareARow(next, ["Add Prep notes", "Open Interview"]);
   },
 };
 

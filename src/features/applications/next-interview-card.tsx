@@ -96,7 +96,11 @@ function Where({ app, at, dashboard }: { app: Application; at: string | null; da
  * opens Edit details on its page; Add Prep notes while it has none; and on a phone, Open Interview.
  * One brand button per page (BIG-240): Add the date is brand on the Application page, but the
  * dashboard's is Add Application, so there every button here is secondary, and Add Prep notes always
- * is. They keep their own width on a phone, as the cards' other add buttons do.
+ * is.
+ *
+ * On a phone they share one row, splitting it equally, two to a row (BIG-254): of three, Open
+ * Interview takes the row below, and a lone one keeps its own width. Their icons give way to the
+ * label there, and a label too long for its half shortens (`ButtonLabel`).
  */
 function Actions({
   href,
@@ -109,26 +113,43 @@ function Actions({
   prepNotes: boolean;
   dashboard: boolean;
 }) {
+  const onAPhone = (addDateHref ? 1 : 0) + (prepNotes ? 0 : 1) + 1;
+  const openWidth = onAPhone === 1 ? "col-span-2 justify-self-start" : onAPhone === 3 ? "col-span-2" : "";
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="@container grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center">
       {addDateHref && (
-        <Link href={addDateHref} className={buttonClasses(dashboard ? "secondary" : "brand")}>
-          <CalendarPlus className="size-4" aria-hidden />
-          Add the date
+        <Link href={addDateHref} aria-label="Add the date" className={buttonClasses(dashboard ? "secondary" : "brand")}>
+          <CalendarPlus className="size-4 max-sm:hidden" aria-hidden />
+          <ButtonLabel full="Add the date" short="Date" />
         </Link>
       )}
       {!prepNotes && (
         <>
-          <Link href={href} className={buttonClasses("secondary")}>
-            <Plus className="size-4" aria-hidden />
-            Add Prep notes
+          <Link href={href} aria-label="Add Prep notes" className={buttonClasses("secondary")}>
+            <Plus className="size-4 max-sm:hidden" aria-hidden />
+            <ButtonLabel full="Add Prep notes" short="Prep notes" />
           </Link>
           <span className="hidden text-sm text-body sm:inline">No Prep notes yet.</span>
         </>
       )}
-      <Link href={href} className={`${buttonClasses("secondary")} sm:hidden`}>
-        Open Interview
+      <Link href={href} aria-label="Open Interview" className={`${buttonClasses("secondary")} ${openWidth} sm:hidden`}>
+        {onAPhone === 2 ? <ButtonLabel full="Open Interview" short="Open" /> : "Open Interview"}
       </Link>
     </div>
+  );
+}
+
+/**
+ * The label of a button sharing a phone's row: the full one, or the short one where half the row is
+ * too narrow for it (BIG-254). Under 18rem, as on 375 px and 320 px phones, "Add Prep notes"
+ * (101 px) no longer fits its half, and both halves shorten together. The button's `aria-label`
+ * keeps the full name either way.
+ */
+function ButtonLabel({ full, short }: { full: string; short: string }) {
+  return (
+    <>
+      <span className="@max-[18rem]:hidden">{full}</span>
+      <span className="hidden @max-[18rem]:inline">{short}</span>
+    </>
   );
 }

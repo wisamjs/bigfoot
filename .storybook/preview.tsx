@@ -2,6 +2,7 @@ import type { Preview } from "@storybook/nextjs-vite";
 import { addons } from "storybook/preview-api";
 import { sb } from "storybook/test";
 import { themes } from "storybook/theming";
+import { MINIMAL_VIEWPORTS } from "storybook/viewport";
 import "../src/app/globals.css";
 import { fixNow } from "./fixed-now";
 import { applyTheme } from "./theme";
@@ -56,6 +57,13 @@ const preview: Preview = {
   parameters: {
     docs: { theme: themes.dark },
     nextjs: { appDirectory: true },
+    // Storybook's own, plus the 375 px phone every UI change is checked at (mobile1 is 320 px).
+    viewport: {
+      options: {
+        ...MINIMAL_VIEWPORTS,
+        phone: { name: "Phone (375 px)", styles: { width: "375px", height: "667px" }, type: "mobile" },
+      },
+    },
     layout: "padded",
     controls: { matchers: { color: /(background|color)$/i, date: /Date$/i } },
     a11y: {
