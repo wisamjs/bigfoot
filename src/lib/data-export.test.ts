@@ -121,6 +121,12 @@ describe("applicationsCsv", () => {
     expect(rows[2][0]).toBe("Second");
   });
 
+  it("leaves an Unscheduled Interview's date empty", () => {
+    const unscheduled: Interview = { id: "i1", application_id: "a1", category: "people_management", title: "Leadership", at: null, what_they_asked: null, how_it_went: null, takeaway: null, prep_notes: null, participants: [], completed: false, created_at: ts, updated_at: ts };
+    const rows = parseCsv(applicationsCsv([application({ interviews: [unscheduled] })]).slice(1));
+    expect(rows[1][rows[0].indexOf("Interviews")]).toBe("Leadership (People Management)");
+  });
+
   it("quotes cells holding quotes and newlines", () => {
     const rows = parseCsv(applicationsCsv([application({ title: 'Say "hi"\nthere' })]).slice(1));
     expect(rows[1][1]).toBe('Say "hi"\nthere');

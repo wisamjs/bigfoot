@@ -1315,7 +1315,7 @@
           "Interviews"
         ],
         "summary": "Add an Interview",
-        "description": "Add an Interview to an Application. The category, title, date and time, and at least one\nParticipant are required; categories and titles can repeat, and Interview notes and Prep notes are\noptional. A Participant sent by `id` must be one of the Application's (422). The number of Interviews per\nApplication is capped (409).",
+        "description": "Add an Interview to an Application. The category, title, `at`, and at least one Participant are\nrequired; `at: null` adds an Unscheduled Interview (docs/adr/0009), which a Done Application refuses (422).\nCategories and titles can repeat, and Interview notes and Prep notes are optional. A Participant sent by\n`id` must be one of the Application's (422). The number of Interviews per Application is capped (409).",
         "operationId": "create_interview_applications__application_id__interviews_post",
         "security": [
           {
@@ -1409,7 +1409,7 @@
           "Interviews"
         ],
         "summary": "Edit an Interview",
-        "description": "Change an Interview's category, title, date, Interview notes, Prep notes, or Participants.\n\nOnly the fields sent change; send null for `what_they_asked`, `how_it_went`, `takeaway` or `prep_notes` to\nclear it. The category, title, and date can't be cleared. `participants` replaces the Interview's\nParticipants: at least one, and a Participant left in no Interview is deleted. An `id` that isn't one of\nthe Application's Participants is refused (422).",
+        "description": "Change an Interview's category, title, date, Interview notes, Prep notes, or Participants.\n\nOnly the fields sent change; send null for `what_they_asked`, `how_it_went`, `takeaway` or `prep_notes` to\nclear it. The category and title can't be cleared. `at: null` makes the Interview Unscheduled, on an In\nProgress Application only (422 on a Done one). `participants` replaces the Interview's\nParticipants: at least one, and a Participant left in no Interview is deleted. An `id` that isn't one of\nthe Application's Participants is refused (422).",
         "operationId": "update_interview_applications__application_id__interviews__interview_id__patch",
         "security": [
           {
@@ -1875,12 +1875,12 @@
             },
             "type": "array",
             "title": "Interviews",
-            "description": "Ordered by date."
+            "description": "Ordered by date, then Unscheduled Interviews last in the order they were added (docs/adr/0009)."
           },
           "is_waiting": {
             "type": "boolean",
             "title": "Is Waiting",
-            "description": "Derived (GLOSSARY.md, Waiting): In Progress with no upcoming Interview, including a new one."
+            "description": "Derived (GLOSSARY.md, Waiting): In Progress with no upcoming Interview, Scheduled or Unscheduled, including a new one."
           },
           "waiting_since": {
             "anyOf": [
@@ -2404,10 +2404,17 @@
             ]
           },
           "at": {
-            "type": "string",
-            "format": "date-time",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "At",
-            "description": "When the Interview happens: a date and time, with a time zone. Required (docs/adr/0005).",
+            "description": "When the Interview happens: a date and time, with a time zone. Null when the Interview is Unscheduled (GLOSSARY.md, docs/adr/0009): upcoming, with no date and time yet, shown as \"Date TBD\".",
             "examples": [
               "2026-11-20T17:00:00Z"
             ]
@@ -2483,7 +2490,7 @@
           "completed": {
             "type": "boolean",
             "title": "Completed",
-            "description": "Derived, never stored: the date is in the past.",
+            "description": "Derived, never stored: the date is in the past. An Unscheduled Interview is never completed.",
             "examples": [
               false
             ]
@@ -2550,10 +2557,17 @@
             ]
           },
           "at": {
-            "type": "string",
-            "format": "date-time",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "At",
-            "description": "When the Interview happens: a date and time, with a time zone. Required (docs/adr/0005).",
+            "description": "When the Interview happens: a date and time, with a time zone. Null when the Interview is Unscheduled (GLOSSARY.md, docs/adr/0009): upcoming, with no date and time yet, shown as \"Date TBD\". Required: send null for an Unscheduled Interview; leaving the key out is refused. Null is refused on a Done Application (422).",
             "examples": [
               "2026-11-20T17:00:00Z"
             ]
@@ -2711,7 +2725,7 @@
               }
             ],
             "title": "At",
-            "description": "When the Interview happens: a date and time, with a time zone. Required (docs/adr/0005). Cannot be cleared.",
+            "description": "When the Interview happens: a date and time, with a time zone. Null when the Interview is Unscheduled (GLOSSARY.md, docs/adr/0009): upcoming, with no date and time yet, shown as \"Date TBD\". Send null to make it Unscheduled, on an In Progress Application only (422 on a Done one).",
             "examples": [
               "2026-11-27T15:30:00Z"
             ]
@@ -2812,7 +2826,7 @@
         "additionalProperties": false,
         "type": "object",
         "title": "InterviewPatch",
-        "description": "Only the fields sent are changed; send null for one of the Interview notes fields or `prep_notes` to clear it.\n\nThe date can't be cleared. `participants`, when sent, replaces the Interview's Participants and needs at least one."
+        "description": "Only the fields sent are changed; send null for one of the Interview notes fields or `prep_notes` to clear it.\n\nSend `at: null` to make an In Progress Application's Interview Unscheduled. `participants`, when sent,\nreplaces the Interview's Participants and needs at least one."
       },
       "JobSeeker": {
         "properties": {
@@ -2942,7 +2956,7 @@
           "is_waiting": {
             "type": "boolean",
             "title": "Is Waiting",
-            "description": "Derived (GLOSSARY.md, Waiting): In Progress with no upcoming Interview, including a new one."
+            "description": "Derived (GLOSSARY.md, Waiting): In Progress with no upcoming Interview, Scheduled or Unscheduled, including a new one."
           },
           "waiting_since": {
             "anyOf": [
@@ -2970,7 +2984,7 @@
             },
             "type": "array",
             "title": "Interviews",
-            "description": "Ordered by date."
+            "description": "Ordered by date, then Unscheduled Interviews last in the order they were added (docs/adr/0009)."
           }
         },
         "additionalProperties": false,
@@ -3018,10 +3032,17 @@
             ]
           },
           "at": {
-            "type": "string",
-            "format": "date-time",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "At",
-            "description": "When the Interview happens: a date and time, with a time zone. Required (docs/adr/0005).",
+            "description": "When the Interview happens: a date and time, with a time zone. Null when the Interview is Unscheduled (GLOSSARY.md, docs/adr/0009): upcoming, with no date and time yet, shown as \"Date TBD\".",
             "examples": [
               "2026-11-24T19:00:00Z"
             ]
@@ -3029,7 +3050,7 @@
           "completed": {
             "type": "boolean",
             "title": "Completed",
-            "description": "Derived, never stored: the date is in the past.",
+            "description": "Derived, never stored: the date is in the past. An Unscheduled Interview is never completed.",
             "examples": [
               false
             ]

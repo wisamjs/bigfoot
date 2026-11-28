@@ -37,6 +37,34 @@ export const MissingFields: Story = {
   },
 };
 
+/** Adding with no date asks for a date and time, or Date TBD: nothing is assumed (BIG-221). */
+export const NoDateChosen: Story = {
+  args: { applicationId: "datadog" },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(canvas.getByRole("textbox", { name: "Role" }), "Recruiter");
+    await userEvent.click(canvas.getByRole("button", { name: "Add Interview" }));
+    await expect(canvas.getByRole("button", { name: /^Date, / })).toHaveAccessibleDescription(
+      "Enter the date and time, or choose Date TBD.",
+    );
+    await expect(createInterviewAction).not.toHaveBeenCalled();
+  },
+};
+
+/** Date TBD ticked (BIG-221): the date and time clear and disable, and the Interview is added Unscheduled. */
+export const DateTbd: Story = {
+  args: { applicationId: "datadog" },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("checkbox", { name: "Date TBD" }));
+    await expect(canvas.getByRole("button", { name: /^Date, / })).toBeDisabled();
+    await expect(canvas.getByLabelText("Time")).toBeDisabled();
+    await userEvent.type(canvas.getByRole("textbox", { name: "Role" }), "VP Engineering");
+    await userEvent.click(canvas.getByRole("button", { name: "Add Interview" }));
+    await waitFor(() =>
+      expect(createInterviewAction).toHaveBeenCalledWith("datadog", expect.objectContaining({ at: null, unscheduled: true })),
+    );
+  },
+};
+
 /**
  * The category (its name filling in the title), a title in the job seeker's words, the date and
  * time, who they're meeting (someone already met at Datadog, and someone new), and How it went

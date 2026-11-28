@@ -218,30 +218,77 @@ export const applications = [lumen, tilth, northwind, fernway, quillon, cobalt, 
 /** A new job seeker's Sample Applications, as onboarding adds them. */
 export const samples = previewApplications(NOW).map((sample) => ({ ...sample, is_sample: true }));
 
+/** An Unscheduled Interview of `app` ("Date TBD", BIG-221), added `daysAgo`: the order added sets its Round number. */
+function unscheduledRound(app: string, id: string, fields: Partial<Interview> & Pick<Interview, "category" | "title">, daysAgo: number) {
+  return interview(`${app}-${id}`, { application_id: app, at: null, completed: false, created_at: on(-daysAgo, 12), ...fields });
+}
+
+/** Through to the next round with no date yet (BIG-221): only an Unscheduled Interview ahead, so "Next round · date TBD". */
+export const harbour = inProgress("harbour", {
+  company: "Harbour Analytics",
+  title: "Senior Engineering Manager",
+  location: "hybrid",
+  office_days: 2,
+  applied_on: dayOf(-24),
+  is_waiting: false,
+  waiting_since: null,
+  interviews: [
+    round("harbour", "screen", { category: "recruiter", title: "Recruiter Screen" }, -15, 10),
+    round("harbour", "manager", {
+      category: "hiring_manager",
+      title: "Hiring Manager",
+      what_they_asked: "How do you run a planning cycle?\nTell me about a launch that slipped.",
+      takeaway: "Ask who I’d be meeting next, and when they’ll decide.",
+    }, -6, 13),
+    unscheduledRound("harbour", "leadership", {
+      category: "people_management",
+      title: "Leadership",
+      prep_notes: "Ask who I’d be meeting.\nHave the org-design story ready.",
+    }, 2),
+  ],
+});
+
+/** Northwind Labs with a Final Panel confirmed but not booked after its Onsite Loop: both kinds ahead, so still "Interview scheduled". */
+export const northwindWithPanel: Application = {
+  ...northwind,
+  interviews: [...northwind.interviews, unscheduledRound("northwind", "panel", { category: "decision_maker", title: "Final Panel" }, 1)],
+};
+
+/** The search with Unscheduled Interviews (BIG-221): Harbour has only one ahead, Northwind has one after a Scheduled one. */
+export const unscheduledApplications = [lumen, tilth, northwindWithPanel, fernway, harbour, cobalt, brightwater, plinth];
+
+/** The Journey a Viewer sees of `apps`: In Progress Applications and Offers, and when the other Done Applications' Interviews happened. */
+function journeyOf(apps: Application[]): Journey {
+  return {
+    shared_by: user.name,
+    applications: apps
+      .filter((a) => !isDone(a) || a.outcome === "offer")
+      .toSorted((a, b) => a.applied_on.localeCompare(b.applied_on))
+      .map((a) => ({
+        company: a.company,
+        title: a.title,
+        applied_on: a.applied_on,
+        offer: a.outcome === "offer",
+        is_waiting: a.is_waiting,
+        waiting_since: a.waiting_since,
+        interviews: a.interviews.map(({ category, title, at, completed }) => ({ category, title, at, completed })),
+      })),
+    // The other Done Applications give only when their completed Interviews happened (BIG-206).
+    other_completed_interviews: apps
+      .filter((a) => isDone(a) && a.outcome !== "offer")
+      .flatMap((a) => a.interviews.flatMap((i) => (i.completed && i.at !== null ? [i.at] : [])))
+      .toSorted(),
+  };
+}
+
 /**
  * The Journey a Viewer of Alex's Share link sees: In Progress Applications and Offers, and when the
  * other Done Applications' Interviews happened; nothing private.
  */
-export const journey: Journey = {
-  shared_by: user.name,
-  applications: applications
-    .filter((a) => !isDone(a) || a.outcome === "offer")
-    .toSorted((a, b) => a.applied_on.localeCompare(b.applied_on))
-    .map((a) => ({
-      company: a.company,
-      title: a.title,
-      applied_on: a.applied_on,
-      offer: a.outcome === "offer",
-      is_waiting: a.is_waiting,
-      waiting_since: a.waiting_since,
-      interviews: a.interviews.map(({ category, title, at, completed }) => ({ category, title, at, completed })),
-    })),
-  // The other Done Applications give only when their completed Interviews happened (BIG-206).
-  other_completed_interviews: applications
-    .filter((a) => isDone(a) && a.outcome !== "offer")
-    .flatMap((a) => a.interviews.filter((i) => i.completed).map((i) => i.at))
-    .toSorted(),
-};
+export const journey: Journey = journeyOf(applications);
+
+/** The Journey with Unscheduled Interviews (BIG-221): Harbour's "Next round · date TBD", and none on the calendar. */
+export const unscheduledJourney: Journey = journeyOf(unscheduledApplications);
 
 export const SHARE_LINK_ID = "k7Qm2x9PaB";
 

@@ -49,3 +49,14 @@ export const AllZero: Story = {
     await expect(canvasElement).toBeEmptyDOMElement();
   },
 };
+
+/** Unscheduled Interviews (BIG-221): "N awaiting a date" follows the Interviews count. */
+export const AwaitingADate: Story = {
+  args: {
+    counts: [
+      { id: "interviews", text: "2 Interviews in the next 2 weeks" },
+      { id: "awaiting", text: "2 awaiting a date" },
+      { id: "waiting", text: "1 waiting to hear back" },
+    ],
+  },
+};

@@ -13,6 +13,7 @@ import { useToday } from "@/hooks/use-today";
 import {
   calendarDaysBetween,
   categoryLabel,
+  DATE_TBD,
   locationText,
   nextInterview,
   OUTCOME_OPTIONS,
@@ -155,7 +156,8 @@ function Marks({ job }: { job: Application }) {
 
 /**
  * What comes next, in two lines (BIG-195): the soonest upcoming Interview's title, then its day and
- * time (in the brand colour today or tomorrow) and "+1 later" when more are booked. While Waiting,
+ * time (in the brand colour today or tomorrow), or "Date TBD" for an Unscheduled one when nothing is
+ * Scheduled (BIG-221), and "+1 later" when more are ahead, Unscheduled ones included. While Waiting,
  * "Nothing booked" over the Waiting since date in the warning colour. A Done Application other than
  * an Offer shows its Outcome. Each upcoming Interview's category and date show on hover and are read
  * to screen readers.
@@ -236,10 +238,18 @@ const sinceFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "n
 /**
  * When the next Interview is, in the brand colour today or tomorrow: "Tomorrow · 2:00 PM", "In 2
  * days · Wed 11:00 AM", "In 11 days · Fri, Dec 4, 9:30 AM". `short`, for a phone's one line:
- * "tomorrow 2:00 PM", "in 2 days". Nothing until hydration, which can't know the viewer's time zone.
+ * "tomorrow 2:00 PM", "in 2 days". "Date TBD" for an Unscheduled Interview. Nothing until hydration,
+ * which can't know the viewer's time zone.
  */
-function NextWhen({ at, short = false }: { at: string; short?: boolean }) {
+function NextWhen({ at, short = false }: { at: string | null; short?: boolean }) {
   const today = useToday();
+  if (at === null) {
+    return (
+      <span aria-hidden className="text-body">
+        {DATE_TBD}
+      </span>
+    );
+  }
   if (!today) return <span className="inline-block h-4" />;
   const { text, soon } = nextWhen(new Date(at), today, short);
   return (
@@ -258,7 +268,12 @@ function WaitingSince({ job }: { job: Application }) {
 
 const hoverFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 
-/** Each upcoming Interview's title, category and date, one per line, for the hover tooltip. */
+/** "Date TBD" for an Unscheduled Interview, else its date in the hover's format. */
+function hoverWhen(at: string | null): string {
+  return at === null ? DATE_TBD : hoverFormat.format(new Date(at));
+}
+
+/** Each upcoming Interview's title, category and date ("Date TBD" when Unscheduled), one per line, for the hover tooltip. */
 function useHoverText(interviews: Interview[]): string | undefined {
   // The server can't know the viewer's time zone, so the dates are added after hydration.
   const isClient = useIsClient();
@@ -266,7 +281,9 @@ function useHoverText(interviews: Interview[]): string | undefined {
   return interviews
     .map((interview) => {
       const category = categoryLabel(interview.category);
-      return isClient ? `${interview.title} · ${category} · ${hoverFormat.format(new Date(interview.at))}` : `${interview.title} · ${category}`;
+      return isClient || interview.at === null
+        ? `${interview.title} · ${category} · ${hoverWhen(interview.at)}`
+        : `${interview.title} · ${category}`;
     })
     .join("\n");
 }
@@ -279,7 +296,8 @@ function UpcomingForScreenReaders({ interviews }: { interviews: Interview[] }) {
       {interviews.map((interview, i) => (
         <span key={interview.id}>
           {i > 0 && "; "}
-          {interview.title}, {categoryLabel(interview.category)}, <InterviewWhen at={interview.at} />
+          {interview.title}, {categoryLabel(interview.category)},{" "}
+          {interview.at === null ? DATE_TBD : <InterviewWhen at={interview.at} />}
         </span>
       ))}
     </span>

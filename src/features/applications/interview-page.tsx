@@ -18,7 +18,7 @@ export const INTERVIEW_NOT_FOUND_TITLE = "Interview not found";
  * The Interview page, under "Dashboard / <company>", which leads to its Application page (BIG-202).
  * `lookBack` (an upcoming Interview's takeaways and They asked last time) and `showsOn` (the
  * Interviews its Takeaway for next time shows before) are worked out from every Application, so
- * only what shows reaches the browser.
+ * only what shows reaches the browser. `editDetails` opens Edit details at once (Add the date).
  */
 export function InterviewPage({
   user,
@@ -26,12 +26,14 @@ export function InterviewPage({
   interview,
   lookBack,
   showsOn,
+  editDetails = false,
 }: {
   user: CurrentUser;
   app: Application;
   interview: Interview;
   lookBack: PrepLookBack | undefined;
   showsOn: PrepTakeaway[];
+  editDetails?: boolean;
 }) {
   return (
     <FormPage
@@ -41,7 +43,7 @@ export function InterviewPage({
       back={<DashboardBreadcrumb href={applicationHref(app.id)}>{app.company}</DashboardBreadcrumb>}
       guard={UnsavedChanges}
     >
-      <InterviewEditor app={app} interview={interview} lookBack={lookBack} showsOn={showsOn} />
+      <InterviewEditor app={app} interview={interview} lookBack={lookBack} showsOn={showsOn} editDetails={editDetails} />
     </FormPage>
   );
 }

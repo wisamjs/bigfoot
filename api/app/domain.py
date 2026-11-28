@@ -3,6 +3,7 @@
 Mirrors the check constraints in supabase/migrations and the labels in src/lib/applications.ts.
 """
 
+from datetime import date, datetime
 from typing import Literal
 
 Status = Literal["in_progress", "done"]
@@ -66,3 +67,13 @@ OUTCOME_NOTE_MAX_LENGTH = 2_000
 # search needs.
 APPLICATIONS_MAX = 1_000
 INTERVIEWS_PER_APPLICATION_MAX = 50
+
+
+def is_completed(at: datetime | None, now: datetime) -> bool:
+    """Completed means the date is in the past; an Unscheduled Interview (no date) never is (docs/adr/0009)."""
+    return at is not None and at <= now
+
+
+def waiting_since(dates: list[datetime | None], applied_on: date) -> datetime | date:
+    """When the wait began: the last dated Interview, or the applied date when there is none."""
+    return max((at for at in dates if at is not None), default=applied_on)

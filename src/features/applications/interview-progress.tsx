@@ -5,20 +5,21 @@ import { useIsClient } from "@/hooks/use-is-client";
 import { DaysFromToday } from "@/features/applications/application-when";
 import { interviewHref } from "@/features/applications/routes";
 import { interviewMark } from "@/features/applications/status-tone";
-import { nextInterview, roundNumber, type Application, type Interview, type Status } from "@/lib/applications";
+import { DATE_TBD, nextInterview, roundNumber, type Application, type Interview, type Status } from "@/lib/applications";
 
 const dayFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
 
 /**
  * The Application's Interviews as a strip of segments, by date (BIG-174): one for each completed
  * Interview, green while the Application is In Progress and grey once it is Done (BIG-177), the
- * brand colour for the next, a light line for the rest, each with "R3 · Nov 25 · In 2 days" (its
- * Round number, BIG-190) and its title under it (BIG-202). Each segment opens its Interview page. On a phone, the segments
+ * brand colour for the next, a light line for the rest, and a dashed one in the brand colour, last,
+ * for each Unscheduled Interview (BIG-221), each with "R3 · Nov 25 · In 2 days" or "R4 · Date TBD"
+ * (its Round number, BIG-190) and its title under it (BIG-202). Each segment opens its Interview page. On a phone, the segments
  * alone and "2 of 4 Interviews completed". Nothing when there are no Interviews.
  *
  * On an Interview page (`current` is that Interview's id, BIG-178), its segment is outlined and
  * labelled "This interview · Nov 13", and a phone's line reads "Round 2 of 4" with a link to
- * "R3 · <title> →".
+ * "R3 · <title> →", or "Round 4 of 4 · Date TBD" for an Unscheduled Interview.
  */
 export function InterviewProgress({ app, current }: { app: Application; current?: string }) {
   const next = nextInterview(app);
@@ -49,6 +50,7 @@ export function InterviewProgress({ app, current }: { app: Application; current?
           <>
             <span>
               Round {roundNumber(app, app.interviews[position])} of {app.interviews.length}
+              {app.interviews[position].at === null && <> · {DATE_TBD}</>}
             </span>
             {following && (
               <Link
@@ -117,9 +119,13 @@ function Segment({
   );
 }
 
-/** "Nov 6 · Completed", "Nov 25 · In 2 days", or on an Interview's own page "This interview · Nov 13". */
+/**
+ * "Nov 6 · Completed", "Nov 25 · In 2 days", "Date TBD", or on an Interview's own page "This
+ * interview · Nov 13" ("This interview · Date TBD").
+ */
 function SegmentWhen({ interview, current }: { interview: Interview; current: boolean }) {
   const isClient = useIsClient();
+  if (interview.at === null) return <>{current ? `This interview · ${DATE_TBD}` : DATE_TBD}</>;
   if (!isClient) return <span className="inline-block h-4" />;
   const day = dayFormat.format(new Date(interview.at));
   if (current) return <>This interview · {day}</>;

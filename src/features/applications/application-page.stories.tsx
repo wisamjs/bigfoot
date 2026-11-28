@@ -1,7 +1,21 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, within } from "storybook/test";
 import { nextInterview, prepLookBack, type Application } from "@/lib/applications";
-import { applications, brightwater, cobalt, DESKTOP, fernway, lumen, MOBILE, PAGE, quillon, user } from "@/test/pages";
+import {
+  applications,
+  brightwater,
+  cobalt,
+  DESKTOP,
+  fernway,
+  harbour,
+  lumen,
+  MOBILE,
+  northwindWithPanel,
+  PAGE,
+  quillon,
+  unscheduledApplications,
+  user,
+} from "@/test/pages";
 import { ApplicationNotFoundPage, ApplicationPage, ApplicationPageSkeleton } from "./application-page";
 
 // An Application's page, whole, as /applications/[id] renders it (BIG-203), at a laptop's width and
@@ -9,9 +23,9 @@ import { ApplicationNotFoundPage, ApplicationPage, ApplicationPageSkeleton } fro
 // (src/test/pages.ts). The look back is worked out from every Application, as the route does.
 
 /** The page's props for `app`, as the route works them out. */
-function page(app: Application, justAdded = false) {
+function page(app: Application, justAdded = false, all = applications) {
   const next = nextInterview(app);
-  return { app, justAdded, lookBack: next ? prepLookBack(applications, app, next) : undefined };
+  return { app, justAdded, lookBack: next ? prepLookBack(all, app, next) : undefined };
 }
 
 const meta = {
@@ -96,3 +110,30 @@ export const NotFoundMobile: Story = { ...notFound, ...MOBILE };
 const loading: Story = { render: () => <ApplicationPageSkeleton /> };
 export const LoadingDesktop: Story = { ...loading, ...DESKTOP };
 export const LoadingMobile: Story = { ...loading, ...MOBILE };
+
+/**
+ * Through to the next round with no date yet (BIG-221): "Next round · date TBD", the strip ending
+ * in a dashed Date TBD segment, and Next up with a TBD tile and Add the date.
+ */
+const dateTbd: Story = {
+  args: page(harbour, false, unscheduledApplications),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("Next round · date TBD")).toBeVisible();
+    const next = canvas.getByRole("region", { name: "Round 3 · Leadership" });
+    await expect(within(next).getByRole("link", { name: "Add the date" })).toBeVisible();
+    await expect(within(next).getByText(/Ask who I’d be meeting next/)).toBeVisible();
+  },
+};
+export const DateTbdDesktop: Story = { ...dateTbd, ...DESKTOP };
+export const DateTbdMobile: Story = { ...dateTbd, ...MOBILE };
+
+/** A Scheduled Interview ahead, then one with no date (BIG-221): still Interview scheduled, Later lists it as Date TBD. */
+const laterDateTbd: Story = {
+  args: page(northwindWithPanel, false, unscheduledApplications),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("Interview scheduled")).toBeVisible();
+    await expect(within(canvas.getByRole("list", { name: "Later" })).getByText("Date TBD")).toBeVisible();
+  },
+};
+export const LaterDateTbdDesktop: Story = { ...laterDateTbd, ...DESKTOP };
+export const LaterDateTbdMobile: Story = { ...laterDateTbd, ...MOBILE };

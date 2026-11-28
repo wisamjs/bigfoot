@@ -24,6 +24,14 @@ export function interviewHref(applicationId: string, interviewId: string) {
   return `${applicationHref(applicationId)}/interviews/${encodeURIComponent(interviewId)}`;
 }
 
+/** The Interview page's search param that opens Edit details at once, as Add the date does. */
+export const EDIT_PARAM = "edit";
+
+/** An Interview's page with Edit details open: the Application page's Add the date for an Unscheduled Interview. */
+export function addDateHref(applicationId: string, interviewId: string) {
+  return `${interviewHref(applicationId, interviewId)}?${new URLSearchParams({ [EDIT_PARAM]: "details" })}`;
+}
+
 /** The Application page's search param that says what was just deleted, so it can say so. */
 export const DELETED_PARAM = "deleted";
 

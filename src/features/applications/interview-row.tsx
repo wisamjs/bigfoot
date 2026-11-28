@@ -10,6 +10,7 @@ import { DateTile } from "@/features/applications/date-tile";
 import { interviewHref } from "@/features/applications/routes";
 import { TheyAsked } from "@/features/applications/interview-notes-form";
 import {
+  DATE_TBD,
   INTERVIEW_NOTES_LABELS,
   hasInterviewNotes,
   paragraphs,
@@ -23,6 +24,7 @@ const FOLD_LENGTH = 140;
 /**
  * One Interview in the Application page's Interviews card (BIG-174): a date tile, its title with its
  * category beside it, its day and time. One still ahead says how far off it is, and "Add Interview notes" while it has none; a
+ * still ahead with no date (Unscheduled, BIG-221) has a "TBD" tile and reads "Date TBD"; a
  * completed one is marked Completed and shows its Interview notes in full (BIG-179: How it went, They
  * asked and the takeaway), folded to the first paragraph on a phone behind Show all notes. The title is a link whose area covers the row, so the whole row
  * opens the Interview page, where it is edited; the notes sit above that, so their text can be
@@ -51,11 +53,17 @@ export function InterviewRow({ applicationId, interview }: { applicationId: stri
           )}
         </p>
         <p className="m-0 mt-1 text-sm text-body">
-          <InterviewDayTime at={interview.at} />
-          {!completed && (
+          {interview.at === null ? (
+            <span className="font-medium text-fg-brand">{DATE_TBD}</span>
+          ) : (
             <>
-              {" · "}
-              <DaysFromToday date={interview.at} />
+              <InterviewDayTime at={interview.at} />
+              {!completed && (
+                <>
+                  {" · "}
+                  <DaysFromToday date={interview.at} />
+                </>
+              )}
             </>
           )}
         </p>

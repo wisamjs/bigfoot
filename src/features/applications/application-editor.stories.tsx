@@ -349,6 +349,57 @@ export const NextUpOnAPhone: Story = {
   },
 };
 
+/** An Unscheduled Interview (BIG-221): through to the next round, with no date yet. */
+const unscheduledLeadership = interview("leadership", {
+  application_id: "lumen",
+  category: "people_management",
+  title: "Leadership",
+  at: null,
+  completed: false,
+  prep_notes: "Ask who I’d be meeting.\nHave the org-design story ready.",
+});
+
+/**
+ * Only an Unscheduled Interview ahead (BIG-221): "Next round · date TBD" in a neutral pill, the
+ * strip ending in a dashed "R3 · Date TBD" segment, and Next up with a "TBD" tile, "Next up · date
+ * TBD" and Add the date, which opens its Interview page with Edit details open.
+ */
+export const NextUpDateTbd: Story = {
+  args: { app: { ...lumen, interviews: [...lumen.interviews.filter((i) => i.completed), unscheduledLeadership] } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("Next round · date TBD")).toBeVisible();
+    const next = canvas.getByRole("region", { name: "Round 3 · Leadership" });
+    await expect(next).toHaveTextContent(/Next up · date TBD/i);
+    await expect(within(next).getByRole("link", { name: "Add the date" })).toHaveAttribute(
+      "href",
+      "/applications/lumen/interviews/leadership?edit=details",
+    );
+    await expect(within(next).getByText(/Have the org-design story ready/)).toBeVisible();
+    const segments = within(canvas.getByRole("list", { name: "Interviews by date" })).getAllByRole("link");
+    await expect(segments[2]).toHaveAccessibleName(/^Round 3 · Date TBD.*Leadership$/);
+  },
+};
+
+/** The same on a phone: the strip's line, and Add the date and Open Interview fitting their labels. */
+export const NextUpDateTbdOnAPhone: Story = {
+  ...NextUpDateTbd,
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+};
+
+/**
+ * A Scheduled Interview ahead and an Unscheduled one after it (BIG-221): still "Interview
+ * scheduled", Next up is the Scheduled one, and Later lists the Unscheduled one last, as "Date TBD".
+ */
+export const LaterDateTbd: Story = {
+  args: { app: { ...lumen, interviews: [...lumen.interviews.filter((i) => i.id !== "leadership"), unscheduledLeadership] } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("Interview scheduled")).toBeVisible();
+    await expect(canvas.getByRole("heading", { level: 2, name: "Round 3 · Technical Deep-Dive" })).toBeVisible();
+    const later = canvas.getByRole("list", { name: "Later" });
+    await expect(within(later).getByText("Date TBD")).toBeVisible();
+  },
+};
+
 /** Reveal shows the salary; it starts hidden each time. */
 export const RevealSalary: Story = {
   play: async ({ canvas, userEvent }) => {

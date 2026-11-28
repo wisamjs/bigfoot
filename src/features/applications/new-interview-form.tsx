@@ -42,6 +42,7 @@ const CONTROLS = {
   title: "title",
   date: "at",
   time: "at-time",
+  unscheduled: "unscheduled",
   participants: "participants",
   how_it_went: "how-it-went",
 } as const;
@@ -53,7 +54,8 @@ const FIRST_CATEGORY: InterviewCategory = "recruiter";
 /**
  * An Interview that doesn't exist yet, on the Add Interview page: the Application it belongs to,
  * its Interview category, its title (filled in from the category until the job seeker edits it),
- * its date and time (both required, no time assumed), who the job seeker is meeting (at least one
+ * its date and time (both required, no time assumed) or Date TBD (Unscheduled, docs/adr/0009: ticking
+ * it clears and disables them; it isn't offered for a Done Application), who the job seeker is meeting (at least one
  * Participant, picked from the Application's or added), and How it went (Interview notes;
  * the other two fields are written on its Interview page). Adding it
  * goes back to the Application page it was opened from, or to the dashboard. With no Applications,
@@ -85,6 +87,7 @@ function NewInterviewFields({
   const [category, setCategory] = useState<InterviewCategory>(FIRST_CATEGORY);
   const [title, setTitle] = useState(() => categoryLabel(FIRST_CATEGORY));
   const [at, setAt] = useState<DateAndTime>({ date: "", time: "" });
+  const [dateTbd, setDateTbd] = useState(false);
   const [howItWent, setHowItWent] = useState("");
   // One blank row to start, keyed the same on the server and in the browser.
   const [participants, setParticipants] = useState<ParticipantDraft[]>([{ key: "first", role: "", name: "" }]);
@@ -103,6 +106,7 @@ function NewInterviewFields({
       ["title", title !== categoryLabel(category)],
       ["date", at.date !== ""],
       ["time", at.time !== ""],
+      ["unscheduled", dateTbd],
       ["participants", participantInputs(participants).inputs.length > 0 || participants.length !== 1],
       ["how_it_went", howItWent !== ""],
     ] as const
@@ -124,6 +128,9 @@ function NewInterviewFields({
     );
   }
 
+  // Date TBD is for an Interview still ahead, so a Done Application's Interviews always have a date.
+  const canBeUnscheduled = offersDateTbd(applications, applicationId);
+  const unscheduled = dateTbd && canBeUnscheduled;
   const byCompany = applications.toSorted((a, b) => a.company.localeCompare(b.company, "en-CA"));
   const inProgress = byCompany.filter((app) => app.status === "in_progress");
   const done = byCompany.filter((app) => app.status !== "in_progress");
@@ -147,17 +154,16 @@ function NewInterviewFields({
     category: InterviewCategory;
     title: string;
     at: string | null;
+    unscheduled?: boolean;
     how_it_went: string | null;
     participants: ParticipantInput[];
   }, keys: string[]): FieldErrors<Control> {
     const errors: FieldErrors<Control> = {};
     if (!applicationId) errors.application = "Choose the Application this Interview belongs to.";
-    const api = interviewErrors(fields, { creating: true });
+    const api = interviewErrors(fields, { creating: true, unscheduledAllowed: canBeUnscheduled });
     if (api.category) errors.category = api.category;
     if (api.title) errors.title = api.title;
-    if (!at.date) errors.date = "Pick the date and enter the time.";
-    else if (!at.time) errors.time = "Enter the time.";
-    else if (api.at) errors.date = api.at;
+    if (!unscheduled) Object.assign(errors, dateErrors(at, api.at));
     const people = participantsProblem(participantsError(fields.participants), keys);
     setParticipantsKey(people?.key);
     if (people) errors.participants = people.message;
@@ -173,7 +179,7 @@ function NewInterviewFields({
     const fields = {
       category,
       title: title.trim(),
-      at: at.date && at.time ? fromLocalInput(`${at.date}T${at.time}`) : null,
+      ...whenOf(at, unscheduled),
       how_it_went: howItWent.trim() || null,
       participants: inputs,
     };
@@ -208,8 +214,6 @@ function NewInterviewFields({
       {app.company} · {app.title}
     </option>
   );
-
-  const atError = fieldErrors.date ?? fieldErrors.time;
 
   return (
     // noValidate: every problem shows at once, beside its field, in Bigfoot's words.
@@ -278,26 +282,21 @@ function NewInterviewFields({
           {...invalidProps(`${id}-title-error`, fieldErrors.title)}
         />
       </Field>
-      {/* Two controls under one label, so a fieldset; each names itself "Date" and "Time". */}
-      <fieldset aria-labelledby={`${id}-at-label`} className="m-0 min-w-0 border-0 p-0">
-        <div className={fieldLabelClasses}>
-          <span id={`${id}-at-label`}>Date and time</span>
-          <RequiredMark />
-        </div>
-        <DateTimePicker
-          id={`${id}-at`}
-          dateLabel="Date"
-          timeLabel="Time"
-          value=""
-          onChange={(next) => {
-            setAt(next);
-            clear("date", "time");
-          }}
-          invalid={{ date: Boolean(fieldErrors.date), time: Boolean(fieldErrors.time) }}
-          aria-describedby={`${id}-at-error`}
-        />
-        <FieldError id={`${id}-at-error`} error={atError} />
-      </fieldset>
+      <DateOrTbdField
+        id={id}
+        unscheduled={unscheduled}
+        canBeUnscheduled={canBeUnscheduled}
+        errors={{ date: fieldErrors.date, time: fieldErrors.time }}
+        onDate={(next) => {
+          setAt(next);
+          clear("date", "time");
+        }}
+        onUnscheduled={(checked) => {
+          setDateTbd(checked);
+          setAt({ date: "", time: "" });
+          clear("date", "time");
+        }}
+      />
       <ParticipantsField
         id={`${id}-participants`}
         value={participants}
@@ -326,5 +325,84 @@ function NewInterviewFields({
       <FormAlert message={invalid} />
       <AddFormActions tracker={tracker} label="New Interview" submitText="Add Interview" />
     </form>
+  );
+}
+
+/** Whether Date TBD is offered: not for a Done Application, whose Interviews always have a date. */
+function offersDateTbd(applications: Application[], applicationId: string): boolean {
+  return applications.find((app) => app.id === applicationId)?.status !== "done";
+}
+
+/** `at` and `unscheduled` as the form sends them: the date and time, or Date TBD's null (BIG-221). */
+function whenOf(at: DateAndTime, unscheduled: boolean): { at: string | null; unscheduled?: true } {
+  if (unscheduled) return { at: null, unscheduled: true };
+  return { at: at.date && at.time ? fromLocalInput(`${at.date}T${at.time}`) : null };
+}
+
+/**
+ * The date and time's problems, beside the part to fix: no date asks for a date and time or Date
+ * TBD (`problem`, from interviewErrors); a date without a time asks for the time, as no time is
+ * assumed. The time field stays disabled until there's a date.
+ */
+function dateErrors(at: DateAndTime, problem: string | undefined): FieldErrors<"date" | "time"> {
+  if (!at.date) return { date: problem };
+  if (!at.time) return { time: "Enter the time." };
+  return problem ? { date: problem } : {};
+}
+
+/**
+ * The date and time, two controls under one label, so a fieldset; each names itself "Date" and
+ * "Time". Under them, Date TBD (BIG-221) unless the Application is Done: a native checkbox, like the
+ * dashboard's Show done, whose label is its 44px touch target. Ticking it clears and disables the
+ * date and time, as the picker mounts again empty.
+ */
+function DateOrTbdField({
+  id,
+  unscheduled,
+  canBeUnscheduled,
+  errors,
+  onDate,
+  onUnscheduled,
+}: {
+  id: string;
+  unscheduled: boolean;
+  canBeUnscheduled: boolean;
+  errors: { date?: string; time?: string };
+  onDate: (next: DateAndTime) => void;
+  onUnscheduled: (checked: boolean) => void;
+}) {
+  const error = errors.date ?? errors.time;
+  return (
+    <fieldset aria-labelledby={`${id}-at-label`} className="m-0 min-w-0 border-0 p-0">
+      <div className={fieldLabelClasses}>
+        <span id={`${id}-at-label`}>Date and time</span>
+        <RequiredMark />
+      </div>
+      <DateTimePicker
+        key={unscheduled ? "tbd" : "dated"}
+        id={`${id}-at`}
+        dateLabel="Date"
+        timeLabel="Time"
+        value=""
+        disabled={unscheduled}
+        onChange={onDate}
+        invalid={{ date: Boolean(errors.date), time: Boolean(errors.time) }}
+        aria-describedby={`${id}-at-error`}
+      />
+      {canBeUnscheduled && (
+        <label htmlFor={`${id}-unscheduled`} className="mt-1 inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-heading">
+          <input
+            type="checkbox"
+            id={`${id}-unscheduled`}
+            checked={unscheduled}
+            aria-describedby={error ? `${id}-at-error` : undefined}
+            onChange={(e) => onUnscheduled(e.target.checked)}
+            className="size-[18px] cursor-pointer rounded-control accent-brand"
+          />
+          Date TBD
+        </label>
+      )}
+      <FieldError id={`${id}-at-error`} error={error} />
+    </fieldset>
   );
 }

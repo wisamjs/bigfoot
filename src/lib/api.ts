@@ -310,10 +310,18 @@ export function listInterviews(jobSeekerId: string, applicationId: string) {
   return request<Interview[]>(jobSeekerId, `/applications/${encodeURIComponent(applicationId)}/interviews`);
 }
 
+/**
+ * The API's body for some Interview fields: `unscheduled` is the forms' Date TBD choice, which the
+ * API reads as `at: null` (docs/adr/0009), so it becomes that and isn't sent itself.
+ */
+export function interviewBody({ unscheduled, ...fields }: Partial<InterviewFields>): Partial<InterviewFields> {
+  return unscheduled ? { ...fields, at: null } : fields;
+}
+
 export function createInterview(jobSeekerId: string, applicationId: string, fields: Partial<InterviewFields>) {
   return request<Interview>(jobSeekerId, `/applications/${encodeURIComponent(applicationId)}/interviews`, {
     method: "POST",
-    body: fields,
+    body: interviewBody(fields),
   });
 }
 
@@ -326,7 +334,7 @@ export function updateInterview(
   return request<Interview>(
     jobSeekerId,
     `/applications/${encodeURIComponent(applicationId)}/interviews/${encodeURIComponent(id)}`,
-    { method: "PATCH", body: changes },
+    { method: "PATCH", body: interviewBody(changes) },
   );
 }
 

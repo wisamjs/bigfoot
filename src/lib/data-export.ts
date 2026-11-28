@@ -102,9 +102,13 @@ const CSV_COLUMNS: {
   { header: "Updated", value: (a) => isoUtc(a.updated_at) },
 ];
 
-/** `Retrospective System Design (System Design, 2026-11-11T15:30:00Z)`: its title, category and date. */
+/**
+ * `Retrospective System Design (System Design, 2026-11-11T15:30:00Z)`: its title, category and date.
+ * An Unscheduled Interview has no date, so that part is left empty: `Leadership (People Management)`.
+ */
 function interviewName(interview: Interview) {
-  return `${interview.title} (${categoryLabel(interview.category)}, ${isoUtc(interview.at)})`;
+  const when = interview.at === null ? "" : `, ${isoUtc(interview.at)}`;
+  return `${interview.title} (${categoryLabel(interview.category)}${when})`;
 }
 
 /** `2026-11-11T15:30:00Z`: ISO 8601 in UTC, to the second, which spreadsheets read as a date. */

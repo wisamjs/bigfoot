@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 from psycopg import Connection
 
 from app.auth import SignedInJobSeekerId, ViewerOf, new_viewer_token, passcode_matches
+from app.domain import is_completed, waiting_since
 from app.models import (
     ErrorMessage,
     Journey,
@@ -187,7 +188,7 @@ def journey_of(conn: Connection[dict[str, Any]], job_seeker_id: str, shared_by: 
     ).fetchall()
     interviews = conn.execute(
         "select application_id, category, title, at from interviews where application_id = any(%s)"
-        " order by at, created_at, id",
+        " order by at nulls last, created_at, id",
         ([a["id"] for a in applications],),
     ).fetchall()
     other_completed = conn.execute(
@@ -208,14 +209,14 @@ def _project(applications: list[dict[str, Any]], interviews: list[dict[str, Any]
     by_application: dict[Any, list[JourneyInterview]] = {a["id"]: [] for a in applications}
     for i in interviews:
         by_application[i["application_id"]].append(
-            JourneyInterview(category=i["category"], title=i["title"], at=i["at"], completed=i["at"] <= now)
+            JourneyInterview(category=i["category"], title=i["title"], at=i["at"], completed=is_completed(i["at"], now))
         )
     return [_application(a, by_application[a["id"]]) for a in applications]
 
 
 def _application(row: dict[str, Any], interviews: list[JourneyInterview]) -> JourneyApplication:
     waiting = not row["offer"] and all(i.completed for i in interviews)
-    since: datetime | date | None = max((i.at for i in interviews), default=row["applied_on"]) if waiting else None
+    since: datetime | date | None = waiting_since([i.at for i in interviews], row["applied_on"]) if waiting else None
     return JourneyApplication(
         company=row["company"],
         title=row["title"],

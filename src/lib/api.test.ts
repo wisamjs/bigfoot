@@ -177,6 +177,20 @@ describe("a job seeker's requests", () => {
       "/applications/a1/interviews/i1",
       { title: "Screen" },
     ],
+    [
+      "createInterview, Date TBD",
+      () => createInterview("s", "a1", { title: "Screen", at: null, unscheduled: true }),
+      "POST",
+      "/applications/a1/interviews",
+      { title: "Screen", at: null },
+    ],
+    [
+      "updateInterview, Date TBD turned off",
+      () => updateInterview("s", "a1", "i1", { at: "2026-12-01T15:00:00.000Z", unscheduled: false }),
+      "PATCH",
+      "/applications/a1/interviews/i1",
+      { at: "2026-12-01T15:00:00.000Z" },
+    ],
     ["deleteInterview", () => deleteInterview("s", "a1", "i1"), "DELETE", "/applications/a1/interviews/i1", undefined],
   ])("%s sends its method, path and body", async (_, call, method, path, body) => {
     await call();

@@ -1,4 +1,4 @@
-import { ArrowRight, Plus } from "lucide-react";
+import { ArrowRight, CalendarPlus, Plus } from "lucide-react";
 import Link from "next/link";
 import { buttonClasses } from "@/components/ui/button-classes";
 import { DaysFromToday, InterviewDayTime } from "@/features/applications/application-when";
@@ -7,7 +7,7 @@ import { DateTile } from "@/features/applications/date-tile";
 import { MarkdownView } from "@/components/ui/markdown-view";
 import { NO_LOOK_BACK } from "@/features/applications/interview-notes-form";
 import { PrepLookBack } from "@/features/applications/prep-look-back";
-import { interviewHref } from "@/features/applications/routes";
+import { addDateHref, interviewHref } from "@/features/applications/routes";
 import { roundNumber, roundTitle, type Application, type Interview, type PrepLookBack as LookBack } from "@/lib/applications";
 
 /**
@@ -16,6 +16,9 @@ import { roundNumber, roundTitle, type Application, type Interview, type PrepLoo
  * Interview. Under them, what its prep looks back at (BIG-181): up to two takeaways and They
  * asked last time, as on its Interview page. Then its Prep notes, or Add Prep notes to start them
  * on its Interview page: the card is there to get ready, and Interview notes come after (BIG-187).
+ *
+ * An Unscheduled Interview (BIG-221), next when nothing is Scheduled, has a "TBD" tile, "Next up ·
+ * date TBD", and Add the date, which opens its Interview page with Edit details open.
  *
  * On the dashboard (`on="dashboard"`, BIG-183), the job seeker's soonest upcoming Interview: the
  * line under its title names the company and role too.
@@ -40,19 +43,14 @@ export function NextInterviewCard({
         <DateTile at={interview.at} tone="brand" className="hidden sm:flex" />
         <div className="min-w-0 flex-1">
           <p className="m-0 text-xs font-bold uppercase tracking-[0.08em] text-fg-brand">
-            Next up
-            {" · "}
-            <DaysFromToday date={interview.at} />
+            Next up · <WhenOff at={interview.at} />
           </p>
           <h2 id="next-up-title" className="m-0 mt-1 break-words text-2xl font-bold leading-[1.2] text-heading">
             {roundTitle(roundNumber(app, interview), interview.title)}
           </h2>
           <p className="m-0 mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 break-words text-base text-body">
             <CategoryBadge category={interview.category} />
-            <span className="min-w-0">
-              {dashboard && `${app.company} · ${app.title} · `}
-              <InterviewDayTime at={interview.at} weekday="long" />
-            </span>
+            <Where app={app} at={interview.at} dashboard={dashboard} />
           </p>
         </div>
         <Link
@@ -73,22 +71,54 @@ export function NextInterviewCard({
         </div>
       )}
 
-      {/* min-w-fit: on touch screens .btn's 44px floor replaces a flex item's automatic minimum, so
-          without it the two flex-1 buttons squeeze below their labels instead of wrapping (BIG-187). */}
-      <div className="flex flex-wrap items-center gap-3">
-        {!prepNotes && (
-          <>
-            <Link href={href} className={`${buttonClasses("brand")} min-w-fit max-sm:flex-1`}>
-              <Plus className="size-4" aria-hidden />
-              Add Prep notes
-            </Link>
-            <span className="hidden text-sm text-body sm:inline">No Prep notes yet.</span>
-          </>
-        )}
-        <Link href={href} className={`${buttonClasses("secondary")} min-w-fit max-sm:flex-1 sm:hidden`}>
-          Open Interview
-        </Link>
-      </div>
+      <Actions href={href} addDateHref={interview.at === null ? addDateHref(app.id, interview.id) : null} prepNotes={Boolean(prepNotes)} />
     </section>
+  );
+}
+
+/** How far off the Interview is, "in 2 days", or "date TBD" for an Unscheduled one (BIG-221). */
+function WhenOff({ at }: { at: string | null }) {
+  return at === null ? <>date TBD</> : <DaysFromToday date={at} />;
+}
+
+/**
+ * The line beside the category: the day and time, with the company and role first on the dashboard.
+ * An Unscheduled Interview has no day and time, so only the dashboard's part, or nothing.
+ */
+function Where({ app, at, dashboard }: { app: Application; at: string | null; dashboard: boolean }) {
+  const parts = [dashboard && `${app.company} · ${app.title}`, at !== null && <InterviewDayTime key="when" at={at} weekday="long" />].filter(Boolean);
+  if (parts.length === 0) return null;
+  return <span className="min-w-0">{parts.flatMap((part, i) => (i > 0 ? [" · ", part] : [part]))}</span>;
+}
+
+/**
+ * The card's buttons: Add the date for an Unscheduled Interview (`addDateHref`, BIG-221), which
+ * opens Edit details on its page; Add Prep notes while it has none (secondary beside Add the date);
+ * and on a phone, Open Interview. min-w-fit: on touch screens .btn's 44px floor replaces a flex
+ * item's automatic minimum, so without it the flex-1 buttons squeeze below their labels instead of
+ * wrapping (BIG-187).
+ */
+function Actions({ href, addDateHref, prepNotes }: { href: string; addDateHref: string | null; prepNotes: boolean }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      {addDateHref && (
+        <Link href={addDateHref} className={`${buttonClasses("brand")} min-w-fit max-sm:flex-1`}>
+          <CalendarPlus className="size-4" aria-hidden />
+          Add the date
+        </Link>
+      )}
+      {!prepNotes && (
+        <>
+          <Link href={href} className={`${buttonClasses(addDateHref ? "secondary" : "brand")} min-w-fit max-sm:flex-1`}>
+            <Plus className="size-4" aria-hidden />
+            Add Prep notes
+          </Link>
+          <span className="hidden text-sm text-body sm:inline">No Prep notes yet.</span>
+        </>
+      )}
+      <Link href={href} className={`${buttonClasses("secondary")} min-w-fit max-sm:flex-1 sm:hidden`}>
+        Open Interview
+      </Link>
+    </div>
   );
 }

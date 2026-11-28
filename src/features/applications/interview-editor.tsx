@@ -26,11 +26,14 @@ export function InterviewEditor({
   interview,
   lookBack,
   showsOn,
+  editDetails = false,
 }: {
   app: Application;
   interview: Interview;
   lookBack?: PrepLookBack;
   showsOn?: PrepTakeaway[];
+  /** Opens Edit details at once, as the Application page's Add the date asks. */
+  editDetails?: boolean;
 }) {
   const trackers = {
     what_they_asked: useSaveStatus(),
@@ -64,7 +67,7 @@ export function InterviewEditor({
   );
   return (
     <div className="flex flex-col gap-6 sm:gap-8">
-      <InterviewHeading app={app} interview={interview} />
+      <InterviewHeading app={app} interview={interview} editOnOpen={editDetails} />
       <InterviewProgress app={app} current={interview.id} />
       <div className="flex flex-col gap-6 sm:gap-8">
         {interview.completed ? (
