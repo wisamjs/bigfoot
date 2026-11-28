@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 import { AppFooter } from "@/features/shell/app-footer";
 import { AppHeader } from "@/features/shell/app-header";
+import { SummaryLine } from "@/features/shell/summary-line";
 import { AddInterviewLink } from "@/features/applications/add-links";
 import { ApplicationListSkeleton } from "@/features/applications/application-list";
 import { NextInterviewCard } from "@/features/applications/next-interview-card";
 import { DashboardApplications } from "@/features/dashboard/dashboard-applications";
 import { DashboardCard } from "@/features/dashboard/dashboard-card";
-import { DashboardSummary } from "@/features/dashboard/dashboard-summary";
 import { InterviewCalendar, InterviewCalendarSkeleton } from "@/features/dashboard/interview-calendar";
 import { Container } from "@/components/ui/container";
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton";
@@ -31,7 +31,7 @@ export function DashboardPage({ user, applications, now }: { user: CurrentUser; 
   return (
     <DashboardLayout
       header={<AppHeader user={user} current="/dashboard" />}
-      summary={<DashboardSummary counts={dashboardSummary(applications, now)} />}
+      summary={<SummaryLine counts={dashboardSummary(applications, now)} />}
       nextUp={
         next && (
           <NextInterviewCard

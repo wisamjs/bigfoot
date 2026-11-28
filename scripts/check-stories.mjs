@@ -17,6 +17,10 @@ export const SHOWN_IN = {
   "src/features/applications/details-form.tsx": "src/features/applications/application-editor.stories.tsx",
   "src/features/applications/category-badge.tsx": "src/features/applications/interview-heading.stories.tsx",
   "src/features/applications/change-status-menu.tsx": "src/features/applications/application-editor.stories.tsx",
+  "src/features/applications/filtered-applications.tsx": "src/features/applications/applications-page.stories.tsx",
+  "src/features/applications/no-applications.tsx": "src/features/applications/applications-page.stories.tsx",
+  "src/features/applications/progress-filter.tsx": "src/features/applications/applications-page.stories.tsx",
+  "src/features/applications/sort-menu.tsx": "src/features/dashboard/dashboard-applications.stories.tsx",
   "src/features/applications/editable-heading.tsx": "src/features/applications/interview-heading.stories.tsx",
   "src/features/applications/application-header.tsx": "src/features/applications/application-editor.stories.tsx",
   "src/features/applications/interview-list.tsx": "src/features/applications/application-editor.stories.tsx",
@@ -42,6 +46,7 @@ export const SHOWN_IN = {
   "src/features/journey/share-link-frame.tsx": "src/features/journey/link-gone.stories.tsx",
   "src/features/shell/account-menu.tsx": "src/features/shell/app-header.stories.tsx",
   "src/features/shell/avatar.tsx": "src/features/shell/app-header.stories.tsx",
+  "src/features/shell/back-links.tsx": "src/features/applications/application-page.stories.tsx",
   "src/features/shell/wordmark.tsx": "src/features/shell/app-header.stories.tsx",
 };
 
@@ -59,7 +64,6 @@ export const ON_PAGE = {
   "src/features/legal/legal.tsx": "/privacy",
   "src/features/shell/app-footer.tsx": "/dashboard",
   "src/features/shell/prefetch-routes.tsx": "/applications/[id]",
-  "src/features/shell/dashboard-link.tsx": "/applications/new",
   "src/features/shell/form-page.tsx": "/applications/new",
   "src/features/shell/theme-script.tsx": "/",
 };

@@ -22,23 +22,37 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** On the dashboard, with initials where Google has no photo, and Bigfoot beside the name: decorative, so an empty alt. */
+/**
+ * On the dashboard, with initials where Google has no photo, and Bigfoot beside the name: decorative,
+ * so an empty alt. Bigfoot's link is the way to the Dashboard (BIG-252), marked current here.
+ */
 export const Default: Story = {
   play: async ({ canvas, canvasElement }) => {
     await expect(canvasElement.querySelector('img[src*="bigfoot-welcome"]')).toHaveAttribute("alt", "");
-    await expect(canvas.getByRole("link", { name: "Dashboard" })).toHaveAttribute("aria-current", "page");
+    await expect(canvas.getByRole("link", { name: "Bigfoot dashboard" })).toHaveAttribute("aria-current", "page");
+    await expect(canvas.queryByRole("link", { name: "Dashboard" })).not.toBeInTheDocument();
     await expect(canvas.getByRole("button", { name: "Account menu, Alex Morgan" })).toHaveTextContent("AM");
     // The dark mode toggle sits just before the avatar (BIG-251).
     await expect(canvas.getByRole("button", { name: "Dark mode" })).toBeVisible();
   },
 };
 
-/** On a 320 px phone: the wordmark, Dashboard, the dark mode toggle and the avatar all fit in the bar. */
+/** On the Applications page (BIG-252): its pill is current. */
+export const Applications: Story = {
+  args: { current: "/applications" },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("link", { name: "Applications" })).toHaveAttribute("aria-current", "page");
+    await expect(canvas.getByRole("link", { name: "Bigfoot dashboard" })).not.toHaveAttribute("aria-current");
+  },
+};
+
+/** On a 320 px phone: the wordmark, Applications, the dark mode toggle and the avatar all fit in the bar. */
 export const Phone: Story = {
   globals: { viewport: { value: "mobile1", isRotated: false } },
   play: async ({ canvas, canvasElement }) => {
     const doc = canvasElement.ownerDocument.documentElement;
     await expect(doc.scrollWidth).toBeLessThanOrEqual(doc.clientWidth);
+    await expect(canvas.getByRole("link", { name: "Applications" })).toBeVisible();
     await expect(canvas.getByRole("button", { name: "Dark mode" })).toBeVisible();
     await expect(canvas.getByRole("button", { name: "Account menu, Alex Morgan" })).toBeVisible();
   },
@@ -49,7 +63,8 @@ export const Account: Story = {
   args: { current: undefined },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("link", { name: "Bigfoot dashboard" })).toHaveAttribute("href", "/dashboard");
-    await expect(canvas.getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current");
+    await expect(canvas.getByRole("link", { name: "Bigfoot dashboard" })).not.toHaveAttribute("aria-current");
+    await expect(canvas.getByRole("link", { name: "Applications" })).not.toHaveAttribute("aria-current");
     await expect(canvas.queryByRole("link", { name: "Account" })).not.toBeInTheDocument();
   },
 };

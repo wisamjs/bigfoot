@@ -370,8 +370,8 @@ function count(n: number, one: string, many: string) {
 /** How far ahead the dashboard's summary line counts upcoming Interviews, in days. */
 export const SUMMARY_DAYS = 14;
 
-/** One count in the dashboard's summary line; `offers` shows in the success colour. */
-export type SummaryCount = { id: "offers" | "interviews" | "awaiting" | "waiting"; text: string };
+/** One count in a page's summary line, the dashboard's or the Applications page's; `offers` shows in the success colour. */
+export type SummaryCount = { id: "offers" | "interviews" | "awaiting" | "waiting" | "in-progress" | "done"; text: string };
 
 /**
  * The line under the dashboard's heading (BIG-183), the counts that aren't zero, in order: Offers
@@ -448,29 +448,85 @@ export function doneWithoutOffer(apps: Application[]): Application[] {
 export const UNSCHEDULED_PROGRESS_LABEL = "Next round · date TBD";
 
 /**
- * The Applications list's groups: Waiting (In Progress, nothing upcoming), Next round · date TBD
- * (In Progress, only Unscheduled Interviews ahead), Interview scheduled (In Progress, a Scheduled
- * Interview ahead) and Offer (Done with Outcome Offer). Other Done Applications appear in a Done
- * group only when showDone is set. Empty groups are left out.
+ * The Applications list's groups, in Progress order, furthest along first: Interview scheduled (In
+ * Progress, a Scheduled Interview ahead), Next round · date TBD (In Progress, only Unscheduled
+ * Interviews ahead), Waiting (In Progress, nothing upcoming) and Offer (Done with Outcome Offer).
+ * Then Done, the other Done Applications. Only the groups `shown` are kept (In Progress ones and
+ * Offers by default), and empty groups are left out.
  */
-export function getApplicationGroups(apps: Application[], { showDone = false } = {}): ApplicationGroup[] {
+export function getApplicationGroups(apps: Application[], { shown = "all" }: { shown?: ApplicationsShown } = {}): ApplicationGroup[] {
   const open = apps.filter((a) => !isDone(a));
   const groups: ApplicationGroup[] = [
-    { id: "waiting", label: "Waiting", applications: open.filter((a) => a.is_waiting) },
+    { id: "scheduled", label: "Interview scheduled", applications: open.filter((a) => nextScheduledInterview(a)) },
     {
       id: "unscheduled",
       label: UNSCHEDULED_PROGRESS_LABEL,
       applications: open.filter((a) => !a.is_waiting && !nextScheduledInterview(a)),
     },
-    { id: "scheduled", label: "Interview scheduled", applications: open.filter((a) => nextScheduledInterview(a)) },
+    { id: "waiting", label: "Waiting", applications: open.filter((a) => a.is_waiting) },
     { id: "offer", label: "Offer", applications: apps.filter((a) => isDone(a) && a.outcome === "offer") },
-    { id: "done", label: "Done", applications: showDone ? doneWithoutOffer(apps) : [] },
+    { id: "done", label: "Done", applications: doneWithoutOffer(apps) },
   ];
-  return groups.filter((g) => g.applications.length > 0);
+  return groups.filter((g) => g.applications.length > 0 && shows(shown, g.id));
 }
 
 /**
- * The orders the dashboard's Applications list can be sorted in (BIG-209), one per column. Progress,
+ * What the Applications list shows (BIG-252): All (In Progress Applications and Offers, the
+ * default) or one Progress value, Done included. In the URL as `?progress=waiting`.
+ */
+export type ProgressFilter = "all" | ApplicationGroup["id"];
+
+/** The Progress values, in Progress order: the filter's choices after All. */
+export const PROGRESS_VALUES = ["scheduled", "unscheduled", "waiting", "offer", "done"] as const satisfies readonly ApplicationGroup["id"][];
+
+/** A Progress value named in the URL, or All for anything else. */
+export function parseProgressFilter(value: string | null | undefined): ProgressFilter {
+  return PROGRESS_VALUES.find((progress) => progress === value) ?? "all";
+}
+
+/**
+ * Which Applications a list shows: a ProgressFilter, or every one, Done included (the dashboard's
+ * Show done, until BIG-253 replaces its card).
+ */
+export type ApplicationsShown = ProgressFilter | "everything";
+
+function shows(shown: ApplicationsShown, group: ApplicationGroup["id"]): boolean {
+  if (shown === "everything") return true;
+  if (shown === "all") return group !== "done";
+  return group === shown;
+}
+
+/**
+ * How many Applications each choice of the Progress filter shows: All, then each Progress value.
+ * Applications in no group (In Progress, not Waiting, nothing ahead) count for none.
+ */
+export function progressCounts(apps: Application[]): Record<ProgressFilter, number> {
+  const counts: Record<ProgressFilter, number> = { all: 0, scheduled: 0, unscheduled: 0, waiting: 0, offer: 0, done: 0 };
+  for (const app of apps) {
+    const group = groupOf(app);
+    if (group === null) continue;
+    counts[group] += 1;
+    if (shows("all", group)) counts.all += 1;
+  }
+  return counts;
+}
+
+/**
+ * The line under the Applications page's heading (BIG-252): "12 In Progress · 1 Offer · 4 Done", the
+ * counts that aren't zero. Done counts the Done Applications that aren't Offers.
+ */
+export function applicationsSummary(apps: Application[]): SummaryCount[] {
+  const offers = apps.filter((a) => isDone(a) && a.outcome === "offer").length;
+  const counts: [SummaryCount["id"], number, string, string][] = [
+    ["in-progress", apps.filter((a) => !isDone(a)).length, "In Progress", "In Progress"],
+    ["offers", offers, "Offer", "Offers"],
+    ["done", doneWithoutOffer(apps).length, "Done", "Done"],
+  ];
+  return counts.filter(([, n]) => n > 0).map(([id, n, one, many]) => ({ id, text: count(n, one, many) }));
+}
+
+/**
+ * The orders the Applications list can be sorted in (BIG-209), one per column. Progress,
  * the default, puts the Applications furthest along first.
  */
 export const APPLICATION_SORTS = ["progress", "application", "next", "location"] as const;
@@ -491,10 +547,11 @@ export function parseApplicationSort(value: string | null | undefined): Applicat
 /** One row of the Applications list: an Application and the group its Progress shows. */
 export type ApplicationListRow = { application: Application; group: Pick<ApplicationGroup, "id" | "label"> };
 
-const GROUP_LABELS: Record<ApplicationGroup["id"], string> = {
-  waiting: "Waiting",
-  unscheduled: UNSCHEDULED_PROGRESS_LABEL,
+/** Each Progress value's name, as its group, the filter and the empty state say it. */
+export const PROGRESS_LABELS: Record<ApplicationGroup["id"], string> = {
   scheduled: "Interview scheduled",
+  unscheduled: UNSCHEDULED_PROGRESS_LABEL,
+  waiting: "Waiting",
   offer: "Offer",
   done: "Done",
 };
@@ -593,23 +650,23 @@ const COMPARE: Record<ApplicationSort, Compare> = {
 };
 
 /**
- * The Applications list's rows in `sort` order (BIG-209): In Progress Applications and Offers, and
- * the other Done ones when showDone is set, all in the one order (BIG-249). Progress and Next put
- * the Done ones last, as they have no Interview ahead; ties fall back to company order.
+ * The Applications list's rows in `sort` order (BIG-209), those `shown` (BIG-252): by default In
+ * Progress Applications and Offers, all in the one order (BIG-249). Progress and Next put the Done
+ * ones last, as they have no Interview ahead; ties fall back to company order.
  */
 export function sortApplications(
   apps: Application[],
-  { sort = "progress", showDone = false }: { sort?: ApplicationSort; showDone?: boolean } = {},
+  { sort = "progress", shown = "all" }: { sort?: ApplicationSort; shown?: ApplicationsShown } = {},
 ): ApplicationListRow[] {
   return apps
     .filter((app) => {
       const group = groupOf(app);
-      return group !== null && (showDone || group !== "done");
+      return group !== null && shows(shown, group);
     })
     .toSorted(COMPARE[sort])
     .map((application) => {
       const id = groupOf(application)!;
-      return { application, group: { id, label: GROUP_LABELS[id] } };
+      return { application, group: { id, label: PROGRESS_LABELS[id] } };
     });
 }
 

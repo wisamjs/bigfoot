@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
 import { Container } from "@/components/ui/container";
 import { AppFooter } from "@/features/shell/app-footer";
-import { DashboardBackLink } from "@/features/shell/dashboard-link";
+import { DashboardBackLink } from "@/features/shell/back-links";
 
 /**
  * A signed-in page that holds one form or one record, such as Add Application or an Application's

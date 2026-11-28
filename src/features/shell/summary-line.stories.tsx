@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect } from "storybook/test";
-import { DashboardSummary } from "./dashboard-summary";
+import { SummaryLine } from "./summary-line";
 
-// The line under the dashboard's heading: the counts that aren't zero.
+// The line under a page's heading: the counts that aren't zero.
 
 const meta = {
-  component: DashboardSummary,
+  component: SummaryLine,
   args: {
     counts: [
       { id: "offers", text: "1 Offer to decide" },
@@ -13,7 +13,7 @@ const meta = {
       { id: "waiting", text: "2 waiting to hear back" },
     ],
   },
-} satisfies Meta<typeof DashboardSummary>;
+} satisfies Meta<typeof SummaryLine>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -58,5 +58,19 @@ export const AwaitingADate: Story = {
       { id: "awaiting", text: "2 awaiting a date" },
       { id: "waiting", text: "1 waiting to hear back" },
     ],
+  },
+};
+
+/** The Applications page's line (BIG-252): In Progress, Offers in the success colour, and Done. */
+export const Applications: Story = {
+  args: {
+    counts: [
+      { id: "in-progress", text: "12 In Progress" },
+      { id: "offers", text: "1 Offer" },
+      { id: "done", text: "4 Done" },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement).toHaveTextContent("12 In Progress · 1 Offer · 4 Done");
   },
 };

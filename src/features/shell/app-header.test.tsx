@@ -47,10 +47,22 @@ describe("AppHeader without a user", () => {
   it("keeps the real nav, without Account, with a shape where the avatar goes", () => {
     render(<AppHeader current="/dashboard" />);
     const nav = screen.getByRole("navigation", { name: "Signed in" });
-    expect(within(nav).getByRole("link", { name: "Dashboard" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Bigfoot dashboard" })).toHaveAttribute("aria-current", "page");
+    expect(within(nav).getByRole("link", { name: "Applications" })).not.toHaveAttribute("aria-current");
     expect(within(nav).queryByRole("link", { name: "Account" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Account menu/ })).not.toBeInTheDocument();
     expect(screen.getByRole("banner").querySelectorAll(".skeleton")).toHaveLength(1);
+  });
+});
+
+describe("AppHeader's nav (BIG-252)", () => {
+  it("has an Applications pill, current on the Applications page; Bigfoot's link is the way to the Dashboard", () => {
+    render(<AppHeader user={user} current="/applications" />);
+    const nav = screen.getByRole("navigation", { name: "Signed in" });
+    expect(within(nav).getAllByRole("link").map((link) => link.textContent)).toEqual(["Applications"]);
+    expect(within(nav).getByRole("link", { name: "Applications" })).toHaveAttribute("aria-current", "page");
+    expect(within(nav).getByRole("link", { name: "Applications" })).toHaveAttribute("href", "/applications");
+    expect(screen.getByRole("link", { name: "Bigfoot dashboard" })).not.toHaveAttribute("aria-current");
   });
 });
 
@@ -63,7 +75,8 @@ describe("AppHeader on a page outside the nav", () => {
   it("highlights nothing", () => {
     render(<AppHeader user={user} />);
     const nav = screen.getByRole("navigation", { name: "Signed in" });
-    expect(within(nav).getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current");
+    expect(within(nav).getByRole("link", { name: "Applications" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "Bigfoot dashboard" })).not.toHaveAttribute("aria-current");
   });
 });
 

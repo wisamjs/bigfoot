@@ -65,7 +65,7 @@ async function expectText(chrome, expect, where, timeoutMs = 0) {
 
 /**
  * Runs a page state's steps (scripts/pages.mjs). A `click` step focuses and clicks the first element
- * matching it whose text includes `text`, as a pointer click in Chrome does, so a dialog it opens
+ * matching it whose text includes `text`, once React has hydrated it, as a pointer click in Chrome does, so a dialog it opens
  * knows where to return focus. With `pointer: true` it presses instead of clicking, for a Radix menu,
  * which opens on pointerdown. A `fill` step types `value` into the first element matching it, once React has hydrated it. Then
  * waits for the page to show the state's `expect`, failing if it never does.
@@ -102,17 +102,19 @@ function stepExpression(step) {
   return `(() => {
         const el = [...document.querySelectorAll(${JSON.stringify(step.click)})]
           .find((e) => e.textContent.includes(${JSON.stringify(step.text ?? "")}));
-        el?.focus();
-        ${step.pointer ? 'el?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerType: "mouse" }));' : "el?.click();"}
+        // Not until React has hydrated it: a click before then is lost, as a value typed is.
+        if (!el || !Object.keys(el).some((key) => key.startsWith("__reactProps$"))) return false;
+        el.focus();
+        ${step.pointer ? 'el.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerType: "mouse" }));' : "el.click();"}
         (window.__clicked ??= []).push(el);
-        return Boolean(el);
+        return true;
       })()`;
 }
 
 async function runStep(chrome, state, step) {
   const expression = stepExpression(step);
-  // A fill step retries while the page hydrates; a click matches or doesn't.
-  const attempts = step.fill ? PAGE_TEXT_TIMEOUT_MS / 250 : 1;
+  // Each step retries while the page hydrates.
+  const attempts = PAGE_TEXT_TIMEOUT_MS / 250;
   for (let attempt = 0; attempt < attempts; attempt++) {
     if (attempt) await sleep(250);
     if ((await chrome.send("Runtime.evaluate", { returnByValue: true, expression })).result.value) return;

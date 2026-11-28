@@ -1,20 +1,28 @@
 // A stand-in for next/navigation in component tests: `vi.mock("next/navigation", () => import("@/test/navigation"))`.
-// useSearchParams follows window.location as Next.js's does, including the window.history.replaceState
-// calls it integrates into the router, so a component that keeps its view in the URL re-renders.
+// useSearchParams follows window.location as Next.js's does, including the window.history.pushState
+// and replaceState calls it integrates into the router, and Back and Forward (popstate), so a
+// component that keeps its view in the URL re-renders.
 import { useSyncExternalStore } from "react";
 import { vi } from "vitest";
 
 const listeners = new Set<() => void>();
-const replaceState = window.history.replaceState.bind(window.history);
-window.history.replaceState = (...args: Parameters<History["replaceState"]>) => {
-  replaceState(...args);
+const notify = () => {
   for (const listener of listeners) listener();
 };
+for (const method of ["pushState", "replaceState"] as const) {
+  const original = window.history[method].bind(window.history);
+  window.history[method] = (...args: Parameters<History["pushState"]>) => {
+    original(...args);
+    notify();
+  };
+}
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
+  window.addEventListener("popstate", listener);
   return () => {
     listeners.delete(listener);
+    window.removeEventListener("popstate", listener);
   };
 }
 

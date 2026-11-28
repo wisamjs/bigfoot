@@ -12,7 +12,10 @@ import {
   prepTakeaways,
   takeawayShowsOn,
   upcomingInterviews,
+  applicationsSummary,
   getApplicationGroups,
+  parseProgressFilter,
+  progressCounts,
   hasInterviewNotes,
   interviewSections,
   interviewsLatestFirst,
@@ -172,14 +175,50 @@ describe("roundNumber", () => {
   });
 });
 
+describe("the Progress filter (BIG-252)", () => {
+  it("reads a Progress value from the URL, and anything else as All", () => {
+    expect(parseProgressFilter("waiting")).toBe("waiting");
+    expect(parseProgressFilter("done")).toBe("done");
+    expect(parseProgressFilter("all")).toBe("all");
+    expect(parseProgressFilter("everything")).toBe("all");
+    expect(parseProgressFilter(null)).toBe("all");
+  });
+
+  it("counts each choice: All is In Progress Applications and Offers, Done the other Done ones", () => {
+    expect(progressCounts([waiting, scheduled, offer, rejected])).toEqual({
+      all: 3,
+      scheduled: 1,
+      unscheduled: 0,
+      waiting: 1,
+      offer: 1,
+      done: 1,
+    });
+  });
+
+  it("sums up the page as In Progress, Offers and Done, leaving out counts at zero", () => {
+    expect(applicationsSummary([waiting, scheduled, offer, rejected])).toEqual([
+      { id: "in-progress", text: "2 In Progress" },
+      { id: "offers", text: "1 Offer" },
+      { id: "done", text: "1 Done" },
+    ]);
+    expect(applicationsSummary([waiting])).toEqual([{ id: "in-progress", text: "1 In Progress" }]);
+    expect(applicationsSummary([])).toEqual([]);
+  });
+});
+
 describe("getApplicationGroups", () => {
-  it("has Waiting, Interview scheduled and Offer, and leaves other Done Applications off", () => {
+  it("has Interview scheduled, Waiting and Offer, in Progress order, and leaves other Done Applications off", () => {
     const columns = getApplicationGroups([waiting, scheduled, offer, rejected]);
     expect(columns.map((c) => [c.label, c.applications.map((a) => a.id)])).toEqual([
-      ["Waiting", ["waiting"]],
       ["Interview scheduled", ["scheduled"]],
+      ["Waiting", ["waiting"]],
       ["Offer", ["offer"]],
     ]);
+  });
+
+  it("keeps only the group a Progress filter picks (BIG-252)", () => {
+    expect(getApplicationGroups([waiting, scheduled, offer, rejected], { shown: "done" }).map((c) => c.id)).toEqual(["done"]);
+    expect(getApplicationGroups([waiting, scheduled], { shown: "offer" })).toEqual([]);
   });
 
   it("leaves empty columns out", () => {
@@ -188,7 +227,7 @@ describe("getApplicationGroups", () => {
   });
 
   it("adds a Done column for Done Applications other than Offers when asked", () => {
-    const columns = getApplicationGroups([waiting, offer, rejected], { showDone: true });
+    const columns = getApplicationGroups([waiting, offer, rejected], { shown: "everything" });
     expect(columns.map((c) => [c.id, c.applications.map((a) => a.id)])).toEqual([
       ["waiting", ["waiting"]],
       ["offer", ["offer"]],
@@ -689,9 +728,9 @@ describe("Unscheduled Interviews (BIG-221)", () => {
     expect(applicationProgress(onlyTbd)).toEqual({ id: "unscheduled", label: "Next round · date TBD" });
     expect(applicationProgress(both)).toEqual({ id: "scheduled", label: "Interview scheduled" });
     expect(getApplicationGroups([waiting, onlyTbd, both]).map((g) => [g.id, g.applications.map((a) => a.id)])).toEqual([
-      ["waiting", ["waiting"]],
-      ["unscheduled", ["only-tbd"]],
       ["scheduled", ["both"]],
+      ["unscheduled", ["only-tbd"]],
+      ["waiting", ["waiting"]],
     ]);
   });
 

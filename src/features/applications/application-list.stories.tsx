@@ -327,7 +327,7 @@ export const Phone: Story = {
     await expect(canvas.getByRole("columnheader", { name: "Application" })).toBeVisible();
     await expect(canvas.queryByRole("columnheader", { name: "Next" })).not.toBeInTheDocument();
     // Shopify's role line takes its Location on a phone.
-    const role = canvas.getAllByText(/^Senior Developer/)[0];
+    const role = canvas.getAllByText(/^Senior Developer/).find((line) => line.closest("tr")?.textContent?.includes("Shopify"))!;
     await expect(role).toHaveTextContent("Senior Developer · Hybrid - 3x a Week");
     await expect(role).toBeVisible();
   },
@@ -338,7 +338,7 @@ export const Phone: Story = {
  * Interviews marked in grey: the hiring process is over.
  */
 export const ShowDone: Story = {
-  args: { showDone: true },
+  args: { shown: "everything" },
   play: async ({ canvasElement }) => {
     await expect(progressMarks(canvasElement, "Instacart")).not.toHaveLength(0);
     await expect(progressMarks(canvasElement, "Instacart").every((mark) => mark.classList.contains("bg-tone-gray-fg"))).toBe(true);
@@ -442,7 +442,7 @@ export const SortedByProgress: Story = {
 
 /** Sorted by Application: company A–Z, then role; with Show done on, the Done ones sort with the rest (BIG-249). */
 export const SortedByApplication: Story = {
-  args: { sort: "application", onSort: fn(), showDone: true },
+  args: { sort: "application", onSort: fn(), shown: "everything" },
   play: async ({ canvasElement }) => {
     const companies = rowCompanies(canvasElement);
     await expect(companies).toEqual(companies.toSorted((a = "", b = "") => a.localeCompare(b, "en", { sensitivity: "base" })));
@@ -453,7 +453,7 @@ export const SortedByApplication: Story = {
 export const SortedByNext: Story = { args: { sort: "next", onSort: fn() } };
 
 /** Sorted by Location A–Z, Applications without one last; with Show done on, the Done ones sort with the rest. */
-export const SortedByLocation: Story = { args: { sort: "location", onSort: fn(), showDone: true } };
+export const SortedByLocation: Story = { args: { sort: "location", onSort: fn(), shown: "everything" } };
 
 /** The landing page's decorative copy: hidden from screen readers, not interactive. */
 export const Decorative: Story = {
