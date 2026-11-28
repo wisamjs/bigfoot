@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, within } from "storybook/test";
 import { prepTakeaways } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
+import { expectButtonsShareARow, expectLabelsFit, visibleLink } from "@/test/phone-buttons";
 import { NextInterviewCard } from "./next-interview-card";
 
 // The Next up card. On the Application page it is shown through application-editor.stories.tsx;
@@ -160,9 +161,69 @@ export const DateTbdWithoutPrepNotes: Story = {
     lookBack: { takeaways: [], theyAsked: null },
   },
   play: async ({ canvas }) => {
-    const links = canvas.getAllByRole("link").map((l) => l.textContent);
-    await expect(links.indexOf("Add the date")).toBeLessThan(links.indexOf("Add Prep notes"));
+    const date = canvas.getByRole("link", { name: "Add the date" });
+    await expect(date.compareDocumentPosition(canvas.getByRole("link", { name: "Add Prep notes" }))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
     // The Application page's one brand button (BIG-240).
     await expect(canvas.getByRole("link", { name: "Add the date" })).toHaveClass("btn-brand");
+  },
+};
+
+// On a phone, inside the page's 24 px gutter, as the dashboard shows the card.
+const onAPhone = (value: "mobile1" | "phone") => ({
+  globals: { viewport: { value, isRotated: false } },
+  decorators: [(Story: () => React.JSX.Element) => <div className="px-6"><Story /></div>],
+});
+
+/**
+ * A 375 px phone (BIG-254): Add Prep notes and Open Interview share one row, splitting it equally,
+ * without their icons. Half the row is too narrow for "Add Prep notes", so both shorten, to "Prep
+ * notes" and "Open", keeping their full names for screen readers.
+ */
+export const ButtonsOnAPhone: Story = {
+  ...onAPhone("phone"),
+  args: WithoutTakeawaysOrPrepNotes.args,
+  play: async ({ canvas }) => {
+    const card = canvas.getByRole("region", { name: "Round 2 · Technical Deep-Dive" });
+    await expectButtonsShareARow(card, ["Add Prep notes", "Open Interview"]);
+    await expect(visibleLink(card, "Add Prep notes").innerText).toBe("Prep notes");
+    await expect(visibleLink(card, "Open Interview").innerText).toBe("Open");
+  },
+};
+
+/** The same on a 320 px phone. */
+export const ButtonsOnANarrowPhone: Story = {
+  ...ButtonsOnAPhone,
+  ...onAPhone("mobile1"),
+};
+
+/**
+ * Three buttons on a 320 px phone, for an Unscheduled Interview with no Prep notes: Add the date
+ * and Add Prep notes share a row, shortened, and Open Interview takes the full row below, in full.
+ */
+export const ThreeButtonsOnAPhone: Story = {
+  ...onAPhone("mobile1"),
+  args: DateTbdWithoutPrepNotes.args,
+  play: async ({ canvas }) => {
+    const card = canvas.getByRole("region", { name: "Round 2 · Technical Deep-Dive" });
+    await expectButtonsShareARow(card, ["Add the date", "Add Prep notes"]);
+    const open = visibleLink(card, "Open Interview");
+    await expect(open.getBoundingClientRect().top).toBeGreaterThan(visibleLink(card, "Add the date").getBoundingClientRect().bottom);
+    await expect(open.getBoundingClientRect().width).toBeCloseTo(open.parentElement!.getBoundingClientRect().width, 0);
+    await expect(open.innerText).toBe("Open Interview");
+    await expectLabelsFit([open]);
+  },
+};
+
+/** With Prep notes, Open Interview is the phone's lone button and keeps its own width. */
+export const LoneButtonOnAPhone: Story = {
+  ...onAPhone("mobile1"),
+  play: async ({ canvas }) => {
+    const card = canvas.getByRole("region", { name: "Round 2 · Technical Deep-Dive" });
+    const open = visibleLink(card, "Open Interview");
+    await expect(open.getBoundingClientRect().width).toBeLessThan(open.parentElement!.getBoundingClientRect().width - 1);
+    await expect(open.innerText).toBe("Open Interview");
+    await expectLabelsFit([open]);
   },
 };

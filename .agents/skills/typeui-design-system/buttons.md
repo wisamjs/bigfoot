@@ -117,6 +117,13 @@ The primary/brand button uses a layered two-gradient fill — a solid-feeling ca
 - **Cursor:** not-allowed
 - **No hover, no focus, no shadow, no glint**
 
+## Buttons on a Phone
+
+- A card's buttons share one row, splitting it equally, at most two to a row; a third takes the full row below
+- A label too long for its half shortens ("Prep notes" for "Add Prep notes"), keeping its full accessible name
+- Icons may give way to the label in a shared row
+- A lone button keeps its own width
+
 ## Icons in Buttons
 
 - Icon size: 16x16px
