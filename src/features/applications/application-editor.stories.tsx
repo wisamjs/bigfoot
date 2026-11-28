@@ -527,6 +527,20 @@ export const MarkDoneAsks: Story = {
   },
 };
 
+/** Escape closes the Mark done dialog, saving nothing, and focus returns to Mark done…. */
+export const MarkDoneAsksThenEscape: Story = {
+  args: MarkDoneAsks.args,
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const markDone = canvas.getByRole("button", { name: "Mark done…" });
+    await userEvent.click(markDone);
+    await userEvent.click(await canvas.findByRole("menuitem", { name: "Mark Rejected" }));
+    await within(canvasElement.ownerDocument.body).findByRole("dialog", { name: "Did these Interviews happen?" });
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(markDone).toHaveFocus());
+    await expect(actions.updateApplicationAction).not.toHaveBeenCalled();
+  },
+};
+
 /**
  * Rejected with an Interview that never took place (Abandoned, BIG-222): its strip segment a dashed
  * grey outline reading "R3 · Didn't happen", its own Didn't happen group in the Interviews card, left

@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, Ellipsis, Trash2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef, useState, type RefObject } from "react";
 import { updateApplicationAction } from "@/app/applications/actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -122,21 +122,31 @@ function WaitingDays({ since }: { since: string | null }) {
 function MarkDoneMenu({ app, onPick }: { app: Application; onPick: (change: StatusChange) => void }) {
   // The menu opens inside the page's main landmark, not at the end of <body>.
   const [container, setContainer] = useState<HTMLElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   return (
     <div ref={setContainer} className="relative hidden sm:block">
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button variant="secondary">
+          <Button ref={triggerRef} variant="secondary">
             {app.status === "done" ? "Change Status…" : "Mark done…"}
             <ChevronDown className="size-4" aria-hidden />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" container={container}>
-          <StatusMenuItems app={app} onPick={onPick} />
+          <StatusMenuItems app={app} onPick={(change) => pickFrom(triggerRef, change, onPick)} />
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
   );
+}
+
+/**
+ * Hands a pick on, with focus first on the menu's button: a pick that opens the Mark done dialog
+ * returns focus there when it closes, not to the menu item, which goes.
+ */
+function pickFrom(triggerRef: RefObject<HTMLButtonElement | null>, change: StatusChange, onPick: (change: StatusChange) => void) {
+  triggerRef.current?.focus();
+  onPick(change);
 }
 
 /** ⋯: Delete application, and on a phone the Change Status choices above it. */
@@ -164,7 +174,7 @@ function MoreMenu({
         <DropdownMenuContent align="end" container={container}>
           {!wide && (
             <>
-              <StatusMenuItems app={app} onPick={onPick} />
+              <StatusMenuItems app={app} onPick={(change) => pickFrom(triggerRef, change, onPick)} />
               <DropdownMenuSeparator />
             </>
           )}
