@@ -89,7 +89,7 @@ export const DateTbdMobile: Story = { ...withBigfoot(dateTbd), ...MOBILE };
 /** Show done: the Done Applications join the In Progress ones. */
 const showDone: Story = {
   play: async ({ canvas }) => {
-    await userEvent.click(canvas.getByRole("checkbox", { name: "Show done" }));
+    await userEvent.click(canvas.getByRole("switch", { name: "Show done" }));
     await expect(canvas.getByRole("link", { name: /^Open Brightwater Data\b/ })).toBeVisible();
     await expect(canvas.queryByText(/Done Applications are hidden/)).not.toBeInTheDocument();
   },

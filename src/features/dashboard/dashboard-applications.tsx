@@ -1,12 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { ArrowUpDown, ChevronDown } from "lucide-react";
+import { useId, useState } from "react";
 import { AddApplicationLink } from "@/features/applications/add-links";
 import { ApplicationList } from "@/features/applications/application-list";
 import { DashboardCard } from "@/features/dashboard/dashboard-card";
 import { SORT_PARAM, setViewParams, useDashboardView } from "@/features/dashboard/dashboard-view";
 import { ClipboardBigfoot } from "@/features/shell/illustrations";
-import { inputClasses } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
 import {
   APPLICATION_SORT_LABELS,
   APPLICATION_SORTS,
@@ -36,17 +46,7 @@ export function DashboardApplications({ applications }: { applications: Applicat
       actions={
         <>
           {applications.length > 1 && <SortMenu sort={sort} onSort={setSort} />}
-          {doneCount > 0 && (
-            <label className="flex cursor-pointer items-center gap-2.5 text-sm text-body pointer-coarse:min-h-11">
-              <input
-                type="checkbox"
-                checked={showDone}
-                onChange={(e) => setShowDone(e.target.checked)}
-                className="size-[18px] cursor-pointer rounded-control accent-brand"
-              />
-              Show done
-            </label>
-          )}
+          {doneCount > 0 && <ShowDoneSwitch checked={showDone} onChange={setShowDone} />}
           <AddApplicationLink />
         </>
       }
@@ -63,23 +63,43 @@ export function DashboardApplications({ applications }: { applications: Applicat
   );
 }
 
-/** "Sort by", on a phone, where the table's column headers are hidden. */
-function SortMenu({ sort, onSort }: { sort: ApplicationSort; onSort: (sort: ApplicationSort) => void }) {
+/** Show done, as the Switch Date TBD uses: its label is the 44px touch target. */
+function ShowDoneSwitch({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
+  const id = useId();
   return (
-    <label className="flex items-center gap-2.5 whitespace-nowrap text-sm text-body sm:hidden">
-      Sort by
-      <select
-        value={sort}
-        onChange={(e) => onSort(e.target.value as ApplicationSort)}
-        className={`${inputClasses} w-auto py-2 pointer-coarse:min-h-11`}
-      >
-        {APPLICATION_SORTS.map((option) => (
-          <option key={option} value={option}>
-            {APPLICATION_SORT_LABELS[option]}
-          </option>
-        ))}
-      </select>
+    <label htmlFor={id} className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-heading">
+      <Switch id={id} checked={checked} onCheckedChange={onChange} />
+      Show done
     </label>
+  );
+}
+
+/** "Sort by", on a phone, where the table's column headers are hidden: a menu like Mark done…. */
+function SortMenu({ sort, onSort }: { sort: ApplicationSort; onSort: (sort: ApplicationSort) => void }) {
+  // The menu opens inside the page's main landmark, not at the end of <body>.
+  const [container, setContainer] = useState<HTMLElement | null>(null);
+  return (
+    <div ref={setContainer} className="relative sm:hidden">
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button variant="secondary" aria-label={`Sort by ${APPLICATION_SORT_LABELS[sort]}`}>
+            <ArrowUpDown className="size-4" aria-hidden />
+            {APPLICATION_SORT_LABELS[sort]}
+            <ChevronDown className="size-4" aria-hidden />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" container={container}>
+          <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={sort} onValueChange={(value) => onSort(parseApplicationSort(value))}>
+            {APPLICATION_SORTS.map((option) => (
+              <DropdownMenuRadioItem key={option} value={option}>
+                {APPLICATION_SORT_LABELS[option]}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }
 
