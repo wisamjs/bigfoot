@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect } from "storybook/test";
+import { expectBigfootClear } from "@/test/art";
 import { DESKTOP, journey, MOBILE, NOW, PAGE, user } from "@/test/pages";
 import { JourneyPreview } from "./journey-preview";
 
@@ -17,15 +18,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** The Bigfoot family right of the heading, as a Viewer sees it (BIG-229): on a laptop, not on a phone. */
-const withBigfoot = (story: Story, shown: boolean): Story => ({
+/** The Bigfoot family right of the heading, as a Viewer sees it (BIG-229), smaller on a phone (BIG-232). */
+const withBigfoot = (story: Story): Story => ({
   ...story,
   play: async (context) => {
     await story.play?.(context);
-    const art = context.canvasElement.querySelector<HTMLImageElement>('img[src*="bigfoot-family"]');
-    await expect(art).toHaveAttribute("alt", "");
-    if (shown) await expect(art).toBeVisible();
-    else await expect(art).not.toBeVisible();
+    await expectBigfootClear(context.canvasElement, "bigfoot-family");
   },
 });
 
@@ -38,8 +36,8 @@ const preview: Story = {
     await expect(canvas.queryByRole("button", { name: "Lock" })).not.toBeInTheDocument();
   },
 };
-export const PreviewDesktop: Story = { ...withBigfoot(preview, true), ...DESKTOP };
-export const PreviewMobile: Story = { ...withBigfoot(preview, false), ...MOBILE };
+export const PreviewDesktop: Story = { ...withBigfoot(preview), ...DESKTOP };
+export const PreviewMobile: Story = { ...withBigfoot(preview), ...MOBILE };
 
 /** Nothing to show yet: the same empty Journey a Viewer would see. */
 const nothing: Story = {
@@ -48,5 +46,5 @@ const nothing: Story = {
     await expect(canvas.getByText("No Applications in progress right now.")).toBeVisible();
   },
 };
-export const NothingInProgressDesktop: Story = { ...withBigfoot(nothing, true), ...DESKTOP };
-export const NothingInProgressMobile: Story = { ...withBigfoot(nothing, false), ...MOBILE };
+export const NothingInProgressDesktop: Story = { ...withBigfoot(nothing), ...DESKTOP };
+export const NothingInProgressMobile: Story = { ...withBigfoot(nothing), ...MOBILE };

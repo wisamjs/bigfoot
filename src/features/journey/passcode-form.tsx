@@ -20,7 +20,8 @@ const IDLE: PasscodeState = { status: "idle" };
  * button that opens their Journey. A wrong Passcode says so under the field; 5 wrong ones in 15
  * minutes lock the link (`locked` on load, or the 5th try), and the button stays disabled. Bigfoot
  * leans out from behind the card's right edge, one paw on it (BIG-229), where there is room beside
- * the card: wide screens only.
+ * the card. Narrower than that, he peeks in from the screen's right edge instead, turned to face the
+ * card, over its empty corner beside the initials.
  */
 export function PasscodeForm({ id, sharedBy, locked = false }: { id: string; sharedBy: string | null; locked?: boolean }) {
   const copy = viewerCopy(sharedBy);
@@ -33,9 +34,11 @@ export function PasscodeForm({ id, sharedBy, locked = false }: { id: string; sha
   return (
     <ShareLinkFrame
       art={
-        // The sprite's straight left edge sits on the card's right border, so only the paw (inside
-        // the card's padding, clear of the field) overlaps the card.
-        <PeekRightBigfoot className="pointer-events-none absolute left-[calc(100%-10px)] top-[70px] hidden h-auto w-32 md:block" />
+        // Wide: the sprite's straight left edge sits on the card's right border, so only the paw
+        // (inside the card's padding, clear of the field) overlaps the card. Narrow: mirrored, its
+        // straight edge on the screen's right edge (the card is centred, at most 30rem wide), the
+        // top above the card and the rest above the heading.
+        <PeekRightBigfoot className="pointer-events-none absolute -top-6 right-[min(-1rem,calc((30rem-100vw)/2))] h-auto w-20 -scale-x-100 md:left-[calc(100%-10px)] md:right-auto md:top-[70px] md:w-32 md:scale-x-100" />
       }
     >
       <span

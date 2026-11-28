@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect } from "storybook/test";
 import { prepLookBack, takeawayShowsOn, type Application } from "@/lib/applications";
-import { applications, brightwater, DESKTOP, lumen, MOBILE, northwind, PAGE, user } from "@/test/pages";
+import { expectBigfootClear } from "@/test/art";
+import { applications, brightwater, DESKTOP, lumen, MOBILE, NARROW, northwind, PAGE, user } from "@/test/pages";
 import { InterviewNotFoundPage, InterviewPage, InterviewPageSkeleton } from "./interview-page";
 
 // An Interview's page, whole, as /applications/[id]/interviews/[interviewId] renders it (BIG-203),
@@ -24,7 +25,10 @@ function page(app: Application, id: string) {
 type Art = "question-sign" | "notebook" | "writing";
 const ART: Art[] = ["question-sign", "notebook", "writing"];
 
-/** `story`, also checking that the `shown` art is visible and the rest is hidden or absent (listed in ART's order). */
+/**
+ * `story`, also checking that the `shown` art is visible, clear of text and controls, and the rest is
+ * absent (listed in ART's order). A phone shows the same art as a laptop, smaller (BIG-232).
+ */
 const withArt = (story: Story, shown: Art[]): Story => ({
   ...story,
   play: async (context) => {
@@ -32,6 +36,7 @@ const withArt = (story: Story, shown: Art[]): Story => ({
     const visible = (name: Art) =>
       context.canvasElement.querySelector<HTMLImageElement>(`img[src*="bigfoot-${name}"]`)?.checkVisibility() ?? false;
     await expect(ART.filter(visible)).toEqual(shown);
+    await Promise.all(shown.map((name) => expectBigfootClear(context.canvasElement, `bigfoot-${name}`)));
   },
 });
 /** The same story in the light theme. */
@@ -55,13 +60,15 @@ const upcoming: Story = {
   },
 };
 export const UpcomingDesktop: Story = { ...withArt(upcoming, ["writing"]), ...DESKTOP };
-export const UpcomingMobile: Story = { ...withArt(upcoming, []), ...MOBILE };
+export const UpcomingMobile: Story = { ...withArt(upcoming, ["writing"]), ...MOBILE };
 
-/** Upcoming, with nothing written yet and nothing to look back on: Bigfoot in both cards, but not on a phone. */
+/** Upcoming, with nothing written yet and nothing to look back on: Bigfoot in both cards, smaller on a phone. */
 const upcomingEmpty: Story = { args: page(northwind, "onsite") };
 export const UpcomingEmptyDesktop: Story = { ...withArt(upcomingEmpty, ["notebook", "writing"]), ...DESKTOP };
 export const UpcomingEmptyLight: Story = { ...withArt(upcomingEmpty, ["notebook", "writing"]), ...LIGHT };
-export const UpcomingEmptyMobile: Story = { ...withArt(upcomingEmpty, []), ...MOBILE };
+export const UpcomingEmptyMobile: Story = { ...withArt(upcomingEmpty, ["notebook", "writing"]), ...MOBILE };
+/** The narrowest phone, 320px: each Bigfoot beside its card's button. */
+export const UpcomingEmptyNarrow: Story = { ...withArt(upcomingEmpty, ["notebook", "writing"]), ...NARROW };
 
 /** Completed, with Interview notes and a Takeaway for next time, and where that takeaway shows. */
 const completed: Story = {
@@ -88,7 +95,7 @@ const ofDone: Story = { args: page(brightwater, "deep-dive") };
 export const OfDoneApplicationDesktop: Story = { ...ofDone, ...DESKTOP };
 export const OfDoneApplicationMobile: Story = { ...ofDone, ...MOBILE };
 
-/** A deleted Interview, a malformed id or another job seeker's: Bigfoot right of the title, but not on a phone. */
+/** A deleted Interview, a malformed id or another job seeker's: Bigfoot right of the title, smaller on a phone. */
 const notFound: Story = {
   render: () => <InterviewNotFoundPage user={user} />,
   play: async ({ canvas }) => {
@@ -97,7 +104,9 @@ const notFound: Story = {
 };
 export const NotFoundDesktop: Story = { ...withArt(notFound, ["question-sign"]), ...DESKTOP };
 export const NotFoundLight: Story = { ...withArt(notFound, ["question-sign"]), ...LIGHT };
-export const NotFoundMobile: Story = { ...withArt(notFound, []), ...MOBILE };
+export const NotFoundMobile: Story = { ...withArt(notFound, ["question-sign"]), ...MOBILE };
+/** The narrowest phone, 320px: the title wraps short of Bigfoot. */
+export const NotFoundNarrow: Story = { ...withArt(notFound, ["question-sign"]), ...NARROW };
 
 /** While the Interview loads. */
 const loading: Story = { render: () => <InterviewPageSkeleton /> };

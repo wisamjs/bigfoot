@@ -63,10 +63,10 @@ export function JourneyView({
       <JourneyHeader id={id} sharedBy={journey.shared_by} />
       <main id="main" className="flex-1 py-8 sm:py-12">
         <Container className="flex flex-col gap-6 max-sm:px-4">
-          <div className="relative sm:pr-28">
+          <div className="relative pr-20 sm:pr-28">
             {/* Out of the flow, so nothing moves; the padding keeps a long name from running under it.
-                Hidden on a phone, where it would crowd the heading. */}
-            <FamilyBigfoot className="pointer-events-none absolute right-0 top-1/2 hidden h-auto w-24 -translate-y-1/2 sm:block" />
+                Smaller on a phone, where the heading needs the room. */}
+            <FamilyBigfoot className="pointer-events-none absolute right-0 top-1/2 h-auto w-16 -translate-y-1/2 sm:w-24" />
             <h1 className="m-0 text-[32px] font-bold leading-[1.1] tracking-[-0.01em] text-heading sm:text-[44px]">
               {copy.heading}
             </h1>

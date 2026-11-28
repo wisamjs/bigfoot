@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, mocked, userEvent, waitFor } from "storybook/test";
+import { expectBigfootClear } from "@/test/art";
 import { openJourneyAction } from "@/app/journey/[id]/actions";
 import { PasscodeForm } from "./passcode-form";
 
@@ -33,6 +34,14 @@ export const BigfootLight: Story = {
     const art = canvasElement.querySelector('img[src*="bigfoot-peek-right"]');
     await expect(art).toHaveAttribute("alt", "");
     await expect(art).toBeVisible();
+  },
+};
+
+/** On a phone there is no room beside the card, so Bigfoot peeks in from the screen's edge, beside the initials (BIG-232). */
+export const BigfootPhone: Story = {
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+  play: async ({ canvasElement }) => {
+    await expectBigfootClear(canvasElement, "bigfoot-peek-right");
   },
 };
 

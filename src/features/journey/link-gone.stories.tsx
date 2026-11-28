@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect } from "storybook/test";
+import { expectBigfootClear } from "@/test/art";
 import { LinkGone } from "./link-gone";
 
 // A Share link that no longer opens (BIG-197).
@@ -13,12 +14,13 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Stopped, or never a link: the same page, naming nobody. */
+/** Stopped, or never a link: the same page, naming nobody. On a phone, Bigfoot looks over the card, smaller (BIG-232). */
 export const NotActive: Story = {
   globals: { viewport: { value: "mobile1", isRotated: false } },
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     await expect(canvas.getByRole("heading", { level: 1, name: "This link isn’t active" })).toBeVisible();
     await expect(canvas.getByText("Ask the person who sent it for a new one.")).toBeVisible();
+    await expectBigfootClear(canvasElement, "bigfoot-peek-over");
   },
 };
 

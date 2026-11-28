@@ -47,6 +47,8 @@ export const PAGE = {
 export const DESKTOP = { globals: { viewport: { value: "desktop", isRotated: false } } } satisfies StoryObj;
 /** A story at a phone's width, 414px. */
 export const MOBILE = { globals: { viewport: { value: "mobile2", isRotated: false } } } satisfies StoryObj;
+/** A story at the narrowest phone's width, 320px. */
+export const NARROW = { globals: { viewport: { value: "mobile1", isRotated: false } } } satisfies StoryObj;
 
 export const user: CurrentUser = {
   id: "u1",
