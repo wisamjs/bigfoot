@@ -17,6 +17,7 @@ import {
   type Application,
   type ApplicationListRow,
   type ApplicationSort,
+  type ApplicationsShown,
 } from "@/lib/applications";
 
 // Also draws the landing page's decorative list (src/features/landing/hero.tsx): after a
@@ -24,37 +25,37 @@ import {
 
 type Props = {
   applications: Application[];
-  /** Show Done Applications other than Offers, after the others. */
-  showDone?: boolean;
+  /** Which Applications show (BIG-252): In Progress ones and Offers by default. */
+  shown?: ApplicationsShown;
   /** Makes each row a link to its Application's page. */
   linked?: boolean;
   /** Render as a decorative picture (landing page) instead of readable content. */
   decorative?: boolean;
-  /** Draw the table edge to edge inside a card (the dashboard's Applications card) instead of in a frame of its own. */
+  /** Draw the table edge to edge inside a card (the Applications page's, the dashboard's) instead of in a frame of its own. */
   flush?: boolean;
   /**
    * Sorts the rows (BIG-209), and with `onSort` makes each column header a button that sorts by
-   * it. Without one, rows are ordered by what they are waiting on (Waiting, Interview scheduled,
-   * Offer, then Done), as the landing page shows them.
+   * it. Without one, rows are in their Progress groups (Interview scheduled, Next round · date TBD,
+   * Waiting, Offer, then Done), as the landing page shows them.
    */
   sort?: ApplicationSort;
   onSort?: (sort: ApplicationSort) => void;
 };
 
 /**
- * The dashboard's Applications: one table, a row per Application, in `sort` order, or by what they
- * are waiting on (Waiting, Interview scheduled, Offer, and Done on request).
+ * The Applications list: one table, a row per Application `shown`, in `sort` order, or in their
+ * Progress groups.
  */
 export function ApplicationList({
   applications,
-  showDone = false,
+  shown = "all",
   linked = false,
   decorative = false,
   flush = false,
   sort,
   onSort,
 }: Props) {
-  const rows = listRows(applications, showDone, sort);
+  const rows = listRows(applications, shown, sort);
   const a11y = decorative ? decorativeProps(rows) : {};
   const look = flush ? FLUSH : FRAMED;
 
@@ -82,9 +83,9 @@ export function ApplicationList({
   );
 }
 
-function listRows(applications: Application[], showDone: boolean, sort: ApplicationSort | undefined): ApplicationListRow[] {
-  if (sort) return sortApplications(applications, { sort, showDone });
-  return getApplicationGroups(applications, { showDone }).flatMap((group) =>
+function listRows(applications: Application[], shown: ApplicationsShown, sort: ApplicationSort | undefined): ApplicationListRow[] {
+  if (sort) return sortApplications(applications, { sort, shown });
+  return getApplicationGroups(applications, { shown }).flatMap((group) =>
     group.applications.map((application) => ({ application, group })),
   );
 }

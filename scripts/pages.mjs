@@ -1,6 +1,7 @@
 // Every page route, signed out and signed in, for scripts/smoke.mjs and scripts/a11y.mjs.
 // scripts/pages.test.ts fails when a src/app page.tsx has no entry here for either state.
 //   expect    text the page must show
+//   query     a search string to open the page with, without the "?" (`progress=waiting`)
 //   params, application, interview
 //             what fills a dynamic route's [id] and [interviewId] (scripts/page-path.mjs); a page
 //             with `application` is opened by a job seeker holding scripts/dev-applications.mjs's
@@ -41,6 +42,24 @@ export const PAGES = [
       { name: "account-menu", steps: [{ click: "button", text: "Account menu", pointer: true }], expect: "Sign out" },
     ],
   },
+  // The Applications list (BIG-252): filtered by Progress (`?progress=`) and sorted (`?sort=`).
+  { path: "/applications", signedIn: false, redirect: "/sign-in" },
+  {
+    path: "/applications",
+    signedIn: true,
+    // Only the loaded page has a table row's link; the skeleton has the heading and the filter's label.
+    expect: "Done Applications aren’t shown",
+    states: [
+      { name: "applications-sorted-by-location", steps: [{ click: "button", text: "Location" }], expect: "Remote" },
+      {
+        name: "applications-filter-menu",
+        steps: [{ click: 'button[aria-label^="Filter:"]', pointer: true }],
+        expect: "Filter by Progress",
+      },
+      { name: "applications-none", applications: "none", steps: [], expect: "Your search starts here" },
+    ],
+  },
+  { path: "/applications", query: "progress=waiting", signedIn: true, expect: "Showing" },
   // A dynamic route's entry fills its [id]: `application` is the company of one of the
   // Applications from scripts/dev-applications.mjs, `params` the value itself (scripts/page-path.mjs).
   { path: "/applications/[id]", signedIn: false, params: { id: "unknown" }, redirect: "/sign-in" },

@@ -21,11 +21,19 @@ export function needsData(page) {
 }
 
 /**
- * The path to open `page` as `jobSeekerId`, who holds the Applications when `page.application` is
+ * The path to open `page` as `jobSeekerId`, with its `query` if it has one.
+ */
+export async function pagePath(page, jobSeekerId) {
+  const path = await routePath(page, jobSeekerId);
+  return page.query ? `${path}?${page.query}` : path;
+}
+
+/**
+ * The route's path for `page` as `jobSeekerId`, who holds the Applications when `page.application` is
  * set. `page.interview` is the title of one of that Application's Interviews, for `[interviewId]`.
  * `page.shareLink` is the label of one of their Share links, for `/journey/[id]`.
  */
-export async function pagePath(page, jobSeekerId) {
+async function routePath(page, jobSeekerId) {
   if (page.shareLink) {
     const links = await call(jobSeekerId, "GET", "/me/share-links");
     const link = links.find((l) => l.label === page.shareLink);

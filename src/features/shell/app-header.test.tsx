@@ -47,6 +47,17 @@ describe("AppHeader without a user", () => {
   });
 });
 
+describe("AppHeader's nav (BIG-252)", () => {
+  it("has Dashboard and Applications, Applications current on the Applications page", () => {
+    render(<AppHeader user={user} current="/applications" />);
+    const nav = screen.getByRole("navigation", { name: "Signed in" });
+    expect(within(nav).getAllByRole("link").map((link) => link.textContent)).toEqual(["Dashboard", "Applications"]);
+    expect(within(nav).getByRole("link", { name: "Applications" })).toHaveAttribute("aria-current", "page");
+    expect(within(nav).getByRole("link", { name: "Applications" })).toHaveAttribute("href", "/applications");
+    expect(within(nav).getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current");
+  });
+});
+
 describe("AppHeader on a page outside the nav", () => {
   it("links the wordmark to the Dashboard", () => {
     render(<AppHeader user={user} />);

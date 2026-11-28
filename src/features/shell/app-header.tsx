@@ -6,11 +6,16 @@ import { ThemeToggle } from "@/features/shell/theme-toggle";
 import { Wordmark } from "@/features/shell/wordmark";
 import type { CurrentUser } from "@/lib/dal";
 
-// Account is reached from the avatar's menu, not the nav (BIG-195).
-const links = [{ href: "/dashboard", label: "Dashboard" }] as const;
+// Account is reached from the avatar's menu, not the nav (BIG-195). On a phone there is no room for
+// both pills beside the dark mode toggle and the avatar, so Dashboard gives way to Bigfoot, whose
+// link leads there too (BIG-252).
+const links = [
+  { href: "/dashboard", label: "Dashboard", className: "max-sm:hidden" },
+  { href: "/applications", label: "Applications", className: "" },
+] as const;
 
 /**
- * Header for signed-in pages (BIG-173): Bigfoot and the wordmark (a link to the Dashboard), the signed-in pages as pills, the light and dark mode toggle,
+ * Header for signed-in pages (BIG-173): Bigfoot and the wordmark (a link to the Dashboard), the signed-in pages as pills (Applications only, on a phone), the light and dark mode toggle,
  * and the job seeker's avatar, which opens the Account menu with Sign out. Without a user (a page's loading
  * state) it is the same header with a shape where the avatar goes. A page not in the nav (Account)
  * leaves `current` out and highlights nothing.
@@ -25,7 +30,7 @@ export function AppHeader({ user, current }: { user?: CurrentUser; current?: (ty
         <nav aria-label="Signed in" className="min-w-0 flex-1">
           <ul className="m-0 flex list-none items-center gap-1 p-0">
             {links.map((link) => (
-              <li key={link.href}>
+              <li key={link.href} className={link.className}>
                 <Link
                   href={link.href}
                   aria-current={link.href === current ? "page" : undefined}

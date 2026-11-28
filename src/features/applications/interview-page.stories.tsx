@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect } from "storybook/test";
+import { expect, within } from "storybook/test";
 import { prepLookBack, takeawayShowsOn, type Application } from "@/lib/applications";
 import { expectBigfootClear } from "@/test/art";
 import {
@@ -68,6 +68,9 @@ type Story = StoryObj<typeof meta>;
 const upcoming: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("link", { name: "Lumen Bio" })).toBeVisible();
+    // "Applications / Lumen Bio" (BIG-252).
+    const breadcrumb = canvas.getByRole("navigation", { name: "Breadcrumb" });
+    await expect(within(breadcrumb).getByRole("link", { name: "Applications" })).toHaveAttribute("href", "/applications");
     await expect(canvas.getByText("Draw the system before talking through it.")).toBeVisible();
   },
 };

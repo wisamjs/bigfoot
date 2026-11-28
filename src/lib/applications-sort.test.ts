@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { application, interview } from "@/test/applications";
-import { parseApplicationSort, sortApplications, type Application, type ApplicationSort } from "./applications";
+import {
+  parseApplicationSort,
+  sortApplications,
+  type Application,
+  type ApplicationSort,
+  type ApplicationsShown,
+} from "./applications";
 
 const done = (n: number) => interview(`done-${n}`, { at: `2026-10-0${n}T15:00:00Z` });
 const upcoming = (n: number, at: string) => interview(`next-${n}`, { at, completed: false });
@@ -49,13 +55,13 @@ const rejected = application("rejected", {
 
 const all = [rejected, offer, waitingNew, waitingNone, waitingTwo, round1, round3, round3Sooner];
 
-function order(sort: ApplicationSort, apps: Application[] = all, showDone = true) {
-  return sortApplications(apps, { sort, showDone }).map((row) => row.application.id);
+function order(sort: ApplicationSort, apps: Application[] = all, shown: ApplicationsShown = "everything") {
+  return sortApplications(apps, { sort, shown }).map((row) => row.application.id);
 }
 
 describe("sortApplications", () => {
   it("sorts by Progress by default: the highest Round booked first, then the most Interviews behind a Waiting one", () => {
-    expect(sortApplications(all, { showDone: true }).map((row) => row.application.id)).toEqual([
+    expect(sortApplications(all, { shown: "everything" }).map((row) => row.application.id)).toEqual([
       "round3-sooner", // Round 3, sooner than round3
       "round3",
       "round1",
@@ -117,11 +123,19 @@ describe("sortApplications", () => {
     }
   });
 
-  it("leaves out the Done Applications other than Offers until showDone", () => {
+  it("shows In Progress Applications and Offers by default, leaving out the other Done ones", () => {
     for (const sort of ["progress", "application", "next", "location"] as const) {
-      expect(order(sort, all, false)).not.toContain("rejected");
-      expect(order(sort, all, false)).toContain("offer");
+      expect(order(sort, all, "all")).not.toContain("rejected");
+      expect(order(sort, all, "all")).toContain("offer");
     }
+  });
+
+  it("shows only the Progress value a filter picks, in the sort's order (BIG-252)", () => {
+    expect(order("progress", all, "waiting")).toEqual(["waiting-two", "waiting-none", "waiting-new"]);
+    expect(order("application", all, "waiting")).toEqual(["waiting-none", "waiting-new", "waiting-two"]);
+    expect(order("progress", all, "done")).toEqual(["rejected"]);
+    expect(order("progress", all, "offer")).toEqual(["offer"]);
+    expect(order("progress", all, "unscheduled")).toEqual([]);
   });
 
   it("puts Applications whose Interviews ahead are all Unscheduled after the booked ones and before Waiting", () => {
@@ -149,7 +163,7 @@ describe("sortApplications", () => {
   });
 
   it("gives each row the group its Progress shows", () => {
-    const groups = sortApplications(all, { showDone: true }).map((row) => row.group.label);
+    const groups = sortApplications(all, { shown: "everything" }).map((row) => row.group.label);
     expect(new Set(groups)).toEqual(new Set(["Interview scheduled", "Waiting", "Offer", "Done"]));
     expect(sortApplications([round1])[0].group).toEqual({ id: "scheduled", label: "Interview scheduled" });
   });

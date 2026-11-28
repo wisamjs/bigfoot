@@ -65,7 +65,7 @@ describe("Dashboard Applications", () => {
         .getAllByRole("link", { name: /^Open / })
         .map((link) => link.textContent?.replace(/^Open /, "").split(",")[0]);
 
-    it("sorts by Progress until a column header is picked, then by that column, keeping it in the URL", async () => {
+    it("sorts by Progress until a column header is picked, then by that column", async () => {
       const user = userEvent.setup();
       render(<DashboardApplications applications={[alpha, zeta]} />);
       // Both Waiting with no Interviews: the longest wait first.
@@ -74,19 +74,21 @@ describe("Dashboard Applications", () => {
 
       await user.click(screen.getByRole("button", { name: "Application" }));
       expect(companies()).toEqual(["Alpha", "Zeta"]);
-      expect(window.location.search).toBe("?sort=application");
       expect(screen.getByRole("columnheader", { name: "Application" })).toHaveAttribute("aria-sort", "ascending");
       expect(screen.getByRole("columnheader", { name: "Progress" })).not.toHaveAttribute("aria-sort");
 
       await user.click(screen.getByRole("button", { name: "Progress" }));
-      expect(window.location.search).toBe("");
+      expect(companies()).toEqual(["Zeta", "Alpha"]);
     });
 
-    it("opens in the sort the URL names", () => {
+    it("ignores a sort in the dashboard's URL, which moved to the Applications page (BIG-252)", async () => {
       window.history.replaceState(null, "", "/dashboard?sort=location");
+      const user = userEvent.setup();
       render(<DashboardApplications applications={[alpha, zeta]} />);
-      expect(companies()).toEqual(["Zeta", "Alpha"]); // In-Office before Remote
-      expect(screen.getByRole("columnheader", { name: "Location" })).toHaveAttribute("aria-sort", "ascending");
+      expect(screen.getByRole("columnheader", { name: "Progress" })).toHaveAttribute("aria-sort", "ascending");
+
+      await user.click(screen.getByRole("button", { name: "Application" }));
+      expect(window.location.search).toBe("?sort=location");
     });
 
     it("sorts from the Sort by menu on a phone", async () => {
@@ -99,7 +101,6 @@ describe("Dashboard Applications", () => {
 
       await user.click(within(menu).getByRole("menuitemradio", { name: "Application" }));
       expect(companies()).toEqual(["Alpha", "Zeta"]);
-      expect(window.location.search).toBe("?sort=application");
       expect(screen.getByRole("button", { name: "Sort by Application" })).toBeInTheDocument();
     });
 
