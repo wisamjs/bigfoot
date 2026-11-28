@@ -1,69 +1,74 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, userEvent } from "storybook/test";
-import { previewApplications } from "@/lib/mock-data";
-import { application } from "@/test/applications";
-import { DashboardApplications } from "./dashboard-applications";
+import { expect, within } from "storybook/test";
+import { brightwater, cobalt, everyGroupApplications, harbour, plinth } from "@/test/pages";
+import { DashboardApplications, DashboardApplicationsSkeleton } from "./dashboard-applications";
 
-// The dashboard's Applications card, for the landing page's sample Applications plus two Done ones.
-
-const done = [
-  application("maple", { company: "Maple Health", title: "Engineering Manager, Growth", status: "done", outcome: "rejected", is_waiting: false }),
-  application("harbor", { company: "Harbor Ed", title: "Director of Engineering", status: "done", outcome: "withdrawn", is_waiting: false }),
-];
+// The dashboard's Applications card (BIG-253): a row per Progress group, each opening the
+// Applications behind it. Pages/Dashboard shows it in the whole page.
 
 const meta = {
   component: DashboardApplications,
-  args: { applications: [...previewApplications(), ...done] },
+  args: { applications: everyGroupApplications },
   parameters: { nextjs: { navigation: { pathname: "/dashboard" } } },
 } satisfies Meta<typeof DashboardApplications>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** In Progress Applications and Offers, with a line saying how many Done ones are hidden. */
+/** Every group: three names then "+1 more" for Waiting's four; Harbour and Cobalt alone open their own pages. */
 export const Default: Story = {
   play: async ({ canvas }) => {
-    await expect(canvas.getByText("2 Done Applications are hidden. Turn on “Show done” to see them.")).toBeVisible();
+    await expect(canvas.getByRole("link", { name: /^Show the 4 Waiting Applications\./ })).toHaveTextContent(/\+1 more$/);
+    await expect(canvas.getByRole("link", { name: /^Open Harbour Analytics, Senior Engineering Manager\./ })).toHaveAttribute(
+      "href",
+      "/applications/harbour",
+    );
   },
 };
 
-/** Show done adds the Done Applications, and the line goes. */
-export const ShowDone: Story = {
+/** Groups of one each: every row opens its Application's page. */
+export const GroupsOfOne: Story = {
+  args: { applications: [harbour, cobalt] },
   play: async ({ canvas }) => {
-    await userEvent.click(canvas.getByRole("switch", { name: "Show done" }));
-    await expect(canvas.getByRole("link", { name: /^Open Maple Health\b/ })).toBeVisible();
-    await expect(canvas.queryByText(/Done Applications are hidden/)).not.toBeInTheDocument();
+    await expect(canvas.getByRole("link", { name: /^Open Cobalt Genomics, Engineering Manager, Web\./ })).toHaveAttribute(
+      "href",
+      "/applications/cobalt",
+    );
   },
 };
 
-/** No Done Applications: no Show done and no line. */
-export const NoneDone: Story = { args: { applications: previewApplications() } };
+/** On a phone: names under each badge, wrapping, and "View all 9 Applications" at the card's foot. */
+export const Phone: Story = {
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+  play: async ({ canvas }) => {
+    const visible = canvas.getAllByRole("link", { name: /^View all/ }).filter((link) => link.checkVisibility());
+    await expect(visible).toHaveLength(1);
+    await expect(visible[0]).toHaveTextContent("View all 9 Applications");
+  },
+};
 
-/** No Applications yet: Bigfoot and a first Add button. */
+/** No Applications yet: Bigfoot and a first Add button, without View all. */
 export const Empty: Story = {
   args: { applications: [] },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("link", { name: "Add your first Application" })).toBeVisible();
+    await expect(canvas.queryByRole("link", { name: /^View all/ })).not.toBeInTheDocument();
   },
 };
 
-/** Only Done Applications, hidden: the table has nothing to show until Show done. */
-export const OnlyDone: Story = { args: { applications: done } };
-
-/** Sorted by Location from its column header (BIG-209); the Location header shows it. */
-export const SortedByLocation: Story = {
+/** Every Application Done, none an Offer: Bigfoot hugging a folder, Add Application, and View all to the Done ones. */
+export const AllDone: Story = {
+  args: { applications: [brightwater, plinth] },
   play: async ({ canvas }) => {
-    await userEvent.click(canvas.getByRole("button", { name: "Location" }));
-    await expect(canvas.getByRole("columnheader", { name: "Location" })).toHaveAttribute("aria-sort", "ascending");
+    await expect(canvas.getByRole("heading", { name: "Every Application is wrapped up" })).toBeVisible();
+    await expect(canvas.getByRole("link", { name: "View all 2 Done Applications" })).toHaveAttribute("href", "/applications?progress=done");
   },
 };
 
-/** On a phone, where the column headers are hidden, the Sort by menu sits beside Show done, open here. */
-export const PhoneSortBy: Story = {
-  globals: { viewport: { value: "mobile1", isRotated: false } },
-  play: async ({ canvas }) => {
-    await userEvent.click(canvas.getByRole("button", { name: "Sort by Progress" }));
-    await expect(canvas.getByRole("menuitemradio", { name: "Progress" })).toBeChecked();
-    await expect(canvas.getByRole("menuitemradio", { name: "Location" })).toBeVisible();
+/** While the Applications load: the real heading over four group rows in skeleton shapes. */
+export const Loading: Story = {
+  render: () => <DashboardApplicationsSkeleton />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole("heading", { name: "Applications" })).toBeVisible();
   },
 };

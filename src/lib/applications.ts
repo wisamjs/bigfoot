@@ -454,7 +454,7 @@ export const UNSCHEDULED_PROGRESS_LABEL = "Next round · date TBD";
  * Then Done, the other Done Applications. Only the groups `shown` are kept (In Progress ones and
  * Offers by default), and empty groups are left out.
  */
-export function getApplicationGroups(apps: Application[], { shown = "all" }: { shown?: ApplicationsShown } = {}): ApplicationGroup[] {
+export function getApplicationGroups(apps: Application[], { shown = "all" }: { shown?: ProgressFilter } = {}): ApplicationGroup[] {
   const open = apps.filter((a) => !isDone(a));
   const groups: ApplicationGroup[] = [
     { id: "scheduled", label: "Interview scheduled", applications: open.filter((a) => nextScheduledInterview(a)) },
@@ -471,6 +471,17 @@ export function getApplicationGroups(apps: Application[], { shown = "all" }: { s
 }
 
 /**
+ * The dashboard's Applications card (BIG-253): the Applications list's groups for All (In Progress
+ * ones and Offers, never Done), each group's Applications in the list's Progress order.
+ */
+export function applicationsCardGroups(apps: Application[]): ApplicationGroup[] {
+  return getApplicationGroups(apps).map((group) => ({
+    ...group,
+    applications: sortApplications(group.applications, { shown: group.id }).map((row) => row.application),
+  }));
+}
+
+/**
  * What the Applications list shows (BIG-252): All (In Progress Applications and Offers, the
  * default) or one Progress value, Done included. In the URL as `?progress=waiting`.
  */
@@ -484,14 +495,7 @@ export function parseProgressFilter(value: string | null | undefined): ProgressF
   return PROGRESS_VALUES.find((progress) => progress === value) ?? "all";
 }
 
-/**
- * Which Applications a list shows: a ProgressFilter, or every one, Done included (the dashboard's
- * Show done, until BIG-253 replaces its card).
- */
-export type ApplicationsShown = ProgressFilter | "everything";
-
-function shows(shown: ApplicationsShown, group: ApplicationGroup["id"]): boolean {
-  if (shown === "everything") return true;
+function shows(shown: ProgressFilter, group: ApplicationGroup["id"]): boolean {
   if (shown === "all") return group !== "done";
   return group === shown;
 }
@@ -656,7 +660,7 @@ const COMPARE: Record<ApplicationSort, Compare> = {
  */
 export function sortApplications(
   apps: Application[],
-  { sort = "progress", shown = "all" }: { sort?: ApplicationSort; shown?: ApplicationsShown } = {},
+  { sort = "progress", shown = "all" }: { sort?: ApplicationSort; shown?: ProgressFilter } = {},
 ): ApplicationListRow[] {
   return apps
     .filter((app) => {

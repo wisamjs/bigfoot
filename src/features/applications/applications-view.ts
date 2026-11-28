@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { PROGRESS_PARAM } from "@/features/applications/routes";
 import { rememberView } from "@/features/shell/back-links";
 import { setViewParams, viewSearch } from "@/features/shell/view-params";
 import { parseApplicationSort, parseProgressFilter, type ApplicationSort, type ProgressFilter } from "@/lib/applications";
@@ -12,8 +13,7 @@ import { parseApplicationSort, parseProgressFilter, type ApplicationSort, type P
  * reads as the default. A shared link opens the same view, and each change is remembered for the
  * "Applications" link back from an Application page.
  */
-export const PROGRESS_PARAM = "progress";
-export const SORT_PARAM = "sort";
+const SORT_PARAM = "sort";
 
 const VIEW_PARAMS = [PROGRESS_PARAM, SORT_PARAM];
 

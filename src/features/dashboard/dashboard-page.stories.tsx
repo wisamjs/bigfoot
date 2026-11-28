@@ -1,6 +1,19 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, userEvent, waitFor, within } from "storybook/test";
-import { applications, DESKTOP, MOBILE, NARROW, NOW, PAGE, samples, unscheduledApplications, user } from "@/test/pages";
+import { expect, waitFor, within } from "storybook/test";
+import {
+  applications,
+  brightwater,
+  DESKTOP,
+  everyGroupApplications,
+  MOBILE,
+  NARROW,
+  NOW,
+  PAGE,
+  plinth,
+  samples,
+  unscheduledApplications,
+  user,
+} from "@/test/pages";
 import { DashboardPage, DashboardPageSkeleton } from "./dashboard-page";
 
 // The dashboard, whole, as /dashboard renders it (BIG-203): every state at a laptop's width and a
@@ -29,11 +42,25 @@ const empty: Story = {
 export const EmptyDesktop: Story = { ...empty, ...DESKTOP };
 export const EmptyMobile: Story = { ...empty, ...MOBILE };
 
-/** A new job seeker's first look: only Sample Applications. */
+/** Every Application Done, none an Offer (BIG-253): Bigfoot hugging a folder, and one brand button. */
+const allDone: Story = {
+  args: { applications: [brightwater, plinth] },
+  play: async ({ canvas }) => {
+    const card = canvas.getByRole("region", { name: "Applications" });
+    await expect(within(card).getByRole("heading", { name: "Every Application is wrapped up" })).toBeVisible();
+    await expect(within(card).getAllByRole("link", { name: "Add Application" })).toHaveLength(1);
+    await expect(within(card).getByRole("link", { name: "View all 2 Done Applications" })).toBeVisible();
+  },
+};
+export const AllDoneDesktop: Story = { ...allDone, ...DESKTOP };
+export const AllDoneMobile: Story = { ...allDone, ...MOBILE };
+
+/** A new job seeker's first look: only Sample Applications, grouped on the Applications card. */
 const samplesOnly: Story = {
   args: { applications: samples },
   play: async ({ canvas }) => {
-    await expect(canvas.getAllByText("Sample").length).toBeGreaterThan(0);
+    const card = canvas.getByRole("region", { name: "Applications" });
+    await expect(within(within(card).getByRole("list")).getAllByRole("link").length).toBeGreaterThan(0);
   },
 };
 export const SamplesDesktop: Story = { ...samplesOnly, ...DESKTOP };
@@ -49,7 +76,10 @@ const inFlight: Story = {
     await waitFor(() => expect(next).toHaveTextContent(/Next up · today/));
     await expect(next).toHaveTextContent("Tilth Agritech · Head of Engineering");
     await expect(within(next).getByText(/^Lead with the decision/)).toBeVisible();
-    await expect(canvas.getByText(/Done Applications are hidden/)).toBeVisible();
+    // The Applications card: a row per Progress group, Done left out.
+    const card = canvas.getByRole("region", { name: "Applications" });
+    await expect(within(card).getByRole("link", { name: /^Show the 3 Applications with an Interview scheduled\./ })).toBeVisible();
+    await expect(within(card).queryByText(/^Done/)).not.toBeInTheDocument();
   },
 };
 export const InFlightDesktop: Story = { ...inFlight, ...DESKTOP };
@@ -65,30 +95,51 @@ const dateTbd: Story = {
   args: { applications: unscheduledApplications },
   play: async ({ canvas }) => {
     await expect(canvas.getByText(/2 awaiting a date/)).toBeVisible();
-    // Progress is drawn twice, stacked for a phone and in its column wider: one of them shows.
-    await expect(canvas.getAllByText("Next round · date TBD").some((label) => label.checkVisibility())).toBe(true);
+    await expect(canvas.getByRole("link", { name: /^Open Harbour Analytics, Senior Engineering Manager\./ })).toBeVisible();
     await expect(await canvas.findByRole("region", { name: "Date TBD" })).toBeVisible();
   },
 };
 export const DateTbdDesktop: Story = { ...dateTbd, ...DESKTOP };
 export const DateTbdMobile: Story = { ...dateTbd, ...MOBILE };
 
-/** Show done: the Done Applications join the In Progress ones. */
-const showDone: Story = {
+/**
+ * Every Progress group on the Applications card (BIG-253): Interview scheduled, Next round · date
+ * TBD and Offer with one Application each opening it, and Waiting's four, three names then "+1 more",
+ * opening the Applications list filtered to Waiting. "View all" is in the heading on wide screens,
+ * at the card's foot on a phone.
+ */
+const everyGroup: Story = {
+  args: { applications: everyGroupApplications },
   play: async ({ canvas }) => {
-    await userEvent.click(canvas.getByRole("switch", { name: "Show done" }));
-    await expect(canvas.getByRole("link", { name: /^Open Brightwater Data\b/ })).toBeVisible();
-    await expect(canvas.queryByText(/Done Applications are hidden/)).not.toBeInTheDocument();
+    const card = canvas.getByRole("region", { name: "Applications" });
+    const rows = within(within(card).getByRole("list")).getAllByRole("link");
+    // Each row's name: where it goes, then what it shows.
+    await expect(rows.map((row) => row.textContent?.split(". ")[0])).toEqual([
+      "Show the 3 Applications with an Interview scheduled",
+      "Open Harbour Analytics, Senior Engineering Manager",
+      "Show the 4 Waiting Applications",
+      "Open Cobalt Genomics, Engineering Manager, Web",
+    ]);
+    await expect(rows[2]).toHaveAttribute("href", "/applications?progress=waiting");
+    await expect(rows[2]).toHaveTextContent(/\+1 more$/);
+    const viewAll = within(card).getAllByRole("link", { name: /^View all 9 Applications/ });
+    await expect(viewAll.filter((link) => link.checkVisibility())).toHaveLength(1);
+    // Each row and View all is a 44px touch target.
+    const heights = [...rows, ...viewAll.filter((link) => link.checkVisibility())].map((target) => target.getBoundingClientRect().height);
+    await expect(Math.min(...heights)).toBeGreaterThanOrEqual(44);
   },
 };
-export const ShowDoneDesktop: Story = { ...showDone, ...DESKTOP };
-export const ShowDoneMobile: Story = { ...showDone, ...MOBILE };
+export const EveryGroupDesktop: Story = { ...everyGroup, ...DESKTOP };
+export const EveryGroupMobile: Story = { ...everyGroup, ...MOBILE };
+/** The narrowest phone, 320px: the names wrap rather than overflow. */
+export const EveryGroupNarrow: Story = { ...everyGroup, ...NARROW };
 
 /** While the Applications load. */
 const loading: Story = {
   render: () => <DashboardPageSkeleton />,
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("heading", { level: 1, name: "Dashboard" })).toBeVisible();
+    await expect(canvas.getByRole("heading", { level: 2, name: "Applications" })).toBeVisible();
   },
 };
 export const LoadingDesktop: Story = { ...loading, ...DESKTOP };

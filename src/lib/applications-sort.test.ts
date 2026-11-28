@@ -5,7 +5,7 @@ import {
   sortApplications,
   type Application,
   type ApplicationSort,
-  type ApplicationsShown,
+  type ProgressFilter,
 } from "./applications";
 
 const done = (n: number) => interview(`done-${n}`, { at: `2026-10-0${n}T15:00:00Z` });
@@ -55,13 +55,13 @@ const rejected = application("rejected", {
 
 const all = [rejected, offer, waitingNew, waitingNone, waitingTwo, round1, round3, round3Sooner];
 
-function order(sort: ApplicationSort, apps: Application[] = all, shown: ApplicationsShown = "everything") {
+function order(sort: ApplicationSort, apps: Application[] = all, shown: ProgressFilter = "all") {
   return sortApplications(apps, { sort, shown }).map((row) => row.application.id);
 }
 
 describe("sortApplications", () => {
   it("sorts by Progress by default: the highest Round booked first, then the most Interviews behind a Waiting one", () => {
-    expect(sortApplications(all, { shown: "everything" }).map((row) => row.application.id)).toEqual([
+    expect(sortApplications(all).map((row) => row.application.id)).toEqual([
       "round3-sooner", // Round 3, sooner than round3
       "round3",
       "round1",
@@ -69,14 +69,12 @@ describe("sortApplications", () => {
       "waiting-none", // none, the longest wait
       "waiting-new",
       "offer",
-      "rejected",
     ]);
   });
 
-  it("sorts by Application: company A–Z, then role, ignoring case and accents, Done ones mixed in", () => {
+  it("sorts by Application: company A–Z, then role, ignoring case and accents", () => {
     const birchManager = application("birch-manager", { company: "birch", title: "Manager" });
     expect(order("application", [...all, birchManager])).toEqual([
-      "rejected", // Aardvark: Done sorts with the rest
       "waiting-none", // acme
       "round3-sooner", // Another Round Three
       "waiting-new", // Birch · Engineer
@@ -97,16 +95,14 @@ describe("sortApplications", () => {
       "waiting-two",
       "waiting-new",
       "offer",
-      "rejected",
     ]);
   });
 
-  it("sorts by Location A–Z, ties by company, with no Location last, Done ones mixed in", () => {
+  it("sorts by Location A–Z, ties by company, with no Location last", () => {
     expect(order("location")).toEqual([
       "waiting-none", // Hybrid - 3x a Week
       "waiting-new", // In-Office
-      "rejected", // Remote, Aardvark: Done sorts with the rest
-      "waiting-two", // Remote, Éclair
+      "waiting-two", // Remote
       "round3-sooner", // no Location, by company
       "round1",
       "round3",
@@ -114,12 +110,12 @@ describe("sortApplications", () => {
     ]);
   });
 
-  it("puts the Done Applications last by Progress and Next, in company order rather than arrival order", () => {
+  it("sorts the Done Applications in company order rather than arrival order", () => {
     const withdrawn = application("withdrawn", { company: "Yew", status: "done", outcome: "withdrawn", is_waiting: false, waiting_since: null });
     const filled = application("filled", { company: "Maple", status: "done", outcome: "position_filled", is_waiting: false, waiting_since: null });
     const apps = [withdrawn, filled, rejected, waitingNew];
     for (const sort of ["progress", "next"] as const) {
-      expect(order(sort, apps)).toEqual(["waiting-new", "rejected", "filled", "withdrawn"]);
+      expect(order(sort, apps, "done")).toEqual(["rejected", "filled", "withdrawn"]);
     }
   });
 
@@ -163,8 +159,9 @@ describe("sortApplications", () => {
   });
 
   it("gives each row the group its Progress shows", () => {
-    const groups = sortApplications(all, { shown: "everything" }).map((row) => row.group.label);
-    expect(new Set(groups)).toEqual(new Set(["Interview scheduled", "Waiting", "Offer", "Done"]));
+    const groups = sortApplications(all).map((row) => row.group.label);
+    expect(new Set(groups)).toEqual(new Set(["Interview scheduled", "Waiting", "Offer"]));
+    expect(sortApplications(all, { shown: "done" })[0].group).toEqual({ id: "done", label: "Done" });
     expect(sortApplications([round1])[0].group).toEqual({ id: "scheduled", label: "Interview scheduled" });
   });
 });

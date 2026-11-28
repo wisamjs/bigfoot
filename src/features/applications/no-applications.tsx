@@ -42,8 +42,11 @@ export function NoMatchingApplications({ label, action, className }: { label: st
 
 type HeadingLevel = 2 | 3;
 
-/** An empty list in its card: Bigfoot, a heading, a line, and one call to action, centred where the table would be. */
-function EmptyApplications({
+/**
+ * An empty list in its card: Bigfoot, a heading, a line, and one call to action, centred where the
+ * table would be; also the dashboard's Applications card with every Application Done (BIG-253).
+ */
+export function EmptyApplications({
   bigfoot,
   heading,
   action,

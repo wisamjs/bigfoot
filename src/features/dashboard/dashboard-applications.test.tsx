@@ -1,127 +1,107 @@
 import { render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { application } from "@/test/applications";
-import { DashboardApplications } from "./dashboard-applications";
+import { describe, expect, it } from "vitest";
+import { application, interview } from "@/test/applications";
+import { DashboardApplications, DashboardApplicationsSkeleton } from "./dashboard-applications";
 
-vi.mock("next/navigation", () => import("@/test/navigation"));
+const upcoming = (id: string, at: string | null) => interview(id, { at, completed: false });
+const scheduled = (id: string, company: string, at: string) =>
+  application(id, { company, is_waiting: false, waiting_since: null, interviews: [upcoming(`${id}-next`, at)] });
+const waiting = (id: string, company: string, since: string) => application(id, { company, waiting_since: since });
+const done = (id: string, outcome: "offer" | "rejected") =>
+  application(id, { company: id, status: "done", outcome, is_waiting: false, waiting_since: null });
 
-afterEach(() => window.history.replaceState(null, "", "/dashboard"));
+const lumen = scheduled("lumen", "Lumen Bio", "2026-12-02T15:00:00Z");
+const kestrel = scheduled("kestrel", "Kestrel AI", "2026-12-04T15:00:00Z");
+const harbour = application("harbour", {
+  company: "Harbour Analytics",
+  title: "Senior Engineering Manager",
+  is_waiting: false,
+  waiting_since: null,
+  interviews: [upcoming("harbour-tbd", null)],
+});
+const waitingApps = [
+  waiting("fernway", "Fernway Health", "2026-09-01"),
+  waiting("brightline", "Brightline Robotics", "2026-09-10"),
+  waiting("saltmarsh", "Saltmarsh Energy", "2026-09-20"),
+  waiting("quillon", "Quillon", "2026-10-01"),
+];
+const offer = done("Cobalt", "offer");
+const rejected = done("Umbrella", "rejected");
 
-const birch = application("birch", { company: "Birch", title: "Engineer" });
-const rejected = application("umbrella", { company: "Umbrella", status: "done", outcome: "rejected", is_waiting: false });
+const rows = () =>
+  within(screen.getByRole("list"))
+    .getAllByRole("link")
+    .map((link) => [link.getAttribute("href"), link.textContent]);
 
-function setUpDashboard() {
-  const user = userEvent.setup();
-  render(<DashboardApplications applications={[birch, rejected]} />);
-  return user;
-}
-
-describe("Dashboard Applications", () => {
-  it("is a card named by its heading, with Add Application", () => {
-    setUpDashboard();
+describe("Dashboard Applications card", () => {
+  it("is a card named by its heading, with Add Application and View all", () => {
+    render(<DashboardApplications applications={[lumen, ...waitingApps, offer, rejected]} />);
     const card = screen.getByRole("region", { name: "Applications" });
     expect(within(card).getByRole("link", { name: "Add Application" })).toHaveAttribute("href", "/applications/new");
+    // All counts In Progress Applications and Offers, as the Applications list's All does.
+    const viewAll = within(card).getAllByRole("link", { name: /^View all 6 Applications/ });
+    expect(viewAll).toHaveLength(2); // the heading's on wide screens, the foot's on a phone
+    for (const link of viewAll) expect(link).toHaveAttribute("href", "/applications");
+    expect(within(card).queryByRole("table")).not.toBeInTheDocument();
+    expect(within(card).queryByRole("switch")).not.toBeInTheDocument();
   });
 
-  it("says how many Done Applications are hidden, and shows them after Show done", async () => {
-    const user = setUpDashboard();
-    expect(screen.queryByText("Umbrella")).not.toBeInTheDocument();
-    expect(screen.getByText("1 Done Application is hidden. Turn on “Show done” to see it.")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("switch", { name: "Show done" }));
-    const umbrella = screen.getAllByRole("row").find((row) => row.textContent?.includes("Umbrella"))!;
-    expect(within(umbrella).getAllByText("Done")[0]).toBeInTheDocument();
-    expect(screen.queryByText(/Done Application is hidden/)).not.toBeInTheDocument();
+  it("has a row per Progress group in Progress order, leaving out empty groups and Done", () => {
+    render(<DashboardApplications applications={[rejected, offer, ...waitingApps, harbour, lumen, kestrel]} />);
+    expect(rows()).toEqual([
+      [
+        "/applications?progress=scheduled",
+        "Show the 2 Applications with an Interview scheduled. Interview scheduled · 2 Lumen Bio, Kestrel AI",
+      ],
+      [
+        "/applications/harbour",
+        "Open Harbour Analytics, Senior Engineering Manager. Next round · date TBD · 1 Harbour Analytics",
+      ],
+      [
+        "/applications?progress=waiting",
+        "Show the 4 Waiting Applications. Waiting · 4 Fernway Health, Brightline Robotics, Saltmarsh Energy +1 more",
+      ],
+      ["/applications/Cobalt", "Open Cobalt, Engineer. Offer · 1 Cobalt"],
+    ]);
   });
 
-  it("has no Show done when no Application is Done", () => {
-    render(<DashboardApplications applications={[birch]} />);
-    expect(screen.queryByRole("switch", { name: "Show done" })).not.toBeInTheDocument();
-    expect(screen.queryByText(/hidden/)).not.toBeInTheDocument();
+  it("lists a group's names in the Applications list's Progress order", () => {
+    render(<DashboardApplications applications={[kestrel, lumen]} />);
+    expect(rows()[0][1]).toMatch(/· 2 Lumen Bio, Kestrel AI$/);
   });
 
-  it("links each row to its Application's page, so ⌘-click opens it in a new tab", async () => {
-    const user = setUpDashboard();
-    expect(screen.getByRole("link", { name: /^Open Birch\b/ })).toHaveAttribute("href", "/applications/birch");
-
-    await user.click(screen.getByRole("switch", { name: "Show done" }));
-    expect(screen.getByRole("link", { name: /^Open Umbrella\b/ })).toHaveAttribute("href", "/applications/umbrella");
+  it("shows each group's badge in the list's Progress colour", () => {
+    render(<DashboardApplications applications={[lumen, ...waitingApps, offer]} />);
+    expect(screen.getByText("Interview scheduled · 1")).toHaveClass("text-tone-blue-fg");
+    expect(screen.getByText("Waiting · 4")).toHaveClass("text-fg-warning");
+    expect(screen.getByText("Offer · 1")).toHaveClass("text-fg-success-strong");
   });
 
-  it("welcomes a job seeker with no Applications, and offers the first one", () => {
+  it("welcomes a job seeker with no Applications, with one brand button and no View all", () => {
     render(<DashboardApplications applications={[]} />);
     expect(screen.getByRole("heading", { name: "Your search starts here" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Add your first Application" })).toHaveAttribute("href", "/applications/new");
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
-    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Add Application" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^View all/ })).not.toBeInTheDocument();
   });
 
-  describe("sorting (BIG-209)", () => {
-    const zeta = application("zeta", { company: "Zeta", location: "in_office", waiting_since: "2026-11-10" });
-    const alpha = application("alpha", { company: "Alpha", location: "remote", waiting_since: "2026-11-20" });
-    const companies = () =>
-      screen
-        .getAllByRole("link", { name: /^Open / })
-        .map((link) => link.textContent?.replace(/^Open /, "").split(",")[0]);
+  it("says every Application is wrapped up when all are Done and none an Offer", () => {
+    render(<DashboardApplications applications={[rejected, done("Maple", "rejected")]} />);
+    expect(screen.getByRole("heading", { name: "Every Application is wrapped up" })).toBeInTheDocument();
+    expect(screen.getByText("Add the next role you apply for, or look back at the 2 you’ve finished.")).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Add Application" })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "View all 2 Done Applications" })).toHaveAttribute("href", "/applications?progress=done");
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+  });
+});
 
-    it("sorts by Progress until a column header is picked, then by that column", async () => {
-      const user = userEvent.setup();
-      render(<DashboardApplications applications={[alpha, zeta]} />);
-      // Both Waiting with no Interviews: the longest wait first.
-      expect(companies()).toEqual(["Zeta", "Alpha"]);
-      expect(screen.getByRole("columnheader", { name: "Progress" })).toHaveAttribute("aria-sort", "ascending");
-
-      await user.click(screen.getByRole("button", { name: "Application" }));
-      expect(companies()).toEqual(["Alpha", "Zeta"]);
-      expect(screen.getByRole("columnheader", { name: "Application" })).toHaveAttribute("aria-sort", "ascending");
-      expect(screen.getByRole("columnheader", { name: "Progress" })).not.toHaveAttribute("aria-sort");
-
-      await user.click(screen.getByRole("button", { name: "Progress" }));
-      expect(companies()).toEqual(["Zeta", "Alpha"]);
-    });
-
-    it("ignores a sort in the dashboard's URL, which moved to the Applications page (BIG-252)", async () => {
-      window.history.replaceState(null, "", "/dashboard?sort=location");
-      const user = userEvent.setup();
-      render(<DashboardApplications applications={[alpha, zeta]} />);
-      expect(screen.getByRole("columnheader", { name: "Progress" })).toHaveAttribute("aria-sort", "ascending");
-
-      await user.click(screen.getByRole("button", { name: "Application" }));
-      expect(window.location.search).toBe("?sort=location");
-    });
-
-    it("sorts from the Sort by menu on a phone", async () => {
-      const user = userEvent.setup();
-      render(<DashboardApplications applications={[alpha, zeta]} />);
-      await user.click(screen.getByRole("button", { name: "Sort by Progress" }));
-      const menu = screen.getByRole("menu");
-      expect(within(menu).getAllByRole("menuitemradio").map((o) => o.textContent)).toEqual(["Progress", "Application", "Next", "Location"]);
-      expect(within(menu).getByRole("menuitemradio", { name: "Progress" })).toBeChecked();
-
-      await user.click(within(menu).getByRole("menuitemradio", { name: "Application" }));
-      expect(companies()).toEqual(["Alpha", "Zeta"]);
-      expect(screen.getByRole("button", { name: "Sort by Application" })).toBeInTheDocument();
-    });
-
-    it("sorts Done Applications with the others once Show done is on (BIG-249)", async () => {
-      const user = userEvent.setup();
-      render(<DashboardApplications applications={[zeta, rejected, alpha]} />);
-      await user.click(screen.getByRole("switch", { name: "Show done" }));
-      // Progress: Done has no Interview ahead, so it comes last.
-      expect(companies()).toEqual(["Zeta", "Alpha", "Umbrella"]);
-
-      await user.click(screen.getByRole("button", { name: "Application" }));
-      expect(companies()).toEqual(["Alpha", "Umbrella", "Zeta"]);
-
-      await user.click(screen.getByRole("button", { name: "Sort by Application" }));
-      await user.click(within(screen.getByRole("menu")).getByRole("menuitemradio", { name: "Progress" }));
-      expect(companies()).toEqual(["Zeta", "Alpha", "Umbrella"]);
-    });
-
-    it("has no Sort by menu for a single Application", () => {
-      render(<DashboardApplications applications={[birch]} />);
-      expect(screen.queryByRole("button", { name: /^Sort by/ })).not.toBeInTheDocument();
-    });
+describe("DashboardApplicationsSkeleton", () => {
+  it("keeps the real heading over four group rows in skeleton shapes", () => {
+    const { container } = render(<DashboardApplicationsSkeleton />);
+    expect(screen.getByRole("heading", { name: "Applications" })).toBeInTheDocument();
+    // Skeleton shapes are aria-hidden, with no role or text, so this checks the DOM itself.
+    // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access -- see above
+    expect(container.querySelectorAll("ul[aria-hidden] > li")).toHaveLength(4);
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
   });
 });

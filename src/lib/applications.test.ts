@@ -225,15 +225,6 @@ describe("getApplicationGroups", () => {
     expect(getApplicationGroups([scheduled]).map((c) => c.id)).toEqual(["scheduled"]);
     expect(getApplicationGroups([rejected])).toEqual([]);
   });
-
-  it("adds a Done column for Done Applications other than Offers when asked", () => {
-    const columns = getApplicationGroups([waiting, offer, rejected], { shown: "everything" });
-    expect(columns.map((c) => [c.id, c.applications.map((a) => a.id)])).toEqual([
-      ["waiting", ["waiting"]],
-      ["offer", ["offer"]],
-      ["done", ["rejected"]],
-    ]);
-  });
 });
 
 describe("getCalendarInterviews", () => {
