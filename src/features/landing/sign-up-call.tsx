@@ -19,7 +19,7 @@ export function SignUpCall() {
                 Ready to find yours?
               </h2>
               <p className="m-0 mt-4 max-w-[48ch] text-lg leading-[1.6] text-body">
-                Sign in with Google, add your first Application, and Bigfoot keeps track from there.
+                Sign in with Google, add your first Application, and let Bigfoot help you stay organized along the way.
               </p>
             </div>
             <Link href="/sign-up" className={`${buttonClasses("brand", "xl")} shrink-0`}>

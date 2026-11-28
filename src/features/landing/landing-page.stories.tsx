@@ -28,7 +28,7 @@ const SPRITES = [
 
 const landing: Story = {
   play: async ({ canvas, canvasElement }) => {
-    await expect(canvas.getByRole("heading", { level: 1, name: /Job hunting is chasing Bigfoot/ })).toBeVisible();
+    await expect(canvas.getByRole("heading", { level: 1, name: /Job hunting can feel like chasing Bigfoot/ })).toBeVisible();
     const features = canvas.getByRole("region", { name: "Your search in one place" });
     await expect(within(features).getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
       "Applications",
@@ -54,7 +54,7 @@ export const Mobile: Story = {
     const { canvas, canvasElement } = context;
     const doc = canvasElement.ownerDocument.documentElement;
     await expect(doc.scrollWidth).toBeLessThanOrEqual(doc.clientWidth);
-    const hero = canvas.getByRole("region", { name: /Job hunting is chasing Bigfoot/ });
+    const hero = canvas.getByRole("region", { name: /Job hunting can feel like chasing Bigfoot/ });
     const button = within(hero).getByRole("link", { name: "Find your Bigfoot" }).getBoundingClientRect();
     await expect(button.height).toBeGreaterThanOrEqual(44);
     await expect(button.width).toBeGreaterThan(doc.clientWidth - 64);
