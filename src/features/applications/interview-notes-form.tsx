@@ -163,7 +163,7 @@ export function InterviewNotesForm({
  * A notes card: outlined while editing, dashed while waiting for afterwards, and, while `empty`,
  * holding Bigfoot (`Art`) at its bottom right (BIG-228), with room kept for him so nothing runs
  * under him. He is out of the flow, so the card keeps its size, and as tall as the card allows up
- * to 150px. Decorative, and hidden on phones.
+ * to 150px; on a phone, smaller and lower, beside the card's last row. Decorative.
  */
 function NotesCard({
   labelledBy,
@@ -184,7 +184,7 @@ function NotesCard({
     <section aria-labelledby={labelledBy} className={cardClasses(editing, waiting, empty)}>
       {children}
       {empty && (
-        <Art className="pointer-events-none absolute bottom-2.5 right-8 hidden h-[min(150px,calc(100%-1.25rem))] w-auto sm:block" />
+        <Art className="pointer-events-none absolute bottom-2.5 right-3 h-[68px] w-auto sm:right-8 sm:h-[min(150px,calc(100%-1.25rem))]" />
       )}
     </section>
   );

@@ -3,6 +3,7 @@ import { expect, mocked, screen, waitFor, within } from "storybook/test";
 import { deleteInterviewAndLeaveAction, updateInterviewAction } from "@/app/applications/actions";
 import { prepLookBack, takeawayShowsOn } from "@/lib/applications";
 import { application, interview } from "@/test/applications";
+import { expectBigfootClear } from "@/test/art";
 import { InterviewEditor } from "./interview-editor";
 import { UnsavedChanges } from "./unsaved-changes";
 
@@ -145,6 +146,17 @@ export const Upcoming: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Add Interview notes" }));
     await expect(canvas.getByRole("textbox", { name: "What they asked" })).toHaveFocus();
     await expect(art(canvasElement, "writing")).not.toBeInTheDocument();
+  },
+};
+
+/** Coming up, on the narrowest phone: each empty card's Bigfoot, smaller, beside its button and clear of the words (BIG-232). */
+export const UpcomingPhone: Story = {
+  args: { interview: upcoming },
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+  play: async ({ canvas, canvasElement }) => {
+    await expect(await canvas.findByText("Upcoming · in 2 days")).toBeVisible();
+    await expectBigfootClear(canvasElement, "bigfoot-notebook");
+    await expectBigfootClear(canvasElement, "bigfoot-writing");
   },
 };
 

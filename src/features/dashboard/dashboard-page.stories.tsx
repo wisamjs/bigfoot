@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { applications, DESKTOP, MOBILE, NOW, PAGE, samples, user } from "@/test/pages";
+import { expectBigfootClear } from "@/test/art";
+import { applications, DESKTOP, MOBILE, NARROW, NOW, PAGE, samples, user } from "@/test/pages";
 import { DashboardPage, DashboardPageSkeleton } from "./dashboard-page";
 
 // The dashboard, whole, as /dashboard renders it (BIG-203): every state at a laptop's width and a
@@ -18,17 +19,15 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Bigfoot hanging above the Interviews card (BIG-226): shown on a laptop, hidden on a phone. */
-const hangingBigfoot = (canvasElement: HTMLElement) =>
-  canvasElement.querySelector<HTMLImageElement>('img[src*="bigfoot-hanging"]');
-const withBigfoot = (story: Story, shown: boolean): Story => ({
+/**
+ * Bigfoot hanging from the header (BIG-226): above the Interviews card on a laptop, at the right of
+ * the title row on a phone (BIG-232), clear of the title and summary either way.
+ */
+const withBigfoot = (story: Story): Story => ({
   ...story,
   play: async (context) => {
     await story.play?.(context);
-    const art = hangingBigfoot(context.canvasElement);
-    await expect(art).toBeInTheDocument();
-    if (shown) await expect(art).toBeVisible();
-    else await expect(art).not.toBeVisible();
+    await expectBigfootClear(context.canvasElement, "bigfoot-hanging");
   },
 });
 
@@ -40,8 +39,8 @@ const empty: Story = {
     await expect(canvas.getByText("All quiet in the woods")).toBeVisible();
   },
 };
-export const EmptyDesktop: Story = { ...withBigfoot(empty, true), ...DESKTOP };
-export const EmptyMobile: Story = { ...withBigfoot(empty, false), ...MOBILE };
+export const EmptyDesktop: Story = { ...withBigfoot(empty), ...DESKTOP };
+export const EmptyMobile: Story = { ...withBigfoot(empty), ...MOBILE };
 
 /** A new job seeker's first look: only Sample Applications. */
 const samplesOnly: Story = {
@@ -50,8 +49,8 @@ const samplesOnly: Story = {
     await expect(canvas.getAllByText("Sample").length).toBeGreaterThan(0);
   },
 };
-export const SamplesDesktop: Story = { ...withBigfoot(samplesOnly, true), ...DESKTOP };
-export const SamplesMobile: Story = { ...withBigfoot(samplesOnly, false), ...MOBILE };
+export const SamplesDesktop: Story = { ...withBigfoot(samplesOnly), ...DESKTOP };
+export const SamplesMobile: Story = { ...withBigfoot(samplesOnly), ...MOBILE };
 
 /**
  * A search in flight: Applications Waiting, Interviewing and at Offer; Next up is the Interview this
@@ -66,8 +65,10 @@ const inFlight: Story = {
     await expect(canvas.getByText(/Done Applications are hidden/)).toBeVisible();
   },
 };
-export const InFlightDesktop: Story = { ...withBigfoot(inFlight, true), ...DESKTOP };
-export const InFlightMobile: Story = { ...withBigfoot(inFlight, false), ...MOBILE };
+export const InFlightDesktop: Story = { ...withBigfoot(inFlight), ...DESKTOP };
+export const InFlightMobile: Story = { ...withBigfoot(inFlight), ...MOBILE };
+/** The narrowest phone, 320px: Bigfoot still hangs right of the title. */
+export const InFlightNarrow: Story = { ...withBigfoot(inFlight), ...NARROW };
 
 /** Show done: the Done Applications join the In Progress ones. */
 const showDone: Story = {
@@ -77,8 +78,8 @@ const showDone: Story = {
     await expect(canvas.queryByText(/Done Applications are hidden/)).not.toBeInTheDocument();
   },
 };
-export const ShowDoneDesktop: Story = { ...withBigfoot(showDone, true), ...DESKTOP };
-export const ShowDoneMobile: Story = { ...withBigfoot(showDone, false), ...MOBILE };
+export const ShowDoneDesktop: Story = { ...withBigfoot(showDone), ...DESKTOP };
+export const ShowDoneMobile: Story = { ...withBigfoot(showDone), ...MOBILE };
 
 /** While the Applications load. */
 const loading: Story = {
@@ -87,5 +88,5 @@ const loading: Story = {
     await expect(canvas.getByRole("heading", { level: 1, name: "Dashboard" })).toBeVisible();
   },
 };
-export const LoadingDesktop: Story = { ...withBigfoot(loading, true), ...DESKTOP };
-export const LoadingMobile: Story = { ...withBigfoot(loading, false), ...MOBILE };
+export const LoadingDesktop: Story = { ...withBigfoot(loading), ...DESKTOP };
+export const LoadingMobile: Story = { ...withBigfoot(loading), ...MOBILE };

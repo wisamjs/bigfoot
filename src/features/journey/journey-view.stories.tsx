@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expectBigfootClear } from "@/test/art";
 import { lockAction } from "@/app/journey/[id]/actions";
 import type { Journey, JourneyApplication, JourneyInterview } from "@/lib/journey";
 import { JourneySkeleton, JourneyView } from "./journey-view";
@@ -150,8 +151,8 @@ export const Phone: Story = {
   globals: { viewport: { value: "mobile1", isRotated: false } },
   play: async ({ canvas, canvasElement }) => {
     await expect(canvas.getByText("View only · shared by Wisam Zaghal")).toBeVisible();
-    // The Bigfoot family would crowd the heading on a phone (BIG-229).
-    await expect(canvasElement.querySelector('img[src*="bigfoot-family"]')).not.toBeVisible();
+    // The Bigfoot family, smaller, right of the heading (BIG-232).
+    await expectBigfootClear(canvasElement, "bigfoot-family");
     await expect(canvas.getByRole("heading", { name: "Interviews" })).toBeVisible();
     await expect(canvas.getByRole("heading", { name: "After that" })).toBeVisible();
     await expect(canvas.queryByRole("heading", { name: "Coming up" })).not.toBeInTheDocument();

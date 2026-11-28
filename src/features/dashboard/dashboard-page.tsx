@@ -110,9 +110,10 @@ function DashboardLayout({
       <main id="main" className="py-8 sm:pb-16">
         <Container className="flex flex-col gap-6">
           <div className="relative flex flex-col gap-1">
-            {/* Hangs from the header over the Interviews column; out of the flow, so nothing moves,
-                and short enough to end above the summary line. Wide screens only. */}
-            <HangingBigfoot className="pointer-events-none absolute -top-8 right-[9.375rem] hidden h-auto w-20 lg:block" />
+            {/* Hangs from the header: over the Interviews column on wide screens, at the right of
+                the title row below that, clear of the title. Out of the flow, so nothing moves, and
+                short enough to end above the summary line. */}
+            <HangingBigfoot className="pointer-events-none absolute -top-8 right-0 h-auto w-16 lg:right-[9.375rem] lg:w-20" />
             <h1 className="m-0 text-[32px] font-bold leading-[1.1] tracking-[-0.02em] text-heading">Dashboard</h1>
             {summary}
           </div>
