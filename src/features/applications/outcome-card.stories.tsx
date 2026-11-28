@@ -31,6 +31,37 @@ const birch = application("birch", {
   interviews: [screen, manager],
 });
 
+/** The corner art (BIG-227): decorative, so it has an empty alt and no role to query by. */
+function art(canvasElement: HTMLElement) {
+  return canvasElement.querySelector<HTMLImageElement>("section img");
+}
+
+/**
+ * The art never covers text: it ends left of nothing in the label and heading rows, and above the
+ * summary line, which keeps the card's full width.
+ */
+async function expectArtClearOfText(canvasElement: HTMLElement, sprite: string) {
+  const img = art(canvasElement);
+  await expect(img?.getAttribute("src")).toContain(sprite);
+  await expect(img).toHaveAttribute("alt", "");
+  const box = img!.getBoundingClientRect();
+  const section = canvasElement.querySelector("section")!;
+  const [label, summary] = section.querySelectorAll(":scope > div > p");
+  const heading = section.querySelector("h2")!;
+  const textRight = Math.max(
+    ...[label, heading].map((row) => {
+      const range = document.createRange();
+      range.selectNodeContents(row);
+      return range.getBoundingClientRect().right;
+    }),
+  );
+  await expect(textRight).toBeLessThanOrEqual(box.left);
+  await expect(box.bottom).toBeLessThanOrEqual(summary.getBoundingClientRect().top);
+  await expect(summary.getBoundingClientRect().width).toBe(heading.parentElement!.getBoundingClientRect().width);
+}
+
+const offer = { ...birch, outcome: "offer" as const, outcome_note: "They matched the salary I asked for." };
+
 const meta = {
   component: OutcomeCard,
   args: { app: birch },
@@ -40,9 +71,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Rejected, with a Done date, an Outcome note and two takeaways, newest Interview first. */
+/** Rejected, with a Done date, an Outcome note and two takeaways, newest Interview first. Sad Bigfoot sits in the corner. */
 export const Default: Story = {
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
+    await expectArtClearOfText(canvasElement, "bigfoot-sad");
     await expect(canvas.getByRole("heading", { level: 2, name: "Rejected" })).toBeVisible();
     await expect(canvas.getByText(/^Outcome/)).toHaveTextContent(/^Outcome · \S+/);
     await expect(canvas.getByText(/^After 2 Interviews, 27 days from applying\./)).toBeVisible();
@@ -83,10 +115,33 @@ export const WithoutTakeaways: Story = {
   },
 };
 
-/** Withdrawn the day they applied, before any Interview. */
+/** Rejected in light mode. */
+export const RejectedLight: Story = {
+  globals: { theme: "light" },
+  play: async ({ canvasElement }) => expectArtClearOfText(canvasElement, "bigfoot-sad"),
+};
+
+/** An Offer: Bigfoot jumps for joy in the corner. */
+export const Offer: Story = {
+  args: { app: offer },
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvas.getByRole("heading", { level: 2, name: "Offer" })).toBeVisible();
+    await expectArtClearOfText(canvasElement, "bigfoot-celebrating");
+  },
+};
+
+/** An Offer in light mode. */
+export const OfferLight: Story = {
+  args: { app: offer },
+  globals: { theme: "light" },
+  play: async ({ canvasElement }) => expectArtClearOfText(canvasElement, "bigfoot-celebrating"),
+};
+
+/** Withdrawn the day they applied, before any Interview. Only an Offer or a Rejection gets art. */
 export const SameDay: Story = {
   args: { app: { ...birch, outcome: "withdrawn", done_on: "2026-10-20", outcome_note: null, interviews: [] } },
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
+    await expect(art(canvasElement)).toBeNull();
     await expect(canvas.getByRole("heading", { level: 2, name: "Withdrawn" })).toBeVisible();
     await expect(canvas.getByText("Before any Interview, on the day you applied.")).toBeVisible();
   },
@@ -100,13 +155,15 @@ export const OneOfEach: Story = {
   },
 };
 
-/** A long Outcome note and takeaway wrap inside the card. */
+const longNote =
+  "The hiring manager called to say they loved the platform roadmap discussion, but the role was reshaped into a staff engineer position after a reorg, and they went with an internal candidate who already knew the codebase.";
+
+/** A long Outcome note and takeaway wrap inside the card, the full width under sad Bigfoot. */
 export const LongText: Story = {
   args: {
     app: {
       ...birch,
-      outcome_note:
-        "The hiring manager called to say they loved the platform roadmap discussion, but the role was reshaped into a staff engineer position after a reorg, and they went with an internal candidate who already knew the codebase.",
+      outcome_note: longNote,
       interviews: [
         {
           ...manager,
@@ -116,4 +173,18 @@ export const LongText: Story = {
       ],
     },
   },
+  play: async ({ canvasElement }) => expectArtClearOfText(canvasElement, "bigfoot-sad"),
+};
+
+/** An Offer with a long quote, in light mode: it runs the full width under celebrating Bigfoot. */
+export const OfferLongQuoteLight: Story = {
+  args: {
+    app: {
+      ...offer,
+      outcome_note:
+        "They came back within a day with a written offer, matched the salary I asked for, added a signing bonus, and agreed to a four-day week for the first three months while I wrap up my current team's handover.",
+    },
+  },
+  globals: { theme: "light" },
+  play: async ({ canvasElement }) => expectArtClearOfText(canvasElement, "bigfoot-celebrating"),
 };
