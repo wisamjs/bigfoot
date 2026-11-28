@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ApplicationRow,
@@ -9,7 +10,14 @@ import {
   progressCellClasses,
   rowBorderClasses,
 } from "@/features/applications/application-row";
-import { getApplicationGroups, type Application, type ApplicationGroup } from "@/lib/applications";
+import {
+  APPLICATION_SORT_LABELS,
+  getApplicationGroups,
+  sortApplications,
+  type Application,
+  type ApplicationListRow,
+  type ApplicationSort,
+} from "@/lib/applications";
 
 // Also draws the landing page's decorative list (src/features/landing/hero.tsx): after a
 // layout change, check docs/screenshots/landing.png too.
@@ -24,18 +32,33 @@ type Props = {
   decorative?: boolean;
   /** Draw the table edge to edge inside a card (the dashboard's Applications card) instead of in a frame of its own. */
   flush?: boolean;
+  /**
+   * Sorts the rows (BIG-209), and with `onSort` makes each column header a button that sorts by
+   * it. Without one, rows are ordered by what they are waiting on (Waiting, Interview scheduled,
+   * Offer, then Done), as the landing page shows them.
+   */
+  sort?: ApplicationSort;
+  onSort?: (sort: ApplicationSort) => void;
 };
 
 /**
- * The dashboard's Applications: one table, a row per Application, ordered by what they are waiting
- * on (Waiting, Interview scheduled, Offer, and Done on request).
+ * The dashboard's Applications: one table, a row per Application, in `sort` order, or by what they
+ * are waiting on (Waiting, Interview scheduled, Offer, and Done on request).
  */
-export function ApplicationList({ applications, showDone = false, linked = false, decorative = false, flush = false }: Props) {
-  const groups = getApplicationGroups(applications, { showDone });
-  const a11y = decorative ? decorativeProps(groups) : {};
+export function ApplicationList({
+  applications,
+  showDone = false,
+  linked = false,
+  decorative = false,
+  flush = false,
+  sort,
+  onSort,
+}: Props) {
+  const rows = listRows(applications, showDone, sort);
+  const a11y = decorative ? decorativeProps(rows) : {};
   const look = flush ? FLUSH : FRAMED;
 
-  if (groups.length === 0) {
+  if (rows.length === 0) {
     return (
       <p className={`m-0 rounded-control bg-surface p-6 text-center text-sm text-body ${look.empty}`}>
         Open Applications show up here, ordered by whether an Interview is booked.
@@ -47,13 +70,11 @@ export function ApplicationList({ applications, showDone = false, linked = false
     <div className={`flex flex-col gap-3 ${decorative ? "text-left shadow-2xl" : ""}`} {...a11y}>
       <div className={look.frame}>
         <table className={look.table}>
-          <TableHead flush={flush} />
+          <TableHead flush={flush} sort={sort} onSort={onSort} />
           <tbody>
-            {groups.flatMap((group) =>
-              group.applications.map((job) => (
-                <ApplicationRow key={job.id} job={job} group={group} linked={linked} />
-              )),
-            )}
+            {rows.map(({ application, group }) => (
+              <ApplicationRow key={application.id} job={application} group={group} linked={linked} />
+            ))}
           </tbody>
         </table>
       </div>
@@ -61,22 +82,23 @@ export function ApplicationList({ applications, showDone = false, linked = false
   );
 }
 
-function TableHead({ flush = false }: { flush?: boolean }) {
+function listRows(applications: Application[], showDone: boolean, sort: ApplicationSort | undefined): ApplicationListRow[] {
+  if (sort) return sortApplications(applications, { sort, showDone });
+  return getApplicationGroups(applications, { showDone }).flatMap((group) =>
+    group.applications.map((application) => ({ application, group })),
+  );
+}
+
+type SortProps = { sort?: ApplicationSort; onSort?: (sort: ApplicationSort) => void };
+
+function TableHead({ flush = false, sort, onSort }: { flush?: boolean } & SortProps) {
   return (
     <thead>
       <tr className={(flush ? FLUSH : FRAMED).headRow}>
-        <th scope="col" className={cellClasses}>
-          Application
-        </th>
-        <th scope="col" className={`${cellClasses} ${progressCellClasses}`}>
-          Progress
-        </th>
-        <th scope="col" className={`${cellClasses} ${nextCellClasses}`}>
-          Next
-        </th>
-        <th scope="col" className={`${cellClasses} ${locationCellClasses}`}>
-          Location
-        </th>
+        <ColumnHead column="application" className={cellClasses} sort={sort} onSort={onSort} />
+        <ColumnHead column="progress" className={`${cellClasses} ${progressCellClasses}`} sort={sort} onSort={onSort} />
+        <ColumnHead column="next" className={`${cellClasses} ${nextCellClasses}`} sort={sort} onSort={onSort} />
+        <ColumnHead column="location" className={`${cellClasses} ${locationCellClasses}`} sort={sort} onSort={onSort} />
         <th scope="col" className={cellClasses}>
           <span className="sr-only">Opens the Application</span>
         </th>
@@ -85,9 +107,38 @@ function TableHead({ flush = false }: { flush?: boolean }) {
   );
 }
 
+/**
+ * A column's header. With `onSort`, a button that sorts the table by the column; the column it is
+ * sorted by shows an arrow and tells screen readers through aria-sort.
+ */
+function ColumnHead({ column, className, sort, onSort }: { column: ApplicationSort; className: string } & SortProps) {
+  const label = APPLICATION_SORT_LABELS[column];
+  if (!onSort) {
+    return (
+      <th scope="col" className={className}>
+        {label}
+      </th>
+    );
+  }
+  const active = sort === column;
+  return (
+    <th scope="col" className={className} aria-sort={active ? "ascending" : undefined}>
+      <button
+        type="button"
+        onClick={() => onSort(column)}
+        className={`-mx-1 inline-flex items-center gap-1 rounded-control px-1 uppercase transition-colors hover:text-heading focus-visible:outline-2 focus-visible:outline-brand pointer-coarse:min-h-11 ${active ? "text-heading" : ""}`}
+      >
+        {label}
+        <ArrowDown aria-hidden className={`size-3.5 ${active ? "" : "invisible"}`} />
+      </button>
+    </th>
+  );
+}
+
 /** Makes the landing page's list one labelled picture instead of readable content. */
-function decorativeProps(groups: ApplicationGroup[]) {
-  return { role: "img" as const, "aria-label": `Applications ordered as ${groups.map((g) => g.label).join(", ")}` };
+function decorativeProps(rows: ApplicationListRow[]) {
+  const labels = [...new Set(rows.map((row) => row.group.label))];
+  return { role: "img" as const, "aria-label": `Applications ordered as ${labels.join(", ")}` };
 }
 
 /** The Applications table while it loads: its header and four rows in skeleton shapes. */

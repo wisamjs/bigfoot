@@ -462,6 +462,150 @@ export function getApplicationGroups(apps: Application[], { showDone = false } =
 }
 
 /**
+ * The orders the dashboard's Applications list can be sorted in (BIG-209), one per column. Progress,
+ * the default, puts the Applications furthest along first.
+ */
+export const APPLICATION_SORTS = ["progress", "application", "next", "location"] as const;
+export type ApplicationSort = (typeof APPLICATION_SORTS)[number];
+
+export const APPLICATION_SORT_LABELS: Record<ApplicationSort, string> = {
+  progress: "Progress",
+  application: "Application",
+  next: "Next",
+  location: "Location",
+};
+
+/** A sort named in the URL, or Progress for anything else. */
+export function parseApplicationSort(value: string | null | undefined): ApplicationSort {
+  return APPLICATION_SORTS.find((sort) => sort === value) ?? "progress";
+}
+
+/** One row of the Applications list: an Application and the group its Progress shows. */
+export type ApplicationListRow = { application: Application; group: Pick<ApplicationGroup, "id" | "label"> };
+
+const GROUP_LABELS: Record<ApplicationGroup["id"], string> = {
+  waiting: "Waiting",
+  unscheduled: UNSCHEDULED_PROGRESS_LABEL,
+  scheduled: "Interview scheduled",
+  offer: "Offer",
+  done: "Done",
+};
+
+/** The group an Application is in, as getApplicationGroups places it; null for one in none. */
+function groupOf(app: Application): ApplicationGroup["id"] | null {
+  if (isDone(app)) return app.outcome === "offer" ? "offer" : "done";
+  if (app.is_waiting) return "waiting";
+  if (nextScheduledInterview(app)) return "scheduled";
+  return nextInterview(app) ? "unscheduled" : null;
+}
+
+// A fixed locale, so the server and the browser sort alike; "base" ignores case and accents.
+const collator = new Intl.Collator("en", { sensitivity: "base", numeric: true });
+
+type Compare = (a: Application, b: Application) => number;
+
+function byText(text: (app: Application) => string): Compare {
+  return (a, b) => collator.compare(text(a), text(b));
+}
+
+/** Earliest first; Applications with no time go last. */
+function byTime(time: (app: Application) => number | null): Compare {
+  return (a, b) => (time(a) ?? Infinity) - (time(b) ?? Infinity);
+}
+
+/** The soonest Scheduled Interview's time; an Unscheduled one has none. */
+function nextAt(app: Application): number | null {
+  const next = nextScheduledInterview(app);
+  return next ? Date.parse(next.at) : null;
+}
+
+function waitingSince(app: Application): number | null {
+  return app.waiting_since ? parseDay(app.waiting_since).getTime() : null;
+}
+
+function nextRound(app: Application): number {
+  const next = nextInterview(app);
+  return next ? roundNumber(app, next) : 0;
+}
+
+function completedCount(app: Application): number {
+  return app.interviews.filter((i) => i.completed).length;
+}
+
+/** Each rule in turn, until one tells the two apart. */
+function inTurn(...rules: Compare[]): Compare {
+  return (a, b) => {
+    for (const rule of rules) {
+      const order = rule(a, b);
+      if (order !== 0) return order;
+    }
+    return 0;
+  };
+}
+
+function byGroup(order: ApplicationGroup["id"][]): Compare {
+  return (a, b) => order.indexOf(groupOf(a)!) - order.indexOf(groupOf(b)!);
+}
+
+const byCompany = inTurn(
+  byText((a) => a.company),
+  byText((a) => a.title),
+);
+
+/** Within the same group: the rule only applies between two Applications of `group`. */
+function within(group: ApplicationGroup["id"], rule: Compare): Compare {
+  return (a, b) => (groupOf(a) === group && groupOf(b) === group ? rule(a, b) : 0);
+}
+
+const doneLast: Compare = (a, b) => Number(groupOf(a) === "done") - Number(groupOf(b) === "done");
+
+const COMPARE: Record<ApplicationSort, Compare> = {
+  // Furthest along first: the highest Round booked, then the highest Round awaiting a date, then
+  // the most Interviews behind a Waiting one.
+  progress: inTurn(
+    byGroup(["scheduled", "unscheduled", "waiting", "offer", "done"]),
+    within("scheduled", (a, b) => nextRound(b) - nextRound(a)),
+    within("scheduled", byTime(nextAt)),
+    within("unscheduled", (a, b) => nextRound(b) - nextRound(a)),
+    within("waiting", (a, b) => completedCount(b) - completedCount(a)),
+    within("waiting", byTime(waitingSince)),
+  ),
+  application: inTurn(doneLast, byCompany),
+  // Soonest Interview first, then those whose next date is TBD, then the longest wait, then Offers.
+  next: inTurn(
+    byGroup(["scheduled", "unscheduled", "waiting", "offer", "done"]),
+    within("scheduled", byTime(nextAt)),
+    within("waiting", byTime(waitingSince)),
+  ),
+  location: inTurn(
+    doneLast,
+    (a, b) => Number(!a.location) - Number(!b.location),
+    byText((a) => locationText(a) ?? ""),
+    byCompany,
+  ),
+};
+
+/**
+ * The Applications list's rows in `sort` order (BIG-209): In Progress Applications and Offers, and
+ * the other Done ones, below the rest whatever the sort, when showDone is set.
+ */
+export function sortApplications(
+  apps: Application[],
+  { sort = "progress", showDone = false }: { sort?: ApplicationSort; showDone?: boolean } = {},
+): ApplicationListRow[] {
+  return apps
+    .filter((app) => {
+      const group = groupOf(app);
+      return group !== null && (showDone || group !== "done");
+    })
+    .toSorted(COMPARE[sort])
+    .map((application) => {
+      const id = groupOf(application)!;
+      return { application, group: { id, label: GROUP_LABELS[id] } };
+    });
+}
+
+/**
  * The cache tag of one job seeker's Applications and their Interviews: the read the Dashboard and
  * the Application page share (`getApplications` in src/lib/api.ts). Every Server Action that
  * changes either, signing out and deleting the account expire it.
