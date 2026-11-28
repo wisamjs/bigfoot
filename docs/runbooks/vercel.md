@@ -4,7 +4,7 @@ Only `main` deploys. Pushing any other branch, or opening or updating a PR, crea
 
 ## Why previews are off
 
-The Hobby plan allows 100 deployments per rolling 24 hours (error code `api-deployments-free-per-day`). Every deployment counts: Preview, Production, CLI and dashboard redeploys. Each push to a PR branch made a Preview deployment, so stacked PRs and parallel branches used the quota up, and then Production could not deploy either. CI (the steps of `npm run verify`, smoke, a11y) already verifies each PR.
+The Hobby plan allows 100 deployments per rolling 24 hours (error code `api-deployments-free-per-day`). Every deployment counts: Preview, Production, CLI, and dashboard redeploys. Each push to a PR branch made a Preview deployment, so stacked PRs and parallel branches used the quota up, and then Production could not deploy either. CI (the steps of `npm run verify`, smoke, a11y) already verifies each PR.
 
 ## How it works
 

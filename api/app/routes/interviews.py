@@ -61,7 +61,7 @@ def list_interviews(request: Request, job_seeker: JobSeekerId, application_id: A
 def create_interview(
     request: Request, job_seeker: JobSeekerId, application_id: ApplicationId, body: InterviewCreate
 ) -> Interview:
-    """Add an Interview to an Application. The category, title, date and time and at least one
+    """Add an Interview to an Application. The category, title, date and time, and at least one
     Participant are required; categories and titles can repeat, and Interview notes and Prep notes are
     optional. A Participant sent by `id` must be one of the Application's (422). The number of Interviews per
     Application is capped (409)."""
@@ -104,10 +104,10 @@ def update_interview(
     interview_id: InterviewId,
     body: InterviewPatch,
 ) -> Interview:
-    """Change an Interview's category, title, date, Interview notes, Prep notes or Participants.
+    """Change an Interview's category, title, date, Interview notes, Prep notes, or Participants.
 
     Only the fields sent change; send null for `what_they_asked`, `how_it_went`, `takeaway` or `prep_notes` to
-    clear it. The category, title and date can't be cleared. `participants` replaces the Interview's
+    clear it. The category, title, and date can't be cleared. `participants` replaces the Interview's
     Participants: at least one, and a Participant left in no Interview is deleted. An `id` that isn't one of
     the Application's Participants is refused (422).
     """

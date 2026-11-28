@@ -127,7 +127,7 @@ TITLE = Field(description="The role's job title.", examples=[EXAMPLE_TITLE])
 POSTING_URL = Field(default=None, description="The job posting, as an http(s) URL.", examples=[EXAMPLE_URL])
 LOCATION = Field(
     default=None,
-    description="How often the role is in the office (GLOSSARY.md, Location): in_office, remote or hybrid.",
+    description="How often the role is in the office (GLOSSARY.md, Location): in_office, remote, or hybrid.",
     examples=["hybrid"],
 )
 OFFICE_DAYS = Field(
@@ -154,7 +154,7 @@ OUTCOME_NOTE = (
 EXAMPLE_OUTCOME_NOTE = "They went with an internal candidate."
 CATEGORY = (
     "What the Interview assesses (GLOSSARY.md, Interview category, docs/adr/0007): recruiter, hiring_manager, "
-    "technical, system_design, project_deep_dive, people_management, project_delivery, collaboration, culture or "
+    "technical, system_design, project_deep_dive, people_management, project_delivery, collaboration, culture, or "
     "decision_maker."
 )
 INTERVIEW_TITLE = (
@@ -251,7 +251,7 @@ class ApplicationCreate(BaseModel):
 class ApplicationPatch(BaseModel):
     """Only the fields sent are changed; send null to clear an optional field.
 
-    Setting the status to in_progress without an outcome clears the outcome, Done date and Outcome note
+    Setting the status to in_progress without an outcome clears the outcome, Done date, and Outcome note
     (reopening); setting it to done from in_progress without a done_on sets the Done date to today. Setting the
     location to anything but hybrid without office_days clears the office days.
     """
@@ -634,7 +634,7 @@ class JourneyInterview(BaseModel):
 
 
 class JourneyApplication(BaseModel):
-    """An In Progress Application or an Offer as a Viewer sees it: no salary, job posting, Location or notes."""
+    """An In Progress Application or an Offer as a Viewer sees it: no salary, job posting, Location, or notes."""
 
     model_config = ConfigDict(extra="forbid")
 

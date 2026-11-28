@@ -47,4 +47,4 @@ Rules for agents are in [`AGENTS.md`](../AGENTS.md). Optionally, install Vercel'
 npx skills add vercel-labs/agent-skills -s vercel-react-best-practices -g
 ```
 
-Where it disagrees with the Next.js docs in `node_modules/next/dist/docs/`, follow the docs. Skip its SWR, `better-all` and LRU cache rules: Bigfoot uses none of them and caches with `"use cache"`.
+Where it disagrees with the Next.js docs in `node_modules/next/dist/docs/`, follow the docs. Skip its SWR, `better-all`, and LRU cache rules: Bigfoot uses none of them and caches with `"use cache"`.

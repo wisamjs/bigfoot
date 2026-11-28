@@ -1,4 +1,4 @@
-"""The signed-in job seeker: onboarding, exporting and deleting the account."""
+"""The signed-in job seeker: onboarding, exporting, and deleting the account."""
 
 import hashlib
 from datetime import UTC, datetime

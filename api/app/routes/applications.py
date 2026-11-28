@@ -31,7 +31,7 @@ def _done_today(applied_on: date | None) -> date | None:
 
 
 def _settle_status(changes: dict[str, Any], current: dict[str, Any]) -> None:
-    """Reopening clears the Outcome, Done date and Outcome note; marking Done without a Done date dates it today.
+    """Reopening clears the Outcome, Done date, and Outcome note; marking Done without a Done date dates it today.
     Leaving Hybrid clears the office days. Only what the change doesn't send itself."""
     status = changes.get("status")
     if status == "in_progress":
@@ -113,7 +113,7 @@ def create_application(request: Request, job_seeker: JobSeekerId, body: Applicat
         422: {
             "description": (
                 "The body is invalid (a list of field errors), or the change would leave a Done "
-                "Application without an Outcome, an In Progress one with an Outcome, a Done date or an "
+                "Application without an Outcome, an In Progress one with an Outcome, a Done date, or an "
                 "Outcome note, a Done date before the applied date, or office days on a Location that "
                 "isn't Hybrid (a message)."
             ),
@@ -136,7 +136,7 @@ def update_application(
     """Change some of an Application's fields and return it with its Interviews.
 
     Only the fields sent change. Setting the status to `in_progress` reopens the Application and clears
-    its Outcome, Done date and Outcome note; setting it to `done` needs an Outcome, sent now or already
+    its Outcome, Done date, and Outcome note; setting it to `done` needs an Outcome, sent now or already
     set, and from `in_progress` sets the Done date to today unless one is sent. Setting the location to
     anything but `hybrid` clears its office days.
     """

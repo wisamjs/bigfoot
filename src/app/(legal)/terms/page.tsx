@@ -94,7 +94,7 @@ export default function TermsPage() {
           and the details you add. Your content stays yours.
         </p>
         <p>
-          You give us permission (a licence) to store, copy and show your content only so we can
+          You give us permission (a licence) to store, copy, and show your content only so we can
           provide Bigfoot to you. This permission ends when you delete your content or your
           account, except for copies that remain in backups for a short time, as the Privacy Policy
           explains.
@@ -118,13 +118,13 @@ export default function TermsPage() {
             try to reach other job seekers’ data, or get around Bigfoot’s security or limits;
           </li>
           <li>overload Bigfoot or disrupt it for others; or</li>
-          <li>copy, resell or pretend to be Bigfoot.</li>
+          <li>copy, resell, or pretend to be Bigfoot.</li>
         </ul>
       </Section>
 
       <Section id="suspension">
         <p>
-          If you break these Terms, or use Bigfoot in a way that could harm it, us or other people,
+          If you break these Terms, or use Bigfoot in a way that could harm it, us, or other people,
           we may suspend or close your account, with or without notice.
         </p>
       </Section>
@@ -154,7 +154,7 @@ export default function TermsPage() {
       <Section id="liability">
         <p>
           To the fullest extent the law allows, we are not liable for any indirect, incidental,
-          special, consequential or punitive damages, or for lost profits, data, opportunities or
+          special, consequential, or punitive damages, or for lost profits, data, opportunities or
           goodwill, that come from your use of Bigfoot. This includes a job you didn’t get, or an
           Interview you missed.
         </p>
