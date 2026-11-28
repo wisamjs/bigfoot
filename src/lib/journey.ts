@@ -10,11 +10,14 @@ export type JourneyInterview = {
   category: InterviewCategory;
   /** Interview title, as the job seeker wrote it. */
   title: string;
-  /** ISO timestamp. */
-  at: string;
-  /** Derived by the API: the date is in the past. */
+  /** ISO timestamp; null when the Interview is Unscheduled ("Date TBD", docs/adr/0009). */
+  at: string | null;
+  /** Derived by the API: the date is in the past. Never for an Unscheduled Interview. */
   completed: boolean;
 };
+
+/** A Journey Interview known to have a date: a Scheduled one. */
+export type ScheduledJourneyInterview = JourneyInterview & { at: string };
 
 export type JourneyApplication = {
   company: string;
@@ -23,11 +26,11 @@ export type JourneyApplication = {
   applied_on: string;
   /** Done with an Offer; otherwise In Progress. */
   offer: boolean;
-  /** In Progress with no upcoming Interview. */
+  /** In Progress with no upcoming Interview, Scheduled or Unscheduled. */
   is_waiting: boolean;
   /** While waiting: an ISO timestamp (the last completed Interview) or an ISO date (applied). */
   waiting_since: string | null;
-  /** Ordered by date. */
+  /** Ordered by date, then Unscheduled Interviews in the order added. */
   interviews: JourneyInterview[];
 };
 
@@ -82,29 +85,47 @@ export function viewerCopy(sharedBy: string | null) {
 export const LOCKED_MESSAGE = "Too many tries. Try again in 15 minutes.";
 
 export type JourneyGroup = {
-  id: "offer" | "interviewing" | "waiting";
+  id: "offer" | "interviewing" | "unscheduled" | "waiting";
   applications: JourneyApplication[];
 };
 
+/** Whether a Journey Interview is Scheduled: it has a date and time. */
+export function isScheduledJourneyInterview(interview: JourneyInterview): interview is ScheduledJourneyInterview {
+  return interview.at !== null;
+}
+
+/** Whether an In Progress Application has a Scheduled Interview still ahead. */
+function hasScheduledAhead(app: JourneyApplication): boolean {
+  return app.interviews.some((i) => !i.completed && isScheduledJourneyInterview(i));
+}
+
 /**
- * Where things stand's order: Offers, Interviewing (something booked), then Waiting to hear back. Each
- * row's pill names its group, so the groups have no headings of their own (BIG-208). Empty groups are left out.
+ * Where things stand's order: Offers, Interviewing (something booked), Next round · date TBD (only
+ * Unscheduled Interviews ahead), then Waiting to hear back. Each row's pill names its group, so the
+ * groups have no headings of their own (BIG-208). Empty groups are left out.
  */
 export function journeyGroups(apps: JourneyApplication[]): JourneyGroup[] {
+  const open = apps.filter((a) => !a.offer);
   const groups: JourneyGroup[] = [
     { id: "offer", applications: apps.filter((a) => a.offer) },
-    { id: "interviewing", applications: apps.filter((a) => !a.offer && !a.is_waiting) },
-    { id: "waiting", applications: apps.filter((a) => !a.offer && a.is_waiting) },
+    { id: "interviewing", applications: open.filter((a) => !a.is_waiting && hasScheduledAhead(a)) },
+    { id: "unscheduled", applications: open.filter((a) => !a.is_waiting && !hasScheduledAhead(a)) },
+    { id: "waiting", applications: open.filter((a) => a.is_waiting) },
   ];
   return groups.filter((g) => g.applications.length > 0);
 }
 
-export type DatedJourneyInterview = { application: JourneyApplication; interview: JourneyInterview };
+export type DatedJourneyInterview = { application: JourneyApplication; interview: ScheduledJourneyInterview };
 
-/** Every Interview of the Journey, past and upcoming, by date. */
+/**
+ * Every Scheduled Interview of the Journey, past and upcoming, by date. Unscheduled ones have no
+ * date, so they stay off the calendar, the counts, and the Next Interview.
+ */
 export function journeyInterviews(apps: JourneyApplication[]): DatedJourneyInterview[] {
   return apps
-    .flatMap((application) => application.interviews.map((interview) => ({ application, interview })))
+    .flatMap((application) =>
+      application.interviews.filter(isScheduledJourneyInterview).map((interview) => ({ application, interview })),
+    )
     .toSorted((a, b) => a.interview.at.localeCompare(b.interview.at));
 }
 

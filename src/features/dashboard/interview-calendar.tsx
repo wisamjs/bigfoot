@@ -10,7 +10,15 @@ import { capitalize } from "@/features/applications/when-text";
 import { useIsClient } from "@/hooks/use-is-client";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { Skeleton } from "@/components/ui/skeleton";
-import { calendarDaysBetween, relativeDays, type DatedInterview } from "@/lib/applications";
+import {
+  calendarDaysBetween,
+  DATE_TBD,
+  relativeDays,
+  roundNumber,
+  roundTitle,
+  type DatedInterview,
+  type Interview,
+} from "@/lib/applications";
 import {
   dayKey,
   groupByDay,
@@ -68,6 +76,9 @@ function parseDayKey(key: string | null): Date | null {
   return dayKey(date) === key ? date : null;
 }
 
+/** No Unscheduled Interviews: a constant, so the default never changes between renders. */
+const NO_UNSCHEDULED: DatedInterview<Interview>[] = [];
+
 /** "the next 2 weeks" as a heading: "Next 2 weeks"; "November" stays as it is. */
 function agendaTitle(span: string) {
   return capitalize(span.replace(/^the /, ""));
@@ -80,7 +91,9 @@ function agendaTitle(span: string) {
  * Any day of the month can be picked; today is picked until another day is. The agenda lists
  * another month's Interviews, or for this month the widest upcoming window that holds five (BIG-72).
  * With nothing to list this month, Bigfoot says why: no Interviews yet, or `waiting` Applications
- * waiting to hear back.
+ * waiting to hear back. `unscheduled` (BIG-221), the In Progress Applications' Unscheduled
+ * Interviews, follow in a "Date TBD" group at the end, always shown and outside the window's five,
+ * never on the grid or week row; Bigfoot's empty state shows only when that group is empty too.
  * On a phone (BIG-195) the grid gives way to this week's row of days, with "Show month" for the
  * grid; another month, or a picked day outside this week, shows the grid too. The phone's agenda
  * puts how far off each Interview is over its time, and fills the soonest one's date in the brand
@@ -88,7 +101,15 @@ function agendaTitle(span: string) {
  * Days and times are the job seeker's own, so the calendar renders only in the browser; the server
  * sends InterviewCalendarSkeleton, the same layout in skeleton shapes.
  */
-export function InterviewCalendar({ interviews, waiting = 0 }: { interviews: DatedInterview[]; waiting?: number }) {
+export function InterviewCalendar({
+  interviews,
+  unscheduled = NO_UNSCHEDULED,
+  waiting = 0,
+}: {
+  interviews: DatedInterview[];
+  unscheduled?: DatedInterview<Interview>[];
+  waiting?: number;
+}) {
   const isClient = useIsClient();
   const view = useCalendarView();
   const wide = useMediaQuery("(min-width: 640px)");
@@ -121,7 +142,9 @@ export function InterviewCalendar({ interviews, waiting = 0 }: { interviews: Dat
         waiting={waiting}
         now={now}
         phone={!wide}
+        hasUnscheduled={unscheduled.length > 0}
       />
+      <UnscheduledAgenda items={unscheduled} />
     </div>
   );
 }
@@ -433,6 +456,7 @@ function Agenda({
   waiting,
   now,
   phone,
+  hasUnscheduled,
 }: {
   span: string;
   items: DatedInterview[];
@@ -442,10 +466,12 @@ function Agenda({
   waiting: number;
   now: Date;
   phone: boolean;
+  /** Whether a Date TBD group follows: Bigfoot's empty state then gives way to it. */
+  hasUnscheduled: boolean;
 }) {
   const soonest = items.find((d) => new Date(d.interview.at) >= now);
   if (items.length === 0 && isThisMonth) {
-    return <NothingScheduled waiting={waiting} monthHasInterviews={monthHasInterviews} />;
+    return hasUnscheduled ? null : <NothingScheduled waiting={waiting} monthHasInterviews={monthHasInterviews} />;
   }
   if (items.length === 0) {
     return (
@@ -476,6 +502,56 @@ function Agenda({
             <AgendaItem key={d.interview.id} item={d} past={new Date(d.interview.at) < now} />
           ),
         )}
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * The agenda's "Date TBD" group (BIG-221): each Unscheduled Interview of an In Progress Application,
+ * with a dashed "TBD" tile, its title, and its company and Round number, linking to its Interview
+ * page. Nothing when there are none.
+ */
+function UnscheduledAgenda({ items }: { items: DatedInterview<Interview>[] }) {
+  if (items.length === 0) return null;
+  return (
+    <section aria-labelledby="calendar-unscheduled" className="border-t border-line">
+      <div className="flex items-baseline justify-between gap-3 px-4 pb-2 pt-4 sm:px-6">
+        <h3 id="calendar-unscheduled" className="m-0 text-sm font-semibold text-heading">
+          {DATE_TBD}
+        </h3>
+        <span className="text-[13px] text-body">{interviewCount(items.length)}</span>
+      </div>
+      <ul className="m-0 flex list-none flex-col gap-0.5 px-1 pb-3 sm:px-3">
+        {items.map(({ application, interview }) => {
+          const round = roundNumber(application, interview);
+          return (
+            <li key={interview.id}>
+              <Link
+                href={interviewHref(application.id, interview.id)}
+                className={`${agendaItemClasses} group transition-colors duration-200 hover:bg-card-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand`}
+              >
+                <span className="sr-only">{`Open Interview: ${application.company}, ${roundTitle(round, interview.title)}, ${DATE_TBD}`}</span>
+                <span
+                  aria-hidden
+                  className={`${dateTileClasses} justify-center self-stretch border-2 border-dashed border-line-brand text-[13px] font-bold tracking-[0.04em] text-fg-brand`}
+                >
+                  TBD
+                </span>
+                <span aria-hidden className="flex min-w-0 flex-1 flex-col gap-px">
+                  <span className="break-words font-semibold text-heading">{interview.title}</span>
+                  <span className="break-words text-sm text-body">
+                    {application.company} · Round {round}
+                  </span>
+                </span>
+                <ChevronRight
+                  className="size-4 shrink-0 text-body transition-transform duration-200 group-hover:translate-x-0.5"
+                  aria-hidden
+                />
+              </Link>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

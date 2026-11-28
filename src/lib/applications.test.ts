@@ -2,7 +2,12 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   applicationProgress,
+  byInterviewOrder,
   calendarDaysBetween,
+  getUnscheduled,
+  isScheduled,
+  isUnscheduled,
+  nextScheduledInterview,
   prepLookBack,
   prepTakeaways,
   takeawayShowsOn,
@@ -630,5 +635,75 @@ describe("Participants", () => {
       ],
     });
     expect(applicationParticipants(app)).toEqual([dana, em]);
+  });
+});
+
+describe("Unscheduled Interviews (BIG-221)", () => {
+  const tbd = (id: string, created_at: string): Interview => ({ ...interview(id, "", false), at: null, title: id, created_at });
+  const past = { ...interview("past", "2026-11-02T15:00:00Z", true), created_at: "2026-11-01T10:00:00Z" };
+  const ahead = { ...interview("ahead", "2026-12-01T15:00:00Z", false), created_at: "2026-11-03T10:00:00Z" };
+  const first = tbd("first", "2026-10-30T10:00:00Z");
+  const second = tbd("second", "2026-11-05T10:00:00Z");
+  const onlyTbd = application("only-tbd", { is_waiting: false, interviews: [past, first] });
+  const both = application("both", { is_waiting: false, interviews: [second, ahead, past, first] });
+  const now = new Date("2026-11-20T12:00:00Z");
+
+  it("are Unscheduled when they have no date, and Scheduled when they have one", () => {
+    expect([isUnscheduled(first), isScheduled(first)]).toEqual([true, false]);
+    expect([isUnscheduled(ahead), isScheduled(ahead)]).toEqual([false, true]);
+  });
+
+  it("come after every Scheduled Interview, in the order added, with the last Round numbers", () => {
+    expect(both.interviews.toSorted(byInterviewOrder).map((i) => i.id)).toEqual(["past", "ahead", "first", "second"]);
+    expect([past, ahead, first, second].map((i) => roundNumber(both, i))).toEqual([1, 2, 3, 4]);
+    expect(upcomingInterviews(both).map((i) => i.id)).toEqual(["ahead", "first", "second"]);
+  });
+
+  it("are next only when nothing ahead is Scheduled", () => {
+    expect(nextInterview(both)?.id).toBe("ahead");
+    expect(nextInterview(onlyTbd)?.id).toBe("first");
+    expect(nextScheduledInterview(both)?.id).toBe("ahead");
+    expect(nextScheduledInterview(onlyTbd)).toBeNull();
+  });
+
+  it("show Next round · date TBD when they're all that's ahead, and Interview scheduled beside a Scheduled one", () => {
+    expect(applicationProgress(onlyTbd)).toEqual({ id: "unscheduled", label: "Next round · date TBD" });
+    expect(applicationProgress(both)).toEqual({ id: "scheduled", label: "Interview scheduled" });
+    expect(getApplicationGroups([waiting, onlyTbd, both]).map((g) => [g.id, g.applications.map((a) => a.id)])).toEqual([
+      ["waiting", ["waiting"]],
+      ["unscheduled", ["only-tbd"]],
+      ["scheduled", ["both"]],
+    ]);
+  });
+
+  it("stay off the calendar, Next up and the upcoming list, and count as awaiting a date", () => {
+    expect(getCalendarInterviews([onlyTbd, both]).map((d) => d.interview.id)).toEqual(["past", "past", "ahead"]);
+    expect(getUpcoming([onlyTbd, both]).map((d) => d.interview.id)).toEqual(["ahead"]);
+    expect(nextUp([onlyTbd])).toBeNull();
+    expect(getUnscheduled([onlyTbd, both, { ...onlyTbd, id: "done", status: "done", outcome: "rejected" }]).map((d) => d.interview.id)).toEqual([
+      "first",
+      "first",
+      "second",
+    ]);
+    expect(dashboardSummary([onlyTbd, both], now)).toEqual([
+      { id: "interviews", text: "1 Interview in the next 2 weeks" },
+      { id: "awaiting", text: "3 awaiting a date" },
+    ]);
+    expect(dashboardSummary([onlyTbd], now)).toEqual([{ id: "awaiting", text: "1 awaiting a date" }]);
+  });
+
+  it("are never completed, so a Done Application's Outcome leaves them out", () => {
+    expect(outcomeSummary({ interviews: [past, first], applied_on: "2026-11-01", done_on: null })).toBe("After 1 Interview.");
+  });
+
+  it("get the takeaways that apply, and a completed Interview's takeaway shows on one", () => {
+    const lesson = { ...past, takeaway: "Lead with the decision." };
+    const lumen = application("lumen", { company: "Lumen Bio", interviews: [lesson, first] });
+    expect(prepTakeaways([lumen], lumen, first).map((t) => t.interview.id)).toEqual(["past"]);
+    expect(takeawayShowsOn([lumen], lumen, lesson).map((t) => [t.rule, t.interview.id])).toEqual([["same_application", "first"]]);
+    const other = application("other", { interviews: [{ ...tbd("elsewhere", "2026-11-04T10:00:00Z"), category: "technical" }] });
+    expect(takeawayShowsOn([application("solo", { interviews: [lesson] }), other], application("solo", { interviews: [lesson] }), lesson)).toEqual([
+      expect.objectContaining({ rule: "same_category", interview: expect.objectContaining({ id: "elsewhere" }) }),
+    ]);
   });
 });

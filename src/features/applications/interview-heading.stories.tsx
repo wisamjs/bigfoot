@@ -147,6 +147,61 @@ export const SaveCategoryAndTitle: Story = {
   },
 };
 
+/** An Unscheduled Interview (BIG-221): no date yet, so the Interview the company confirmed but hasn't booked. */
+const unscheduled = interview("leadership", {
+  application_id: "lumen",
+  category: "people_management",
+  title: "Leadership",
+  at: null,
+  completed: false,
+  participants: [{ id: "priya", role: "VP Engineering", name: "Priya Nair" }],
+});
+
+/** Unscheduled (BIG-221): "Date TBD" where the date would be, and a neutral "Upcoming · date TBD". */
+export const Unscheduled: Story = {
+  args: { app: { ...lumen, interviews: [completed, upcoming, unscheduled] }, interview: unscheduled },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("heading", { level: 1, name: "Round 3 · Leadership" })).toBeVisible();
+    await expect(canvas.getByText("Date TBD")).toBeVisible();
+    await expect(canvas.getByText("Upcoming · date TBD")).toBeVisible();
+  },
+};
+
+/** Opened from Add the date: Edit details is already open, with Date TBD on and the date and time disabled. */
+export const AddTheDate: Story = {
+  args: { ...Unscheduled.args, editOnOpen: true },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("switch", { name: "Date TBD" })).toBeChecked();
+    await expect(canvas.getByRole("button", { name: /^Date, / })).toBeDisabled();
+    await expect(canvas.getByLabelText("Time")).toBeDisabled();
+  },
+};
+
+/** Date TBD turned off with no date: it asks for both, and sends nothing. */
+export const DateTbdTurnedOff: Story = {
+  args: AddTheDate.args,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("switch", { name: "Date TBD" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Save" }));
+    await expect(await canvas.findByRole("alert")).toHaveTextContent("Enter the date and time, or turn on Date TBD.");
+    await expect(actions.updateInterviewAction).not.toHaveBeenCalled();
+  },
+};
+
+/** Postponed with no new date: turning Date TBD on and saving makes it Unscheduled. */
+export const Postpone: Story = {
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Edit details" }));
+    await userEvent.click(canvas.getByRole("switch", { name: "Date TBD" }));
+    await expect(canvas.getByRole("button", { name: /^Date, / })).toBeDisabled();
+    await userEvent.click(canvas.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(actions.updateInterviewAction).toHaveBeenCalledWith("lumen", upcoming.id, { at: null, unscheduled: true }),
+    );
+    await expect(await canvas.findByText("Upcoming · date TBD")).toBeVisible();
+  },
+};
+
 /** An empty title isn't saved: it says why beside the field. */
 export const EmptyTitle: Story = {
   play: async ({ canvas, userEvent }) => {

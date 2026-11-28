@@ -46,3 +46,14 @@ export const Tones: Story = {
     await expect(canvas.getAllByText("25")).toHaveLength(3);
   },
 };
+
+/** An Unscheduled Interview in a list (BIG-221): "TBD" in a dashed brand outline. */
+export const Unscheduled: Story = {
+  args: { at: null },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("TBD")).toBeVisible();
+  },
+};
+
+/** An Unscheduled Interview as the next one (the Next up card): brand-soft inside the dashed outline. */
+export const UnscheduledNext: Story = { args: { at: null, tone: "brand" } };

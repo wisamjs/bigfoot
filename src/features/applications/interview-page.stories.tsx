@@ -2,7 +2,19 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect } from "storybook/test";
 import { prepLookBack, takeawayShowsOn, type Application } from "@/lib/applications";
 import { expectBigfootClear } from "@/test/art";
-import { applications, brightwater, DESKTOP, lumen, MOBILE, NARROW, northwind, PAGE, user } from "@/test/pages";
+import {
+  applications,
+  brightwater,
+  DESKTOP,
+  harbour,
+  lumen,
+  MOBILE,
+  NARROW,
+  northwind,
+  PAGE,
+  unscheduledApplications,
+  user,
+} from "@/test/pages";
 import { InterviewNotFoundPage, InterviewPage, InterviewPageSkeleton } from "./interview-page";
 
 // An Interview's page, whole, as /applications/[id]/interviews/[interviewId] renders it (BIG-203),
@@ -11,13 +23,13 @@ import { InterviewNotFoundPage, InterviewPage, InterviewPageSkeleton } from "./i
 // and where a takeaway shows are worked out from every Application, as the route does.
 
 /** The page's props for `app`'s Interview `id`, as the route works them out. */
-function page(app: Application, id: string) {
+function page(app: Application, id: string, all = applications) {
   const interview = app.interviews.find((i) => i.id === `${app.id}-${id}`)!;
   return {
     app,
     interview,
-    lookBack: interview.completed ? undefined : prepLookBack(applications, app, interview),
-    showsOn: takeawayShowsOn(applications, app, interview),
+    lookBack: interview.completed ? undefined : prepLookBack(all, app, interview),
+    showsOn: takeawayShowsOn(all, app, interview),
   };
 }
 
@@ -112,3 +124,27 @@ export const NotFoundNarrow: Story = { ...withArt(notFound, ["question-sign"]), 
 const loading: Story = { render: () => <InterviewPageSkeleton /> };
 export const LoadingDesktop: Story = { ...loading, ...DESKTOP };
 export const LoadingMobile: Story = { ...loading, ...MOBILE };
+
+/**
+ * Unscheduled (BIG-221): "Date TBD" where the date would be, "Upcoming · date TBD", the strip's
+ * dashed segment ("Round 3 of 3 · Date TBD" on a phone), and Prep notes headed "Get ready".
+ */
+const dateTbd: Story = {
+  args: page(harbour, "leadership", unscheduledApplications),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("Upcoming · date TBD")).toBeVisible();
+    await expect(canvas.getByText("Get ready")).toBeVisible();
+  },
+};
+export const DateTbdDesktop: Story = { ...withArt(dateTbd, ["writing"]), ...DESKTOP };
+export const DateTbdMobile: Story = { ...withArt(dateTbd, ["writing"]), ...MOBILE };
+
+/** Opened from Add the date (BIG-221): Edit details is open, Date TBD on, ready for the date. */
+const addTheDate: Story = {
+  args: { ...page(harbour, "leadership", unscheduledApplications), editDetails: true },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("switch", { name: "Date TBD" })).toBeChecked();
+  },
+};
+export const AddTheDateDesktop: Story = { ...addTheDate, ...DESKTOP };
+export const AddTheDateMobile: Story = { ...addTheDate, ...MOBILE };

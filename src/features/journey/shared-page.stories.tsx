@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect } from "storybook/test";
 import { expectBigfootClear } from "@/test/art";
-import { DESKTOP, journey, MOBILE, NARROW, PAGE, SHARE_LINK_ID, user } from "@/test/pages";
+import { DESKTOP, journey, MOBILE, NARROW, PAGE, SHARE_LINK_ID, unscheduledJourney, user } from "@/test/pages";
 import { SharedPage, SharedPageSkeleton } from "./shared-page";
 
 // A Share link's page, whole, as /journey/[id] renders it for a Viewer (BIG-203), at a laptop's
@@ -102,3 +102,18 @@ export const NotActiveMobile: Story = { ...withBigfoot(notActive, "bigfoot-peek-
 const loading: Story = { render: () => <SharedPageSkeleton /> };
 export const LoadingDesktop: Story = { ...loading, ...DESKTOP };
 export const LoadingMobile: Story = { ...loading, ...MOBILE };
+
+/**
+ * Unscheduled Interviews (BIG-221): Harbour shows "Next round · date TBD", its Next is the title over
+ * "Date TBD", and no Unscheduled Interview is on the calendar or in the counts.
+ */
+const dateTbd: Story = {
+  args: { page: { kind: "journey", journey: unscheduledJourney } },
+  play: async ({ canvas }) => {
+    // Rows draw Progress and Next twice, stacked for a phone and in columns wider: one of each shows.
+    await expect(canvas.getAllByText("Next round · date TBD").some((label) => label.checkVisibility())).toBe(true);
+    await expect(canvas.getAllByText("Date TBD").some((label) => label.checkVisibility())).toBe(true);
+  },
+};
+export const DateTbdDesktop: Story = { ...withBigfoot(dateTbd, "bigfoot-family"), ...DESKTOP };
+export const DateTbdMobile: Story = { ...withBigfoot(dateTbd, "bigfoot-family"), ...MOBILE };

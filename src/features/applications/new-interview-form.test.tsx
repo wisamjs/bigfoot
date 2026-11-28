@@ -92,8 +92,41 @@ describe("Add Interview", () => {
     expect(picker).toHaveFocus();
     const date = within(form!).getByRole("button", { name: /^Date, / });
     expect(date).toHaveAttribute("aria-invalid", "true");
-    expect(date).toHaveAccessibleDescription("Pick the date and enter the time.");
+    expect(date).toHaveAccessibleDescription("Enter the date and time, or choose Date TBD.");
     expect(within(form!).getByRole("alert")).toHaveTextContent("Choose the Application");
+    expect(actions.createInterviewAction).not.toHaveBeenCalled();
+  });
+
+  it("adds an Unscheduled Interview when Date TBD is ticked, which clears and disables the date and time", async () => {
+    const { user, form } = openAdd(undefined, "oak");
+    await pickDate(user, form!, "09:00");
+    const tbd = within(form!).getByRole("checkbox", { name: "Date TBD" });
+    await user.click(tbd);
+    expect(tbd).toBeChecked();
+    expect(within(form!).getByRole("button", { name: /^Date, / })).toBeDisabled();
+    expect(within(form!).getByLabelText("Time")).toBeDisabled();
+    expect(within(form!).getByLabelText("Time")).toHaveValue("");
+    await meet(user, form!);
+    await user.click(within(form!).getByRole("button", { name: "Add Interview" }));
+    expect(actions.createInterviewAction).toHaveBeenCalledWith(
+      "oak",
+      expect.objectContaining({ at: null, unscheduled: true, title: "Recruiter" }),
+    );
+
+    // Clearing the box gives the date and time back, empty: nothing is assumed.
+    await user.click(tbd);
+    expect(within(form!).getByRole("button", { name: /^Date, / })).toBeEnabled();
+  });
+
+  it("doesn't offer Date TBD for a Done Application, whose Interviews have a date", async () => {
+    const { user, form } = openAdd(undefined, "oak");
+    await user.click(within(form!).getByRole("checkbox", { name: "Date TBD" }));
+    await user.selectOptions(within(form!).getByLabelText("Application"), "cedar");
+    expect(within(form!).queryByRole("checkbox", { name: "Date TBD" })).not.toBeInTheDocument();
+    expect(within(form!).getByRole("button", { name: /^Date, / })).toBeEnabled();
+    await meet(user, form!);
+    await user.click(within(form!).getByRole("button", { name: "Add Interview" }));
+    expect(within(form!).getByRole("button", { name: /^Date, / })).toHaveAccessibleDescription("Enter the date and time.");
     expect(actions.createInterviewAction).not.toHaveBeenCalled();
   });
 

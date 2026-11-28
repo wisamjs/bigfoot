@@ -172,6 +172,34 @@ export const NothingBooked: Story = {
   },
 };
 
+/**
+ * Only an Unscheduled Interview ahead (BIG-221): "Next round · date TBD" in a neutral pill, a dashed
+ * mark, and Next the title over "Date TBD". There's no Next Interview, nothing on the calendar, and
+ * no Interview in the next 2 weeks.
+ */
+export const DateTbd: Story = {
+  args: {
+    journey: {
+      shared_by: "Wisam Zaghal",
+      applications: [
+        application({
+          company: "Harbour Analytics",
+          title: "Senior Engineering Manager",
+          applied_on: isoDay(-20),
+          is_waiting: false,
+          interviews: [interview("Recruiter Screen", "recruiter", -10), { title: "Leadership", category: "people_management", at: null, completed: false }],
+        }),
+      ],
+      other_completed_interviews: [],
+    },
+  },
+  play: async ({ canvas }) => {
+    await expect(showing(canvas.getAllByText("Next round · date TBD"))).toHaveLength(1);
+    await expect(showing(canvas.getAllByText("Date TBD"))).toHaveLength(1);
+    await expect(canvas.queryByText(/Next Interview/)).not.toBeInTheDocument();
+  },
+};
+
 /** No Applications in progress, and no Offers. */
 export const NoApplications: Story = {
   args: { journey: { shared_by: "Wisam Zaghal", applications: [], other_completed_interviews: [] } },

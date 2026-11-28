@@ -1,6 +1,6 @@
 """Migrations that change what job seekers already recorded: Interviews (BIG-38), Locations, requiring an
-Interview's date (BIG-139), splitting Interview notes (BIG-179), the Done date and Outcome note (BIG-182) and
-Interview category and title (BIG-189)."""
+Interview's date (BIG-139) and allowing Unscheduled ones again (BIG-221), splitting Interview notes (BIG-179),
+the Done date and Outcome note (BIG-182) and Interview category and title (BIG-189)."""
 
 from datetime import UTC
 
@@ -112,15 +112,17 @@ def _add_application(conn) -> str:
     ).fetchone()[0]
 
 
-def test_the_database_requires_an_interviews_date(settings):
+def test_the_database_stores_an_unscheduled_interview_without_a_date(settings):
+    # ADR 0009 made `at` nullable again, after ADR 0005's NOT NULL.
     with psycopg.connect(settings.database_url, prepare_threshold=None, autocommit=True) as conn:
         conn.execute(sql.SQL("set search_path to {}").format(sql.Identifier(TEST_SCHEMA)))
         application = _add_application(conn)
-        with pytest.raises(psycopg.errors.NotNullViolation):
-            conn.execute(
-                "insert into interviews (application_id, category, title) values (%s, 'technical', 'Technical')",
-                (application,),
-            )
+        row = conn.execute(
+            "insert into interviews (application_id, category, title) values (%s, 'technical', 'Technical')"
+            " returning at",
+            (application,),
+        ).fetchone()
+        assert row[0] is None
 
 
 @pytest.mark.rebuilds_schema

@@ -115,6 +115,30 @@ describe("sortApplications", () => {
     }
   });
 
+  it("puts Applications whose Interviews ahead are all Unscheduled after the booked ones and before Waiting", () => {
+    const tbd = (n: number) => interview(`tbd-${n}`, { at: null, completed: false });
+    /** Next round · date TBD: Round 3 awaits a date. */
+    const tbdRound3 = application("tbd-round3", {
+      company: "TBD Three",
+      is_waiting: false,
+      waiting_since: null,
+      interviews: [done(1), done(2), tbd(3)],
+    });
+    /** Next round · date TBD: Round 1 awaits a date. */
+    const tbdRound1 = application("tbd-round1", { company: "TBD One", is_waiting: false, waiting_since: null, interviews: [tbd(1)] });
+    /** Booked: Round 1 on Dec 2, and an Unscheduled Round 2 after it, so Interview scheduled. */
+    const bookedThenTbd = application("booked-then-tbd", {
+      company: "Booked",
+      is_waiting: false,
+      waiting_since: null,
+      interviews: [upcoming(1, "2026-12-02T15:00:00Z"), tbd(2)],
+    });
+    const apps = [waitingTwo, tbdRound1, tbdRound3, bookedThenTbd, round3];
+    expect(order("progress", apps)).toEqual(["round3", "booked-then-tbd", "tbd-round3", "tbd-round1", "waiting-two"]);
+    expect(order("next", apps)).toEqual(["booked-then-tbd", "round3", "tbd-round1", "tbd-round3", "waiting-two"]);
+    expect(sortApplications([tbdRound1])[0].group).toEqual({ id: "unscheduled", label: "Next round · date TBD" });
+  });
+
   it("gives each row the group its Progress shows", () => {
     const groups = sortApplications(all, { showDone: true }).map((row) => row.group.label);
     expect(new Set(groups)).toEqual(new Set(["Interview scheduled", "Waiting", "Offer", "Done"]));

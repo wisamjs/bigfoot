@@ -1,9 +1,9 @@
 import { Badge, type Tone } from "@/components/ui/badge";
 import { journeyNext, markClasses, nextMarkIndex, progressLabel } from "@/features/journey/journey-text";
-import { parseDay } from "@/lib/applications";
+import { DATE_TBD, parseDay } from "@/lib/applications";
 import { interviewsDone, journeyGroups, type JourneyApplication, type JourneyGroup } from "@/lib/journey";
 
-const GROUP_TONE: Record<JourneyGroup["id"], Tone> = { offer: "success", interviewing: "blue", waiting: "warning" };
+const GROUP_TONE: Record<JourneyGroup["id"], Tone> = { offer: "success", interviewing: "blue", unscheduled: "neutral", waiting: "warning" };
 const appliedFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
 
 const cell = "px-4 py-4 align-middle sm:px-6";
@@ -95,7 +95,7 @@ function Progress({ app, group, now }: { app: JourneyApplication; group: Journey
             {app.interviews.map((interview, i) => (
               <span
                 key={`${interview.at}|${interview.title}`}
-                className={`h-1.5 w-6 rounded-full ${markClasses(interview.completed, i === next)}`}
+                className={`h-1.5 w-6 rounded-full ${markClasses(interview.completed, i === next, interview.at === null)}`}
               />
             ))}
           </span>
@@ -111,6 +111,14 @@ function Next({ app, now }: { app: JourneyApplication; now: Date }) {
   const next = journeyNext(app, now);
   if (next.kind === "offer") return <p className="m-0 font-semibold text-fg-success-strong">Thinking it over</p>;
   if (next.kind === "nothing") return <p className="m-0 text-body">Nothing booked yet</p>;
+  if (next.kind === "unscheduled") {
+    return (
+      <p className="m-0">
+        <span className="block font-semibold text-heading">{next.title}</span>
+        <span className="block text-sm text-body">{DATE_TBD}</span>
+      </p>
+    );
+  }
   return (
     <p className={`m-0 font-semibold ${next.soon ? "text-fg-brand" : "text-heading"}`}>
       {next.title} · <time dateTime={next.at}>{next.when}</time>

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { expectBigfootClear } from "@/test/art";
-import { applications, DESKTOP, MOBILE, NARROW, NOW, PAGE, samples, user } from "@/test/pages";
+import { applications, DESKTOP, MOBILE, NARROW, NOW, PAGE, samples, unscheduledApplications, user } from "@/test/pages";
 import { DashboardPage, DashboardPageSkeleton } from "./dashboard-page";
 
 // The dashboard, whole, as /dashboard renders it (BIG-203): every state at a laptop's width and a
@@ -69,6 +69,22 @@ export const InFlightDesktop: Story = { ...withBigfoot(inFlight), ...DESKTOP };
 export const InFlightMobile: Story = { ...withBigfoot(inFlight), ...MOBILE };
 /** The narrowest phone, 320px: Bigfoot still hangs right of the title. */
 export const InFlightNarrow: Story = { ...withBigfoot(inFlight), ...NARROW };
+
+/**
+ * Unscheduled Interviews (BIG-221): Harbour's "Next round · date TBD" after Waiting, Northwind's
+ * "+1 later", "2 awaiting a date" in the summary line, and a Date TBD group ending the agenda.
+ */
+const dateTbd: Story = {
+  args: { applications: unscheduledApplications },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText(/2 awaiting a date/)).toBeVisible();
+    // Progress is drawn twice, stacked for a phone and in its column wider: one of them shows.
+    await expect(canvas.getAllByText("Next round · date TBD").some((label) => label.checkVisibility())).toBe(true);
+    await expect(await canvas.findByRole("region", { name: "Date TBD" })).toBeVisible();
+  },
+};
+export const DateTbdDesktop: Story = { ...withBigfoot(dateTbd), ...DESKTOP };
+export const DateTbdMobile: Story = { ...withBigfoot(dateTbd), ...MOBILE };
 
 /** Show done: the Done Applications join the In Progress ones. */
 const showDone: Story = {

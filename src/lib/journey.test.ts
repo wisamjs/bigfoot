@@ -133,3 +133,28 @@ describe("waitingDays and interviewsDone", () => {
     expect(interviewsDone(app({}))).toBeNull();
   });
 });
+
+describe("Unscheduled Interviews on the Journey (BIG-221)", () => {
+  const tbd: JourneyInterview = { category: "people_management", title: "Leadership", at: null, completed: false };
+  const lumen = app({ company: "Lumen Bio", interviews: [interview(at(10, 8)), tbd] });
+  const northwind = app({ company: "Northwind", interviews: [interview(at(10, 29), "Onsite Loop"), tbd] });
+
+  it("put an Application with only Unscheduled ones ahead in its own group, after Interviewing", () => {
+    const waiting = app({ company: "Fernway", is_waiting: true, waiting_since: "2026-11-05" });
+    expect(journeyGroups([waiting, lumen, northwind]).map((g) => [g.id, g.applications.map((a) => a.company)])).toEqual([
+      ["interviewing", ["Northwind"]],
+      ["unscheduled", ["Lumen Bio"]],
+      ["waiting", ["Fernway"]],
+    ]);
+  });
+
+  it("stay off the upcoming list and the counts of Interviews in the next 2 weeks", () => {
+    expect(upcomingJourneyInterviews([lumen, northwind], NOW).map(({ interview: i }) => i.title)).toEqual(["Onsite Loop"]);
+    const [, upcoming] = journeyCounts({ applications: [lumen, northwind], other_completed_interviews: [] }, NOW);
+    expect(upcoming).toMatchObject({ id: "upcoming", value: 1 });
+  });
+
+  it("count in how many Interviews there are, never as done", () => {
+    expect(interviewsDone(lumen)).toBe("1 of 2 done");
+  });
+});

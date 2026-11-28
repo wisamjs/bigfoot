@@ -34,8 +34,8 @@ function at(days, hour) {
   return d.toISOString();
 }
 
-// Interviews are [category, title, days from today, hour]; negative days are completed. Every Interview has a
-// date and time (docs/adr/0005), and its Participants (PARTICIPANTS, BIG-191).
+// Interviews are [category, title, days from today, hour]; negative days are completed. Every one is Scheduled, with a
+// date and time (docs/adr/0009), and has its Participants (PARTICIPANTS, BIG-191).
 function applications() {
   const applied_on = at(-14, 9).slice(0, 10);
   return [

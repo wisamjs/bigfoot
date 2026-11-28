@@ -18,6 +18,7 @@ import { useToday } from "@/hooks/use-today";
 import { DeleteApplicationDialog } from "@/features/applications/application-dialogs";
 import { StatusMenuItems, type StatusChange } from "@/features/applications/change-status-menu";
 import { SampleBadge } from "@/features/applications/sample-badge";
+import { UNSCHEDULED_PILL } from "@/features/applications/status-tone";
 import {
   applicationProgress,
   calendarDaysBetween,
@@ -30,6 +31,8 @@ import {
 /** The Progress badge's colours: its dot and its pill. */
 const PROGRESS_TONE: Record<Progress["id"], { pill: string; dot: string }> = {
   waiting: { pill: "border-line-warning-subtle bg-warning-soft text-fg-warning", dot: "bg-fg-warning" },
+  // Next round · date TBD (BIG-221): neutral, neither warning nor blue.
+  unscheduled: UNSCHEDULED_PILL,
   scheduled: { pill: "border-tone-blue-line bg-tone-blue text-tone-blue-fg", dot: "bg-tone-blue-fg" },
   offer: { pill: "border-line-success-subtle bg-success-soft text-fg-success-strong", dot: "bg-fg-success-strong" },
   done: { pill: "border-tone-gray-line bg-tone-gray text-tone-gray-fg", dot: "bg-tone-gray-fg" },
