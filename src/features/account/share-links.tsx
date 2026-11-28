@@ -25,7 +25,7 @@ import { PasscodeField } from "./passcode-field";
 
 const THEY_SEE = [
   "Interview dates and times in their own time zone",
-  "Companies, roles and where each one stands",
+  "Companies, roles, and where each one stands",
   "Interview titles as you wrote them",
   "Offers",
 ];

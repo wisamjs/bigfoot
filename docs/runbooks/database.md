@@ -13,7 +13,7 @@ Keep `bigfoot-prod` the only project in the Pro organization. The Pro plan's com
 
 ## Connecting to production
 
-The prod database URLs live only in the `bigfoot-api` Vercel project's Production environment and in the password manager. Never put them in `.env.local`, the repo or CI secrets.
+The prod database URLs live only in the `bigfoot-api` Vercel project's Production environment and in the password manager. Never put them in `.env.local`, the repo, or CI secrets.
 
 | Variable | Pooler | Used by |
 | --- | --- | --- |

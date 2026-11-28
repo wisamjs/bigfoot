@@ -1,4 +1,4 @@
-# Interviews get a title, a fixed category and a derived round number
+# Interviews get a title, a fixed category, and a derived round number
 
 ADR 0002 gave an Interview a kind from a fixed list and no title, and the glossary avoided "round". In practice the 15 kinds both overlapped (Technical, Coding Challenge, AI Assisted Coding Challenge) and missed real Interviews: a project deep-dive that is strategic rather than technical, or a "Strategic Alignment with Sr Director" that is close to, but not the same as, a "Product Alignment" with a Product Manager. Job seekers had no way to name the Interview they were actually having.
 

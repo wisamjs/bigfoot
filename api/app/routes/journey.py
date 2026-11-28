@@ -133,11 +133,11 @@ def open_share_link(request: Request, share_link_id: ShareLinkId, body: Passcode
 )
 def get_journey(request: Request, share_link_id: ShareLinkId, viewer: ViewerOf) -> Journey:
     """The job seeker's Journey: their In Progress Applications and Offers, with each one's company,
-    role, applied date and Interviews (category, title and time). Of the other Done Applications,
+    role, applied date, and Interviews (category, title, and time). Of the other Done Applications,
     only when their completed Interviews happened, for the count of Interviews completed this month.
-    Salary, job postings, Location, Prep notes, Interview notes and Outcome notes are never read.
+    Salary, job postings, Location, Prep notes, Interview notes, and Outcome notes are never read.
 
-    Every request checks the link again, so stopping it, letting it expire or changing its Passcode
+    Every request checks the link again, so stopping it, letting it expire, or changing its Passcode
     cuts the Viewer off at once. Records when the link was last opened, to within a minute."""
     if viewer.share_link_id != share_link_id:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "This token is for another Share link")

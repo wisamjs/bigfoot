@@ -1,4 +1,4 @@
-"""Bigfoot API: create, read, update and delete a job seeker's Applications and their Interviews,
+"""Bigfoot API: create, read, update, and delete a job seeker's Applications and their Interviews,
 and the Access tokens that let their scripts do the same."""
 
 import os
@@ -27,14 +27,14 @@ names. There are two kinds of token that name a job seeker:
   ([ADR 0003](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0003-access-tokens-open-fastapi-to-scripts.md)).
 - **Web token** (`WebToken`): a short-lived JWT the Next.js server signs for the signed-in job
   seeker. The browser itself never calls this API. Web tokens work on every route, and are the only
-  way to use the Account, Access tokens and Share links routes
+  way to use the Account, Access tokens, and Share links routes
   ([ADR 0001](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0001-fastapi-behind-nextjs-with-authjs.md)).
 
 A third kind, the **Viewer token** (`ViewerToken`), names a Share link instead: a Viewer gets one by
 typing the link's Passcode, and it reads only that link's Journey
 ([ADR 0008](https://github.com/wisamjs/bigfoot/blob/main/docs/adr/0008-a-share-link-lets-a-viewer-read-a-journey.md)).
 
-Terms such as Application, Interview, Waiting, Sample Application and Access token are defined in
+Terms such as Application, Interview, Waiting, Sample Application, and Access token are defined in
 [GLOSSARY.md](https://github.com/wisamjs/bigfoot/blob/main/GLOSSARY.md).
 
 To try a request, click **Authorize** and paste an Access token from the Account page, or a web
@@ -44,7 +44,7 @@ token from `node scripts/dev-api-token.mjs`.
 TAGS = [
     {
         "name": "Account",
-        "description": "The signed-in job seeker: onboarding, exporting and deleting the account. Web tokens only.",
+        "description": "The signed-in job seeker: onboarding, exporting, and deleting the account. Web tokens only.",
     },
     {
         "name": "Access tokens",

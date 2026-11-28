@@ -82,7 +82,7 @@ function AccountLayout({
                 </div>
               </div>
               <p className="m-0 text-sm leading-[1.6] text-body">
-                Your name, email and photo come from your Google account. To change them, change them
+                Your name, email, and photo come from your Google account. To change them, change them
                 in Google, then sign in to Bigfoot again.
               </p>
             </section>
@@ -216,7 +216,7 @@ const DOWNLOADS: { format: ExportFormat; label: string; type: string; descriptio
     label: "JSON",
     type: EXPORT_CONTENT_TYPES.json,
     description:
-      "Everything, for moving to another tool: your profile, every field of every Application, your Share links’ labels and dates (never their passcodes) and your Access tokens’ names and dates (never their secrets).",
+      "Everything, for moving to another tool: your profile, every field of every Application, your Share links’ labels and dates (never their passcodes), and your Access tokens’ names and dates (never their secrets).",
   },
 ];
 
