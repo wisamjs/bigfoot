@@ -1,7 +1,7 @@
 import Image from "next/image";
 
 /**
- * Bigfoot spot illustrations, in maroon fur (BIG-173, BIG-174, BIG-225). Decorative: an empty alt keeps
+ * Bigfoot spot illustrations, in maroon fur (BIG-173, BIG-174, BIG-225, BIG-231). Decorative: an empty alt keeps
  * them out of the accessibility tree, so the text beside each one has to say everything. Transparent
  * WebP, so they sit on a card in light and dark mode alike. Small (under 85 KB, most under 45 KB) and
  * near the top of the page, so they load eagerly rather than pop in. Each sprite's comment says where
@@ -78,4 +78,29 @@ export function PeekOverBigfoot({ className }: Props) {
 /** Bigfoot leaning out from behind a card's right edge: the Passcode page (BIG-229). */
 export function PeekRightBigfoot({ className }: Props) {
   return <Image src="/illustrations/bigfoot-peek-right.webp" alt="" loading="eager" width={339} height={480} className={className} />;
+}
+
+/** Bigfoot with both arms open in welcome: the home page hero, beside the heading (BIG-231). */
+export function WelcomeBigfoot({ className }: Props) {
+  return <Image src="/illustrations/bigfoot-welcome.webp" alt="" loading="eager" width={456} height={480} className={className} />;
+}
+
+/** Bigfoot hugging a folder: the home page's Applications feature (BIG-231). */
+export function FolderHugBigfoot({ className }: Props) {
+  return <Image src="/illustrations/bigfoot-folder-hug.webp" alt="" loading="eager" width={303} height={345} className={className} />;
+}
+
+/** Bigfoot writing on a clipboard: the home page's Interviews feature (BIG-231). */
+export function ClipboardWritingBigfoot({ className }: Props) {
+  return <Image src="/illustrations/bigfoot-clipboard-writing.webp" alt="" loading="eager" width={290} height={346} className={className} />;
+}
+
+/** Bigfoot surprised by a desk calendar: the home page's Interview calendar feature (BIG-231). */
+export function CalendarSurprisedBigfoot({ className }: Props) {
+  return <Image src="/illustrations/bigfoot-calendar-surprised.webp" alt="" loading="eager" width={356} height={333} className={className} />;
+}
+
+/** Bigfoot with two thumbs up: the home page's closing call to sign up (BIG-231). */
+export function DoubleThumbsUpBigfoot({ className }: Props) {
+  return <Image src="/illustrations/bigfoot-double-thumbs-up.webp" alt="" loading="eager" width={343} height={480} className={className} />;
 }

@@ -5,6 +5,7 @@ import { Features } from "./features";
 import { Footer } from "./footer";
 import { Hero } from "./hero";
 import { Navbar } from "./navbar";
+import { SignUpCall } from "./sign-up-call";
 import { AppFooter } from "@/features/shell/app-footer";
 
 // The sign-in buttons post to Server Actions, which need Auth.js and a request.
@@ -26,10 +27,21 @@ describe("landing sections", () => {
     expect(screen.queryByRole("link", { name: "Sign in" })).not.toBeInTheDocument();
   });
 
-  it("Features is a section named by its h2, with an h3 per feature", () => {
+  it("Features is a section named by its h2, with an h3 per feature, sharing a Journey last", () => {
     render(<Features />);
     const section = sectionNamedBy(2);
-    expect(within(section).getAllByRole("heading", { level: 3 })).toHaveLength(3);
+    expect(within(section).getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
+      "Applications",
+      "Interviews",
+      "Interview calendar",
+      "Share your Journey",
+    ]);
+  });
+
+  it("SignUpCall is a section named by its h2, ending in the sign-up button", () => {
+    render(<SignUpCall />);
+    const section = sectionNamedBy(2);
+    expect(within(section).getByRole("link", { name: "Find your Bigfoot" })).toHaveAttribute("href", "/sign-up");
   });
 
   it("Navbar's mobile menu shows the sign-in note with its buttons", async () => {
