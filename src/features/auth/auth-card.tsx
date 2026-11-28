@@ -14,7 +14,7 @@ export function AuthCard({ next }: { next?: string }) {
         Welcome to Bigfoot
       </h1>
       <p className="m-0 mb-8 text-base leading-[1.7] text-body">
-        Job hunting is chasing Bigfoot. Let’s find yours.
+        Job hunting can feel like chasing Bigfoot. Let’s find yours.
       </p>
       <GoogleAuthButton size="xl" next={next}>Continue with Google</GoogleAuthButton>
       <SignInNote className="mt-6" />
