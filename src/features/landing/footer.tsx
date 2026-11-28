@@ -23,7 +23,7 @@ export function Footer() {
               <Wordmark />
             </Link>
             <p className="m-0 text-base leading-[1.7] text-body">
-              Job hunting is chasing Bigfoot. Track every application until you find yours.
+              Job hunting can feel like chasing Bigfoot. Track every Application until you find yours.
             </p>
           </div>
           {columns.map((col) => (

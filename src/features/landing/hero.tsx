@@ -21,10 +21,10 @@ export function Hero() {
               id="hero-title"
               className="text-balance text-[32px] font-bold leading-[1.1] tracking-[-0.8px] text-heading md:text-[44px] lg:text-[56px]"
             >
-              Job hunting is chasing Bigfoot. <span className="inline-block md:block">Let’s find yours.</span>
+              Job hunting can feel like chasing Bigfoot. <span className="inline-block md:block">Let’s find yours.</span>
             </h1>
             <p className="mx-auto mt-6 max-w-[56ch] text-balance text-lg leading-[1.5] text-body lg:mx-0 lg:text-xl">
-              Bigfoot keeps every role you apply to, and every Interview for it, in one place.
+              Track your Applications, organize your Interviews, and bring a little clarity to the chaos of job hunting.
             </p>
             <div className="mt-8 flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-center lg:justify-start">
               <Link href="/sign-up" className={buttonClasses("brand", "xl")}>

@@ -19,7 +19,7 @@ const allo = localFont({
 
 const title = "Bigfoot: job application tracker";
 const description =
-  "Job hunting is chasing Bigfoot. Track every application, interview and follow-up in one place until you find yours.";
+  "Job hunting can feel like chasing Bigfoot. Track your Applications, organize your Interviews, and find yours.";
 
 // The home-screen icons (apple-icon.png, manifest.webmanifest) and the shared-link preview
 // (opengraph-image.png, twitter-image.png) are files beside this one; scripts/app-icons.sh makes
