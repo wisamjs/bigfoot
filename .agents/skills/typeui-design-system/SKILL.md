@@ -1,6 +1,6 @@
 ---
 name: "candy"
-description: "Candy design skill for AI coding agents."
+description: "Use when writing or restyling UI components, pages, or colours: Bigfoot's TypeUI Candy design system, with one module per kind of component."
 metadata:
   author: typeui.sh
   source: workspace-importer

@@ -48,6 +48,15 @@ describe.each(FILES)("lint rules on for %s", (file) => {
     expect(result.messages.filter((m) => m.severity === 2).map((m) => m.ruleId)).toContain("complexity");
   });
 
+  it.each([
+    ["with no reason", "@eslint-community/eslint-comments/require-description", `// eslint-disable-next-line no-eval\nexport const f = (t: string) => eval(t);`],
+    ["with no rule named", "@eslint-community/eslint-comments/no-unlimited-disable", `// eslint-disable-next-line -- because\nexport const f = (t: string) => eval(t);`],
+    ["that silences nothing", null, `// eslint-disable-next-line no-eval -- because\nexport const f = 1;`],
+  ])("refuse an inline disable %s (BIG-236)", async (_, rule, code) => {
+    const [result] = await eslint.lintText(code, { filePath: file });
+    expect(result.messages.filter((m) => m.severity === 2).map((m) => m.ruleId)).toContain(rule);
+  });
+
   it("report each problem once: no react-hooks rule is on beside its ESLint React copy", async () => {
     const on = new Set(await rulesOn(file));
     const twice = [...on]

@@ -2,6 +2,12 @@
 
 exports[`lint rules on for src/components/ui/modal.test.tsx > match the snapshot 1`] = `
 [
+  "@eslint-community/eslint-comments/disable-enable-pair",
+  "@eslint-community/eslint-comments/no-aggregating-enable",
+  "@eslint-community/eslint-comments/no-duplicate-disable",
+  "@eslint-community/eslint-comments/no-unlimited-disable",
+  "@eslint-community/eslint-comments/no-unused-enable",
+  "@eslint-community/eslint-comments/require-description",
   "@eslint-react/dom-no-dangerously-set-innerhtml",
   "@eslint-react/dom-no-dangerously-set-innerhtml-with-children",
   "@eslint-react/dom-no-find-dom-node",
@@ -216,6 +222,12 @@ exports[`lint rules on for src/components/ui/modal.test.tsx > match the snapshot
 
 exports[`lint rules on for src/components/ui/modal.tsx > match the snapshot 1`] = `
 [
+  "@eslint-community/eslint-comments/disable-enable-pair",
+  "@eslint-community/eslint-comments/no-aggregating-enable",
+  "@eslint-community/eslint-comments/no-duplicate-disable",
+  "@eslint-community/eslint-comments/no-unlimited-disable",
+  "@eslint-community/eslint-comments/no-unused-enable",
+  "@eslint-community/eslint-comments/require-description",
   "@eslint-react/dom-no-dangerously-set-innerhtml",
   "@eslint-react/dom-no-dangerously-set-innerhtml-with-children",
   "@eslint-react/dom-no-find-dom-node",

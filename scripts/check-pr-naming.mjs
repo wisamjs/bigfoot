@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Fails unless a PR names its Linear ticket the way AGENTS.md says: the branch is the ticket's
+// Fails unless a PR names its Linear ticket as the pick-up-ticket skill does: the branch is the ticket's
 // Linear branch name (wisamzaghal/big-n-…), the title ends with (BIG-n), and the body starts
 // with `Closes BIG-n`, all with the same n. Dependabot's PRs have no ticket, so they pass.
 // Run by .github/workflows/pr-naming.yml with PR_AUTHOR, PR_BRANCH, PR_TITLE and PR_BODY set.
@@ -54,7 +54,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   });
   for (const problem of problems) console.error(`✗ ${problem}`);
   if (problems.length) {
-    console.error("\nSee the Tickets line in AGENTS.md. Fix the title or body on GitHub and this check reruns.");
+    console.error("\nEach problem says what to change; .claude/skills/pick-up-ticket/SKILL.md shows the whole naming. Fix the title or body on GitHub and this check reruns.");
     process.exit(1);
   }
   console.log(process.env.PR_AUTHOR === DEPENDABOT ? "✓ Dependabot PR, no ticket needed" : "✓ branch, title and body name the same ticket");

@@ -43,12 +43,6 @@ outside the base block, a repeated base step, and an unused token. Review judges
 - A dark-mode change points the role at another base step in `@tokens dark`; it never adds a
   colour of its own.
 
-## Green CI before approval
-
-Approve only when the PR's latest `CI` and `PR naming` runs succeeded. A cancelled or skipped
-run is not a pass: rerun it. GitHub can't enforce this on this private repo (branch protection
-needs GitHub Pro), so the review is the only gate.
-
 ## What a job seeker types stays text
 
 React escapes text, so typed values are shown as `{value}` and nothing else. A link built from
@@ -111,10 +105,13 @@ coverage minus 2 points: raise it as tests are added, never lower it.
 | --- | --- |
 | `src/components/ui/` | The design system: anything that would make sense in a different app. shadcn/ui primitives (`npx shadcn add` writes here) and components built on them, one per file, no barrel. |
 | `src/hooks/` | Hooks that know nothing about Bigfoot. |
-| `src/features/<feature>/` | Everything else in the UI, one folder per feature: `applications`, `dashboard`, `auth`, `account`, `legal`, `landing`, and `shell` (header, footer, wordmark, illustrations). Presentational and stateful components share the folder. |
+| `src/features/<feature>/` | Everything else in the UI, one folder per feature, with `shell` holding the header, footer, wordmark, and illustrations. Presentational and stateful components share the folder. |
 | `src/lib/` | Domain and server code: types, allowed values and their labels, data access. No colours or components. |
 | `src/app/` | Routes: thin files that put features together. |
-| `src/*.ts` | Next.js's root files: `auth.ts`, `proxy.ts`, `instrumentation.ts`. |
+| `src/test/` | Fixtures and stand-ins shared by tests and stories. Production code never imports them. |
+| `src/*.ts` | Next.js's root files, such as `auth.ts`, `proxy.ts`, and `instrumentation.ts`. |
+
+The folders themselves, and which features may import which, are the `boundaries` settings in `eslint.config.mjs`.
 
 Stories (`<name>.stories.tsx`) sit beside the component they show, under the same import rules. Storybook's stand-ins for Server Actions sit in `__mocks__/actions.ts` beside each `actions.ts`.
 
@@ -154,12 +151,7 @@ change to this table, so the table must say the same.
 | `jsx-a11y` `strict`, plus every live rule it leaves off | `**/*.{jsx,tsx}` | Semantic HTML and ARIA mistakes: a `role` where a native element exists (`prefer-tag-over-role`: `<fieldset>`, `<section>`, `<output>`), controls with no label, focusable elements hidden with `aria-hidden`, vague link text, missing labels and alt text, invalid roles, click handlers on non-interactive elements, `autoFocus`, `tabIndex` on non-interactive elements. Heading order and landmarks are runtime checks in `npm run a11y`. |
 | `eslint-plugin-boundaries` (`dependencies`, `no-unknown-files`) | `src/**/*.{ts,tsx}` | Imports that cross the layers in "Where code goes": the design system reaching into a feature, the domain, `auth.ts`, or a server action; `lib` importing UI; a feature importing a feature the config doesn't link it to, or a route; production code importing test fixtures. Anything not allowed is an error, and a file in a folder no rule covers is an error too. |
 | `complexity` (ESLint core) and Ruff `C90` (mccabe), maximum 10 | all, including tests and scripts; `api/` and `scripts/*.py` for Ruff | A function with more than 10 independent paths through it (each `if`, loop, `case`, `&&`, `||`, `?:`, and `catch` adds one). Every path needs a test, and a function with many has more bugs and is slower to change. Split it into smaller functions, or into components in React. |
+| `@eslint-community/eslint-comments` `recommended`, plus `require-description`, and unused disables reported | all | An `eslint-disable` with no rule named, no reason after `--`, or nothing left to silence. A disable at the top of a file covers the whole file on purpose, so it needs no `eslint-enable`. |
 | Testing Library (React) and jest-dom | `**/*.test.tsx` | Tests that reach into the DOM instead of querying as a user would, misnamed render results, and assertions with a clearer jest-dom matcher. |
 
-An inline `eslint-disable` names its rule and gives a reason after `--`. Today's exceptions:
-`autoFocus` where a dialog moves focus on purpose, a focusable scrolling region, the calendar
-reading today's date while it renders, and the skeleton tests, which check `aria-hidden` shapes
-that have no role or text to query by, and the axe test, which writes broken markup by hand and clears
-the screen itself before `setup.ts` checks it. The tests' stand-in for `next/navigation`
-(`src/test/navigation.ts`) keeps the name `useRouter` though it calls no Hooks. The XSS tests list `javascript:` URLs as payloads
-(`src/test/xss.ts`) and look for injected tags, which have no role or text to query by.
+An inline `eslint-disable` names its rule and gives a reason after `--`, and one that silences nothing is an error: the `eslint-comments` group checks both. Review judges whether the reason holds.

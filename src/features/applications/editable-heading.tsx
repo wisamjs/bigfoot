@@ -89,8 +89,7 @@ export function EditableHeading({
   if (!editing) return display;
 
   return (
-    // A form only relays its fields' events here: Escape and focus leaving the fields.
-    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- a form only relays its fields' events here: Escape and focus leaving the fields.
     <form onSubmit={submit} onBlur={blur} onKeyDown={keyDown} noValidate aria-label={editLabel} className="flex flex-col gap-4">
       <h1 className="sr-only">{title}</h1>
       {children}
