@@ -67,9 +67,10 @@ describe("sortApplications", () => {
     ]);
   });
 
-  it("sorts by Application: company A–Z, then role, ignoring case and accents", () => {
+  it("sorts by Application: company A–Z, then role, ignoring case and accents, Done ones mixed in", () => {
     const birchManager = application("birch-manager", { company: "birch", title: "Manager" });
     expect(order("application", [...all, birchManager])).toEqual([
+      "rejected", // Aardvark: Done sorts with the rest
       "waiting-none", // acme
       "round3-sooner", // Another Round Three
       "waiting-new", // Birch · Engineer
@@ -78,7 +79,6 @@ describe("sortApplications", () => {
       "round1",
       "round3",
       "offer",
-      "rejected", // Aardvark, but Done stays last
     ]);
   });
 
@@ -95,17 +95,26 @@ describe("sortApplications", () => {
     ]);
   });
 
-  it("sorts by Location A–Z, ties by company, with no Location last", () => {
+  it("sorts by Location A–Z, ties by company, with no Location last, Done ones mixed in", () => {
     expect(order("location")).toEqual([
       "waiting-none", // Hybrid - 3x a Week
       "waiting-new", // In-Office
-      "waiting-two", // Remote
+      "rejected", // Remote, Aardvark: Done sorts with the rest
+      "waiting-two", // Remote, Éclair
       "round3-sooner", // no Location, by company
       "round1",
       "round3",
-      "offer",
-      "rejected", // Remote, but Done stays last
+      "offer", // Zeta
     ]);
+  });
+
+  it("puts the Done Applications last by Progress and Next, in company order rather than arrival order", () => {
+    const withdrawn = application("withdrawn", { company: "Yew", status: "done", outcome: "withdrawn", is_waiting: false, waiting_since: null });
+    const filled = application("filled", { company: "Maple", status: "done", outcome: "position_filled", is_waiting: false, waiting_since: null });
+    const apps = [withdrawn, filled, rejected, waitingNew];
+    for (const sort of ["progress", "next"] as const) {
+      expect(order(sort, apps)).toEqual(["waiting-new", "rejected", "filled", "withdrawn"]);
+    }
   });
 
   it("leaves out the Done Applications other than Offers until showDone", () => {
